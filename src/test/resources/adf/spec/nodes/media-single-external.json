@@ -1,0 +1,26 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "mediaSingle",
+      "attrs": {
+        "layout": "center",
+        "width": 50,
+        "widthType": "percentage"
+      },
+      "content": [
+        {
+          "type": "media",
+          "attrs": {
+            "type": "external",
+            "url": "https://example.com/diagram.png",
+            "alt": "Sized",
+            "width": 800,
+            "height": 400
+          }
+        }
+      ]
+    }
+  ]
+}

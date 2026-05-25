@@ -1,0 +1,140 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "type": "text",
+          "text": "Draft link",
+          "marks": [
+            {
+              "type": "link",
+              "attrs": {
+                "href": "https://example.atlassian.net/wiki/spaces/OF/pages/edit-v2/12345?draftShareId=abc"
+              }
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": " Metadata link",
+          "marks": [
+            {
+              "type": "link",
+              "attrs": {
+                "href": "https://example.atlassian.net/wiki/labels/view",
+                "__confluenceMetadata": {
+                  "linkType": "page",
+                  "pageId": "67890"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": " Duplicate draft",
+          "marks": [
+            {
+              "type": "link",
+              "attrs": {
+                "href": "https://example.atlassian.net/wiki/spaces/OF/pages/12345"
+              }
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": " External link",
+          "marks": [
+            {
+              "type": "link",
+              "attrs": {
+                "href": "https://external.example.com/docs"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "blockCard",
+      "attrs": {
+        "url": "https://external.example.com/docs"
+      }
+    },
+    {
+      "type": "mediaSingle",
+      "content": [
+        {
+          "type": "media",
+          "attrs": {
+            "type": "file",
+            "id": "asset-22",
+            "__fileMimeType": "image/png",
+            "__fileName": "diagram.png",
+            "width": 200,
+            "height": 100
+          }
+        }
+      ]
+    },
+    {
+      "type": "mediaSingle",
+      "content": [
+        {
+          "type": "media",
+          "attrs": {
+            "type": "file",
+            "id": "asset-22",
+            "__fileMimeType": "image/png",
+            "__fileName": "diagram.png"
+          }
+        }
+      ]
+    },
+    {
+      "type": "mediaSingle",
+      "content": [
+        {
+          "type": "media",
+          "attrs": {
+            "type": "external",
+            "url": "https://cdn.example.com/diagram.png",
+            "alt": "Diagram"
+          }
+        }
+      ]
+    },
+    {
+      "type": "extension",
+      "attrs": {
+        "extensionType": "com.atlassian.confluence.macro.core",
+        "extensionKey": "viewpdf",
+        "parameters": {
+          "macroParams": {
+            "name": {
+              "value": "guide.pdf"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "extension",
+      "attrs": {
+        "extensionType": "com.atlassian.confluence.macro.core",
+        "extensionKey": "viewpdf",
+        "parameters": {
+          "macroParams": {
+            "name": {
+              "value": "guide.pdf"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,3 @@
+- [ ] Main task
+
+  with detail

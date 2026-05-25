@@ -1,0 +1,13 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "paragraph",
+      "marks": [ { "type": "indentation", "attrs": { "level": 1 } } ],
+      "content": [
+        { "type": "text", "text": "Indented one level." }
+      ]
+    }
+  ]
+}

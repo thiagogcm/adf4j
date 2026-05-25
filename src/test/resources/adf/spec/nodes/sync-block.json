@@ -1,0 +1,10 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "syncBlock",
+      "attrs": { "resourceId": "abc-123", "localId": "sync-1" }
+    }
+  ]
+}

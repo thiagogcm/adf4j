@@ -1,0 +1,14 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "paragraph",
+      "content": [
+        { "type": "text", "text": "Assigned to " },
+        { "type": "mention", "attrs": { "id": "user-1", "text": "@Ada" } },
+        { "type": "text", "text": "." }
+      ]
+    }
+  ]
+}

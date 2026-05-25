@@ -1,0 +1,61 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "heading",
+      "attrs": {
+        "level": 1
+      },
+      "content": [
+        {
+          "type": "mediaInline",
+          "attrs": {
+            "width": 512,
+            "height": 512,
+            "alt": "Reporting icon",
+            "id": "children-reporting-icon",
+            "type": "image"
+          }
+        },
+        {
+          "type": "text",
+          "text": "Reporting Specifications",
+          "marks": [
+            {
+              "type": "textColor",
+              "attrs": {
+                "color": "#0747a6"
+              }
+            },
+            {
+              "type": "strong"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "extension",
+      "attrs": {
+        "layout": "default",
+        "extensionType": "com.atlassian.confluence.macro.core",
+        "extensionKey": "children",
+        "parameters": {
+          "macroParams": {
+            "allChildren": {
+              "value": "true"
+            }
+          },
+          "macroMetadata": {
+            "title": "Child pages"
+          }
+        },
+        "localId": "children-reporting"
+      }
+    },
+    {
+      "type": "paragraph"
+    }
+  ]
+}

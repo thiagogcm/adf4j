@@ -1,0 +1,12 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "codeBlock",
+      "content": [
+        { "type": "text", "text": "no language\nsecond line" }
+      ]
+    }
+  ]
+}

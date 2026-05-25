@@ -1,0 +1,109 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "type": "text",
+          "text": "Participants can be consulted through the directory export."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "type": "text",
+          "text": "Directory file",
+          "marks": [
+            {
+              "type": "link",
+              "attrs": {
+                "href": "https://data.directory.openbankingbrasil.org.br/participants"
+              }
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": " and registration schema ",
+          "marks": [
+            {
+              "type": "link",
+              "attrs": {
+                "href": "https://github.com/OpenBanking-Brasil/specs-directory/blob/main/swagger_participants.yaml"
+              }
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": "remain available for discovery."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "attrs": {
+        "level": 2
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Participant registration guide",
+          "marks": [
+            {
+              "type": "strong"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "type": "text",
+          "text": "Open the PDF instructions using the "
+        },
+        {
+          "type": "text",
+          "text": "attachment link",
+          "marks": [
+            {
+              "type": "link",
+              "attrs": {
+                "href": "https://openfinancebrasil.atlassian.net/wiki/download/attachments/7996604/Open_Finance_cadastro_diretorio_passo_a_passo.pdf?api=v2"
+              }
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": "."
+        }
+      ]
+    },
+    {
+      "type": "extension",
+      "attrs": {
+        "layout": "default",
+        "extensionType": "com.atlassian.confluence.macro.core",
+        "extensionKey": "viewpdf",
+        "parameters": {
+          "macroParams": {
+            "name": {
+              "value": "Open_Finance_cadastro_diretorio_passo_a_passo.pdf"
+            }
+          },
+          "macroMetadata": {
+            "title": "PDF"
+          }
+        },
+        "localId": "lista-participantes-pdf"
+      }
+    }
+  ]
+}

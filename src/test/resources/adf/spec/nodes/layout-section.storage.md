@@ -1,0 +1,3 @@
+Wide column.
+
+Narrow column.

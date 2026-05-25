@@ -1,0 +1,16 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "heading",
+      "attrs": { "level": 2 },
+      "content": [
+        { "type": "text", "text": "Greeting from " },
+        { "type": "mention", "attrs": { "id": "u1", "text": "@Lin" } },
+        { "type": "text", "text": " on " },
+        { "type": "date", "attrs": { "timestamp": "1745366400000" } }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "table",
+      "content": [
+        {
+          "type": "tableRow",
+          "content": [
+            {
+              "type": "tableCell",
+              "attrs": { "colspan": 2 },
+              "content": [
+                {
+                  "type": "bulletList",
+                  "content": [
+                    {
+                      "type": "listItem",
+                      "content": [
+                        { "type": "paragraph", "content": [ { "type": "text", "text": "First" } ] }
+                      ]
+                    },
+                    {
+                      "type": "listItem",
+                      "content": [
+                        { "type": "paragraph", "content": [ { "type": "text", "text": "Second" } ] }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

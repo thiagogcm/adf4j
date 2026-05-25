@@ -1,0 +1,2 @@
+- [decision:DECIDED] Ship it.
+- [decision:UNDECIDED] Still discussing.

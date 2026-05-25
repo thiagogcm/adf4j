@@ -1,0 +1,2 @@
+> [!TIP]
+> Try this trick.

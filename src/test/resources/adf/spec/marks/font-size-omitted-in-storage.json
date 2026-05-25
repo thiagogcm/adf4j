@@ -1,0 +1,17 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "expand",
+      "attrs": { "title": "Notes" },
+      "content": [
+        {
+          "type": "paragraph",
+          "marks": [ { "type": "fontSize", "attrs": { "fontSize": "small" } } ],
+          "content": [ { "type": "text", "text": "Footnote text" } ]
+        }
+      ]
+    }
+  ]
+}

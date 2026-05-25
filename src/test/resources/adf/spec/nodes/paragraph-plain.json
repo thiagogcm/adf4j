@@ -1,0 +1,18 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "paragraph",
+      "content": [
+        { "type": "text", "text": "Hello, ADF." }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        { "type": "text", "text": "A second paragraph stays separated by a blank line." }
+      ]
+    }
+  ]
+}

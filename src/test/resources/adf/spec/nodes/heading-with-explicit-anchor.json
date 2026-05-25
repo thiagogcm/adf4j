@@ -1,0 +1,25 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "heading",
+      "attrs": { "level": 2 },
+      "content": [
+        { "type": "text", "text": "Custom anchor" },
+        {
+          "type": "inlineExtension",
+          "attrs": {
+            "extensionType": "com.atlassian.confluence.macro.core",
+            "extensionKey": "anchor",
+            "parameters": {
+              "macroParams": {
+                "": { "value": "custom-id" }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

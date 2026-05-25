@@ -1,0 +1,12 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    { "type": "heading", "attrs": { "level": 1 }, "content": [ { "type": "text", "text": "Level one" } ] },
+    { "type": "heading", "attrs": { "level": 2 }, "content": [ { "type": "text", "text": "Level two" } ] },
+    { "type": "heading", "attrs": { "level": 3 }, "content": [ { "type": "text", "text": "Level three" } ] },
+    { "type": "heading", "attrs": { "level": 4 }, "content": [ { "type": "text", "text": "Level four" } ] },
+    { "type": "heading", "attrs": { "level": 5 }, "content": [ { "type": "text", "text": "Level five" } ] },
+    { "type": "heading", "attrs": { "level": 6 }, "content": [ { "type": "text", "text": "Level six" } ] }
+  ]
+}

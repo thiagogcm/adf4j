@@ -1,0 +1,22 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "decisionList",
+      "attrs": { "localId": "decisions-1" },
+      "content": [
+        {
+          "type": "decisionItem",
+          "attrs": { "localId": "d1", "state": "DECIDED" },
+          "content": [ { "type": "text", "text": "Ship it." } ]
+        },
+        {
+          "type": "decisionItem",
+          "attrs": { "localId": "d2", "state": "UNDECIDED" },
+          "content": [ { "type": "text", "text": "Still discussing." } ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "mediaGroup",
+      "content": [
+        { "type": "media", "attrs": { "type": "external", "url": "https://example.com/a.png", "alt": "A" } },
+        { "type": "media", "attrs": { "type": "external", "url": "https://example.com/b.png", "alt": "B" } }
+      ]
+    }
+  ]
+}

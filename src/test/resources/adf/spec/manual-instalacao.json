@@ -1,0 +1,94 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "type": "text",
+          "text": "This guide describes the installation flow for the quality engine."
+        }
+      ]
+    },
+    {
+      "type": "extension",
+      "attrs": {
+        "layout": "default",
+        "extensionType": "com.atlassian.confluence.macro.core",
+        "extensionKey": "toc",
+        "parameters": {
+          "macroParams": {
+            "minLevel": {
+              "value": "1"
+            },
+            "maxLevel": {
+              "value": "1"
+            },
+            "type": {
+              "value": "list"
+            }
+          },
+          "macroMetadata": {
+            "title": "Table of contents"
+          }
+        },
+        "localId": "toc-installation"
+      }
+    },
+    {
+      "type": "heading",
+      "attrs": {
+        "level": 1
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Installation"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "type": "text",
+          "text": "Clone the repository locally before running the setup."
+        }
+      ]
+    },
+    {
+      "type": "codeBlock",
+      "content": [
+        {
+          "type": "text",
+          "text": "git clone https://github.com/example/sample-client.git"
+        }
+      ]
+    },
+    {
+      "type": "mediaSingle",
+      "attrs": {
+        "layout": "center",
+        "width": 1320,
+        "widthType": "pixel"
+      },
+      "content": [
+        {
+          "type": "media",
+          "attrs": {
+            "__fileSize": 142527,
+            "__fileMimeType": "image/png",
+            "width": 425,
+            "id": "fixture-installation-image",
+            "collection": "contentId-fixture",
+            "type": "file",
+            "__fileName": "installation.png",
+            "height": 86,
+            "alt": "Installation overview"
+          }
+        }
+      ]
+    }
+  ]
+}

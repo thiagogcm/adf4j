@@ -1,0 +1,21 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "mediaSingle",
+      "attrs": { "layout": "center" },
+      "content": [
+        {
+          "type": "media",
+          "attrs": {
+            "type": "file",
+            "id": "file-abc",
+            "collection": "contentId-1",
+            "alt": "Local image"
+          }
+        }
+      ]
+    }
+  ]
+}

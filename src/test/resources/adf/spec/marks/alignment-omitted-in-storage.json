@@ -1,0 +1,20 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "paragraph",
+      "marks": [ { "type": "alignment", "attrs": { "align": "center" } } ],
+      "content": [
+        { "type": "text", "text": "Centered." }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "marks": [ { "type": "alignment", "attrs": { "align": "end" } } ],
+      "content": [
+        { "type": "text", "text": "Aligned to end." }
+      ]
+    }
+  ]
+}

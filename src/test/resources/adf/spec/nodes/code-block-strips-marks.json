@@ -1,0 +1,14 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "codeBlock",
+      "attrs": { "language": "shell" },
+      "content": [
+        { "type": "text", "text": "echo " },
+        { "type": "text", "text": "boom", "marks": [ { "type": "strong" } ] }
+      ]
+    }
+  ]
+}

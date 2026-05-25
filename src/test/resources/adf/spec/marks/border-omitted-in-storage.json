@@ -1,0 +1,38 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "paragraph",
+      "content": [
+        { "type": "text", "text": "Boxed " },
+        {
+          "type": "mediaInline",
+          "attrs": {
+            "type": "file",
+            "id": "media-bordered",
+            "collection": "contentId-1",
+            "alt": "Bordered"
+          },
+          "marks": [ { "type": "border", "attrs": { "size": 2, "color": "#000000" } } ]
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        { "type": "text", "text": "Out of range " },
+        {
+          "type": "mediaInline",
+          "attrs": {
+            "type": "file",
+            "id": "media-clamped",
+            "collection": "contentId-1",
+            "alt": "Clamped"
+          },
+          "marks": [ { "type": "border", "attrs": { "size": 7, "color": "#0000ff" } } ]
+        }
+      ]
+    }
+  ]
+}

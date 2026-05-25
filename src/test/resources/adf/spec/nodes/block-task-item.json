@@ -1,0 +1,20 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "taskList",
+      "attrs": { "localId": "tl-1" },
+      "content": [
+        {
+          "type": "blockTaskItem",
+          "attrs": { "localId": "bt-1", "state": "TODO" },
+          "content": [
+            { "type": "paragraph", "content": [ { "type": "text", "text": "Main task" } ] },
+            { "type": "paragraph", "content": [ { "type": "text", "text": "with detail" } ] }
+          ]
+        }
+      ]
+    }
+  ]
+}

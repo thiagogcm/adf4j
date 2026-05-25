@@ -1,0 +1,13 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "codeBlock",
+      "attrs": { "language": "java" },
+      "content": [
+        { "type": "text", "text": "var greeting = \"Hello, ADF\";" }
+      ]
+    }
+  ]
+}

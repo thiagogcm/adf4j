@@ -1,0 +1,13 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "paragraph",
+      "content": [
+        { "type": "text", "text": "Result: " },
+        { "type": "status", "attrs": { "text": "Blocked", "color": "red" } }
+      ]
+    }
+  ]
+}
