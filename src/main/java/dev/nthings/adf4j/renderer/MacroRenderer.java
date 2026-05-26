@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
-import dev.nthings.adf4j.AdfJson;
 import dev.nthings.adf4j.HeadingReference;
 import dev.nthings.adf4j.MarkdownLinkListRenderer;
 import dev.nthings.adf4j.RenderOptions;
@@ -16,6 +15,8 @@ import dev.nthings.adf4j.ast.InlineExtension;
 import dev.nthings.adf4j.ast.MacroParams;
 import dev.nthings.adf4j.ast.SyncBlock;
 import dev.nthings.adf4j.ast.Text;
+import dev.nthings.adf4j.internal.AttachmentReferences;
+import dev.nthings.adf4j.internal.ConfluenceSupport;
 import dev.nthings.adf4j.model.ExcerptKey;
 
 import org.slf4j.Logger;
@@ -53,7 +54,7 @@ public final class MacroRenderer {
       RenderContext context,
       AdfRenderer adfRenderer,
       boolean inline) {
-    if (!AdfJson.isConfluenceMacroExtension(extensionType)) {
+    if (!ConfluenceSupport.isConfluenceMacroExtension(extensionType)) {
       return renderExtensionPlaceholder(extensionType, extensionKey);
     }
 
@@ -72,7 +73,7 @@ public final class MacroRenderer {
 
   List<String> renderBodiedExtension(
       BodiedExtension node, RenderContext context, AdfRenderer adfRenderer) {
-    if (AdfJson.isConfluenceMacroExtension(node.extensionType())
+    if (ConfluenceSupport.isConfluenceMacroExtension(node.extensionType())
         && "excerpt".equals(node.extensionKey())) {
       return adfRenderer.renderBlocks(node.content(), context);
     }
@@ -121,7 +122,7 @@ public final class MacroRenderer {
         return null;
       }
 
-      if (!AdfJson.isConfluenceMacroExtension(extension.extensionType())
+      if (!ConfluenceSupport.isConfluenceMacroExtension(extension.extensionType())
           || !"excerpt-include".equals(extension.extensionKey())) {
         return null;
       }
@@ -232,7 +233,7 @@ public final class MacroRenderer {
     if (context.strategy().isStorage()) {
       return "";
     }
-    return HtmlFragments.anchor(AdfJson.anchorId(macroParams));
+    return HtmlFragments.anchor(ConfluenceSupport.anchorId(macroParams));
   }
 
   private String renderIframeMacro(MacroParams macroParams) {
@@ -245,7 +246,7 @@ public final class MacroRenderer {
 
   private String renderViewPdfMacro(MacroParams macroParams, RenderContext context) {
     var name = macroParams.value("name");
-    var attachmentReference = AdfJson.resolveAttachmentReference(macroParams, context.attachmentReferencesByTitle());
+    var attachmentReference = AttachmentReferences.resolve(macroParams, context.attachmentReferencesByTitle());
     if (attachmentReference == null
         || attachmentReference.fileId() == null
         || attachmentReference.fileId().isBlank()) {

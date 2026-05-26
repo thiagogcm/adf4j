@@ -4,10 +4,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 import dev.nthings.adf4j.ast.AdfBlock;
+import dev.nthings.adf4j.internal.AttachmentReferences;
 import dev.nthings.adf4j.model.ExcerptKey;
 import dev.nthings.adf4j.model.PageLinkResolver;
 import dev.nthings.adf4j.model.UnknownNodePolicy;
@@ -43,15 +43,6 @@ public record RenderOptions(
   public static RenderOptions defaults(String pageTitle) {
     return new RenderOptions(
         pageTitle, null, Map.of(), null, null, UnknownNodePolicy.PLACEHOLDER, Map.of(), List.of());
-  }
-
-  public static String normalizeAttachmentTitle(String title) {
-    if (title == null)
-      return null;
-    var stripped = title.strip();
-    if (stripped.isEmpty())
-      return null;
-    return stripped.toLowerCase(Locale.ROOT);
   }
 
   public RenderOptions withPageId(String pageId) {
@@ -119,7 +110,7 @@ public record RenderOptions(
           continue;
         }
 
-        var normalizedTitle = normalizeAttachmentTitle(attachmentReference.title());
+        var normalizedTitle = AttachmentReferences.normalizeTitle(attachmentReference.title());
         if (normalizedTitle == null || attachmentReference.fileId() == null || attachmentReference.fileId().isBlank()) {
           continue;
         }
@@ -150,7 +141,7 @@ public record RenderOptions(
   }
 
   public AttachmentReference attachmentReference(String title) {
-    var normalizedTitle = normalizeAttachmentTitle(title);
+    var normalizedTitle = AttachmentReferences.normalizeTitle(title);
     if (normalizedTitle == null) {
       return null;
     }

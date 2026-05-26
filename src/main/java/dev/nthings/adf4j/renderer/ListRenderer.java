@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import dev.nthings.adf4j.AdfJson;
+import dev.nthings.adf4j.internal.MarkdownText;
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.BlockTaskItem;
 import dev.nthings.adf4j.ast.BulletList;
@@ -158,11 +158,11 @@ public final class ListRenderer {
 
     if (block instanceof BulletList bulletList) {
       var nested = renderBulletList(bulletList, childContext, adfRenderer);
-      return nested.isBlank() ? List.of() : AdfJson.splitLines(nested);
+      return nested.isBlank() ? List.of() : MarkdownText.splitLines(nested);
     }
     if (block instanceof OrderedList orderedList) {
       var nested = renderOrderedList(orderedList, childContext, adfRenderer);
-      return nested.isBlank() ? List.of() : AdfJson.splitLines(nested);
+      return nested.isBlank() ? List.of() : MarkdownText.splitLines(nested);
     }
 
     var text = adfRenderer.joinBlocks(adfRenderer.renderBlock(block, childContext));
@@ -172,7 +172,7 @@ public final class ListRenderer {
 
     var indent = RenderBuffer.LIST_INDENT.repeat(context.listDepth() + 1);
     var lines = new ArrayList<String>();
-    for (var line : AdfJson.splitLines(text)) {
+    for (var line : MarkdownText.splitLines(text)) {
       lines.add(line.isBlank() ? indent.stripTrailing() : indent + line);
     }
     return lines;
@@ -211,7 +211,7 @@ public final class ListRenderer {
       return List.of(prefix.stripTrailing());
     }
 
-    var parts = AdfJson.splitLines(text);
+    var parts = MarkdownText.splitLines(text);
     var lines = new ArrayList<String>(parts.size());
     lines.add(prefix + parts.getFirst());
     var indent = RenderBuffer.LIST_INDENT.repeat(indentDepth);

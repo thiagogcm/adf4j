@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-import dev.nthings.adf4j.AdfJson;
+import dev.nthings.adf4j.internal.MarkdownText;
 
 final class RenderBuffer {
 
@@ -33,7 +33,7 @@ final class RenderBuffer {
 
     var indent = indentUnit.repeat(Math.max(0, depth));
     var lines = new ArrayList<String>();
-    for (var line : AdfJson.splitLines(value)) {
+    for (var line : MarkdownText.splitLines(value)) {
       lines.add(line.isBlank() ? indent.stripTrailing() : indent + line);
     }
     return lines;

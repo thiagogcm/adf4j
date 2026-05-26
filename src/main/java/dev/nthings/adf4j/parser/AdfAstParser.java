@@ -5,7 +5,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Objects;
 
-import dev.nthings.adf4j.AdfJson;
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.ast.AdfInline;
@@ -110,25 +109,25 @@ public final class AdfAstParser {
   }
 
   public AdfBlock parseBlock(JsonNode node) {
-    var type = AdfJson.text(node, "type", "");
+    var type = JsonFields.text(node, "type", "");
     return switch (type) {
       case "paragraph" -> new Paragraph(parseInlines(node.get("content")), parseMarks(node.get("marks")));
       case "heading" -> parseHeading(node);
       case "blockquote" -> new Blockquote(parseBlocks(node.get("content")));
       case "codeBlock" -> parseCodeBlock(node);
-      case "panel" -> new Panel(AdfJson.text(node.path("attrs"), "panelType"), parseBlocks(node.get("content")));
+      case "panel" -> new Panel(JsonFields.text(node.path("attrs"), "panelType"), parseBlocks(node.get("content")));
       case "rule" -> new Rule();
       case "bulletList" -> new BulletList(parseListItems(node.get("content")));
       case "orderedList" -> parseOrderedList(node);
       case "listItem" -> new ListItem(parseBlocks(node.get("content")));
       case "taskList" -> new TaskList(parseTaskListItems(node.get("content")));
       case "taskItem" -> new TaskItem(
-          AdfJson.text(node.path("attrs"), "state"), parseInlines(node.get("content")));
+          JsonFields.text(node.path("attrs"), "state"), parseInlines(node.get("content")));
       case "blockTaskItem" -> new BlockTaskItem(
-          AdfJson.text(node.path("attrs"), "state"), parseBlocks(node.get("content")));
+          JsonFields.text(node.path("attrs"), "state"), parseBlocks(node.get("content")));
       case "decisionList" -> new DecisionList(parseDecisionItems(node.get("content")));
       case "decisionItem" -> new DecisionItem(
-          AdfJson.text(node.path("attrs"), "state"), parseInlines(node.get("content")));
+          JsonFields.text(node.path("attrs"), "state"), parseInlines(node.get("content")));
       case "table" -> parseTable(node);
       case "tableRow" -> new TableRow(parseTableCells(node.get("content")));
       case "tableCell" -> parseTableCell(node, false);
@@ -137,17 +136,17 @@ public final class AdfAstParser {
       case "mediaGroup" -> new MediaGroup(parseMediaBlocks(node.get("content")));
       case "media" -> new Media(parseMediaAttrs(node.path("attrs")), parseMarks(node.get("marks")));
       case "caption" -> new Caption(parseInlines(node.get("content")));
-      case "expand" -> new Expand(AdfJson.text(node.path("attrs"), "title", ""), parseBlocks(node.get("content")));
+      case "expand" -> new Expand(JsonFields.text(node.path("attrs"), "title", ""), parseBlocks(node.get("content")));
       case "nestedExpand" -> new NestedExpand(
-          AdfJson.text(node.path("attrs"), "title", ""), parseBlocks(node.get("content")));
+          JsonFields.text(node.path("attrs"), "title", ""), parseBlocks(node.get("content")));
       case "layoutSection" -> new LayoutSection(parseLayoutColumns(node.get("content")));
       case "layoutColumn" -> new LayoutColumn(
           node.path("attrs").path("width").asInt(0), parseBlocks(node.get("content")));
       case "extension" -> parseExtension(node);
       case "bodiedExtension" -> parseBodiedExtension(node);
-      case "syncBlock" -> new SyncBlock(AdfJson.text(node.path("attrs"), "resourceId"));
+      case "syncBlock" -> new SyncBlock(JsonFields.text(node.path("attrs"), "resourceId"));
       case "bodiedSyncBlock" -> new BodiedSyncBlock(
-          AdfJson.text(node.path("attrs"), "resourceId"), parseBlocks(node.get("content")));
+          JsonFields.text(node.path("attrs"), "resourceId"), parseBlocks(node.get("content")));
       case "blockCard" -> new BlockCard(parseCardAttrs(node.path("attrs")));
       case "embedCard" -> new EmbedCard(parseCardAttrs(node.path("attrs")));
       default -> new UnknownBlock(type, rawJson(node));
@@ -169,31 +168,31 @@ public final class AdfAstParser {
   }
 
   public AdfInline parseInline(JsonNode node) {
-    var type = AdfJson.text(node, "type", "");
+    var type = JsonFields.text(node, "type", "");
     return switch (type) {
-      case "text" -> new Text(AdfJson.text(node, "text", ""), parseMarks(node.get("marks")));
+      case "text" -> new Text(JsonFields.text(node, "text", ""), parseMarks(node.get("marks")));
       case "hardBreak" -> new HardBreak();
       case "inlineCard" -> new InlineCard(parseCardAttrs(node.path("attrs")));
       case "mediaInline" -> new MediaInline(parseMediaAttrs(node.path("attrs")), parseMarks(node.get("marks")));
       case "date" -> new Date(
-          AdfJson.text(node.path("attrs"), "timestamp"),
-          AdfJson.text(node.path("attrs"), "localId"));
+          JsonFields.text(node.path("attrs"), "timestamp"),
+          JsonFields.text(node.path("attrs"), "localId"));
       case "emoji" -> new Emoji(
-          AdfJson.text(node.path("attrs"), "id"),
-          AdfJson.text(node.path("attrs"), "text"),
-          AdfJson.text(node.path("attrs"), "shortName"));
+          JsonFields.text(node.path("attrs"), "id"),
+          JsonFields.text(node.path("attrs"), "text"),
+          JsonFields.text(node.path("attrs"), "shortName"));
       case "mention" -> new Mention(
-          AdfJson.text(node.path("attrs"), "id"),
+          JsonFields.text(node.path("attrs"), "id"),
           mentionText(node.path("attrs")),
-          AdfJson.text(node.path("attrs"), "userType"),
-          AdfJson.text(node.path("attrs"), "accessLevel"),
-          AdfJson.text(node.path("attrs"), "localId"));
-      case "placeholder" -> new Placeholder(AdfJson.text(node.path("attrs"), "text", ""));
+          JsonFields.text(node.path("attrs"), "userType"),
+          JsonFields.text(node.path("attrs"), "accessLevel"),
+          JsonFields.text(node.path("attrs"), "localId"));
+      case "placeholder" -> new Placeholder(JsonFields.text(node.path("attrs"), "text", ""));
       case "status" -> new Status(
-          AdfJson.text(node.path("attrs"), "text"),
-          AdfJson.text(node.path("attrs"), "color"),
-          AdfJson.text(node.path("attrs"), "style"),
-          AdfJson.text(node.path("attrs"), "localId"));
+          JsonFields.text(node.path("attrs"), "text"),
+          JsonFields.text(node.path("attrs"), "color"),
+          JsonFields.text(node.path("attrs"), "style"),
+          JsonFields.text(node.path("attrs"), "localId"));
       case "inlineExtension" -> parseInlineExtension(node);
       default -> new UnknownInline(type, rawJson(node));
     };
@@ -214,7 +213,7 @@ public final class AdfAstParser {
   }
 
   public AdfMark parseMark(JsonNode node) {
-    var type = AdfJson.text(node, "type", "");
+    var type = JsonFields.text(node, "type", "");
     var attrs = node.path("attrs");
     return switch (type) {
       case "strong" -> new Strong();
@@ -222,17 +221,17 @@ public final class AdfAstParser {
       case "code" -> new Code();
       case "strike" -> new Strike();
       case "underline" -> new Underline();
-      case "subsup" -> new SubSup(AdfJson.text(attrs, "type"));
+      case "subsup" -> new SubSup(JsonFields.text(attrs, "type"));
       case "link" -> new Link(
-          AdfJson.text(attrs, "href"),
-          AdfJson.text(attrs, "title"),
+          JsonFields.text(attrs, "href"),
+          JsonFields.text(attrs, "title"),
           parseConfluenceMetadata(attrs.path("__confluenceMetadata")));
-      case "textColor" -> new TextColor(AdfJson.text(attrs, "color"));
-      case "backgroundColor" -> new BackgroundColor(AdfJson.text(attrs, "color"));
-      case "alignment" -> new Alignment(AdfJson.text(attrs, "align"));
+      case "textColor" -> new TextColor(JsonFields.text(attrs, "color"));
+      case "backgroundColor" -> new BackgroundColor(JsonFields.text(attrs, "color"));
+      case "alignment" -> new Alignment(JsonFields.text(attrs, "align"));
       case "indentation" -> new Indentation(attrs.path("level").asInt(0));
-      case "fontSize" -> new FontSize(AdfJson.text(attrs, "fontSize"));
-      case "border" -> new Border(AdfJson.text(attrs, "color"), AdfJson.text(attrs, "size"));
+      case "fontSize" -> new FontSize(JsonFields.text(attrs, "fontSize"));
+      case "border" -> new Border(JsonFields.text(attrs, "color"), JsonFields.text(attrs, "size"));
       case "annotation" -> new Annotation();
       case "breakout" -> new Breakout();
       case "fragment" -> new Fragment();
@@ -268,17 +267,17 @@ public final class AdfAstParser {
   }
 
   private Heading parseHeading(JsonNode node) {
-    var level = AdfJson.clampHeadingLevel(node.path("attrs").path("level").asInt(1));
+    var level = Math.clamp(node.path("attrs").path("level").asInt(1), 1, 6);
     return new Heading(level, parseInlines(node.get("content")), parseMarks(node.get("marks")));
   }
 
   private CodeBlock parseCodeBlock(JsonNode node) {
-    var language = AdfJson.text(node.path("attrs"), "language");
+    var language = JsonFields.text(node.path("attrs"), "language");
     var builder = new StringBuilder();
     var content = node.get("content");
     if (content != null && content.isArray()) {
       for (var child : content) {
-        builder.append(AdfJson.text(child, "text", ""));
+        builder.append(JsonFields.text(child, "text", ""));
       }
     }
     return new CodeBlock(language, builder.toString());
@@ -293,7 +292,7 @@ public final class AdfAstParser {
       if (child == null || !child.isObject()) {
         continue;
       }
-      if (!"listItem".equals(AdfJson.text(child, "type"))) {
+      if (!"listItem".equals(JsonFields.text(child, "type"))) {
         continue;
       }
       items.add(new ListItem(parseBlocks(child.get("content"))));
@@ -315,7 +314,7 @@ public final class AdfAstParser {
       if (child == null || !child.isObject()) {
         continue;
       }
-      var type = AdfJson.text(child, "type", "");
+      var type = JsonFields.text(child, "type", "");
       if (!"taskItem".equals(type) && !"blockTaskItem".equals(type)) {
         continue;
       }
@@ -333,12 +332,12 @@ public final class AdfAstParser {
       if (child == null || !child.isObject()) {
         continue;
       }
-      if (!"decisionItem".equals(AdfJson.text(child, "type"))) {
+      if (!"decisionItem".equals(JsonFields.text(child, "type"))) {
         continue;
       }
       items.add(
           new DecisionItem(
-              AdfJson.text(child.path("attrs"), "state"), parseInlines(child.get("content"))));
+              JsonFields.text(child.path("attrs"), "state"), parseInlines(child.get("content"))));
     }
     return items;
   }
@@ -354,7 +353,7 @@ public final class AdfAstParser {
       if (rowNode == null || !rowNode.isObject()) {
         continue;
       }
-      if (!"tableRow".equals(AdfJson.text(rowNode, "type"))) {
+      if (!"tableRow".equals(JsonFields.text(rowNode, "type"))) {
         continue;
       }
       rows.add(new TableRow(parseTableCells(rowNode.get("content"))));
@@ -371,7 +370,7 @@ public final class AdfAstParser {
       if (cellNode == null || !cellNode.isObject()) {
         continue;
       }
-      var type = AdfJson.text(cellNode, "type", "");
+      var type = JsonFields.text(cellNode, "type", "");
       if (!"tableCell".equals(type) && !"tableHeader".equals(type)) {
         continue;
       }
@@ -384,15 +383,15 @@ public final class AdfAstParser {
     var attrs = node.path("attrs");
     var colspan = attrs.path("colspan").asInt(1);
     var rowspan = attrs.path("rowspan").asInt(1);
-    var background = AdfJson.text(attrs, "background");
+    var background = JsonFields.text(attrs, "background");
     return new TableCell(header, colspan, rowspan, background, parseBlocks(node.get("content")));
   }
 
   private MediaSingle parseMediaSingle(JsonNode node) {
     var attrs = node.path("attrs");
-    var layout = AdfJson.text(attrs, "layout");
-    var widthType = AdfJson.text(attrs, "widthType");
-    var width = AdfJson.text(attrs, "width");
+    var layout = JsonFields.text(attrs, "layout");
+    var widthType = JsonFields.text(attrs, "widthType");
+    var width = JsonFields.text(attrs, "width");
     return new MediaSingle(layout, widthType, width, parseMediaBlocks(node.get("content")));
   }
 
@@ -419,7 +418,7 @@ public final class AdfAstParser {
       if (child == null || !child.isObject()) {
         continue;
       }
-      if (!"layoutColumn".equals(AdfJson.text(child, "type"))) {
+      if (!"layoutColumn".equals(JsonFields.text(child, "type"))) {
         continue;
       }
       var width = child.path("attrs").path("width").asInt(0);
@@ -431,16 +430,16 @@ public final class AdfAstParser {
   private Extension parseExtension(JsonNode node) {
     var attrs = node.path("attrs");
     return new Extension(
-        AdfJson.text(attrs, "extensionType"),
-        AdfJson.text(attrs, "extensionKey"),
+        JsonFields.text(attrs, "extensionType"),
+        JsonFields.text(attrs, "extensionKey"),
         parseMacroParams(attrs.path("parameters").path("macroParams")));
   }
 
   private BodiedExtension parseBodiedExtension(JsonNode node) {
     var attrs = node.path("attrs");
     return new BodiedExtension(
-        AdfJson.text(attrs, "extensionType"),
-        AdfJson.text(attrs, "extensionKey"),
+        JsonFields.text(attrs, "extensionType"),
+        JsonFields.text(attrs, "extensionKey"),
         parseMacroParams(attrs.path("parameters").path("macroParams")),
         parseBlocks(node.get("content")));
   }
@@ -448,8 +447,8 @@ public final class AdfAstParser {
   private InlineExtension parseInlineExtension(JsonNode node) {
     var attrs = node.path("attrs");
     return new InlineExtension(
-        AdfJson.text(attrs, "extensionType"),
-        AdfJson.text(attrs, "extensionKey"),
+        JsonFields.text(attrs, "extensionType"),
+        JsonFields.text(attrs, "extensionKey"),
         parseMacroParams(attrs.path("parameters").path("macroParams")));
   }
 
@@ -457,10 +456,10 @@ public final class AdfAstParser {
     if (attrs == null || !attrs.isObject()) {
       return new CardAttrs(null, null, null, null, null);
     }
-    var url = AdfJson.text(attrs, "url");
-    var datasourceId = AdfJson.text(attrs.path("datasource"), "id");
-    var localId = AdfJson.text(attrs, "localId");
-    var title = AdfJson.text(attrs.path("data"), "title");
+    var url = JsonFields.text(attrs, "url");
+    var datasourceId = JsonFields.text(attrs.path("datasource"), "id");
+    var localId = JsonFields.text(attrs, "localId");
+    var title = JsonFields.text(attrs.path("data"), "title");
     var confluenceMetadata = parseConfluenceMetadata(attrs.path("__confluenceMetadata"));
     return new CardAttrs(url, datasourceId, localId, title, confluenceMetadata);
   }
@@ -470,18 +469,18 @@ public final class AdfAstParser {
       return new MediaAttrs(null, null, null, null, null, null, null, null, null, null, null, null);
     }
     return new MediaAttrs(
-        AdfJson.text(attrs, "type"),
-        AdfJson.text(attrs, "id"),
-        AdfJson.text(attrs, "localId"),
-        AdfJson.text(attrs, "url"),
-        AdfJson.text(attrs, "collection"),
-        AdfJson.text(attrs, "alt"),
-        AdfJson.text(attrs, "width"),
-        AdfJson.text(attrs, "height"),
-        AdfJson.text(attrs, "mediaType"),
-        AdfJson.text(attrs, "__fileMimeType"),
-        AdfJson.text(attrs, "__fileName"),
-        AdfJson.text(attrs, "name"));
+        JsonFields.text(attrs, "type"),
+        JsonFields.text(attrs, "id"),
+        JsonFields.text(attrs, "localId"),
+        JsonFields.text(attrs, "url"),
+        JsonFields.text(attrs, "collection"),
+        JsonFields.text(attrs, "alt"),
+        JsonFields.text(attrs, "width"),
+        JsonFields.text(attrs, "height"),
+        JsonFields.text(attrs, "mediaType"),
+        JsonFields.text(attrs, "__fileMimeType"),
+        JsonFields.text(attrs, "__fileName"),
+        JsonFields.text(attrs, "name"));
   }
 
   private ConfluenceMetadata parseConfluenceMetadata(JsonNode node) {
@@ -489,14 +488,14 @@ public final class AdfAstParser {
       return ConfluenceMetadata.empty();
     }
     return new ConfluenceMetadata(
-        AdfJson.text(node, "linkType"),
-        AdfJson.text(node, "pageId"),
-        AdfJson.text(node, "contentId"),
-        AdfJson.text(node, "id"));
+        JsonFields.text(node, "linkType"),
+        JsonFields.text(node, "pageId"),
+        JsonFields.text(node, "contentId"),
+        JsonFields.text(node, "id"));
   }
 
   private String mentionText(JsonNode attrs) {
-    var raw = AdfJson.text(attrs, "text");
+    var raw = JsonFields.text(attrs, "text");
     if (raw == null) {
       return "";
     }

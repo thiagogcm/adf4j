@@ -8,13 +8,14 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-import dev.nthings.adf4j.AdfJson;
 import dev.nthings.adf4j.AttachmentReference;
 import dev.nthings.adf4j.ContentMetadata;
 import dev.nthings.adf4j.ExternalReference;
 import dev.nthings.adf4j.HeadingReference;
 import dev.nthings.adf4j.PageReference;
 import dev.nthings.adf4j.RenderOptions;
+import dev.nthings.adf4j.internal.AttachmentReferences;
+import dev.nthings.adf4j.internal.ConfluenceSupport;
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.ast.AdfInline;
@@ -201,7 +202,7 @@ public final class AdfContentMetadataExtractor {
   }
 
   private String resolvePageNodeId(String normalizedUrl, ConfluenceMetadata metadata) {
-    var inferredNodeId = AdfJson.confluencePageId(normalizedUrl);
+    var inferredNodeId = ConfluenceSupport.pageId(normalizedUrl);
     var metadataNodeId = metadata == null
         ? null
         : Stream.of(
@@ -276,7 +277,7 @@ public final class AdfContentMetadataExtractor {
     }
 
     var attachmentReference =
-        AdfJson.resolveAttachmentReference(macroParams, state.attachmentReferencesByTitle);
+        AttachmentReferences.resolve(macroParams, state.attachmentReferencesByTitle);
     if (attachmentReference == null
         || attachmentReference.fileId() == null
         || attachmentReference.fileId().isBlank()) {

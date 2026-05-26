@@ -5,8 +5,9 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.stream.Stream;
 
-import dev.nthings.adf4j.AdfJson;
 import dev.nthings.adf4j.HeadingReference;
+import dev.nthings.adf4j.internal.ConfluenceSupport;
+import dev.nthings.adf4j.internal.MarkdownText;
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.ast.AdfInline;
@@ -60,7 +61,7 @@ public final class AdfHeadingCollector {
     var headingsByNode = new IdentityHashMap<Heading, HeadingReference>();
 
     for (var heading : walkHeadings(document)) {
-      var level = AdfJson.clampHeadingLevel(heading.level());
+      var level = MarkdownText.clampHeadingLevel(heading.level());
       var headingText = extractHeadingPlainText(heading.content());
       if (headingText.isBlank()) {
         continue;
@@ -135,7 +136,7 @@ public final class AdfHeadingCollector {
           var alt = media.attrs().alt();
           builder.append(alt == null || alt.isBlank() ? "media" : alt);
         }
-        case Date date -> builder.append(AdfJson.dateFromTimestamp(date.timestamp()));
+        case Date date -> builder.append(MarkdownText.dateFromTimestamp(date.timestamp()));
         case Placeholder placeholder -> builder.append(placeholder.text());
         default -> {
         }
@@ -148,7 +149,7 @@ public final class AdfHeadingCollector {
     if (!(node instanceof InlineExtension extension)) {
       return false;
     }
-    return AdfJson.isConfluenceMacroExtension(extension.extensionType())
+    return ConfluenceSupport.isConfluenceMacroExtension(extension.extensionType())
         && "anchor".equals(extension.extensionKey());
   }
 
@@ -192,7 +193,7 @@ public final class AdfHeadingCollector {
       if (!isAnchorExtension(extension)) {
         continue;
       }
-      var anchorId = AdfJson.anchorId(extension.macroParams());
+      var anchorId = ConfluenceSupport.anchorId(extension.macroParams());
       if (anchorId != null && !anchorId.isBlank()) {
         return anchorId;
       }

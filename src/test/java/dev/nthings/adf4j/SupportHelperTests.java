@@ -2,6 +2,9 @@ package dev.nthings.adf4j;
 
 import java.util.List;
 
+import dev.nthings.adf4j.internal.AttachmentReferences;
+import dev.nthings.adf4j.internal.ConfluenceSupport;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -10,7 +13,7 @@ import org.junit.jupiter.params.provider.FieldSource;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.argumentSet;
 
-class AdfJsonTests {
+class SupportHelperTests {
 
   private static final List<Arguments> confluence_page_id_urls =
       List.of(
@@ -64,12 +67,12 @@ class AdfJsonTests {
 
   @ParameterizedTest(name = "{argumentSetName}")
   @FieldSource("confluence_page_id_urls")
-  void confluence_page_id_recognizes_supported_confluence_urls(PageIdCase input) {
-    assertThat(AdfJson.confluencePageId(input.url())).isEqualTo(input.pageId());
+  void confluence_support_recognizes_supported_page_urls(PageIdCase input) {
+    assertThat(ConfluenceSupport.pageId(input.url())).isEqualTo(input.pageId());
   }
 
   @Test
-  void resolve_attachment_reference_prefers_normalized_title_matches_over_raw_ids()
+  void attachment_references_prefers_normalized_title_matches_over_raw_ids()
       throws Exception {
     var options =
         RenderOptions.defaults("Fixture")
@@ -90,7 +93,7 @@ class AdfJsonTests {
             """);
 
     var resolved =
-        AdfJson.resolveAttachmentReference(macroParams, options.attachmentReferencesByTitle());
+        AttachmentReferences.resolve(macroParams, options.attachmentReferencesByTitle());
 
     assertThat(resolved.fileId()).isEqualTo("resolved-id");
     assertThat(resolved.title()).isEqualTo("Guide.PDF");
@@ -98,7 +101,7 @@ class AdfJsonTests {
   }
 
   @Test
-  void resolve_attachment_reference_falls_back_to_attachment_ids_and_inferred_media_types()
+  void attachment_references_falls_back_to_attachment_ids_and_inferred_media_types()
       throws Exception {
     var macroParams =
         testSupport.macroParams(
@@ -113,7 +116,7 @@ class AdfJsonTests {
             }
             """);
 
-    var resolved = AdfJson.resolveAttachmentReference(macroParams, null);
+    var resolved = AttachmentReferences.resolve(macroParams, null);
 
     assertThat(resolved.fileId()).isEqualTo("file-99");
     assertThat(resolved.title()).isEqualTo("diagram.png");
@@ -122,8 +125,8 @@ class AdfJsonTests {
 
   @ParameterizedTest(name = "{argumentSetName}")
   @FieldSource("anchor_macro_shapes")
-  void anchor_id_resolves_supported_macro_shapes(AnchorCase input) throws Exception {
-    assertThat(AdfJson.anchorId(testSupport.macroParams(input.macroParamsJson())))
+  void confluence_support_resolves_supported_anchor_macro_shapes(AnchorCase input) throws Exception {
+    assertThat(ConfluenceSupport.anchorId(testSupport.macroParams(input.macroParamsJson())))
         .isEqualTo(input.anchorId());
   }
 }

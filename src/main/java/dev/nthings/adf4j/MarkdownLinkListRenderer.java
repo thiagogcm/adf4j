@@ -3,6 +3,8 @@ package dev.nthings.adf4j;
 import java.util.ArrayList;
 import java.util.List;
 
+import dev.nthings.adf4j.internal.MarkdownText;
+
 public final class MarkdownLinkListRenderer {
 
   private static final String CHILD_INDENT = "  ";
@@ -39,7 +41,7 @@ public final class MarkdownLinkListRenderer {
       lines.add(
           CHILD_INDENT.repeat(depth)
               + "- ["
-              + AdfJson.escapeMarkdownLinkText(node.label())
+              + MarkdownText.escapeLinkText(node.label())
               + "]("
               + node.href()
               + ")");

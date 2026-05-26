@@ -6,8 +6,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-import dev.nthings.adf4j.AdfJson;
 import dev.nthings.adf4j.RenderOptions;
+import dev.nthings.adf4j.internal.ConfluenceSupport;
+import dev.nthings.adf4j.internal.MarkdownText;
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.ast.AdfInline;
@@ -193,7 +194,7 @@ public final class AdfRenderer {
       case HardBreak _ -> hardBreakMarker(context);
       case InlineCard card -> renderInlineCard(card.attrs(), context);
       case MediaInline media -> mediaRenderer.renderMediaInline(context.strategy(), media, context, this);
-      case Date date -> AdfJson.dateFromTimestamp(date.timestamp());
+      case Date date -> MarkdownText.dateFromTimestamp(date.timestamp());
       case Emoji emoji -> renderEmoji(emoji);
       case Mention mention -> renderMention(mention);
       case Placeholder placeholder -> placeholder.text();
@@ -217,7 +218,7 @@ public final class AdfRenderer {
   }
 
   private String renderHeading(Heading heading, RenderContext context) {
-    var level = AdfJson.clampHeadingLevel(heading.level());
+    var level = MarkdownText.clampHeadingLevel(heading.level());
     var text = renderHeadingText(heading.content(), context);
     if (text.isBlank()) {
       return "";
@@ -274,7 +275,7 @@ public final class AdfRenderer {
     if (value.isBlank()) {
       return "";
     }
-    var lines = AdfJson.splitLines(value).stream().map(line -> line.isBlank() ? ">" : "> " + line).toList();
+    var lines = MarkdownText.splitLines(value).stream().map(line -> line.isBlank() ? ">" : "> " + line).toList();
     return String.join("\n", lines);
   }
 
@@ -332,7 +333,7 @@ public final class AdfRenderer {
     if (context.linkResolver() == null || context.currentPageId() == null) {
       return href;
     }
-    var targetPageId = AdfJson.confluencePageId(href);
+    var targetPageId = ConfluenceSupport.pageId(href);
     if (targetPageId != null) {
       return context.linkResolver().resolve(context.currentPageId(), targetPageId).orElse(href);
     }
@@ -391,7 +392,7 @@ public final class AdfRenderer {
     var resolvedUrl = resolveHref(url, context);
     var explicitTitle = attrs.title();
     if (explicitTitle != null && !explicitTitle.isBlank()) {
-      return "[%s](%s)".formatted(AdfJson.escapeMarkdownLinkText(explicitTitle), resolvedUrl);
+      return "[%s](%s)".formatted(MarkdownText.escapeLinkText(explicitTitle), resolvedUrl);
     }
     return "<%s>".formatted(resolvedUrl);
   }
@@ -404,7 +405,7 @@ public final class AdfRenderer {
 
     var resolvedUrl = resolveHref(url, context);
     var label = resolveCardLabel(attrs, url, resolvedUrl, context);
-    return "[%s](%s)".formatted(AdfJson.escapeMarkdownLinkText(label), resolvedUrl);
+    return "[%s](%s)".formatted(MarkdownText.escapeLinkText(label), resolvedUrl);
   }
 
   private String resolveCardLabel(
@@ -418,7 +419,7 @@ public final class AdfRenderer {
 
   private String resolveInternalPageTitle(
       String href, String fallbackLabel, RenderContext context) {
-    var targetPageId = AdfJson.confluencePageId(href);
+    var targetPageId = ConfluenceSupport.pageId(href);
     if (targetPageId == null || context.pageTitleResolver() == null) {
       return fallbackLabel;
     }
