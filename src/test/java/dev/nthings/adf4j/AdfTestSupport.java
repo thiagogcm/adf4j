@@ -5,7 +5,6 @@ import java.io.IOException;
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.ast.MacroParams;
 import dev.nthings.adf4j.parser.AdfAstParser;
-import dev.nthings.adf4j.renderer.AdfContentMetadataExtractor;
 import dev.nthings.adf4j.testing.TestResources;
 
 import tools.jackson.databind.json.JsonMapper;
@@ -16,24 +15,15 @@ final class AdfTestSupport {
 
   private final JsonMapper mapper;
   private final AdfAstParser astParser;
-  private final AdfParsingService parsingService;
-  private final AdfContentMetadataExtractor metadataExtractor;
-  private final AdfStorageDocumentService storageDocumentService;
-  private final AdfPresentationDocumentService presentationDocumentService;
+  private final AdfProcessor processor;
 
   private AdfTestSupport(
       JsonMapper mapper,
       AdfAstParser astParser,
-      AdfParsingService parsingService,
-      AdfContentMetadataExtractor metadataExtractor,
-      AdfStorageDocumentService storageDocumentService,
-      AdfPresentationDocumentService presentationDocumentService) {
+      AdfProcessor processor) {
     this.mapper = mapper;
     this.astParser = astParser;
-    this.parsingService = parsingService;
-    this.metadataExtractor = metadataExtractor;
-    this.storageDocumentService = storageDocumentService;
-    this.presentationDocumentService = presentationDocumentService;
+    this.processor = processor;
   }
 
   static AdfTestSupport create() {
@@ -41,26 +31,11 @@ final class AdfTestSupport {
     return new AdfTestSupport(
         services.mapper(),
         services.astParser(),
-        services.parsingService(),
-        services.metadataExtractor(),
-        services.storageDocumentService(),
-        services.presentationDocumentService());
+        new AdfProcessor(services));
   }
 
-  AdfParsingService parsingService() {
-    return parsingService;
-  }
-
-  AdfContentMetadataExtractor metadataExtractor() {
-    return metadataExtractor;
-  }
-
-  AdfStorageDocumentService storageDocumentService() {
-    return storageDocumentService;
-  }
-
-  AdfPresentationDocumentService presentationDocumentService() {
-    return presentationDocumentService;
+  AdfProcessor processor() {
+    return processor;
   }
 
   String caseInput(String name) throws IOException {

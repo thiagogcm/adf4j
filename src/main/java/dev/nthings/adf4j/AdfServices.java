@@ -3,7 +3,6 @@ package dev.nthings.adf4j;
 import java.util.List;
 
 import dev.nthings.adf4j.parser.AdfAstParser;
-import dev.nthings.adf4j.renderer.AdfContentMetadataExtractor;
 import dev.nthings.adf4j.renderer.AdfHeadingCollector;
 import dev.nthings.adf4j.renderer.AdfRendererFactory;
 
@@ -25,23 +24,17 @@ final class AdfServices {
   private final JsonMapper mapper;
   private final AdfAstParser astParser;
   private final AdfParsingService parsingService;
-  private final AdfContentMetadataExtractor metadataExtractor;
-  private final AdfStorageDocumentService storageDocumentService;
-  private final AdfPresentationDocumentService presentationDocumentService;
+  private final AdfDocumentWorkflow workflow;
 
   private AdfServices(
       JsonMapper mapper,
       AdfAstParser astParser,
       AdfParsingService parsingService,
-      AdfContentMetadataExtractor metadataExtractor,
-      AdfStorageDocumentService storageDocumentService,
-      AdfPresentationDocumentService presentationDocumentService) {
+      AdfDocumentWorkflow workflow) {
     this.mapper = mapper;
     this.astParser = astParser;
     this.parsingService = parsingService;
-    this.metadataExtractor = metadataExtractor;
-    this.storageDocumentService = storageDocumentService;
-    this.presentationDocumentService = presentationDocumentService;
+    this.workflow = workflow;
   }
 
   static AdfServices createDefault() {
@@ -65,15 +58,11 @@ final class AdfServices {
         metadataExtractor,
         markdownRenderingSupport,
         htmlSanitizer);
-    var storageDocumentService = new AdfStorageDocumentService(workflow);
-    var presentationDocumentService = new AdfPresentationDocumentService(workflow);
     return new AdfServices(
         mapper,
         astParser,
         parsingService,
-        metadataExtractor,
-        storageDocumentService,
-        presentationDocumentService);
+        workflow);
   }
 
   JsonMapper mapper() {
@@ -88,16 +77,8 @@ final class AdfServices {
     return parsingService;
   }
 
-  AdfContentMetadataExtractor metadataExtractor() {
-    return metadataExtractor;
-  }
-
-  AdfStorageDocumentService storageDocumentService() {
-    return storageDocumentService;
-  }
-
-  AdfPresentationDocumentService presentationDocumentService() {
-    return presentationDocumentService;
+  AdfDocumentWorkflow workflow() {
+    return workflow;
   }
 
   private static List<Extension> adfCommonmarkExtensions() {

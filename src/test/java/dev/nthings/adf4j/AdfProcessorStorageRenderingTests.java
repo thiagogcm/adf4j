@@ -9,14 +9,14 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-class AdfStorageDocumentServiceTests {
+class AdfProcessorStorageRenderingTests {
 
   private final AdfTestSupport testSupport = AdfTestSupport.create();
-  private final AdfStorageDocumentService storageDocumentService = testSupport.storageDocumentService();
+  private final AdfProcessor processor = testSupport.processor();
 
   @Test
   void render_storage_document_returns_empty_metadata_for_blank_input() {
-    var result = storageDocumentService.renderStorageDocument("   ", RenderOptions.defaults("Ignored"));
+    var result = processor.renderStorageDocument("   ", RenderOptions.defaults("Ignored"));
 
     assertThat(result.body()).isEmpty();
     assertThat(result.outputFormat()).isEqualTo(OutputFormat.STORAGE_MARKDOWN);
@@ -27,16 +27,15 @@ class AdfStorageDocumentServiceTests {
   void render_storage_document_falls_back_to_normalized_raw_markdown_for_invalid_adf_roots() {
     var rawPayload = "{\"type\":\"paragraph\",\"version\":1,\"content\":[]}";
 
-    var result = storageDocumentService.renderStorageDocument(rawPayload, RenderOptions.defaults("Ignored"));
+    var result = processor.renderStorageDocument(rawPayload, RenderOptions.defaults("Ignored"));
 
-    assertThat(result.body())
-        .isEqualTo(storageDocumentService.normalizeStorageMarkdown(rawPayload));
+    assertThat(result.body()).isEqualTo("{\"type\":\"paragraph\",\"version\":1,\"content\":\\[\\]}");
     assertThat(result.metadata()).isEqualTo(ContentMetadata.empty());
   }
 
   @Test
   void render_storage_document_matches_the_reporte_regression_case() throws Exception {
-    var result = storageDocumentService.renderStorageDocument(
+    var result = processor.renderStorageDocument(
         testSupport.caseInput("reporte"), RenderOptions.defaults("Report Fixture"));
 
     assertThat(result.body())
@@ -54,7 +53,7 @@ class AdfStorageDocumentServiceTests {
         .withAttachmentReferences(
             List.of(new AttachmentReference("file-pdf-1", "guide.pdf", "application/pdf")));
 
-    var result = storageDocumentService.renderStorageDocument(rawPayload, options);
+    var result = processor.renderStorageDocument(rawPayload, options);
 
     assertThat(result.body()).isEqualTo("[PDF: guide.pdf](attachment:file-pdf-1)");
     assertThat(result.metadata().attachmentRefs())
@@ -67,18 +66,18 @@ class AdfStorageDocumentServiceTests {
     var rawPayload = testSupport.caseInput("unknown-node-policy");
 
     assertThat(
-        storageDocumentService.renderStorageMarkdown(
+        processor.renderStorageMarkdown(
             rawPayload,
             RenderOptions.defaults("Unknown")
                 .withUnknownNodePolicy(UnknownNodePolicy.PLACEHOLDER)))
         .contains("[Unsupported: mysteryBlock]");
     assertThat(
-        storageDocumentService.renderStorageMarkdown(
+        processor.renderStorageMarkdown(
             rawPayload,
             RenderOptions.defaults("Unknown").withUnknownNodePolicy(UnknownNodePolicy.SKIP)))
         .isEmpty();
     assertThatThrownBy(
-        () -> storageDocumentService.renderStorageMarkdown(
+        () -> processor.renderStorageMarkdown(
             rawPayload,
             RenderOptions.defaults("Unknown").withUnknownNodePolicy(UnknownNodePolicy.FAIL)))
         .isInstanceOf(IllegalStateException.class)
@@ -88,7 +87,7 @@ class AdfStorageDocumentServiceTests {
   @Test
   void render_storage_document_keeps_children_macros_as_placeholders_for_db_derived_cases()
       throws Exception {
-    var markdown = storageDocumentService.renderStorageMarkdown(
+    var markdown = processor.renderStorageMarkdown(
         testSupport.caseInput("especificacoes-reporte-children"),
         RenderOptions.defaults("Reporting Specifications"));
 
@@ -106,7 +105,7 @@ class AdfStorageDocumentServiceTests {
                     "Open_Finance_cadastro_diretorio_passo_a_passo.pdf",
                     "application/pdf")));
 
-    var result = storageDocumentService.renderStorageDocument(
+    var result = processor.renderStorageDocument(
         testSupport.caseInput("lista-participantes-viewpdf"), options);
 
     assertThat(result.body())

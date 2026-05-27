@@ -14,7 +14,7 @@ import org.junit.jupiter.params.provider.FieldSource;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.argumentSet;
 
-class AdfParsingServiceTests {
+class AdfProcessorParsingTests {
 
   private static final List<Arguments> blank_inputs = List.of(
       argumentSet("null input", (String) null),
@@ -40,7 +40,7 @@ class AdfParsingServiceTests {
               List.of("INVALID_VERSION"))));
 
   private final AdfTestSupport testSupport = AdfTestSupport.create();
-  private final AdfParsingService parsingService = testSupport.parsingService();
+  private final AdfProcessor processor = testSupport.processor();
 
   record InvalidRootCase(String rawAdf, List<String> issueCodes) {
   }
@@ -48,14 +48,14 @@ class AdfParsingServiceTests {
   @ParameterizedTest(name = "{argumentSetName}")
   @FieldSource("blank_inputs")
   void parse_returns_the_empty_result_for_absent_input(String rawAdf) {
-    var result = parsingService.parse(rawAdf);
+    var result = processor.parse(rawAdf);
 
     assertThat(result).isEqualTo(ParseResult.empty());
   }
 
   @Test
   void parse_reports_invalid_json_payloads() {
-    var result = parsingService.parse("{");
+    var result = processor.parse("{");
 
     assertThat(result.document()).isNull();
     assertThat(result.validAdfRoot()).isFalse();
@@ -72,7 +72,7 @@ class AdfParsingServiceTests {
   @ParameterizedTest(name = "{argumentSetName}")
   @FieldSource("invalid_root_inputs")
   void parse_reports_root_validation_issues_for_parseable_json(InvalidRootCase input) {
-    var result = parsingService.parse(input.rawAdf());
+    var result = processor.parse(input.rawAdf());
 
     assertThat(result.document()).isNull();
     assertThat(result.validAdfRoot()).isFalse();
@@ -81,7 +81,7 @@ class AdfParsingServiceTests {
 
   @Test
   void parse_accepts_valid_adf_roots() throws IOException {
-    var result = parsingService.parse(testSupport.caseInput("valid-adf-root"));
+    var result = processor.parse(testSupport.caseInput("valid-adf-root"));
 
     assertThat(result.document()).isNotNull();
     assertThat(result.validAdfRoot()).isTrue();

@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class AdfContentMetadataExtractorTests {
+class AdfProcessorMetadataTests {
 
   private final AdfTestSupport testSupport = AdfTestSupport.create();
 
@@ -22,8 +22,8 @@ class AdfContentMetadataExtractorTests {
                     "application/pdf")));
 
     var metadata = testSupport
-        .metadataExtractor()
-        .extract(testSupport.caseDocument("lista-participantes-viewpdf"), options);
+        .processor()
+        .extractContentMetadata(testSupport.caseDocument("lista-participantes-viewpdf"), options);
 
     assertThat(metadata.pageRefs()).isEmpty();
     assertThat(metadata.externalRefs())
@@ -49,7 +49,7 @@ class AdfContentMetadataExtractorTests {
         .withAttachmentReferences(
             List.of(new AttachmentReference("file-pdf-1", "guide.pdf", "application/pdf")));
 
-    var metadata = testSupport.metadataExtractor().extract(adf, options);
+    var metadata = testSupport.processor().extractContentMetadata(adf, options);
 
     assertThat(metadata.pageRefs())
         .extracting(PageReference::pageNodeId)
@@ -67,8 +67,8 @@ class AdfContentMetadataExtractorTests {
   @Test
   void extract_populates_the_heading_outline_with_levels_text_and_anchors() throws Exception {
     var metadata = testSupport
-        .metadataExtractor()
-        .extract(testSupport.caseDocument("anchor-macros"));
+        .processor()
+        .extractContentMetadata(testSupport.caseDocument("anchor-macros"), RenderOptions.defaults(""));
 
     assertThat(metadata.outline())
         .containsExactly(new HeadingReference(2, "Section A", "custom-section"));
@@ -77,8 +77,8 @@ class AdfContentMetadataExtractorTests {
   @Test
   void extract_generates_stable_anchor_suffixes_for_repeated_headings() throws Exception {
     var metadata = testSupport
-        .metadataExtractor()
-        .extract(
+        .processor()
+        .extractContentMetadata(
             testSupport.parseDocument(
                 """
                 {
@@ -90,7 +90,8 @@ class AdfContentMetadataExtractorTests {
                     {"type": "heading", "attrs": {"level": 3}, "content": [{"type": "text", "text": "Section"}]}
                   ]
                 }
-                """));
+                """),
+            RenderOptions.defaults(""));
 
     assertThat(metadata.outline())
         .containsExactly(

@@ -15,23 +15,23 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-public final class AdfParsingService {
+final class AdfParsingService {
 
   private static final Logger log = LoggerFactory.getLogger(AdfParsingService.class);
 
   private final JsonMapper mapper;
   private final AdfAstParser astParser;
 
-  public AdfParsingService(JsonMapper mapper) {
+  AdfParsingService(JsonMapper mapper) {
     this(mapper, new AdfAstParser(mapper));
   }
 
-  public AdfParsingService(JsonMapper mapper, AdfAstParser astParser) {
+  AdfParsingService(JsonMapper mapper, AdfAstParser astParser) {
     this.mapper = mapper;
     this.astParser = astParser;
   }
 
-  public ParseResult parse(String rawAdf) {
+  ParseResult parse(String rawAdf) {
     if (rawAdf == null || rawAdf.isBlank()) {
       log.debug("parse called with null or blank input – returning empty result");
       return ParseResult.empty();

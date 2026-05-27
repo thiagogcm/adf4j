@@ -7,16 +7,15 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class AdfPresentationDocumentServiceTests {
+class AdfProcessorPresentationRenderingTests {
 
     private final AdfTestSupport testSupport = AdfTestSupport.create();
-    private final AdfPresentationDocumentService presentationDocumentService = testSupport
-            .presentationDocumentService();
+    private final AdfProcessor processor = testSupport.processor();
 
     @Test
     void render_presentation_html_matches_the_manual_installation_regression_case()
             throws Exception {
-        var html = presentationDocumentService.renderPresentationHtml(
+        var html = processor.renderPresentationHtml(
                 testSupport.caseInput("manual-instalacao"),
                 RenderOptions.defaults("Installation Fixture"));
 
@@ -41,7 +40,7 @@ class AdfPresentationDocumentServiceTests {
                                     default -> "Page " + pageNodeId;
                                 }));
 
-        var html = presentationDocumentService.renderPresentationHtml(rawPayload, options);
+        var html = processor.renderPresentationHtml(rawPayload, options);
 
         assertThat(html)
                 .contains("<a href=\"/pages/12345\">Runbook Page</a>")
@@ -76,7 +75,7 @@ class AdfPresentationDocumentServiceTests {
                 }
                 """;
 
-        var html = presentationDocumentService.renderPresentationHtml(
+        var html = processor.renderPresentationHtml(
                 rawPayload,
                 RenderOptions.defaults("External Link Fixture")
                         .withPageId("37945515")
@@ -93,7 +92,7 @@ class AdfPresentationDocumentServiceTests {
             throws Exception {
         var rawPayload = testSupport.caseInput("anchor-macros");
 
-        var html = presentationDocumentService.renderPresentationHtml(
+        var html = processor.renderPresentationHtml(
                 rawPayload, RenderOptions.defaults("Anchor Fixture"));
 
         assertThat(html)
@@ -106,18 +105,17 @@ class AdfPresentationDocumentServiceTests {
         var invalidJson = "# Heading\n\nParagraph";
         var invalidRoot = "{\"type\":\"paragraph\",\"version\":1,\"content\":[]}";
 
-        assertThat(
-                presentationDocumentService.renderPresentationHtml(
-                        invalidJson, RenderOptions.defaults("")))
-                .isEqualTo(presentationDocumentService.renderHtmlFromMarkdown(invalidJson));
-        assertThat(
-                presentationDocumentService.renderPresentationHtml(
-                        invalidRoot, RenderOptions.defaults("")))
-                .isEqualTo(presentationDocumentService.renderHtmlFromMarkdown(invalidRoot));
+        assertThat(processor.renderPresentationHtml(invalidJson, RenderOptions.defaults("")))
+                .contains("Heading")
+                .contains("Paragraph");
+        assertThat(processor.renderPresentationHtml(invalidRoot, RenderOptions.defaults("")))
+                .contains("paragraph")
+                .contains("version")
+                .contains("content");
     }
 
     @Test
-    void render_html_from_markdown_preserves_supported_href_schemes_and_strips_unsafe_html() {
+    void render_presentation_html_markdown_fallback_preserves_supported_href_schemes_and_strips_unsafe_html() {
         var markdown = """
                 [Page](/pages/42)
                 [Fragment](#details)
@@ -127,7 +125,7 @@ class AdfPresentationDocumentServiceTests {
                 <script>alert("x")</script>
                 """;
 
-        var html = presentationDocumentService.renderHtmlFromMarkdown(markdown);
+        var html = processor.renderPresentationHtml(markdown, RenderOptions.defaults(""));
 
         assertThat(html)
                 .contains("href=\"/pages/42\"")
@@ -150,7 +148,7 @@ class AdfPresentationDocumentServiceTests {
                                         List.of(new RenderOptions.ChildPage("grandchild-1", "Nested Child"))),
                                 new RenderOptions.ChildPage("child-2", "Beta Child")));
 
-        var html = presentationDocumentService.renderPresentationHtml(
+        var html = processor.renderPresentationHtml(
                 testSupport.caseInput("especificacoes-reporte-children"), options);
 
         assertThat(html)
@@ -173,7 +171,7 @@ class AdfPresentationDocumentServiceTests {
                                         "Open_Finance_cadastro_diretorio_passo_a_passo.pdf",
                                         "application/pdf")));
 
-        var html = presentationDocumentService.renderPresentationHtml(
+        var html = processor.renderPresentationHtml(
                 testSupport.caseInput("lista-participantes-viewpdf"), options);
 
         assertThat(html)
