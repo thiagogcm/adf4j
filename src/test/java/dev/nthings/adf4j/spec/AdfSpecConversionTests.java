@@ -14,6 +14,7 @@ import java.util.stream.Stream;
 
 import dev.nthings.adf4j.AdfProcessor;
 import dev.nthings.adf4j.RenderOptions;
+import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
 import dev.nthings.adf4j.testing.TestResources;
 
 import org.junit.jupiter.api.Test;
@@ -32,7 +33,8 @@ class AdfSpecConversionTests {
   private static final Path SPEC_ROOT = TestResources.root("adf/spec");
   private static final JsonMapper MAPPER = JsonMapper.builder().build();
   private static final AdfProcessor PROCESSOR = new AdfProcessor();
-  private static final RenderOptions DEFAULT_OPTIONS = RenderOptions.defaults("Spec Fixture");
+  private static final RenderOptions DEFAULT_OPTIONS =
+      RenderOptions.defaults().withContext(ConfluenceRenderContext.forPage("Spec Fixture"));
   private static final Supplier<Stream<Arguments>> storage_specs = () -> specCases(Target.STORAGE_MARKDOWN)
       .map(SpecCase::toArguments);
   private static final Supplier<Stream<Arguments>> presentation_specs = () -> specCases(Target.PRESENTATION_HTML)

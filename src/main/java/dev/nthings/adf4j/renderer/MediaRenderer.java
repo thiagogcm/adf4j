@@ -14,7 +14,7 @@ public final class MediaRenderer {
 
   private static final int DEFAULT_INLINE_IMAGE_HEIGHT_PX = 22;
 
-  String renderMediaSingle(MediaSingle node, RenderContext context, AdfRenderer adfRenderer) {
+  String renderMediaSingle(MediaSingle node, RendererState context, AdfRenderer adfRenderer) {
     if (node.content().isEmpty()) {
       return "";
     }
@@ -37,11 +37,11 @@ public final class MediaRenderer {
     return String.join("\n\n", blocks);
   }
 
-  String renderCaption(Caption node, RenderContext context, AdfRenderer adfRenderer) {
+  String renderCaption(Caption node, RendererState context, AdfRenderer adfRenderer) {
     return adfRenderer.renderInlineNodes(node.content(), context);
   }
 
-  String renderMediaGroup(MediaGroup node, RenderContext context, AdfRenderer adfRenderer) {
+  String renderMediaGroup(MediaGroup node, RendererState context, AdfRenderer adfRenderer) {
     if (node.content().isEmpty()) {
       return "";
     }
@@ -55,13 +55,13 @@ public final class MediaRenderer {
     return String.join("\n", lines);
   }
 
-  String renderMedia(Media node, RenderContext context, AdfRenderer adfRenderer) {
+  String renderMedia(Media node, RendererState context, AdfRenderer adfRenderer) {
     var rendered = renderMediaBlock(node.attrs());
     return adfRenderer.applyMarks(rendered, node.marks(), context);
   }
 
   String renderMediaInline(
-      RenderingStrategy strategy, MediaInline node, RenderContext context, AdfRenderer adfRenderer) {
+      RenderingStrategy strategy, MediaInline node, RendererState context, AdfRenderer adfRenderer) {
     var rendered = strategy.usesStyledInlineMedia()
         ? renderStyledInlineMedia(node.attrs())
         : renderMediaBlock(node.attrs());

@@ -2,6 +2,8 @@ package dev.nthings.adf4j;
 
 import java.util.List;
 
+import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
+
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -13,13 +15,15 @@ class AdfProcessorMetadataTests {
   @Test
   void extract_collects_external_refs_and_durable_attachment_refs_from_db_derived_viewpdf_case()
       throws Exception {
-    var options = RenderOptions.defaults("Participant Guide")
-        .withAttachmentReferences(
-            List.of(
-                new AttachmentReference(
-                    "file-pdf-123",
-                    "Open_Finance_cadastro_diretorio_passo_a_passo.pdf",
-                    "application/pdf")));
+    var options = RenderOptions.defaults()
+        .withContext(
+            ConfluenceRenderContext.forPage("Participant Guide")
+                .withAttachmentReferences(
+                    List.of(
+                        new AttachmentReference(
+                            "file-pdf-123",
+                            "Open_Finance_cadastro_diretorio_passo_a_passo.pdf",
+                            "application/pdf"))));
 
     var metadata = testSupport
         .processor()
@@ -45,9 +49,11 @@ class AdfProcessorMetadataTests {
   void extract_deduplicates_repeated_refs_and_preserves_first_seen_encounter_order()
       throws Exception {
     var adf = testSupport.caseDocument("deduplicate-references");
-    var options = RenderOptions.defaults("Metadata Fixture")
-        .withAttachmentReferences(
-            List.of(new AttachmentReference("file-pdf-1", "guide.pdf", "application/pdf")));
+    var options = RenderOptions.defaults()
+        .withContext(
+            ConfluenceRenderContext.forPage("Metadata Fixture")
+                .withAttachmentReferences(
+                    List.of(new AttachmentReference("file-pdf-1", "guide.pdf", "application/pdf"))));
 
     var metadata = testSupport.processor().extractContentMetadata(adf, options);
 
@@ -68,7 +74,7 @@ class AdfProcessorMetadataTests {
   void extract_populates_the_heading_outline_with_levels_text_and_anchors() throws Exception {
     var metadata = testSupport
         .processor()
-        .extractContentMetadata(testSupport.caseDocument("anchor-macros"), RenderOptions.defaults(""));
+        .extractContentMetadata(testSupport.caseDocument("anchor-macros"), RenderOptions.defaults());
 
     assertThat(metadata.outline())
         .containsExactly(new HeadingReference(2, "Section A", "custom-section"));
@@ -91,7 +97,7 @@ class AdfProcessorMetadataTests {
                   ]
                 }
                 """),
-            RenderOptions.defaults(""));
+            RenderOptions.defaults());
 
     assertThat(metadata.outline())
         .containsExactly(

@@ -11,12 +11,13 @@ import dev.nthings.adf4j.HeadingReference;
 import dev.nthings.adf4j.PageTitleResolver;
 import dev.nthings.adf4j.RenderOptions;
 import dev.nthings.adf4j.ast.Heading;
+import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
 import dev.nthings.adf4j.model.ExcerptKey;
 import dev.nthings.adf4j.model.MacroContext;
 import dev.nthings.adf4j.model.PageLinkResolver;
 import dev.nthings.adf4j.model.UnknownNodePolicy;
 
-record RenderContext(
+record RendererState(
     int listDepth,
     boolean inTable,
     RenderingStrategy strategy,
@@ -24,30 +25,31 @@ record RenderContext(
     String currentPageId,
     MacroContext macroContext,
     HeadingOutline headingOutline,
-    List<RenderOptions.ChildPage> childPages,
+    List<ConfluenceRenderContext.ChildPage> childPages,
     Map<String, AttachmentReference> attachmentReferencesByTitle,
     PageLinkResolver linkResolver,
     PageTitleResolver pageTitleResolver,
     UnknownNodePolicy unknownNodePolicy,
     Set<ExcerptKey> activeExcerpts) {
 
-  static RenderContext root(
+  static RendererState root(
       RenderOptions options, HeadingOutline headingOutline, RenderingStrategy strategy) {
     var requiredOptions = Objects.requireNonNull(options, "options");
     var safeOutline = Objects.requireNonNullElseGet(headingOutline, HeadingOutline::empty);
     var renderingStrategy = Objects.requireNonNullElseGet(strategy, RenderingStrategies::storage);
-    return new RenderContext(
+    var confluenceContext = ConfluenceRenderContext.from(requiredOptions.context());
+    return new RendererState(
         0,
         false,
         renderingStrategy,
-        requiredOptions.pageTitle(),
-        requiredOptions.currentPageId(),
-        MacroContext.from(requiredOptions.excerpts(), safeOutline.headings()),
+        confluenceContext.pageTitle(),
+        confluenceContext.currentPageId(),
+        MacroContext.from(confluenceContext.excerpts(), safeOutline.headings()),
         safeOutline,
-        requiredOptions.childPages(),
-        requiredOptions.attachmentReferencesByTitle(),
-        requiredOptions.pageLinkResolver(),
-        requiredOptions.pageTitleResolver(),
+        confluenceContext.childPages(),
+        confluenceContext.attachmentReferencesByTitle(),
+        confluenceContext.pageLinkResolver(),
+        confluenceContext.pageTitleResolver(),
         requiredOptions.unknownNodePolicy(),
         Set.of());
   }
@@ -56,11 +58,11 @@ record RenderContext(
     return headingOutline.infoFor(heading);
   }
 
-  RenderContext withListDepth(int depth) {
+  RendererState withListDepth(int depth) {
     return copy(depth, inTable, activeExcerpts);
   }
 
-  RenderContext withTable(boolean table) {
+  RendererState withTable(boolean table) {
     return copy(listDepth, table, activeExcerpts);
   }
 
@@ -68,15 +70,15 @@ record RenderContext(
     return activeExcerpts.contains(key);
   }
 
-  RenderContext withExcerpt(ExcerptKey key) {
+  RendererState withExcerpt(ExcerptKey key) {
     var nextActiveExcerpts = new LinkedHashSet<>(activeExcerpts);
     nextActiveExcerpts.add(key);
     return copy(listDepth, inTable, Set.copyOf(nextActiveExcerpts));
   }
 
-  private RenderContext copy(
+  private RendererState copy(
       int listDepth, boolean inTable, Set<ExcerptKey> activeExcerpts) {
-    return new RenderContext(
+    return new RendererState(
         listDepth,
         inTable,
         strategy,

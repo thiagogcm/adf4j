@@ -57,6 +57,7 @@ import dev.nthings.adf4j.ast.TableRow;
 import dev.nthings.adf4j.ast.TaskItem;
 import dev.nthings.adf4j.ast.TaskList;
 import dev.nthings.adf4j.ast.Text;
+import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
 
 public final class AdfContentMetadataExtractor {
 
@@ -67,7 +68,7 @@ public final class AdfContentMetadataExtractor {
   }
 
   public ContentMetadata extract(AdfDocument document) {
-    return extract(document, RenderOptions.defaults(""));
+    return extract(document, RenderOptions.defaults());
   }
 
   public ContentMetadata extract(AdfDocument document, RenderOptions options) {
@@ -84,7 +85,8 @@ public final class AdfContentMetadataExtractor {
     }
 
     var requiredOptions = Objects.requireNonNull(options, "options");
-    var state = new State(requiredOptions.attachmentReferencesByTitle());
+    var confluenceContext = ConfluenceRenderContext.from(requiredOptions.context());
+    var state = new State(confluenceContext.attachmentReferencesByTitle());
     for (var block : document.content()) {
       collectBlock(block, state);
     }

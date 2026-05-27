@@ -32,7 +32,7 @@ public final class AdfProcessor {
   }
 
   public String renderStorageMarkdown(String rawAdf) {
-    return renderStorageMarkdown(rawAdf, RenderOptions.defaults(""));
+    return renderStorageMarkdown(rawAdf, RenderOptions.defaults());
   }
 
   public String renderStorageMarkdown(String rawAdf, RenderOptions options) {

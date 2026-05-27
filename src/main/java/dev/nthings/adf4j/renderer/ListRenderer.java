@@ -19,7 +19,7 @@ import dev.nthings.adf4j.ast.TaskList;
 
 public final class ListRenderer {
 
-  String renderTaskList(TaskList node, RenderContext context, AdfRenderer adfRenderer) {
+  String renderTaskList(TaskList node, RendererState context, AdfRenderer adfRenderer) {
     if (node.content().isEmpty()) {
       return "";
     }
@@ -36,7 +36,7 @@ public final class ListRenderer {
     return String.join("\n", lines);
   }
 
-  String renderTaskItem(TaskItem node, RenderContext context, AdfRenderer adfRenderer) {
+  String renderTaskItem(TaskItem node, RendererState context, AdfRenderer adfRenderer) {
     var checked = "DONE".equalsIgnoreCase(node.state());
     var content = adfRenderer.renderInlineNodes(node.content(), context);
     var prefix = checklistPrefix(context, checked);
@@ -46,12 +46,12 @@ public final class ListRenderer {
     return prefix + content;
   }
 
-  String renderBlockTaskItem(BlockTaskItem node, RenderContext context, AdfRenderer adfRenderer) {
+  String renderBlockTaskItem(BlockTaskItem node, RendererState context, AdfRenderer adfRenderer) {
     return String.join("\n", renderBlockTaskItemLines(node, context, adfRenderer));
   }
 
   List<String> renderBlockTaskItemLines(
-      BlockTaskItem node, RenderContext context, AdfRenderer adfRenderer) {
+      BlockTaskItem node, RendererState context, AdfRenderer adfRenderer) {
     var checked = "DONE".equalsIgnoreCase(node.state());
     var prefix = checklistPrefix(context, checked);
     var blocks = node.content();
@@ -80,7 +80,7 @@ public final class ListRenderer {
     return lines;
   }
 
-  private List<String> indentedBlock(AdfBlock block, RenderContext context, AdfRenderer adfRenderer) {
+  private List<String> indentedBlock(AdfBlock block, RendererState context, AdfRenderer adfRenderer) {
     return RenderBuffer.indentLines(
         adfRenderer.joinBlocks(
             adfRenderer.renderBlock(block, context.withListDepth(context.listDepth() + 1))),
@@ -88,17 +88,17 @@ public final class ListRenderer {
         RenderBuffer.LIST_INDENT);
   }
 
-  String renderBulletList(BulletList node, RenderContext context, AdfRenderer adfRenderer) {
+  String renderBulletList(BulletList node, RendererState context, AdfRenderer adfRenderer) {
     return renderListItems(node.content(), context, adfRenderer, false, 1);
   }
 
-  String renderOrderedList(OrderedList node, RenderContext context, AdfRenderer adfRenderer) {
+  String renderOrderedList(OrderedList node, RendererState context, AdfRenderer adfRenderer) {
     return renderListItems(node.content(), context, adfRenderer, true, node.order());
   }
 
   private String renderListItems(
       List<ListItem> items,
-      RenderContext context,
+      RendererState context,
       AdfRenderer adfRenderer,
       boolean ordered,
       int start) {
@@ -120,7 +120,7 @@ public final class ListRenderer {
 
   List<String> renderListItem(
       ListItem node,
-      RenderContext context,
+      RendererState context,
       AdfRenderer adfRenderer,
       boolean ordered,
       Integer number) {
@@ -153,7 +153,7 @@ public final class ListRenderer {
     return lines;
   }
 
-  List<String> renderListItemBlock(AdfBlock block, RenderContext context, AdfRenderer adfRenderer) {
+  List<String> renderListItemBlock(AdfBlock block, RendererState context, AdfRenderer adfRenderer) {
     var childContext = context.withListDepth(context.listDepth() + 1);
 
     if (block instanceof BulletList bulletList) {
@@ -178,7 +178,7 @@ public final class ListRenderer {
     return lines;
   }
 
-  String renderDecisionList(DecisionList node, RenderContext context, AdfRenderer adfRenderer) {
+  String renderDecisionList(DecisionList node, RendererState context, AdfRenderer adfRenderer) {
     if (node.content().isEmpty()) {
       return "";
     }
@@ -190,7 +190,7 @@ public final class ListRenderer {
     return String.join("\n", lines);
   }
 
-  String renderDecisionItem(DecisionItem node, RenderContext context, AdfRenderer adfRenderer) {
+  String renderDecisionItem(DecisionItem node, RendererState context, AdfRenderer adfRenderer) {
     var state = node.state();
     var label = state == null || state.isBlank() ? "[decision]" : "[decision:%s]".formatted(state);
     var content = adfRenderer.renderInlineNodes(node.content(), context);
@@ -201,7 +201,7 @@ public final class ListRenderer {
     return prefix + label + " " + content;
   }
 
-  private String checklistPrefix(RenderContext context, boolean checked) {
+  private String checklistPrefix(RendererState context, boolean checked) {
     var indent = RenderBuffer.LIST_INDENT.repeat(Math.max(0, context.listDepth()));
     return indent + "- [" + (checked ? "x" : " ") + "] ";
   }

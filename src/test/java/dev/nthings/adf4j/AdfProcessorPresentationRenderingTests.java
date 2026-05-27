@@ -3,6 +3,8 @@ package dev.nthings.adf4j;
 import java.util.List;
 import java.util.Optional;
 
+import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
+
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -17,7 +19,7 @@ class AdfProcessorPresentationRenderingTests {
             throws Exception {
         var html = processor.renderPresentationHtml(
                 testSupport.caseInput("manual-instalacao"),
-                RenderOptions.defaults("Installation Fixture"));
+                optionsForPage("Installation Fixture"));
 
         assertThat(html)
                 .isEqualToNormalizingNewlines(
@@ -28,7 +30,7 @@ class AdfProcessorPresentationRenderingTests {
     void render_presentation_html_rewrites_internal_page_links_and_resolves_readable_labels()
             throws Exception {
         var rawPayload = testSupport.caseInput("internal-page-links");
-        var options = RenderOptions.defaults("Resolver Fixture")
+        var context = ConfluenceRenderContext.forPage("Resolver Fixture")
                 .withPageId("page-current")
                 .withPageLinkResolver(
                         (currentPageId, targetPageId) -> Optional.of("/pages/" + targetPageId))
@@ -39,6 +41,7 @@ class AdfProcessorPresentationRenderingTests {
                                     case "54321" -> "Draft Guide";
                                     default -> "Page " + pageNodeId;
                                 }));
+        var options = RenderOptions.defaults().withContext(context);
 
         var html = processor.renderPresentationHtml(rawPayload, options);
 
@@ -77,9 +80,10 @@ class AdfProcessorPresentationRenderingTests {
 
         var html = processor.renderPresentationHtml(
                 rawPayload,
-                RenderOptions.defaults("External Link Fixture")
-                        .withPageId("37945515")
-                        .withPageLinkResolver((currentPageId, targetPageId) -> Optional.empty()));
+                RenderOptions.defaults().withContext(
+                        ConfluenceRenderContext.forPage("External Link Fixture")
+                                .withPageId("37945515")
+                                .withPageLinkResolver((currentPageId, targetPageId) -> Optional.empty())));
 
         assertThat(html)
                 .contains(
@@ -93,7 +97,7 @@ class AdfProcessorPresentationRenderingTests {
         var rawPayload = testSupport.caseInput("anchor-macros");
 
         var html = processor.renderPresentationHtml(
-                rawPayload, RenderOptions.defaults("Anchor Fixture"));
+                rawPayload, optionsForPage("Anchor Fixture"));
 
         assertThat(html)
                 .contains("href=\"#custom-section\"")
@@ -105,10 +109,10 @@ class AdfProcessorPresentationRenderingTests {
         var invalidJson = "# Heading\n\nParagraph";
         var invalidRoot = "{\"type\":\"paragraph\",\"version\":1,\"content\":[]}";
 
-        assertThat(processor.renderPresentationHtml(invalidJson, RenderOptions.defaults("")))
+        assertThat(processor.renderPresentationHtml(invalidJson, RenderOptions.defaults()))
                 .contains("Heading")
                 .contains("Paragraph");
-        assertThat(processor.renderPresentationHtml(invalidRoot, RenderOptions.defaults("")))
+        assertThat(processor.renderPresentationHtml(invalidRoot, RenderOptions.defaults()))
                 .contains("paragraph")
                 .contains("version")
                 .contains("content");
@@ -125,7 +129,7 @@ class AdfProcessorPresentationRenderingTests {
                 <script>alert("x")</script>
                 """;
 
-        var html = processor.renderPresentationHtml(markdown, RenderOptions.defaults(""));
+        var html = processor.renderPresentationHtml(markdown, RenderOptions.defaults());
 
         assertThat(html)
                 .contains("href=\"/pages/42\"")
@@ -139,14 +143,18 @@ class AdfProcessorPresentationRenderingTests {
     @Test
     void render_presentation_html_expands_db_derived_children_macros_with_nested_descendants()
             throws Exception {
-        var options = RenderOptions.defaults("Reporting Specifications")
-                .withChildPages(
-                        List.of(
-                                new RenderOptions.ChildPage(
-                                        "child-1",
-                                        "Alpha Child",
-                                        List.of(new RenderOptions.ChildPage("grandchild-1", "Nested Child"))),
-                                new RenderOptions.ChildPage("child-2", "Beta Child")));
+        var options = RenderOptions.defaults()
+                .withContext(
+                        ConfluenceRenderContext.forPage("Reporting Specifications")
+                                .withChildPages(
+                                        List.of(
+                                                new ConfluenceRenderContext.ChildPage(
+                                                        "child-1",
+                                                        "Alpha Child",
+                                                        List.of(
+                                                                new ConfluenceRenderContext.ChildPage(
+                                                                        "grandchild-1", "Nested Child"))),
+                                                new ConfluenceRenderContext.ChildPage("child-2", "Beta Child"))));
 
         var html = processor.renderPresentationHtml(
                 testSupport.caseInput("especificacoes-reporte-children"), options);
@@ -163,13 +171,15 @@ class AdfProcessorPresentationRenderingTests {
     @Test
     void render_presentation_html_resolves_db_derived_viewpdf_cases_with_attachment_context()
             throws Exception {
-        var options = RenderOptions.defaults("Participant Guide")
-                .withAttachmentReferences(
-                        List.of(
-                                new AttachmentReference(
-                                        "file-pdf-123",
-                                        "Open_Finance_cadastro_diretorio_passo_a_passo.pdf",
-                                        "application/pdf")));
+        var options = RenderOptions.defaults()
+                .withContext(
+                        ConfluenceRenderContext.forPage("Participant Guide")
+                                .withAttachmentReferences(
+                                        List.of(
+                                                new AttachmentReference(
+                                                        "file-pdf-123",
+                                                        "Open_Finance_cadastro_diretorio_passo_a_passo.pdf",
+                                                        "application/pdf"))));
 
         var html = processor.renderPresentationHtml(
                 testSupport.caseInput("lista-participantes-viewpdf"), options);
@@ -180,5 +190,9 @@ class AdfProcessorPresentationRenderingTests {
                         "href=\"https://github.com/OpenBanking-Brasil/specs-directory/blob/main/swagger_participants.yaml\"")
                 .contains("href=\"attachment:file-pdf-123\"")
                 .contains("PDF: Open_Finance_cadastro_diretorio_passo_a_passo.pdf");
+    }
+
+    private static RenderOptions optionsForPage(String pageTitle) {
+        return RenderOptions.defaults().withContext(ConfluenceRenderContext.forPage(pageTitle));
     }
 }

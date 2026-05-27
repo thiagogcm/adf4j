@@ -23,7 +23,7 @@ public final class TableRenderer {
     this.markdownRenderingSupport = markdownRenderingSupport;
   }
 
-  String renderTable(Table node, RenderContext context, AdfRenderer adfRenderer) {
+  String renderTable(Table node, RendererState context, AdfRenderer adfRenderer) {
     var rows = node.content();
     if (rows.isEmpty()) {
       return "";
@@ -82,12 +82,12 @@ public final class TableRenderer {
     return String.join("\n", lines);
   }
 
-  String renderTableRow(TableRow node, RenderContext context, AdfRenderer adfRenderer) {
+  String renderTableRow(TableRow node, RendererState context, AdfRenderer adfRenderer) {
     var rendered = renderTableRowCells(node, context, adfRenderer);
     return rendered.cells().isEmpty() ? "" : "| " + String.join(" | ", rendered.cells()) + " |";
   }
 
-  String renderTableCell(TableCell cell, RenderContext context, AdfRenderer adfRenderer) {
+  String renderTableCell(TableCell cell, RendererState context, AdfRenderer adfRenderer) {
     var text = adfRenderer
         .joinBlocks(adfRenderer.renderBlocks(cell.content(), context.withTable(true)))
         .trim();
@@ -97,7 +97,7 @@ public final class TableRenderer {
     return text.replace("|", "\\|").replace("\n", "<br>");
   }
 
-  private Row renderTableRowCells(TableRow row, RenderContext context, AdfRenderer adfRenderer) {
+  private Row renderTableRowCells(TableRow row, RendererState context, AdfRenderer adfRenderer) {
     var cells = row.content();
     if (cells.isEmpty()) {
       return new Row(List.of(), false);
@@ -157,7 +157,7 @@ public final class TableRenderer {
   }
 
   private String renderHtmlTable(
-      List<TableRow> rows, RenderContext context, AdfRenderer adfRenderer, boolean numberColumn) {
+      List<TableRow> rows, RendererState context, AdfRenderer adfRenderer, boolean numberColumn) {
     var table = new Element(Tag.valueOf("table"), "");
     var dataRowIndex = 0;
 
@@ -201,7 +201,7 @@ public final class TableRenderer {
   }
 
   private Element renderHtmlTableCell(
-      TableCell cell, RenderContext context, AdfRenderer adfRenderer) {
+      TableCell cell, RendererState context, AdfRenderer adfRenderer) {
     var tag = cell.header() ? "th" : "td";
     var element = new Element(Tag.valueOf(tag), "");
 
@@ -221,7 +221,7 @@ public final class TableRenderer {
   }
 
   private String renderHtmlTableCellContent(
-      List<AdfBlock> content, RenderContext context, AdfRenderer adfRenderer) {
+      List<AdfBlock> content, RendererState context, AdfRenderer adfRenderer) {
     var renderedBlocks = new ArrayList<String>();
     for (var block : content) {
       var rendered = renderHtmlTableCellBlock(block, context, adfRenderer);
@@ -233,7 +233,7 @@ public final class TableRenderer {
   }
 
   private String renderHtmlTableCellBlock(
-      AdfBlock block, RenderContext context, AdfRenderer adfRenderer) {
+      AdfBlock block, RendererState context, AdfRenderer adfRenderer) {
     if (block instanceof BulletList bulletList) {
       return renderHtmlList(bulletList.content(), context, adfRenderer, false);
     }
@@ -244,7 +244,7 @@ public final class TableRenderer {
   }
 
   private String renderHtmlTableCellLeafBlock(
-      AdfBlock block, RenderContext context, AdfRenderer adfRenderer) {
+      AdfBlock block, RendererState context, AdfRenderer adfRenderer) {
     var rendered = adfRenderer.joinBlocks(adfRenderer.renderBlock(block, context.withTable(true))).trim();
     if (rendered.isBlank()) {
       return "";
@@ -257,7 +257,7 @@ public final class TableRenderer {
   }
 
   private String renderHtmlList(
-      List<ListItem> items, RenderContext context, AdfRenderer adfRenderer, boolean ordered) {
+      List<ListItem> items, RendererState context, AdfRenderer adfRenderer, boolean ordered) {
     var tag = ordered ? "ol" : "ul";
     var list = new Element(Tag.valueOf(tag), "");
     for (var item : items) {
@@ -273,7 +273,7 @@ public final class TableRenderer {
   }
 
   private Element renderHtmlListItem(
-      ListItem item, RenderContext context, AdfRenderer adfRenderer) {
+      ListItem item, RendererState context, AdfRenderer adfRenderer) {
     var fragments = new ArrayList<String>();
     for (var block : item.content()) {
       var rendered = renderHtmlTableCellBlock(block, context.withTable(true), adfRenderer);

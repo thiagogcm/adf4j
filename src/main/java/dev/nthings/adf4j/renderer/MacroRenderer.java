@@ -6,7 +6,6 @@ import java.util.stream.Stream;
 
 import dev.nthings.adf4j.HeadingReference;
 import dev.nthings.adf4j.MarkdownLinkListRenderer;
-import dev.nthings.adf4j.RenderOptions;
 import dev.nthings.adf4j.ast.AdfInline;
 import dev.nthings.adf4j.ast.BodiedExtension;
 import dev.nthings.adf4j.ast.BodiedSyncBlock;
@@ -15,6 +14,7 @@ import dev.nthings.adf4j.ast.InlineExtension;
 import dev.nthings.adf4j.ast.MacroParams;
 import dev.nthings.adf4j.ast.SyncBlock;
 import dev.nthings.adf4j.ast.Text;
+import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
 import dev.nthings.adf4j.internal.AttachmentReferences;
 import dev.nthings.adf4j.internal.ConfluenceSupport;
 import dev.nthings.adf4j.model.ExcerptKey;
@@ -26,7 +26,7 @@ public final class MacroRenderer {
 
   private static final Logger log = LoggerFactory.getLogger(MacroRenderer.class);
 
-  String renderExtension(Extension node, RenderContext context, AdfRenderer adfRenderer) {
+  String renderExtension(Extension node, RendererState context, AdfRenderer adfRenderer) {
     return renderExtensionCore(
         node.extensionType(),
         node.extensionKey(),
@@ -37,7 +37,7 @@ public final class MacroRenderer {
   }
 
   String renderInlineExtension(
-      InlineExtension node, RenderContext context, AdfRenderer adfRenderer) {
+      InlineExtension node, RendererState context, AdfRenderer adfRenderer) {
     return renderExtensionCore(
         node.extensionType(),
         node.extensionKey(),
@@ -51,7 +51,7 @@ public final class MacroRenderer {
       String extensionType,
       String extensionKey,
       MacroParams macroParams,
-      RenderContext context,
+      RendererState context,
       AdfRenderer adfRenderer,
       boolean inline) {
     if (!ConfluenceSupport.isConfluenceMacroExtension(extensionType)) {
@@ -72,7 +72,7 @@ public final class MacroRenderer {
   }
 
   List<String> renderBodiedExtension(
-      BodiedExtension node, RenderContext context, AdfRenderer adfRenderer) {
+      BodiedExtension node, RendererState context, AdfRenderer adfRenderer) {
     if (ConfluenceSupport.isConfluenceMacroExtension(node.extensionType())
         && "excerpt".equals(node.extensionKey())) {
       return adfRenderer.renderBlocks(node.content(), context);
@@ -93,7 +93,7 @@ public final class MacroRenderer {
   }
 
   List<String> renderBodiedSyncBlock(
-      BodiedSyncBlock node, RenderContext context, AdfRenderer adfRenderer) {
+      BodiedSyncBlock node, RendererState context, AdfRenderer adfRenderer) {
     var blocks = new ArrayList<String>();
     var resourceId = node.resourceId();
     blocks.add(
@@ -135,7 +135,7 @@ public final class MacroRenderer {
     return candidate;
   }
 
-  private String renderChildrenMacro(MacroParams macroParams, RenderContext context) {
+  private String renderChildrenMacro(MacroParams macroParams, RendererState context) {
     if (!context.strategy().isStorage()) {
       if (context.childPages().isEmpty()) {
         return "";
@@ -166,7 +166,7 @@ public final class MacroRenderer {
     return "{{children}}";
   }
 
-  private String renderTocMacro(MacroParams macroParams, RenderContext context) {
+  private String renderTocMacro(MacroParams macroParams, RendererState context) {
     var headings = context.macroContext() == null ? List.<HeadingReference>of() : context.macroContext().headings();
     if (headings.isEmpty()) {
       return "";
@@ -215,7 +215,7 @@ public final class MacroRenderer {
   }
 
   private List<MarkdownLinkListRenderer.LinkNode> toLinkNodes(
-      List<RenderOptions.ChildPage> childPages) {
+      List<ConfluenceRenderContext.ChildPage> childPages) {
     if (childPages == null || childPages.isEmpty()) {
       return List.of();
     }
@@ -229,7 +229,7 @@ public final class MacroRenderer {
         .toList();
   }
 
-  private String renderAnchorMacro(MacroParams macroParams, RenderContext context) {
+  private String renderAnchorMacro(MacroParams macroParams, RendererState context) {
     if (context.strategy().isStorage()) {
       return "";
     }
@@ -244,7 +244,7 @@ public final class MacroRenderer {
     return "[Embedded content](%s)".formatted(src);
   }
 
-  private String renderViewPdfMacro(MacroParams macroParams, RenderContext context) {
+  private String renderViewPdfMacro(MacroParams macroParams, RendererState context) {
     var name = macroParams.value("name");
     var attachmentReference = AttachmentReferences.resolve(macroParams, context.attachmentReferencesByTitle());
     if (attachmentReference == null
@@ -263,7 +263,7 @@ public final class MacroRenderer {
   }
 
   private String renderExcerptIncludeMacro(
-      MacroParams macroParams, RenderContext context, AdfRenderer adfRenderer, boolean inline) {
+      MacroParams macroParams, RendererState context, AdfRenderer adfRenderer, boolean inline) {
     var pageTitle = Stream.of(macroParams.value(""), context.pageTitle())
         .filter(s -> s != null && !s.isBlank())
         .findFirst()

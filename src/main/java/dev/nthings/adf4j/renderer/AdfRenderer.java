@@ -111,11 +111,11 @@ public final class AdfRenderer {
     var requiredOptions = Objects.requireNonNull(options, "options");
     var renderingStrategy = Objects.requireNonNullElseGet(strategy, RenderingStrategies::storage);
     var outline = headingOutline == null ? headingCollector.collect(document) : headingOutline;
-    var context = RenderContext.root(requiredOptions, outline, renderingStrategy);
+    var context = RendererState.root(requiredOptions, outline, renderingStrategy);
     return joinBlocks(renderBlocks(document.content(), context));
   }
 
-  public List<String> renderBlock(AdfBlock block, RenderContext context) {
+  public List<String> renderBlock(AdfBlock block, RendererState context) {
     return switch (block) {
       case Paragraph paragraph -> List.of(renderParagraph(paragraph, context));
       case Heading heading -> List.of(renderHeading(heading, context));
@@ -156,7 +156,7 @@ public final class AdfRenderer {
     };
   }
 
-  public List<String> renderBlocks(List<AdfBlock> blocks, RenderContext context) {
+  public List<String> renderBlocks(List<AdfBlock> blocks, RendererState context) {
     if (blocks == null || blocks.isEmpty()) {
       return List.of();
     }
@@ -165,7 +165,7 @@ public final class AdfRenderer {
         .toList();
   }
 
-  public String renderInlineNodes(List<AdfInline> nodes, RenderContext context) {
+  public String renderInlineNodes(List<AdfInline> nodes, RendererState context) {
     if (nodes == null || nodes.isEmpty()) {
       return "";
     }
@@ -176,7 +176,7 @@ public final class AdfRenderer {
     return builder.toString();
   }
 
-  public String applyMarks(String text, List<AdfMark> marks, RenderContext context) {
+  public String applyMarks(String text, List<AdfMark> marks, RendererState context) {
     return markRenderer.applyMarks(
         text,
         marks,
@@ -188,7 +188,7 @@ public final class AdfRenderer {
     return RenderBuffer.joinBlocks(blocks);
   }
 
-  private String renderInline(AdfInline node, RenderContext context) {
+  private String renderInline(AdfInline node, RendererState context) {
     return switch (node) {
       case Text text -> renderText(text, context);
       case HardBreak _ -> hardBreakMarker(context);
@@ -205,7 +205,7 @@ public final class AdfRenderer {
     };
   }
 
-  private String renderParagraph(Paragraph paragraph, RenderContext context) {
+  private String renderParagraph(Paragraph paragraph, RendererState context) {
     var standaloneExcerpt = macroRenderer.extractStandaloneExcerptInclude(paragraph.content());
     if (standaloneExcerpt != null) {
       return macroRenderer.renderInlineExtension(standaloneExcerpt, context, this);
@@ -217,7 +217,7 @@ public final class AdfRenderer {
         .formatParagraph(rendered, markRenderer.extractBlockStyles(paragraph.marks()));
   }
 
-  private String renderHeading(Heading heading, RenderContext context) {
+  private String renderHeading(Heading heading, RendererState context) {
     var level = MarkdownText.clampHeadingLevel(heading.level());
     var text = renderHeadingText(heading.content(), context);
     if (text.isBlank()) {
@@ -236,7 +236,7 @@ public final class AdfRenderer {
             markRenderer.extractBlockStyles(heading.marks()));
   }
 
-  private String renderHeadingText(List<AdfInline> content, RenderContext context) {
+  private String renderHeadingText(List<AdfInline> content, RendererState context) {
     var headingNodes = AdfHeadingCollector.normalizedHeadingNodes(content);
     if (headingNodes.isEmpty()) {
       return "";
@@ -244,12 +244,12 @@ public final class AdfRenderer {
     return renderInlineNodes(headingNodes, context).strip();
   }
 
-  private String renderBlockQuote(Blockquote blockquote, RenderContext context) {
+  private String renderBlockQuote(Blockquote blockquote, RendererState context) {
     var content = joinBlocks(renderBlocks(blockquote.content(), context));
     return toBlockQuote(content);
   }
 
-  private String renderPanel(Panel panel, RenderContext context) {
+  private String renderPanel(Panel panel, RendererState context) {
     var alertHeader = "> [!" + gfmAlertType(panel.panelType()) + "]";
     var content = joinBlocks(renderBlocks(panel.content(), context));
     if (content.isBlank()) {
@@ -285,7 +285,7 @@ public final class AdfRenderer {
     return "%s\n%s\n```".formatted(fence.stripTrailing(), codeBlock.text()).stripTrailing();
   }
 
-  private String renderLayoutSection(LayoutSection layout, RenderContext context) {
+  private String renderLayoutSection(LayoutSection layout, RendererState context) {
     var columns = layout.content();
     if (columns.isEmpty()) {
       return "";
@@ -311,7 +311,7 @@ public final class AdfRenderer {
     return cells.toString();
   }
 
-  private String renderExpand(String title, List<AdfBlock> content, RenderContext context) {
+  private String renderExpand(String title, List<AdfBlock> content, RendererState context) {
     var safeTitle = title == null ? "" : title.trim();
     var body = joinBlocks(renderBlocks(content, context));
     var summary = safeTitle.isBlank() ? "<summary></summary>" : "<summary>" + safeTitle + "</summary>";
@@ -321,15 +321,15 @@ public final class AdfRenderer {
     return "<details>" + summary + "\n\n" + body + "\n\n</details>";
   }
 
-  private String renderText(Text text, RenderContext context) {
+  private String renderText(Text text, RendererState context) {
     return applyMarks(text.text(), text.marks(), context);
   }
 
-  private String hardBreakMarker(RenderContext context) {
+  private String hardBreakMarker(RendererState context) {
     return context.inTable() ? "\n" : "  \n";
   }
 
-  private String resolveHref(String href, RenderContext context) {
+  private String resolveHref(String href, RendererState context) {
     if (context.linkResolver() == null || context.currentPageId() == null) {
       return href;
     }
@@ -340,7 +340,7 @@ public final class AdfRenderer {
     return href;
   }
 
-  private ResolvedLink resolveLink(String href, String renderedLabel, RenderContext context) {
+  private ResolvedLink resolveLink(String href, String renderedLabel, RendererState context) {
     var resolvedHref = resolveHref(href, context);
     var fallbackLabel = (renderedLabel == null || renderedLabel.isBlank()) ? resolvedHref : renderedLabel;
     if (!shouldUseResolvedPageTitle(fallbackLabel, href, resolvedHref)) {
@@ -362,7 +362,7 @@ public final class AdfRenderer {
         || Objects.equals(normalizedLabel, resolvedHref != null ? resolvedHref.strip() : "");
   }
 
-  private String renderBlockCard(CardAttrs attrs, RenderContext context) {
+  private String renderBlockCard(CardAttrs attrs, RendererState context) {
     var renderedUrl = renderCardUrl(attrs, context);
     if (renderedUrl != null) {
       return renderedUrl;
@@ -378,12 +378,12 @@ public final class AdfRenderer {
     return "[Card: %s]".formatted(identifier);
   }
 
-  private String renderInlineCard(CardAttrs attrs, RenderContext context) {
+  private String renderInlineCard(CardAttrs attrs, RendererState context) {
     var url = renderCardUrl(attrs, context);
     return url != null ? url : "[Inline card]";
   }
 
-  private String renderEmbedCard(CardAttrs attrs, RenderContext context) {
+  private String renderEmbedCard(CardAttrs attrs, RendererState context) {
     var url = attrs.url();
     if (url == null || url.isBlank()) {
       return "[Embed card]";
@@ -397,7 +397,7 @@ public final class AdfRenderer {
     return "<%s>".formatted(resolvedUrl);
   }
 
-  private String renderCardUrl(CardAttrs attrs, RenderContext context) {
+  private String renderCardUrl(CardAttrs attrs, RendererState context) {
     var url = attrs.url();
     if (url == null || url.isBlank()) {
       return null;
@@ -409,7 +409,7 @@ public final class AdfRenderer {
   }
 
   private String resolveCardLabel(
-      CardAttrs attrs, String originalUrl, String resolvedUrl, RenderContext context) {
+      CardAttrs attrs, String originalUrl, String resolvedUrl, RendererState context) {
     var explicitTitle = attrs.title();
     if (explicitTitle != null && !explicitTitle.isBlank()) {
       return explicitTitle;
@@ -418,7 +418,7 @@ public final class AdfRenderer {
   }
 
   private String resolveInternalPageTitle(
-      String href, String fallbackLabel, RenderContext context) {
+      String href, String fallbackLabel, RendererState context) {
     var targetPageId = ConfluenceSupport.pageId(href);
     if (targetPageId == null || context.pageTitleResolver() == null) {
       return fallbackLabel;
@@ -446,7 +446,7 @@ public final class AdfRenderer {
     return text;
   }
 
-  private String renderStatus(Status status, RenderContext context) {
+  private String renderStatus(Status status, RendererState context) {
     var text = status.text();
     var safeText = text == null || text.isBlank() ? "status" : text;
     if (context.strategy().isStorage()) {
@@ -460,7 +460,7 @@ public final class AdfRenderer {
         .formatted(background, foreground, safeText);
   }
 
-  private List<String> renderUnknownBlockByPolicy(String nodeType, RenderContext context) {
+  private List<String> renderUnknownBlockByPolicy(String nodeType, RendererState context) {
     var label = (nodeType == null || nodeType.isBlank()) ? "<empty>" : nodeType;
     return switch (context.unknownNodePolicy()) {
       case SKIP -> {
@@ -476,7 +476,7 @@ public final class AdfRenderer {
     };
   }
 
-  private String renderUnknownInlineByPolicy(String nodeType, RenderContext context) {
+  private String renderUnknownInlineByPolicy(String nodeType, RendererState context) {
     var label = (nodeType == null || nodeType.isBlank()) ? "<empty>" : nodeType;
     return switch (context.unknownNodePolicy()) {
       case SKIP -> {

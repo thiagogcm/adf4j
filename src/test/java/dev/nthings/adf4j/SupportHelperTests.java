@@ -2,6 +2,7 @@ package dev.nthings.adf4j;
 
 import java.util.List;
 
+import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
 import dev.nthings.adf4j.internal.AttachmentReferences;
 import dev.nthings.adf4j.internal.ConfluenceSupport;
 
@@ -74,8 +75,8 @@ class SupportHelperTests {
   @Test
   void attachment_references_prefers_normalized_title_matches_over_raw_ids()
       throws Exception {
-    var options =
-        RenderOptions.defaults("Fixture")
+    var context =
+        ConfluenceRenderContext.forPage("Fixture")
             .withAttachmentReferences(
                 List.of(
                     new AttachmentReference("resolved-id", "Guide.PDF", "application/pdf")));
@@ -93,7 +94,7 @@ class SupportHelperTests {
             """);
 
     var resolved =
-        AttachmentReferences.resolve(macroParams, options.attachmentReferencesByTitle());
+        AttachmentReferences.resolve(macroParams, context.attachmentReferencesByTitle());
 
     assertThat(resolved.fileId()).isEqualTo("resolved-id");
     assertThat(resolved.title()).isEqualTo("Guide.PDF");
