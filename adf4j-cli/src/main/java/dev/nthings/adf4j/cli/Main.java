@@ -35,7 +35,7 @@ public final class Main {
         }
     }
 
-    static int run(String[] args, InputStream defaultInput) throws Exception {
+    static int run(String[] args, InputStream stdinStream) throws Exception {
         Options options;
         try {
             options = Options.compile(USAGE).parse(args);
@@ -55,7 +55,7 @@ public final class Main {
             return 1;
         }
 
-        String input = readInput(options.args(), defaultInput);
+        String input = readInput(options.args(), stdinStream);
         if (input == null) {
             return 1;
         }
@@ -88,7 +88,7 @@ public final class Main {
         };
     }
 
-    private static String readInput(java.util.List<String> positionalArgs, InputStream defaultInput) throws IOException {
+    private static String readInput(java.util.List<String> positionalArgs, InputStream stdinStream) throws IOException {
         if (!positionalArgs.isEmpty()) {
             Path inputPath = Path.of(positionalArgs.getFirst());
             if (!Files.exists(inputPath)) {
@@ -97,7 +97,7 @@ public final class Main {
             }
             return Files.readString(inputPath, StandardCharsets.UTF_8);
         }
-        return new String(defaultInput.readAllBytes(), StandardCharsets.UTF_8);
+        return new String(stdinStream.readAllBytes(), StandardCharsets.UTF_8);
     }
 
     private Main() {}
