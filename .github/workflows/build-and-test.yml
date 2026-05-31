@@ -58,3 +58,38 @@ jobs:
                   name: adf4j-cli-${{ matrix.os }}
                   path: dist/*
                   if-no-files-found: error
+
+    build-wasm:
+        name: Build WASM (Web Image)
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Set up GraalVM JDK 25
+              uses: graalvm/setup-graalvm@v1
+              with:
+                  java-version: "25"
+                  distribution: "graalvm"
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+                  cache: "maven"
+                  native-image-job-reports: "true"
+
+            - name: Verify Native Image installation
+              run: native-image --version
+
+            - name: Build WASM CLI
+              run: ./mvnw package -Pwasm -pl adf4j-cli -am -DskipTests
+
+            - name: Prepare WASM artifact
+              run: |
+                  mkdir -p dist
+                  cp adf4j-cli/target/adf4j-cli.wasm dist/adf4j-cli.wasm
+
+            - name: Upload WASM Artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: adf4j-cli-wasm
+                  path: dist/*
+                  if-no-files-found: error
