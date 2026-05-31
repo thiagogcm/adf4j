@@ -7,7 +7,6 @@ import dev.nthings.adf4j.AttachmentReference;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ConfluenceRenderContextTests {
 
@@ -30,31 +29,5 @@ class ConfluenceRenderContextTests {
     assertThat(context.attachmentReference("GUIDE.PDF").mediaType()).isEqualTo("application/pdf");
     assertThat(context.attachmentReference("diagram.png").fileId()).isEqualTo("file-3");
     assertThat(context.attachmentReference("missing.pdf")).isNull();
-  }
-
-  @Test
-  void with_child_pages_sanitizes_invalid_entries_recursively_and_returns_immutable_children() {
-    var context = ConfluenceRenderContext.forPage("Fixture")
-        .withChildPages(
-            List.of(
-                new ConfluenceRenderContext.ChildPage(
-                    "page-1",
-                    "Page One",
-                    List.of(
-                        new ConfluenceRenderContext.ChildPage("child-1", "Child One"),
-                        new ConfluenceRenderContext.ChildPage("", "Ignored child"),
-                        new ConfluenceRenderContext.ChildPage("child-2", "   "))),
-                new ConfluenceRenderContext.ChildPage(" ", "Ignored page"),
-                new ConfluenceRenderContext.ChildPage("page-2", "Page Two")));
-
-    assertThat(context.childPages()).hasSize(2);
-    assertThat(context.childPages().get(0).nodeId()).isEqualTo("page-1");
-    assertThat(context.childPages().get(0).children())
-        .containsExactly(new ConfluenceRenderContext.ChildPage("child-1", "Child One"));
-    assertThat(context.childPages().get(1))
-        .isEqualTo(new ConfluenceRenderContext.ChildPage("page-2", "Page Two"));
-    assertThatThrownBy(
-        () -> context.childPages().add(new ConfluenceRenderContext.ChildPage("page-3", "Page Three")))
-        .isInstanceOf(UnsupportedOperationException.class);
   }
 }

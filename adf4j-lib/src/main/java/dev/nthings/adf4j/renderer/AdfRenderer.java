@@ -6,7 +6,6 @@ import java.util.Objects;
 import java.util.stream.Stream;
 
 import dev.nthings.adf4j.RenderOptions;
-import dev.nthings.adf4j.internal.ConfluenceSupport;
 import dev.nthings.adf4j.internal.MarkdownText;
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.AdfDocument;
@@ -19,7 +18,6 @@ import dev.nthings.adf4j.ast.BodiedExtension;
 import dev.nthings.adf4j.ast.BodiedSyncBlock;
 import dev.nthings.adf4j.ast.BulletList;
 import dev.nthings.adf4j.ast.Caption;
-import dev.nthings.adf4j.ast.CardAttrs;
 import dev.nthings.adf4j.ast.CodeBlock;
 import dev.nthings.adf4j.ast.Date;
 import dev.nthings.adf4j.ast.DecisionItem;
@@ -70,6 +68,7 @@ public final class AdfRenderer {
   private final TableRenderer tableRenderer;
   private final MediaRenderer mediaRenderer;
   private final MacroRenderer macroRenderer;
+  private final CardRenderer cardRenderer;
 
   public AdfRenderer(
       AdfHeadingCollector headingCollector,
@@ -77,13 +76,15 @@ public final class AdfRenderer {
       ListRenderer listRenderer,
       TableRenderer tableRenderer,
       MediaRenderer mediaRenderer,
-      MacroRenderer macroRenderer) {
+      MacroRenderer macroRenderer,
+      CardRenderer cardRenderer) {
     this.headingCollector = headingCollector;
     this.markRenderer = markRenderer;
     this.listRenderer = listRenderer;
     this.tableRenderer = tableRenderer;
     this.mediaRenderer = mediaRenderer;
     this.macroRenderer = macroRenderer;
+    this.cardRenderer = cardRenderer;
   }
 
   public String render(
@@ -133,8 +134,8 @@ public final class AdfRenderer {
       case BodiedExtension bodied -> macroRenderer.renderBodiedExtension(bodied, context, this);
       case SyncBlock sync -> List.of(macroRenderer.renderSyncBlock(sync));
       case BodiedSyncBlock sync -> macroRenderer.renderBodiedSyncBlock(sync, context, this);
-      case BlockCard blockCard -> List.of(renderBlockCard(blockCard.attrs(), context));
-      case EmbedCard embedCard -> List.of(renderEmbedCard(embedCard.attrs(), context));
+      case BlockCard blockCard -> List.of(cardRenderer.renderBlockCard(blockCard.attrs(), context));
+      case EmbedCard embedCard -> List.of(cardRenderer.renderEmbedCard(embedCard.attrs(), context));
       case UnknownBlock unknown -> renderUnknownBlockByPolicy(unknown.type(), context);
     };
   }
@@ -161,7 +162,7 @@ public final class AdfRenderer {
 
   public String applyMarks(String text, List<AdfMark> marks, RendererState context) {
     return markRenderer.applyMarks(
-        text, marks, (href, renderedLabel) -> resolveLink(href, renderedLabel, context));
+        text, marks, (href, renderedLabel) -> cardRenderer.resolveLink(href, renderedLabel, context));
   }
 
   public String joinBlocks(List<String> blocks) {
@@ -172,7 +173,7 @@ public final class AdfRenderer {
     return switch (node) {
       case Text text -> renderText(text, context);
       case HardBreak _ -> hardBreakMarker(context);
-      case InlineCard card -> renderInlineCard(card.attrs(), context);
+      case InlineCard card -> cardRenderer.renderInlineCard(card.attrs(), context);
       case MediaInline media -> mediaRenderer.renderMediaInline(media, context, this);
       case Date date -> MarkdownText.dateFromTimestamp(date.timestamp());
       case Emoji emoji -> renderEmoji(emoji);
@@ -286,107 +287,6 @@ public final class AdfRenderer {
 
   private String hardBreakMarker(RendererState context) {
     return context.inTable() ? "\n" : "  \n";
-  }
-
-  private String resolveHref(String href, RendererState context) {
-    if (context.linkResolver() == null || context.currentPageId() == null) {
-      return href;
-    }
-    var targetPageId = ConfluenceSupport.pageId(href);
-    if (targetPageId != null) {
-      return context.linkResolver().resolve(context.currentPageId(), targetPageId).orElse(href);
-    }
-    return href;
-  }
-
-  private ResolvedLink resolveLink(String href, String renderedLabel, RendererState context) {
-    var resolvedHref = resolveHref(href, context);
-    var fallbackLabel = (renderedLabel == null || renderedLabel.isBlank()) ? resolvedHref : renderedLabel;
-    if (!shouldUseResolvedPageTitle(fallbackLabel, href, resolvedHref)) {
-      return new ResolvedLink(resolvedHref, fallbackLabel);
-    }
-    return new ResolvedLink(resolvedHref, resolveInternalPageTitle(href, fallbackLabel, context));
-  }
-
-  private boolean shouldUseResolvedPageTitle(
-      String label, String originalHref, String resolvedHref) {
-    if (label == null) {
-      return true;
-    }
-    var normalizedLabel = label.strip();
-    if (normalizedLabel.isEmpty()) {
-      return true;
-    }
-    return Objects.equals(normalizedLabel, originalHref != null ? originalHref.strip() : "")
-        || Objects.equals(normalizedLabel, resolvedHref != null ? resolvedHref.strip() : "");
-  }
-
-  private String renderBlockCard(CardAttrs attrs, RendererState context) {
-    var renderedUrl = renderCardUrl(attrs, context);
-    if (renderedUrl != null) {
-      return renderedUrl;
-    }
-
-    var identifier = Stream.of(attrs.datasourceId(), attrs.localId())
-        .filter(s -> s != null && !s.isBlank())
-        .findFirst()
-        .orElse(null);
-    if (identifier == null || identifier.isBlank()) {
-      return "[Card]";
-    }
-    return "[Card: %s]".formatted(identifier);
-  }
-
-  private String renderInlineCard(CardAttrs attrs, RendererState context) {
-    var url = renderCardUrl(attrs, context);
-    return url != null ? url : "[Inline card]";
-  }
-
-  private String renderEmbedCard(CardAttrs attrs, RendererState context) {
-    var url = attrs.url();
-    if (url == null || url.isBlank()) {
-      return "[Embed card]";
-    }
-
-    var resolvedUrl = resolveHref(url, context);
-    var explicitTitle = attrs.title();
-    if (explicitTitle != null && !explicitTitle.isBlank()) {
-      return "[%s](%s)".formatted(MarkdownText.escapeLinkText(explicitTitle), resolvedUrl);
-    }
-    return "<%s>".formatted(resolvedUrl);
-  }
-
-  private String renderCardUrl(CardAttrs attrs, RendererState context) {
-    var url = attrs.url();
-    if (url == null || url.isBlank()) {
-      return null;
-    }
-
-    var resolvedUrl = resolveHref(url, context);
-    var label = resolveCardLabel(attrs, url, resolvedUrl, context);
-    return "[%s](%s)".formatted(MarkdownText.escapeLinkText(label), resolvedUrl);
-  }
-
-  private String resolveCardLabel(
-      CardAttrs attrs, String originalUrl, String resolvedUrl, RendererState context) {
-    var explicitTitle = attrs.title();
-    if (explicitTitle != null && !explicitTitle.isBlank()) {
-      return explicitTitle;
-    }
-    return resolveInternalPageTitle(originalUrl, resolvedUrl, context);
-  }
-
-  private String resolveInternalPageTitle(
-      String href, String fallbackLabel, RendererState context) {
-    var targetPageId = ConfluenceSupport.pageId(href);
-    if (targetPageId == null || context.pageTitleResolver() == null) {
-      return fallbackLabel;
-    }
-    return context
-        .pageTitleResolver()
-        .resolve(targetPageId)
-        .filter(s -> !s.isBlank())
-        .orElse(fallbackLabel);
   }
 
   private String renderEmoji(Emoji emoji) {

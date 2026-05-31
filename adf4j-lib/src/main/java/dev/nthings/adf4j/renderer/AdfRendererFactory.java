@@ -22,7 +22,8 @@ public final class AdfRendererFactory {
         new ListRenderer(),
         new TableRenderer(markdownRenderingSupport),
         new MediaRenderer(),
-        new MacroRenderer());
+        new MacroRenderer(),
+        new CardRenderer());
   }
 
   public static AdfContentMetadataExtractor contentMetadataExtractor(

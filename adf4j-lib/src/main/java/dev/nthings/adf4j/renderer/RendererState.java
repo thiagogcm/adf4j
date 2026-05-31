@@ -1,9 +1,7 @@
 package dev.nthings.adf4j.renderer;
 
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 
 import dev.nthings.adf4j.AttachmentReference;
@@ -11,55 +9,66 @@ import dev.nthings.adf4j.HeadingReference;
 import dev.nthings.adf4j.PageTitleResolver;
 import dev.nthings.adf4j.RenderOptions;
 import dev.nthings.adf4j.ast.Heading;
-import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
 import dev.nthings.adf4j.model.ExcerptKey;
 import dev.nthings.adf4j.model.MacroContext;
 import dev.nthings.adf4j.model.PageLinkResolver;
 import dev.nthings.adf4j.model.UnknownNodePolicy;
 
+/**
+ * The traversal cursor: a shared immutable {@link RenderContext} plus the position-dependent state
+ * that changes as the renderer descends (list depth, table scope, active excerpts). Transitions
+ * copy only the cursor fields and keep the same {@link RenderContext} reference.
+ */
 record RendererState(
+    RenderContext context,
     int listDepth,
     boolean inTable,
-    String pageTitle,
-    String currentPageId,
-    MacroContext macroContext,
-    HeadingOutline headingOutline,
-    List<ConfluenceRenderContext.ChildPage> childPages,
-    Map<String, AttachmentReference> attachmentReferencesByTitle,
-    PageLinkResolver linkResolver,
-    PageTitleResolver pageTitleResolver,
-    UnknownNodePolicy unknownNodePolicy,
     Set<ExcerptKey> activeExcerpts) {
 
   static RendererState root(RenderOptions options, HeadingOutline headingOutline) {
-    var requiredOptions = Objects.requireNonNull(options, "options");
-    var safeOutline = Objects.requireNonNullElseGet(headingOutline, HeadingOutline::empty);
-    var confluenceContext = ConfluenceRenderContext.from(requiredOptions.context());
-    return new RendererState(
-        0,
-        false,
-        confluenceContext.pageTitle(),
-        confluenceContext.currentPageId(),
-        MacroContext.from(confluenceContext.excerpts(), safeOutline.headings()),
-        safeOutline,
-        confluenceContext.childPages(),
-        confluenceContext.attachmentReferencesByTitle(),
-        confluenceContext.pageLinkResolver(),
-        confluenceContext.pageTitleResolver(),
-        requiredOptions.unknownNodePolicy(),
-        Set.of());
+    return new RendererState(RenderContext.from(options, headingOutline), 0, false, Set.of());
+  }
+
+  // Delegating accessors onto the shared context so renderer call sites stay stable.
+  String pageTitle() {
+    return context.pageTitle();
+  }
+
+  String currentPageId() {
+    return context.currentPageId();
+  }
+
+  MacroContext macroContext() {
+    return context.macroContext();
+  }
+
+  Map<String, AttachmentReference> attachmentReferencesByTitle() {
+    return context.attachmentReferencesByTitle();
+  }
+
+  PageLinkResolver linkResolver() {
+    return context.linkResolver();
+  }
+
+  PageTitleResolver pageTitleResolver() {
+    return context.pageTitleResolver();
+  }
+
+  UnknownNodePolicy unknownNodePolicy() {
+    return context.unknownNodePolicy();
   }
 
   HeadingReference headingInfo(Heading heading) {
-    return headingOutline.infoFor(heading);
+    return context.headingOutline().infoFor(heading);
   }
 
+  // Cursor transitions.
   RendererState withListDepth(int depth) {
-    return copy(depth, inTable, activeExcerpts);
+    return new RendererState(context, depth, inTable, activeExcerpts);
   }
 
   RendererState withTable(boolean table) {
-    return copy(listDepth, table, activeExcerpts);
+    return new RendererState(context, listDepth, table, activeExcerpts);
   }
 
   boolean isExcerptActive(ExcerptKey key) {
@@ -67,26 +76,8 @@ record RendererState(
   }
 
   RendererState withExcerpt(ExcerptKey key) {
-    var nextActiveExcerpts = new LinkedHashSet<>(activeExcerpts);
-    nextActiveExcerpts.add(key);
-    return copy(listDepth, inTable, Set.copyOf(nextActiveExcerpts));
+    var next = new LinkedHashSet<>(activeExcerpts);
+    next.add(key);
+    return new RendererState(context, listDepth, inTable, Set.copyOf(next));
   }
-
-  private RendererState copy(
-      int listDepth, boolean inTable, Set<ExcerptKey> activeExcerpts) {
-    return new RendererState(
-        listDepth,
-        inTable,
-        pageTitle,
-        currentPageId,
-        macroContext,
-        headingOutline,
-        childPages,
-        attachmentReferencesByTitle,
-        linkResolver,
-        pageTitleResolver,
-        unknownNodePolicy,
-        activeExcerpts);
-  }
-
 }

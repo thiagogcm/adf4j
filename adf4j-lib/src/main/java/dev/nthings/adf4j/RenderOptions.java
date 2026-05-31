@@ -1,25 +1,26 @@
 package dev.nthings.adf4j;
 
+import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
 import dev.nthings.adf4j.model.UnknownNodePolicy;
 
 public record RenderOptions(
     UnknownNodePolicy unknownNodePolicy,
-    AdfRenderContext context) {
+    ConfluenceRenderContext context) {
 
   public RenderOptions {
     unknownNodePolicy = unknownNodePolicy == null ? UnknownNodePolicy.PLACEHOLDER : unknownNodePolicy;
-    context = context == null ? AdfRenderContext.none() : context;
+    context = context == null ? ConfluenceRenderContext.empty() : context;
   }
 
   public static RenderOptions defaults() {
-    return new RenderOptions(UnknownNodePolicy.PLACEHOLDER, AdfRenderContext.none());
+    return new RenderOptions(UnknownNodePolicy.PLACEHOLDER, ConfluenceRenderContext.empty());
   }
 
   public RenderOptions withUnknownNodePolicy(UnknownNodePolicy policy) {
     return new RenderOptions(policy, context);
   }
 
-  public RenderOptions withContext(AdfRenderContext renderContext) {
+  public RenderOptions withContext(ConfluenceRenderContext renderContext) {
     return new RenderOptions(unknownNodePolicy, renderContext);
   }
 }

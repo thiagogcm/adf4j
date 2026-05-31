@@ -1,13 +1,11 @@
 package dev.nthings.adf4j.confluence;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import dev.nthings.adf4j.AdfRenderContext;
 import dev.nthings.adf4j.AttachmentReference;
 import dev.nthings.adf4j.PageTitleResolver;
 import dev.nthings.adf4j.ast.AdfBlock;
@@ -21,25 +19,11 @@ public record ConfluenceRenderContext(
     Map<ExcerptKey, List<AdfBlock>> excerpts,
     PageLinkResolver pageLinkResolver,
     PageTitleResolver pageTitleResolver,
-    Map<String, AttachmentReference> attachmentReferencesByTitle,
-    List<ChildPage> childPages)
-    implements AdfRenderContext {
+    Map<String, AttachmentReference> attachmentReferencesByTitle) {
 
   public ConfluenceRenderContext {
     excerpts = immutableExcerpts(excerpts);
     attachmentReferencesByTitle = immutableAttachmentReferencesByTitle(attachmentReferencesByTitle);
-    childPages = childPages == null ? List.of() : List.copyOf(childPages);
-  }
-
-  public record ChildPage(String nodeId, String title, List<ChildPage> children) {
-
-    public ChildPage(String nodeId, String title) {
-      this(nodeId, title, List.of());
-    }
-
-    public ChildPage {
-      children = children == null ? List.of() : List.copyOf(children);
-    }
   }
 
   public static ConfluenceRenderContext empty() {
@@ -47,54 +31,24 @@ public record ConfluenceRenderContext(
   }
 
   public static ConfluenceRenderContext forPage(String pageTitle) {
-    return new ConfluenceRenderContext(
-        pageTitle, null, Map.of(), null, null, Map.of(), List.of());
-  }
-
-  public static ConfluenceRenderContext from(AdfRenderContext context) {
-    return context instanceof ConfluenceRenderContext confluenceContext
-        ? confluenceContext
-        : empty();
+    return new ConfluenceRenderContext(pageTitle, null, Map.of(), null, null, Map.of());
   }
 
   public ConfluenceRenderContext withPageId(String pageId) {
-    return copy(
-        pageId,
-        excerpts,
-        pageLinkResolver,
-        pageTitleResolver,
-        attachmentReferencesByTitle,
-        childPages);
+    return copy(pageId, excerpts, pageLinkResolver, pageTitleResolver, attachmentReferencesByTitle);
   }
 
   public ConfluenceRenderContext withExcerpts(Map<ExcerptKey, List<AdfBlock>> excerptByKey) {
     return copy(
-        currentPageId,
-        excerptByKey,
-        pageLinkResolver,
-        pageTitleResolver,
-        attachmentReferencesByTitle,
-        childPages);
+        currentPageId, excerptByKey, pageLinkResolver, pageTitleResolver, attachmentReferencesByTitle);
   }
 
   public ConfluenceRenderContext withPageLinkResolver(PageLinkResolver resolver) {
-    return copy(
-        currentPageId,
-        excerpts,
-        resolver,
-        pageTitleResolver,
-        attachmentReferencesByTitle,
-        childPages);
+    return copy(currentPageId, excerpts, resolver, pageTitleResolver, attachmentReferencesByTitle);
   }
 
   public ConfluenceRenderContext withPageTitleResolver(PageTitleResolver resolver) {
-    return copy(
-        currentPageId,
-        excerpts,
-        pageLinkResolver,
-        resolver,
-        attachmentReferencesByTitle,
-        childPages);
+    return copy(currentPageId, excerpts, pageLinkResolver, resolver, attachmentReferencesByTitle);
   }
 
   public ConfluenceRenderContext withAttachmentReferences(
@@ -117,23 +71,7 @@ public record ConfluenceRenderContext(
       }
     }
 
-    return copy(
-        currentPageId,
-        excerpts,
-        pageLinkResolver,
-        pageTitleResolver,
-        safe,
-        childPages);
-  }
-
-  public ConfluenceRenderContext withChildPages(Iterable<ChildPage> pages) {
-    return copy(
-        currentPageId,
-        excerpts,
-        pageLinkResolver,
-        pageTitleResolver,
-        attachmentReferencesByTitle,
-        sanitizeChildPages(pages));
+    return copy(currentPageId, excerpts, pageLinkResolver, pageTitleResolver, safe);
   }
 
   public AttachmentReference attachmentReference(String title) {
@@ -162,31 +100,6 @@ public record ConfluenceRenderContext(
     return Map.copyOf(converted);
   }
 
-  private static List<ChildPage> sanitizeChildPages(Iterable<ChildPage> pages) {
-    var safe = new ArrayList<ChildPage>();
-    if (pages == null) {
-      return safe;
-    }
-
-    for (var page : pages) {
-      var sanitized = sanitizeChildPage(page);
-      if (sanitized != null) {
-        safe.add(sanitized);
-      }
-    }
-
-    return safe;
-  }
-
-  private static ChildPage sanitizeChildPage(ChildPage page) {
-    if (page == null || page.nodeId() == null || page.nodeId().isBlank() || page.title() == null
-        || page.title().isBlank()) {
-      return null;
-    }
-
-    return new ChildPage(page.nodeId(), page.title(), sanitizeChildPages(page.children()));
-  }
-
   private static Map<String, AttachmentReference> immutableAttachmentReferencesByTitle(
       Map<String, AttachmentReference> attachmentReferencesByTitle) {
     if (attachmentReferencesByTitle == null || attachmentReferencesByTitle.isEmpty()) {
@@ -201,15 +114,13 @@ public record ConfluenceRenderContext(
       Map<ExcerptKey, List<AdfBlock>> excerpts,
       PageLinkResolver pageLinkResolver,
       PageTitleResolver pageTitleResolver,
-      Map<String, AttachmentReference> attachmentReferencesByTitle,
-      List<ChildPage> childPages) {
+      Map<String, AttachmentReference> attachmentReferencesByTitle) {
     return new ConfluenceRenderContext(
         pageTitle,
         currentPageId,
         excerpts,
         pageLinkResolver,
         pageTitleResolver,
-        attachmentReferencesByTitle,
-        childPages);
+        attachmentReferencesByTitle);
   }
 }
