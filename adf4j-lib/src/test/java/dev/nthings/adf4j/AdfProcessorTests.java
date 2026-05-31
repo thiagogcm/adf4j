@@ -31,30 +31,23 @@ class AdfProcessorTests {
   private static final List<Arguments> option_aware_api_calls =
       List.of(
           argumentSet(
-              "renderStorageDocument(String, RenderOptions)",
-              new NullOptionCall(() -> PROCESSOR.renderStorageDocument(MINIMAL_ADF, null))),
+              "render(String, RenderOptions)",
+              new NullOptionCall(() -> PROCESSOR.render(MINIMAL_ADF, null))),
           argumentSet(
-              "renderStorageMarkdown(String, RenderOptions)",
-              new NullOptionCall(() -> PROCESSOR.renderStorageMarkdown(MINIMAL_ADF, null))),
+              "render(AdfDocument, RenderOptions)",
+              new NullOptionCall(() -> PROCESSOR.render(MINIMAL_ADF_DOCUMENT, null))),
           argumentSet(
-              "renderStorageMarkdown(AdfDocument, RenderOptions)",
-              new NullOptionCall(() -> PROCESSOR.renderStorageMarkdown(MINIMAL_ADF_DOCUMENT, null))),
+              "renderMarkdown(String, RenderOptions)",
+              new NullOptionCall(() -> PROCESSOR.renderMarkdown(MINIMAL_ADF, null))),
+          argumentSet(
+              "renderMarkdown(AdfDocument, RenderOptions)",
+              new NullOptionCall(() -> PROCESSOR.renderMarkdown(MINIMAL_ADF_DOCUMENT, null))),
           argumentSet(
               "extractContentMetadata(String, RenderOptions)",
               new NullOptionCall(() -> PROCESSOR.extractContentMetadata(MINIMAL_ADF, null))),
           argumentSet(
               "extractContentMetadata(AdfDocument, RenderOptions)",
-              new NullOptionCall(() -> PROCESSOR.extractContentMetadata(MINIMAL_ADF_DOCUMENT, null))),
-          argumentSet(
-              "renderPresentationMarkdown(String, RenderOptions)",
-              new NullOptionCall(() -> PROCESSOR.renderPresentationMarkdown(MINIMAL_ADF, null))),
-          argumentSet(
-              "renderPresentationMarkdown(AdfDocument, RenderOptions)",
-              new NullOptionCall(
-                  () -> PROCESSOR.renderPresentationMarkdown(MINIMAL_ADF_DOCUMENT, null))),
-          argumentSet(
-              "renderPresentationHtml(String, RenderOptions)",
-              new NullOptionCall(() -> PROCESSOR.renderPresentationHtml(MINIMAL_ADF, null))));
+              new NullOptionCall(() -> PROCESSOR.extractContentMetadata(MINIMAL_ADF_DOCUMENT, null))));
 
   record NullOptionCall(Runnable runnable) {
     void invoke() {
@@ -64,7 +57,7 @@ class AdfProcessorTests {
 
   @Test
   void default_construction_exposes_the_public_parse_and_render_workflow() {
-    var markdown = PROCESSOR.renderStorageMarkdown(
+    var markdown = PROCESSOR.renderMarkdown(
         """
             {
               "type": "doc",

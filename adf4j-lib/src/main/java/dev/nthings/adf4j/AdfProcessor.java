@@ -27,49 +27,31 @@ public final class AdfProcessor {
     return parsingService.parse(rawAdf);
   }
 
-  public RenderResult renderStorageDocument(String rawAdf, RenderOptions options) {
-    return workflow.render(rawAdf, Objects.requireNonNull(options, "options"), OutputFormat.STORAGE_MARKDOWN);
+  public RenderResult render(String rawAdf, RenderOptions options) {
+    return workflow.render(rawAdf, Objects.requireNonNull(options, "options"));
   }
 
-  public String renderStorageMarkdown(String rawAdf) {
-    return renderStorageMarkdown(rawAdf, RenderOptions.defaults());
+  public RenderResult render(AdfDocument document, RenderOptions options) {
+    return workflow.render(document, Objects.requireNonNull(options, "options"));
   }
 
-  public String renderStorageMarkdown(String rawAdf, RenderOptions options) {
-    return renderStorageDocument(rawAdf, Objects.requireNonNull(options, "options")).body();
+  public String renderMarkdown(String rawAdf) {
+    return renderMarkdown(rawAdf, RenderOptions.defaults());
   }
 
-  public String renderStorageMarkdown(AdfDocument document, RenderOptions options) {
-    return workflow
-        .render(document, Objects.requireNonNull(options, "options"), OutputFormat.STORAGE_MARKDOWN)
-        .body();
+  public String renderMarkdown(String rawAdf, RenderOptions options) {
+    return render(rawAdf, Objects.requireNonNull(options, "options")).body();
+  }
+
+  public String renderMarkdown(AdfDocument document, RenderOptions options) {
+    return render(document, Objects.requireNonNull(options, "options")).body();
   }
 
   public ContentMetadata extractContentMetadata(String rawAdf, RenderOptions options) {
-    return renderStorageDocument(rawAdf, Objects.requireNonNull(options, "options")).metadata();
+    return render(rawAdf, Objects.requireNonNull(options, "options")).metadata();
   }
 
   public ContentMetadata extractContentMetadata(AdfDocument document, RenderOptions options) {
-    return workflow
-        .render(document, Objects.requireNonNull(options, "options"), OutputFormat.STORAGE_MARKDOWN)
-        .metadata();
-  }
-
-  public String renderPresentationMarkdown(String rawAdf, RenderOptions options) {
-    return workflow
-        .render(rawAdf, Objects.requireNonNull(options, "options"), OutputFormat.PRESENTATION_MARKDOWN)
-        .body();
-  }
-
-  public String renderPresentationMarkdown(AdfDocument document, RenderOptions options) {
-    return workflow
-        .render(document, Objects.requireNonNull(options, "options"), OutputFormat.PRESENTATION_MARKDOWN)
-        .body();
-  }
-
-  public String renderPresentationHtml(String rawAdf, RenderOptions options) {
-    return workflow
-        .render(rawAdf, Objects.requireNonNull(options, "options"), OutputFormat.PRESENTATION_HTML)
-        .body();
+    return render(document, Objects.requireNonNull(options, "options")).metadata();
   }
 }

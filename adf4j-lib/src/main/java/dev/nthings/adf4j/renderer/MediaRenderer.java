@@ -12,8 +12,6 @@ import dev.nthings.adf4j.ast.MediaSingle;
 
 public final class MediaRenderer {
 
-  private static final int DEFAULT_INLINE_IMAGE_HEIGHT_PX = 22;
-
   String renderMediaSingle(MediaSingle node, RendererState context, AdfRenderer adfRenderer) {
     if (node.content().isEmpty()) {
       return "";
@@ -22,10 +20,7 @@ public final class MediaRenderer {
     var blocks = new ArrayList<String>();
     for (var item : node.content()) {
       if (item instanceof Media media) {
-        blocks.add(
-            context.strategy().isStorage()
-                ? renderMedia(media, context, adfRenderer)
-                : renderPresentationMediaSingle(media.attrs(), node));
+        blocks.add(renderMedia(media, context, adfRenderer));
       } else if (item instanceof Caption caption) {
         var rendered = renderCaption(caption, context, adfRenderer);
         if (!rendered.isBlank()) {
@@ -60,39 +55,9 @@ public final class MediaRenderer {
     return adfRenderer.applyMarks(rendered, node.marks(), context);
   }
 
-  String renderMediaInline(
-      RenderingStrategy strategy, MediaInline node, RendererState context, AdfRenderer adfRenderer) {
-    var rendered = strategy.usesStyledInlineMedia()
-        ? renderStyledInlineMedia(node.attrs())
-        : renderMediaBlock(node.attrs());
+  String renderMediaInline(MediaInline node, RendererState context, AdfRenderer adfRenderer) {
+    var rendered = renderMediaBlock(node.attrs());
     return adfRenderer.applyMarks(rendered, node.marks(), context);
-  }
-
-  private String renderPresentationMediaSingle(MediaAttrs attrs, MediaSingle mediaSingle) {
-    var details = mediaDetails(attrs);
-    if (details.source().isEmpty()) {
-      return renderMediaBlock(attrs);
-    }
-
-    var layout = mediaSingle.layout();
-    var style = renderMediaSingleStyle(mediaSingle, layout);
-    return HtmlFragments.image(
-        details.source().orElseThrow(),
-        details.safeAlt(),
-        image -> {
-          if (details.width() != null) {
-            image.attr("width", Integer.toString(details.width()));
-          }
-          if (details.height() != null) {
-            image.attr("height", Integer.toString(details.height()));
-          }
-          if (layout != null && !layout.isBlank()) {
-            image.attr("data-layout", layout);
-          }
-          if (style != null && !style.isBlank()) {
-            image.attr("style", style);
-          }
-        });
   }
 
   private String renderMediaBlock(MediaAttrs attrs) {
@@ -100,27 +65,6 @@ public final class MediaRenderer {
     var attributeSuffix = renderImageAttributeSuffix(details.width(), details.height());
     return "![%s](%s)%s"
         .formatted(details.safeAlt(), details.markdownSource(), attributeSuffix);
-  }
-
-  private String renderStyledInlineMedia(MediaAttrs attrs) {
-    var details = mediaDetails(attrs);
-    if (details.source().isEmpty()) {
-      return renderMediaBlock(attrs);
-    }
-
-    var inlineHeight = resolveInlineImageHeight(details.height());
-    var inlineWidth = resolveInlineImageWidth(details.width(), details.height(), inlineHeight);
-    return HtmlFragments.image(
-        details.source().orElseThrow(),
-        details.safeAlt(),
-        image -> {
-          if (inlineWidth != null) {
-            image.attr("width", Integer.toString(inlineWidth));
-          }
-          if (inlineHeight != null) {
-            image.attr("height", Integer.toString(inlineHeight));
-          }
-        });
   }
 
   private String resolveMediaSource(MediaAttrs attrs) {
@@ -151,24 +95,6 @@ public final class MediaRenderer {
         positiveInteger(attrs.height()));
   }
 
-  private Integer resolveInlineImageHeight(Integer intrinsicHeight) {
-    if (intrinsicHeight == null) {
-      return DEFAULT_INLINE_IMAGE_HEIGHT_PX;
-    }
-    return Math.min(intrinsicHeight, DEFAULT_INLINE_IMAGE_HEIGHT_PX);
-  }
-
-  private Integer resolveInlineImageWidth(
-      Integer intrinsicWidth, Integer intrinsicHeight, Integer targetHeight) {
-    if (targetHeight == null || targetHeight <= 0) {
-      return null;
-    }
-    if (intrinsicWidth == null || intrinsicHeight == null || intrinsicHeight <= 0) {
-      return null;
-    }
-    return Math.max(1, Math.round((float) intrinsicWidth * targetHeight / intrinsicHeight));
-  }
-
   private String renderImageAttributeSuffix(Integer width, Integer height) {
     var attributes = new ArrayList<String>();
     if (width != null) {
@@ -181,52 +107,6 @@ public final class MediaRenderer {
       return "";
     }
     return "{%s}".formatted(String.join(" ", attributes));
-  }
-
-  private String renderMediaSingleStyle(MediaSingle mediaSingle, String layout) {
-    var styles = new ArrayList<String>();
-    var widthType = mediaSingle.widthType();
-    if ("wide".equals(layout) || "full-width".equals(layout)) {
-      styles.add("width:100%");
-      styles.add("height:auto");
-    } else {
-      var displayWidth = positiveInteger(mediaSingle.width());
-      if (displayWidth != null) {
-        if ("percentage".equals(widthType)) {
-          styles.add("width:%d%%".formatted(displayWidth));
-        } else {
-          styles.add("width:min(100%%, %dpx)".formatted(displayWidth));
-        }
-        styles.add("height:auto");
-      }
-    }
-
-    if (layout == null || layout.isBlank()) {
-      return styles.isEmpty() ? null : String.join(";", styles);
-    }
-
-    switch (layout) {
-      case "center" -> {
-        styles.add("display:block");
-        styles.add("margin:0 auto");
-      }
-      case "align-end" -> {
-        styles.add("display:block");
-        styles.add("margin-left:auto");
-      }
-      case "wrap-left" -> {
-        styles.add("float:left");
-        styles.add("margin:0 1rem 1rem 0");
-      }
-      case "wrap-right" -> {
-        styles.add("float:right");
-        styles.add("margin:0 0 1rem 1rem");
-      }
-      default -> {
-      }
-    }
-
-    return styles.isEmpty() ? null : String.join(";", styles);
   }
 
   private Integer positiveInteger(String rawValue) {

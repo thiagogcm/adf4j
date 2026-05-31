@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import dev.nthings.adf4j.HeadingReference;
-import dev.nthings.adf4j.MarkdownLinkListRenderer;
 import dev.nthings.adf4j.ast.AdfInline;
 import dev.nthings.adf4j.ast.BodiedExtension;
 import dev.nthings.adf4j.ast.BodiedSyncBlock;
@@ -14,7 +13,6 @@ import dev.nthings.adf4j.ast.InlineExtension;
 import dev.nthings.adf4j.ast.MacroParams;
 import dev.nthings.adf4j.ast.SyncBlock;
 import dev.nthings.adf4j.ast.Text;
-import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
 import dev.nthings.adf4j.internal.AttachmentReferences;
 import dev.nthings.adf4j.internal.ConfluenceSupport;
 import dev.nthings.adf4j.model.ExcerptKey;
@@ -59,9 +57,9 @@ public final class MacroRenderer {
     }
 
     var rendered = switch (extensionKey != null ? extensionKey : "") {
-      case "children" -> renderChildrenMacro(macroParams, context);
+      case "children" -> renderChildrenPlaceholder(macroParams);
       case "toc" -> renderTocMacro(macroParams, context);
-      case "anchor" -> renderAnchorMacro(macroParams, context);
+      case "anchor" -> "";
       case "iframe" -> renderIframeMacro(macroParams);
       case "viewpdf" -> renderViewPdfMacro(macroParams, context);
       case "excerpt-include" -> renderExcerptIncludeMacro(macroParams, context, adfRenderer, inline);
@@ -135,17 +133,6 @@ public final class MacroRenderer {
     return candidate;
   }
 
-  private String renderChildrenMacro(MacroParams macroParams, RendererState context) {
-    if (!context.strategy().isStorage()) {
-      if (context.childPages().isEmpty()) {
-        return "";
-      }
-      return MarkdownLinkListRenderer.render(
-          toLinkNodes(context.childPages()), resolveChildrenMacroDepth(macroParams));
-    }
-    return renderChildrenPlaceholder(macroParams);
-  }
-
   private String renderChildrenPlaceholder(MacroParams macroParams) {
     var all = allChildrenValue(macroParams);
     if (all != null && "true".equalsIgnoreCase(all)) {
@@ -197,43 +184,11 @@ public final class MacroRenderer {
     return String.join("\n", lines);
   }
 
-  private Integer resolveChildrenMacroDepth(MacroParams macroParams) {
-    var all = allChildrenValue(macroParams);
-    if (all != null && "true".equalsIgnoreCase(all)) {
-      return null;
-    }
-
-    var depth = parsePositiveInteger(macroParams.value("depth"));
-    return depth != null ? depth : 1;
-  }
-
   private String allChildrenValue(MacroParams macroParams) {
     return Stream.of(macroParams.value("all"), macroParams.value("allChildren"))
         .filter(s -> s != null && !s.isBlank())
         .findFirst()
         .orElse(null);
-  }
-
-  private List<MarkdownLinkListRenderer.LinkNode> toLinkNodes(
-      List<ConfluenceRenderContext.ChildPage> childPages) {
-    if (childPages == null || childPages.isEmpty()) {
-      return List.of();
-    }
-
-    return childPages.stream()
-        .map(
-            childPage -> new MarkdownLinkListRenderer.LinkNode(
-                childPage.title(),
-                "/pages/" + childPage.nodeId(),
-                toLinkNodes(childPage.children())))
-        .toList();
-  }
-
-  private String renderAnchorMacro(MacroParams macroParams, RendererState context) {
-    if (context.strategy().isStorage()) {
-      return "";
-    }
-    return HtmlFragments.anchor(ConfluenceSupport.anchorId(macroParams));
   }
 
   private String renderIframeMacro(MacroParams macroParams) {
@@ -303,18 +258,6 @@ public final class MacroRenderer {
       return Integer.parseInt(raw);
     } catch (NumberFormatException _) {
       return fallback;
-    }
-  }
-
-  private Integer parsePositiveInteger(String raw) {
-    if (raw == null || raw.isBlank()) {
-      return null;
-    }
-    try {
-      var parsed = Integer.parseInt(raw);
-      return parsed > 0 ? parsed : null;
-    } catch (NumberFormatException _) {
-      return null;
     }
   }
 

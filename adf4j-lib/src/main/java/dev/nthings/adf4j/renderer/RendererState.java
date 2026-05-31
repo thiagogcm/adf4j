@@ -20,7 +20,6 @@ import dev.nthings.adf4j.model.UnknownNodePolicy;
 record RendererState(
     int listDepth,
     boolean inTable,
-    RenderingStrategy strategy,
     String pageTitle,
     String currentPageId,
     MacroContext macroContext,
@@ -32,16 +31,13 @@ record RendererState(
     UnknownNodePolicy unknownNodePolicy,
     Set<ExcerptKey> activeExcerpts) {
 
-  static RendererState root(
-      RenderOptions options, HeadingOutline headingOutline, RenderingStrategy strategy) {
+  static RendererState root(RenderOptions options, HeadingOutline headingOutline) {
     var requiredOptions = Objects.requireNonNull(options, "options");
     var safeOutline = Objects.requireNonNullElseGet(headingOutline, HeadingOutline::empty);
-    var renderingStrategy = Objects.requireNonNullElseGet(strategy, RenderingStrategies::storage);
     var confluenceContext = ConfluenceRenderContext.from(requiredOptions.context());
     return new RendererState(
         0,
         false,
-        renderingStrategy,
         confluenceContext.pageTitle(),
         confluenceContext.currentPageId(),
         MacroContext.from(confluenceContext.excerpts(), safeOutline.headings()),
@@ -81,7 +77,6 @@ record RendererState(
     return new RendererState(
         listDepth,
         inTable,
-        strategy,
         pageTitle,
         currentPageId,
         macroContext,

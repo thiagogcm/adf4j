@@ -211,9 +211,6 @@ public final class TableRenderer {
     if (cell.rowspan() > 1) {
       element.attr("rowspan", Integer.toString(cell.rowspan()));
     }
-    if (!context.strategy().isStorage() && cell.background() != null && !cell.background().isBlank()) {
-      element.attr("style", "background-color:%s".formatted(cell.background()));
-    }
 
     var value = renderHtmlTableCellContent(cell.content(), context.withTable(true), adfRenderer);
     element.html(value);
@@ -252,7 +249,7 @@ public final class TableRenderer {
     return renderHtmlFragment(rendered);
   }
 
-  String renderHtmlFragment(String markdown) {
+  private String renderHtmlFragment(String markdown) {
     return markdownRenderingSupport.renderHtmlFragment(markdown);
   }
 

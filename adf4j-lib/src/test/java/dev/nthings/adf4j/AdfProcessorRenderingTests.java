@@ -10,37 +10,36 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-class AdfProcessorStorageRenderingTests {
+class AdfProcessorRenderingTests {
 
   private final AdfTestSupport testSupport = AdfTestSupport.create();
   private final AdfProcessor processor = testSupport.processor();
 
   @Test
-  void render_storage_document_returns_empty_metadata_for_blank_input() {
-    var result = processor.renderStorageDocument("   ", RenderOptions.defaults());
+  void render_returns_empty_metadata_for_blank_input() {
+    var result = processor.render("   ", RenderOptions.defaults());
 
     assertThat(result.body()).isEmpty();
-    assertThat(result.outputFormat()).isEqualTo(OutputFormat.STORAGE_MARKDOWN);
     assertThat(result.metadata()).isEqualTo(ContentMetadata.empty());
   }
 
   @Test
-  void render_storage_document_falls_back_to_normalized_raw_markdown_for_invalid_adf_roots() {
+  void render_falls_back_to_normalized_raw_markdown_for_invalid_adf_roots() {
     var rawPayload = "{\"type\":\"paragraph\",\"version\":1,\"content\":[]}";
 
-    var result = processor.renderStorageDocument(rawPayload, RenderOptions.defaults());
+    var result = processor.render(rawPayload, RenderOptions.defaults());
 
     assertThat(result.body()).isEqualTo("{\"type\":\"paragraph\",\"version\":1,\"content\":\\[\\]}");
     assertThat(result.metadata()).isEqualTo(ContentMetadata.empty());
   }
 
   @Test
-  void render_storage_document_matches_the_reporte_regression_case() throws Exception {
-    var result = processor.renderStorageDocument(
+  void render_matches_the_reporte_regression_case() throws Exception {
+    var result = processor.render(
         testSupport.caseInput("reporte"), optionsForPage("Report Fixture"));
 
     assertThat(result.body())
-        .isEqualToNormalizingNewlines(testSupport.caseOutput("reporte", ".storage.md"))
+        .isEqualToNormalizingNewlines(testSupport.caseOutput("reporte", ".md"))
         .doesNotContain("<table")
         .doesNotContain("<img")
         .doesNotContain("<span style=")
@@ -48,7 +47,7 @@ class AdfProcessorStorageRenderingTests {
   }
 
   @Test
-  void render_storage_document_resolves_viewpdf_macros_with_attachment_context() throws Exception {
+  void render_resolves_viewpdf_macros_with_attachment_context() throws Exception {
     var rawPayload = testSupport.caseInput("viewpdf-macros");
     var options = RenderOptions.defaults()
         .withContext(
@@ -56,7 +55,7 @@ class AdfProcessorStorageRenderingTests {
                 .withAttachmentReferences(
                     List.of(new AttachmentReference("file-pdf-1", "guide.pdf", "application/pdf"))));
 
-    var result = processor.renderStorageDocument(rawPayload, options);
+    var result = processor.render(rawPayload, options);
 
     assertThat(result.body()).isEqualTo("[PDF: guide.pdf](attachment:file-pdf-1)");
     assertThat(result.metadata().attachmentRefs())
@@ -65,22 +64,22 @@ class AdfProcessorStorageRenderingTests {
   }
 
   @Test
-  void render_storage_document_applies_the_unknown_node_policy() throws Exception {
+  void render_applies_the_unknown_node_policy() throws Exception {
     var rawPayload = testSupport.caseInput("unknown-node-policy");
 
     assertThat(
-        processor.renderStorageMarkdown(
+        processor.renderMarkdown(
             rawPayload,
             RenderOptions.defaults()
                 .withUnknownNodePolicy(UnknownNodePolicy.PLACEHOLDER)))
         .contains("[Unsupported: mysteryBlock]");
     assertThat(
-        processor.renderStorageMarkdown(
+        processor.renderMarkdown(
             rawPayload,
             RenderOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.SKIP)))
         .isEmpty();
     assertThatThrownBy(
-        () -> processor.renderStorageMarkdown(
+        () -> processor.renderMarkdown(
             rawPayload,
             RenderOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.FAIL)))
         .isInstanceOf(IllegalStateException.class)
@@ -88,8 +87,8 @@ class AdfProcessorStorageRenderingTests {
   }
 
   @Test
-  void render_storage_document_supports_generic_options_without_context() throws Exception {
-    var markdown = processor.renderStorageMarkdown(
+  void render_supports_generic_options_without_context() throws Exception {
+    var markdown = processor.renderMarkdown(
         testSupport.caseInput("unknown-node-policy"),
         RenderOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.SKIP));
 
@@ -97,9 +96,8 @@ class AdfProcessorStorageRenderingTests {
   }
 
   @Test
-  void render_storage_document_keeps_children_macros_as_placeholders_for_db_derived_cases()
-      throws Exception {
-    var markdown = processor.renderStorageMarkdown(
+  void render_keeps_children_macros_as_placeholders_for_db_derived_cases() throws Exception {
+    var markdown = processor.renderMarkdown(
         testSupport.caseInput("especificacoes-reporte-children"),
         optionsForPage("Reporting Specifications"));
 
@@ -107,8 +105,7 @@ class AdfProcessorStorageRenderingTests {
   }
 
   @Test
-  void render_storage_document_resolves_db_derived_viewpdf_cases_with_attachment_context()
-      throws Exception {
+  void render_resolves_db_derived_viewpdf_cases_with_attachment_context() throws Exception {
     var options = RenderOptions.defaults()
         .withContext(
             ConfluenceRenderContext.forPage("Participant Guide")
@@ -119,7 +116,7 @@ class AdfProcessorStorageRenderingTests {
                             "Open_Finance_cadastro_diretorio_passo_a_passo.pdf",
                             "application/pdf"))));
 
-    var result = processor.renderStorageDocument(
+    var result = processor.render(
         testSupport.caseInput("lista-participantes-viewpdf"), options);
 
     assertThat(result.body())

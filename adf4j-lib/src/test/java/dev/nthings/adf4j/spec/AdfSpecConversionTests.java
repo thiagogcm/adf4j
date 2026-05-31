@@ -5,7 +5,6 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.function.Supplier;
@@ -31,62 +30,44 @@ import static org.junit.jupiter.params.provider.Arguments.argumentSet;
 class AdfSpecConversionTests {
 
   private static final Path SPEC_ROOT = TestResources.root("adf/spec");
+  private static final String INPUT_SUFFIX = ".json";
+  private static final String EXPECTED_SUFFIX = ".md";
   private static final JsonMapper MAPPER = JsonMapper.builder().build();
   private static final AdfProcessor PROCESSOR = new AdfProcessor();
   private static final RenderOptions DEFAULT_OPTIONS =
       RenderOptions.defaults().withContext(ConfluenceRenderContext.forPage("Spec Fixture"));
-  private static final Supplier<Stream<Arguments>> storage_specs = () -> specCases(Target.STORAGE_MARKDOWN)
-      .map(SpecCase::toArguments);
-  private static final Supplier<Stream<Arguments>> presentation_specs = () -> specCases(Target.PRESENTATION_HTML)
-      .map(SpecCase::toArguments);
+  private static final Supplier<Stream<Arguments>> markdown_specs = () -> specCases().map(SpecCase::toArguments);
 
-  enum Target {
-    STORAGE_MARKDOWN(".storage.md"),
-    PRESENTATION_HTML(".presentation.html");
-
-    private final String suffix;
-
-    Target(String suffix) {
-      this.suffix = suffix;
-    }
-
-    String suffix() {
-      return suffix;
-    }
-  }
-
-  record SpecCase(String name, Target target) {
+  record SpecCase(String name) {
     String inputPath() {
-      return "adf/spec/" + name + ".json";
+      return "adf/spec/" + name + INPUT_SUFFIX;
     }
 
     String expectedPath() {
-      return "adf/spec/" + name + target.suffix();
+      return "adf/spec/" + name + EXPECTED_SUFFIX;
     }
 
     Arguments toArguments() {
-      return argumentSet(name + " -> " + target.name(), this);
+      return argumentSet(name, this);
     }
   }
 
   @ParameterizedTest(name = "{argumentSetName}")
-  @FieldSource("storage_specs")
-  void renders_storage_markdown_spec(SpecCase spec) throws IOException {
-    assertRenders(spec);
-  }
-
-  @ParameterizedTest(name = "{argumentSetName}")
-  @FieldSource("presentation_specs")
-  void renders_presentation_html_spec(SpecCase spec) throws IOException {
-    assertRenders(spec);
+  @FieldSource("markdown_specs")
+  void renders_markdown_spec(SpecCase spec) throws IOException {
+    var input = TestResources.read(spec.inputPath());
+    var expected = TestResources.stripFinalNewline(TestResources.read(spec.expectedPath()));
+    var actual = PROCESSOR.renderMarkdown(input, DEFAULT_OPTIONS);
+    assertThat(actual)
+        .as("case %s", spec.name())
+        .isEqualToNormalizingNewlines(expected);
   }
 
   @Test
-  void every_spec_input_has_an_expected_behavior_file() throws IOException {
-    var jsonSpecs = specFiles(".json").map(AdfSpecConversionTests::baseName).toList();
-    var expectedSpecs = Stream.of(Target.values())
-        .map(target -> specFiles(target.suffix()).map(AdfSpecConversionTests::baseName))
-        .flatMap(stream -> stream)
+  void every_spec_input_has_an_expected_markdown_file() throws IOException {
+    var jsonSpecs = specFiles(INPUT_SUFFIX).map(AdfSpecConversionTests::baseName).toList();
+    var expectedSpecs = specFiles(EXPECTED_SUFFIX)
+        .map(AdfSpecConversionTests::baseName)
         .collect(Collectors.toCollection(LinkedHashSet::new));
 
     assertThat(jsonSpecs)
@@ -100,7 +81,7 @@ class AdfSpecConversionTests {
     var seen = new LinkedHashMap<JsonNode, String>();
     var duplicates = new ArrayList<String>();
 
-    for (var path : specFiles(".json").toList()) {
+    for (var path : specFiles(INPUT_SUFFIX).toList()) {
       var document = MAPPER.readTree(Files.readString(path));
       var previous = seen.putIfAbsent(document, baseName(path));
       if (previous != null) {
@@ -109,30 +90,14 @@ class AdfSpecConversionTests {
     }
 
     assertThat(duplicates)
-        .as("merge duplicate JSON payloads by colocating storage and presentation expectations")
+        .as("merge duplicate JSON payloads instead of colocating identical fixtures")
         .isEmpty();
   }
 
-  private static void assertRenders(SpecCase spec) throws IOException {
-    var input = TestResources.read(spec.inputPath());
-    var expected = TestResources.stripFinalNewline(TestResources.read(spec.expectedPath()));
-    var actual = switch (spec.target()) {
-      case STORAGE_MARKDOWN -> PROCESSOR.renderStorageMarkdown(input, DEFAULT_OPTIONS);
-      case PRESENTATION_HTML -> PROCESSOR.renderPresentationHtml(input, DEFAULT_OPTIONS);
-    };
-    assertThat(actual)
-        .as("case %s", spec.name())
-        .isEqualToNormalizingNewlines(expected);
-  }
-
-  private static Stream<SpecCase> specCases(Target target) {
-    return specFiles(target.suffix())
-        .map(path -> specCase(baseName(path), target))
+  private static Stream<SpecCase> specCases() {
+    return specFiles(EXPECTED_SUFFIX)
+        .map(path -> new SpecCase(baseName(path)))
         .sorted((left, right) -> left.name().compareTo(right.name()));
-  }
-
-  private static SpecCase specCase(String name, Target target) {
-    return new SpecCase(name, target);
   }
 
   private static Stream<Path> specFiles(String suffix) {
@@ -151,16 +116,11 @@ class AdfSpecConversionTests {
 
   private static String baseName(Path path) {
     var relative = SPEC_ROOT.relativize(path).toString().replace('\\', '/');
-    for (var suffix : suffixes()) {
+    for (var suffix : new String[] {INPUT_SUFFIX, EXPECTED_SUFFIX}) {
       if (relative.endsWith(suffix)) {
         return relative.substring(0, relative.length() - suffix.length());
       }
     }
     throw new IllegalArgumentException("Unsupported spec case: " + path);
-  }
-
-  private static Collection<String> suffixes() {
-    return Stream.concat(Stream.of(".json"), Stream.of(Target.values()).map(Target::suffix))
-        .toList();
   }
 }

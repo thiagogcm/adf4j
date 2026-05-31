@@ -23,7 +23,6 @@ import dev.nthings.adf4j.ast.SubSup;
 import dev.nthings.adf4j.ast.TextColor;
 import dev.nthings.adf4j.ast.Underline;
 import dev.nthings.adf4j.ast.UnknownMark;
-import dev.nthings.adf4j.model.BlockStyles;
 
 record ResolvedLink(String href, String label) {
 }
@@ -37,8 +36,7 @@ public final class TextMarkRenderer {
 
   private static final Comparator<AdfMark> INLINE_MARK_ORDER = Comparator.comparingInt(TextMarkRenderer::canonicalRank);
 
-  String applyMarks(
-      String value, List<AdfMark> marks, RenderingStrategy strategy, LinkTargetResolver linkResolver) {
+  String applyMarks(String value, List<AdfMark> marks, LinkTargetResolver linkResolver) {
     if (marks == null || marks.isEmpty()) {
       return value;
     }
@@ -64,7 +62,7 @@ public final class TextMarkRenderer {
     } else {
       nonLinkMarks.sort(INLINE_MARK_ORDER);
       for (var mark : nonLinkMarks) {
-        rendered = applyInlineMark(rendered, mark, strategy);
+        rendered = applyInlineMark(rendered, mark);
       }
     }
 
@@ -91,41 +89,6 @@ public final class TextMarkRenderer {
     return rendered;
   }
 
-  BlockStyles extractBlockStyles(List<AdfMark> marks) {
-    if (marks == null || marks.isEmpty()) {
-      return BlockStyles.none();
-    }
-
-    String alignment = null;
-    Integer indentationLevel = null;
-    String fontSize = null;
-
-    for (var mark : marks) {
-      switch (mark) {
-        case Alignment a -> {
-          var align = a.align();
-          if ("center".equals(align) || "end".equals(align)) {
-            alignment = align;
-          }
-        }
-        case Indentation indent -> {
-          if (indent.level() > 0) {
-            indentationLevel = Math.clamp(indent.level(), 1, 6);
-          }
-        }
-        case FontSize size -> {
-          if (size.fontSize() != null && !size.fontSize().isBlank()) {
-            fontSize = size.fontSize();
-          }
-        }
-        default -> {
-        }
-      }
-    }
-
-    return new BlockStyles(alignment, indentationLevel, fontSize);
-  }
-
   private static int canonicalRank(AdfMark mark) {
     return switch (mark) {
       case Strong _ -> 0;
@@ -150,12 +113,9 @@ public final class TextMarkRenderer {
     };
   }
 
-  private String applyInlineMark(String value, AdfMark mark, RenderingStrategy strategy) {
-    if (mark instanceof UnknownMark) {
-      return value;
-    }
-
-    if (strategy.omitsVisualOnlyMarks() && isVisualOnlyHtmlMark(mark)) {
+  private String applyInlineMark(String value, AdfMark mark) {
+    // Visual-only marks (colour, size, underline, …) carry no Markdown equivalent and are dropped.
+    if (isVisualOnlyHtmlMark(mark)) {
       return value;
     }
 
@@ -163,13 +123,7 @@ public final class TextMarkRenderer {
       case Strong _ -> wrapDelimited(value, "**");
       case Em _ -> wrapDelimited(value, "*");
       case Strike _ -> wrapDelimited(value, "~~");
-      case Underline _ -> "<u>" + value + "</u>";
-      case SubSup s -> applySubsupMark(value, s.subSupType());
-      case TextColor c -> applySpanMark(value, "color", c.color());
-      case BackgroundColor c -> applySpanMark(value, "background-color", c.color());
-      case Border b -> applyBorderMark(value, b);
-      case FontSize f -> applySpanMark(value, "font-size", f.fontSize());
-      case Alignment _,Indentation _,Annotation _,Fragment _,DataConsumer _,Breakout _,Link _,Code _,UnknownMark _ ->
+      case Underline _,SubSup _,TextColor _,BackgroundColor _,Border _,FontSize _,Alignment _,Indentation _,Annotation _,Fragment _,DataConsumer _,Breakout _,Link _,Code _,UnknownMark _ ->
         value;
     };
   }
@@ -190,37 +144,6 @@ public final class TextMarkRenderer {
     }
 
     return leadingWhitespace + delimiter + content + delimiter + trailingWhitespace;
-  }
-
-  private String applyBorderMark(String value, Border border) {
-    var color = border.color() == null || border.color().isBlank() ? "currentColor" : border.color();
-    var size = border.size() == null || border.size().isBlank() ? "1" : border.size();
-    var parsedSize = "1";
-    try {
-      parsedSize = Integer.toString(Math.clamp(Integer.parseInt(size), 1, 3));
-    } catch (NumberFormatException _) {
-      parsedSize = "1";
-    }
-
-    return "<span style=\"border:%spx solid %s\">%s</span>".formatted(parsedSize, color, value);
-  }
-
-  private String applySubsupMark(String value, String subSupType) {
-    if ("sub".equals(subSupType)) {
-      return "<sub>" + value + "</sub>";
-    }
-    if ("sup".equals(subSupType)) {
-      return "<sup>" + value + "</sup>";
-    }
-    return value;
-  }
-
-  private String applySpanMark(String value, String property, String cssValue) {
-    if (cssValue == null || cssValue.isBlank()) {
-      return value;
-    }
-
-    return "<span style=\"%s:%s\">%s</span>".formatted(property, cssValue, value);
   }
 
   private String escapeLinkTitle(String title) {

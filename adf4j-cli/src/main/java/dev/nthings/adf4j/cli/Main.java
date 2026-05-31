@@ -7,7 +7,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import dev.nthings.adf4j.AdfProcessor;
-import dev.nthings.adf4j.OutputFormat;
 import dev.nthings.adf4j.RenderOptions;
 
 import org.jline.builtins.Options;
@@ -15,15 +14,13 @@ import org.jline.builtins.Options;
 public final class Main {
 
     private static final String[] USAGE = {
-        "adf4j-cli - Convert ADF JSON documents to different output formats",
+        "adf4j-cli - Convert ADF JSON documents to Markdown",
         "",
-        "Usage: adf4j-cli [-f <format>] [-o <file>] [<input-file>]",
+        "Usage: adf4j-cli [-o <file>] [<input-file>]",
         "",
         "  If no input file is provided, reads from stdin.",
         "",
         "Options:",
-        "  -f, --format=FORMAT    Output format: storage-markdown, presentation-markdown, presentation-html",
-        "                         (default: storage-markdown)",
         "  -o, --output=FILE      Write output to FILE instead of stdout",
         "  -h, --help             Show this help message",
     };
@@ -49,23 +46,13 @@ public final class Main {
             return 0;
         }
 
-        OutputFormat outputFormat = parseFormat(options.get("format"));
-        if (outputFormat == null) {
-            System.err.println("Error: Invalid format. Valid formats: storage-markdown, presentation-markdown, presentation-html");
-            return 1;
-        }
-
         String input = readInput(options.args(), stdinStream);
         if (input == null) {
             return 1;
         }
 
         var processor = new AdfProcessor();
-        String result = switch (outputFormat) {
-            case STORAGE_MARKDOWN -> processor.renderStorageMarkdown(input, RenderOptions.defaults());
-            case PRESENTATION_MARKDOWN -> processor.renderPresentationMarkdown(input, RenderOptions.defaults());
-            case PRESENTATION_HTML -> processor.renderPresentationHtml(input, RenderOptions.defaults());
-        };
+        String result = processor.renderMarkdown(input, RenderOptions.defaults());
 
         if (options.isSet("output")) {
             Files.writeString(Path.of(options.get("output")), result, StandardCharsets.UTF_8);
@@ -74,18 +61,6 @@ public final class Main {
         }
 
         return 0;
-    }
-
-    private static OutputFormat parseFormat(String format) {
-        if (format == null || format.isEmpty()) {
-            return OutputFormat.STORAGE_MARKDOWN;
-        }
-        return switch (format.toLowerCase()) {
-            case "storage-markdown", "storage_markdown" -> OutputFormat.STORAGE_MARKDOWN;
-            case "presentation-markdown", "presentation_markdown" -> OutputFormat.PRESENTATION_MARKDOWN;
-            case "presentation-html", "presentation_html" -> OutputFormat.PRESENTATION_HTML;
-            default -> null;
-        };
     }
 
     private static String readInput(java.util.List<String> positionalArgs, InputStream stdinStream) throws IOException {

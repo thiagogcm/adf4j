@@ -50,14 +50,12 @@ final class AdfServices {
     var renderer = AdfRendererFactory.adfRenderer(markdownRenderingSupport, headingCollector);
     var metadataExtractor = AdfRendererFactory.contentMetadataExtractor(headingCollector);
     var parsingService = new AdfParsingService(mapper, astParser);
-    var htmlSanitizer = new PresentationHtmlSanitizer();
     var workflow = new AdfDocumentWorkflow(
         parsingService,
         headingCollector,
         renderer,
         metadataExtractor,
-        markdownRenderingSupport,
-        htmlSanitizer);
+        markdownRenderingSupport);
     return new AdfServices(
         mapper,
         astParser,

@@ -2,7 +2,6 @@ package dev.nthings.adf4j.renderer;
 
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
 
@@ -65,18 +64,6 @@ public final class AdfRenderer {
 
   private static final Logger log = LoggerFactory.getLogger(AdfRenderer.class);
 
-  private static final Map<String, String> STATUS_BACKGROUND = Map.of(
-      "neutral", "#DFE1E6",
-      "purple", "#998DD9",
-      "blue", "#0052CC",
-      "red", "#DE350B",
-      "yellow", "#FFAB00",
-      "green", "#00875A");
-  private static final Map<String, String> STATUS_FOREGROUND = Map.of(
-      "neutral", "#172B4D",
-      "yellow", "#172B4D");
-  private static final String STATUS_FOREGROUND_DEFAULT = "#FFFFFF";
-
   private final AdfHeadingCollector headingCollector;
   private final TextMarkRenderer markRenderer;
   private final ListRenderer listRenderer;
@@ -100,18 +87,14 @@ public final class AdfRenderer {
   }
 
   public String render(
-      AdfDocument document,
-      RenderOptions options,
-      RenderingStrategy strategy,
-      HeadingOutline headingOutline) {
+      AdfDocument document, RenderOptions options, HeadingOutline headingOutline) {
     if (document == null) {
       return "";
     }
 
     var requiredOptions = Objects.requireNonNull(options, "options");
-    var renderingStrategy = Objects.requireNonNullElseGet(strategy, RenderingStrategies::storage);
     var outline = headingOutline == null ? headingCollector.collect(document) : headingOutline;
-    var context = RendererState.root(requiredOptions, outline, renderingStrategy);
+    var context = RendererState.root(requiredOptions, outline);
     return joinBlocks(renderBlocks(document.content(), context));
   }
 
@@ -178,10 +161,7 @@ public final class AdfRenderer {
 
   public String applyMarks(String text, List<AdfMark> marks, RendererState context) {
     return markRenderer.applyMarks(
-        text,
-        marks,
-        context.strategy(),
-        (href, renderedLabel) -> resolveLink(href, renderedLabel, context));
+        text, marks, (href, renderedLabel) -> resolveLink(href, renderedLabel, context));
   }
 
   public String joinBlocks(List<String> blocks) {
@@ -193,12 +173,12 @@ public final class AdfRenderer {
       case Text text -> renderText(text, context);
       case HardBreak _ -> hardBreakMarker(context);
       case InlineCard card -> renderInlineCard(card.attrs(), context);
-      case MediaInline media -> mediaRenderer.renderMediaInline(context.strategy(), media, context, this);
+      case MediaInline media -> mediaRenderer.renderMediaInline(media, context, this);
       case Date date -> MarkdownText.dateFromTimestamp(date.timestamp());
       case Emoji emoji -> renderEmoji(emoji);
       case Mention mention -> renderMention(mention);
       case Placeholder placeholder -> placeholder.text();
-      case Status status -> renderStatus(status, context);
+      case Status status -> renderStatus(status);
       case InlineExtension extension ->
         macroRenderer.renderInlineExtension(extension, context, this);
       case UnknownInline unknown -> renderUnknownInlineByPolicy(unknown.type(), context);
@@ -211,10 +191,7 @@ public final class AdfRenderer {
       return macroRenderer.renderInlineExtension(standaloneExcerpt, context, this);
     }
 
-    var rendered = renderInlineNodes(paragraph.content(), context);
-    return context
-        .strategy()
-        .formatParagraph(rendered, markRenderer.extractBlockStyles(paragraph.marks()));
+    return renderInlineNodes(paragraph.content(), context);
   }
 
   private String renderHeading(Heading heading, RendererState context) {
@@ -224,16 +201,13 @@ public final class AdfRenderer {
       return "";
     }
 
-    var renderedText = context.strategy().isStorage() ? text : tableRenderer.renderHtmlFragment(text);
     var headingInfo = context.headingInfo(heading);
-
-    return context
-        .strategy()
-        .formatHeading(
-            level,
-            renderedText,
-            headingInfo == null ? null : headingInfo.anchor(),
-            markRenderer.extractBlockStyles(heading.marks()));
+    var anchor = headingInfo == null ? null : headingInfo.anchor();
+    var markup = "%s %s".formatted("#".repeat(level), text).trim();
+    if (anchor != null && !anchor.isBlank()) {
+      return HtmlFragments.anchor(anchor) + "\n" + markup;
+    }
+    return markup;
   }
 
   private String renderHeadingText(List<AdfInline> content, RendererState context) {
@@ -291,24 +265,9 @@ public final class AdfRenderer {
       return "";
     }
 
-    if (context.strategy().isStorage()) {
-      return joinBlocks(columns.stream()
-          .flatMap(column -> renderBlocks(column.content(), context).stream())
-          .toList());
-    }
-
-    var cells = new StringBuilder("<table><tr>");
-    for (var column : columns) {
-      cells.append("<td");
-      if (column.width() > 0) {
-        cells.append(" style=\"width:").append(column.width()).append("%\"");
-      }
-      cells.append('>');
-      cells.append(joinBlocks(renderBlocks(column.content(), context)));
-      cells.append("</td>");
-    }
-    cells.append("</tr></table>");
-    return cells.toString();
+    return joinBlocks(columns.stream()
+        .flatMap(column -> renderBlocks(column.content(), context).stream())
+        .toList());
   }
 
   private String renderExpand(String title, List<AdfBlock> content, RendererState context) {
@@ -446,18 +405,10 @@ public final class AdfRenderer {
     return text;
   }
 
-  private String renderStatus(Status status, RendererState context) {
+  private String renderStatus(Status status) {
     var text = status.text();
     var safeText = text == null || text.isBlank() ? "status" : text;
-    if (context.strategy().isStorage()) {
-      return "[%s]".formatted(safeText);
-    }
-    var color = status.color();
-    var normalized = color == null ? "neutral" : color.toLowerCase(Locale.ROOT);
-    var background = STATUS_BACKGROUND.getOrDefault(normalized, STATUS_BACKGROUND.get("neutral"));
-    var foreground = STATUS_FOREGROUND.getOrDefault(normalized, STATUS_FOREGROUND_DEFAULT);
-    return "<span style=\"background-color:%s;color:%s\">%s</span>"
-        .formatted(background, foreground, safeText);
+    return "[%s]".formatted(safeText);
   }
 
   private List<String> renderUnknownBlockByPolicy(String nodeType, RendererState context) {

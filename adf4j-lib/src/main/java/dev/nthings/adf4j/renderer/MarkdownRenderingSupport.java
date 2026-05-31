@@ -26,7 +26,7 @@ public final class MarkdownRenderingSupport {
     return markdownRenderer.render(markdownParser.parse(cleaned)).stripTrailing();
   }
 
-  public String renderHtmlDocument(String markdown) {
+  private String renderHtmlDocument(String markdown) {
     if (markdown == null || markdown.isBlank()) {
       return "";
     }
