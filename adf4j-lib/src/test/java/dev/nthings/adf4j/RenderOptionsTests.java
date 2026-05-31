@@ -1,7 +1,7 @@
 package dev.nthings.adf4j;
 
 import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
-import dev.nthings.adf4j.model.UnknownNodePolicy;
+import dev.nthings.adf4j.UnknownNodePolicy;
 
 import org.junit.jupiter.api.Test;
 

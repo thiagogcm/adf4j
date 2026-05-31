@@ -11,7 +11,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import dev.nthings.adf4j.AdfProcessor;
+import dev.nthings.adf4j.AdfConverter;
 import dev.nthings.adf4j.RenderOptions;
 import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
 import dev.nthings.adf4j.testing.TestResources;
@@ -33,7 +33,7 @@ class AdfSpecConversionTests {
   private static final String INPUT_SUFFIX = ".json";
   private static final String EXPECTED_SUFFIX = ".md";
   private static final JsonMapper MAPPER = JsonMapper.builder().build();
-  private static final AdfProcessor PROCESSOR = new AdfProcessor();
+  private static final AdfConverter PROCESSOR = new AdfConverter();
   private static final RenderOptions DEFAULT_OPTIONS =
       RenderOptions.defaults().withContext(ConfluenceRenderContext.forPage("Spec Fixture"));
   private static final Supplier<Stream<Arguments>> markdown_specs = () -> specCases().map(SpecCase::toArguments);
@@ -57,7 +57,7 @@ class AdfSpecConversionTests {
   void renders_markdown_spec(SpecCase spec) throws IOException {
     var input = TestResources.read(spec.inputPath());
     var expected = TestResources.stripFinalNewline(TestResources.read(spec.expectedPath()));
-    var actual = PROCESSOR.renderMarkdown(input, DEFAULT_OPTIONS);
+    var actual = PROCESSOR.toMarkdown(input, DEFAULT_OPTIONS);
     assertThat(actual)
         .as("case %s", spec.name())
         .isEqualToNormalizingNewlines(expected);

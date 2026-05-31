@@ -7,11 +7,8 @@ import java.util.List;
 import java.util.Map;
 
 import dev.nthings.adf4j.AttachmentReference;
-import dev.nthings.adf4j.PageTitleResolver;
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.internal.AttachmentReferences;
-import dev.nthings.adf4j.model.ExcerptKey;
-import dev.nthings.adf4j.model.PageLinkResolver;
 
 public record ConfluenceRenderContext(
     String pageTitle,

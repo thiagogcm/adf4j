@@ -6,8 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import dev.nthings.adf4j.AdfProcessor;
-import dev.nthings.adf4j.RenderOptions;
+import dev.nthings.adf4j.Adf;
 
 import org.jline.builtins.Options;
 
@@ -51,8 +50,7 @@ public final class Main {
             return 1;
         }
 
-        var processor = new AdfProcessor();
-        String result = processor.renderMarkdown(input, RenderOptions.defaults());
+        String result = Adf.toMarkdown(input);
 
         if (options.isSet("output")) {
             Files.writeString(Path.of(options.get("output")), result, StandardCharsets.UTF_8);
