@@ -11,8 +11,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import dev.nthings.adf4j.AdfConverter;
-import dev.nthings.adf4j.RenderOptions;
+import dev.nthings.adf4j.AdfToMarkdown;
 import dev.nthings.adf4j.testing.TestResources;
 
 import org.junit.jupiter.api.Test;
@@ -32,8 +31,7 @@ class AdfSpecConversionTests {
   private static final String INPUT_SUFFIX = ".json";
   private static final String EXPECTED_SUFFIX = ".md";
   private static final JsonMapper MAPPER = JsonMapper.builder().build();
-  private static final AdfConverter PROCESSOR = new AdfConverter();
-  private static final RenderOptions DEFAULT_OPTIONS = RenderOptions.defaults();
+  private static final AdfToMarkdown PROCESSOR = AdfToMarkdown.create();
   private static final Supplier<Stream<Arguments>> markdown_specs = () -> specCases().map(SpecCase::toArguments);
 
   record SpecCase(String name) {
@@ -55,7 +53,7 @@ class AdfSpecConversionTests {
   void renders_markdown_spec(SpecCase spec) throws IOException {
     var input = TestResources.read(spec.inputPath());
     var expected = TestResources.stripFinalNewline(TestResources.read(spec.expectedPath()));
-    var actual = PROCESSOR.toMarkdown(input, DEFAULT_OPTIONS);
+    var actual = PROCESSOR.toMarkdown(input);
     assertThat(actual)
         .as("case %s", spec.name())
         .isEqualToNormalizingNewlines(expected);

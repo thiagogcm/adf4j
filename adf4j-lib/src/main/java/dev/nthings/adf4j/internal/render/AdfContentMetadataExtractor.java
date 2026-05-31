@@ -8,12 +8,12 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-import dev.nthings.adf4j.AttachmentReference;
-import dev.nthings.adf4j.ContentMetadata;
-import dev.nthings.adf4j.ExternalReference;
-import dev.nthings.adf4j.HeadingReference;
-import dev.nthings.adf4j.PageReference;
-import dev.nthings.adf4j.RenderOptions;
+import dev.nthings.adf4j.metadata.AttachmentReference;
+import dev.nthings.adf4j.metadata.ContentMetadata;
+import dev.nthings.adf4j.metadata.ExternalReference;
+import dev.nthings.adf4j.metadata.HeadingReference;
+import dev.nthings.adf4j.metadata.PageReference;
+import dev.nthings.adf4j.options.MarkdownOptions;
 import dev.nthings.adf4j.internal.AttachmentReferences;
 import dev.nthings.adf4j.internal.ConfluenceSupport;
 import dev.nthings.adf4j.ast.AdfBlock;
@@ -27,6 +27,7 @@ import dev.nthings.adf4j.ast.BodiedExtension;
 import dev.nthings.adf4j.ast.BodiedSyncBlock;
 import dev.nthings.adf4j.ast.BulletList;
 import dev.nthings.adf4j.ast.Caption;
+import dev.nthings.adf4j.ast.Attributes;
 import dev.nthings.adf4j.ast.CardAttrs;
 import dev.nthings.adf4j.confluence.ConfluenceMetadata;
 import dev.nthings.adf4j.ast.DecisionItem;
@@ -61,7 +62,7 @@ import dev.nthings.adf4j.ast.Text;
 public final class AdfContentMetadataExtractor {
 
   public ContentMetadata extract(
-      AdfDocument document, RenderOptions options, List<HeadingReference> outline) {
+      AdfDocument document, MarkdownOptions options, List<HeadingReference> outline) {
     if (document == null) {
       return ContentMetadata.empty();
     }
@@ -151,7 +152,7 @@ public final class AdfContentMetadataExtractor {
   private void collectLinkMarks(List<AdfMark> marks, State state) {
     for (var mark : marks) {
       if (mark instanceof Link link) {
-        collectLink(link.href(), link.confluenceMetadata(), state);
+        collectLink(link.href(), link.attrs(), state);
       }
     }
   }
@@ -159,7 +160,7 @@ public final class AdfContentMetadataExtractor {
   private void collectMediaMarks(List<AdfMark> marks, State state) {
     for (var mark : marks) {
       if (mark instanceof Link link) {
-        collectLink(link.href(), link.confluenceMetadata(), state);
+        collectLink(link.href(), link.attrs(), state);
       }
     }
   }
@@ -168,14 +169,15 @@ public final class AdfContentMetadataExtractor {
     if (attrs == null) {
       return;
     }
-    collectLink(attrs.url(), attrs.confluenceMetadata(), state);
+    collectLink(attrs.url(), attrs.attrs(), state);
   }
 
-  private void collectLink(String rawUrl, ConfluenceMetadata metadata, State state) {
+  private void collectLink(String rawUrl, Attributes attrs, State state) {
     var normalized = trimToNull(rawUrl);
     if (normalized == null || "#".equals(normalized)) {
       return;
     }
+    var metadata = ConfluenceMetadata.from(attrs);
     var pageNodeId = resolvePageNodeId(normalized, metadata);
     if (pageNodeId != null) {
       state.pageRefs.add(pageNodeId);

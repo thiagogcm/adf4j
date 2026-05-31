@@ -4,7 +4,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
-import dev.nthings.adf4j.HeadingReference;
+import dev.nthings.adf4j.metadata.HeadingReference;
 import dev.nthings.adf4j.ast.Heading;
 
 public final class HeadingOutline {

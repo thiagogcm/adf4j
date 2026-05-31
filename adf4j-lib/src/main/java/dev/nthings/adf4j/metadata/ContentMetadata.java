@@ -1,7 +1,8 @@
-package dev.nthings.adf4j;
+package dev.nthings.adf4j.metadata;
 
 import java.util.List;
 
+/** References and outline extracted from an ADF document during conversion. */
 public record ContentMetadata(
     List<PageReference> pageRefs,
     List<ExternalReference> externalRefs,

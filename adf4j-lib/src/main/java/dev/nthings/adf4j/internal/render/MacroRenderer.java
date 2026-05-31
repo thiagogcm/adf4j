@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
-import dev.nthings.adf4j.HeadingReference;
+import dev.nthings.adf4j.metadata.HeadingReference;
 import dev.nthings.adf4j.ast.BodiedExtension;
 import dev.nthings.adf4j.ast.BodiedSyncBlock;
 import dev.nthings.adf4j.ast.Extension;

@@ -4,8 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-import dev.nthings.adf4j.ParseIssue;
-import dev.nthings.adf4j.ParseResult;
+import dev.nthings.adf4j.result.ParseIssue;
+import dev.nthings.adf4j.result.ParseResult;
 import dev.nthings.adf4j.internal.parser.AdfAstParser;
 
 import org.slf4j.Logger;

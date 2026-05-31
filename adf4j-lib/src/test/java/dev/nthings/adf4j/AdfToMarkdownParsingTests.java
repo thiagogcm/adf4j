@@ -3,6 +3,9 @@ package dev.nthings.adf4j;
 import java.io.IOException;
 import java.util.List;
 
+import dev.nthings.adf4j.result.ParseIssue;
+import dev.nthings.adf4j.result.ParseResult;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -11,7 +14,7 @@ import org.junit.jupiter.params.provider.FieldSource;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.argumentSet;
 
-class AdfConverterParsingTests {
+class AdfToMarkdownParsingTests {
 
   private static final List<Arguments> blank_inputs = List.of(
       argumentSet("null input", (String) null),
@@ -37,7 +40,7 @@ class AdfConverterParsingTests {
               List.of("INVALID_VERSION"))));
 
   private final AdfTestSupport testSupport = AdfTestSupport.create();
-  private final AdfConverter processor = testSupport.processor();
+  private final AdfToMarkdown processor = testSupport.processor();
 
   record InvalidRootCase(String rawAdf, List<String> issueCodes) {
   }

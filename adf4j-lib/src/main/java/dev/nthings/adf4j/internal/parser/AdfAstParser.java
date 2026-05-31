@@ -3,6 +3,7 @@ package dev.nthings.adf4j.internal.parser;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import dev.nthings.adf4j.ast.AdfBlock;
@@ -10,6 +11,7 @@ import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.ast.AdfInline;
 import dev.nthings.adf4j.ast.AdfMark;
 import dev.nthings.adf4j.ast.Alignment;
+import dev.nthings.adf4j.ast.Attributes;
 import dev.nthings.adf4j.ast.Annotation;
 import dev.nthings.adf4j.ast.BackgroundColor;
 import dev.nthings.adf4j.ast.BlockCard;
@@ -24,7 +26,6 @@ import dev.nthings.adf4j.ast.Caption;
 import dev.nthings.adf4j.ast.CardAttrs;
 import dev.nthings.adf4j.ast.Code;
 import dev.nthings.adf4j.ast.CodeBlock;
-import dev.nthings.adf4j.confluence.ConfluenceMetadata;
 import dev.nthings.adf4j.ast.DataConsumer;
 import dev.nthings.adf4j.ast.Date;
 import dev.nthings.adf4j.ast.DecisionItem;
@@ -225,7 +226,7 @@ public final class AdfAstParser {
       case "link" -> new Link(
           JsonFields.text(attrs, "href"),
           JsonFields.text(attrs, "title"),
-          parseConfluenceMetadata(attrs.path("__confluenceMetadata")));
+          toAttributes(attrs));
       case "textColor" -> new TextColor(JsonFields.text(attrs, "color"));
       case "backgroundColor" -> new BackgroundColor(JsonFields.text(attrs, "color"));
       case "alignment" -> new Alignment(JsonFields.text(attrs, "align"));
@@ -454,14 +455,13 @@ public final class AdfAstParser {
 
   private CardAttrs parseCardAttrs(JsonNode attrs) {
     if (attrs == null || !attrs.isObject()) {
-      return new CardAttrs(null, null, null, null, null);
+      return new CardAttrs(null, null, null, null, Attributes.empty());
     }
     var url = JsonFields.text(attrs, "url");
     var datasourceId = JsonFields.text(attrs.path("datasource"), "id");
     var localId = JsonFields.text(attrs, "localId");
     var title = JsonFields.text(attrs.path("data"), "title");
-    var confluenceMetadata = parseConfluenceMetadata(attrs.path("__confluenceMetadata"));
-    return new CardAttrs(url, datasourceId, localId, title, confluenceMetadata);
+    return new CardAttrs(url, datasourceId, localId, title, toAttributes(attrs));
   }
 
   private MediaAttrs parseMediaAttrs(JsonNode attrs) {
@@ -483,15 +483,59 @@ public final class AdfAstParser {
         JsonFields.text(attrs, "name"));
   }
 
-  private ConfluenceMetadata parseConfluenceMetadata(JsonNode node) {
-    if (node == null || node.isMissingNode() || node.isNull() || !node.isObject()) {
-      return ConfluenceMetadata.empty();
+  /**
+   * Converts a node's raw {@code attrs} into a generic {@link Attributes} view of plain Java values.
+   * The conversion is product-neutral: every key (including any {@code __*} extension keys) is copied
+   * as-is, leaving interpretation of product-specific extras to higher layers.
+   */
+  private Attributes toAttributes(JsonNode attrs) {
+    if (attrs == null || !attrs.isObject()) {
+      return Attributes.empty();
     }
-    return new ConfluenceMetadata(
-        JsonFields.text(node, "linkType"),
-        JsonFields.text(node, "pageId"),
-        JsonFields.text(node, "contentId"),
-        JsonFields.text(node, "id"));
+    var values = new LinkedHashMap<String, Object>();
+    for (var entry : attrs.properties()) {
+      var value = toPlainValue(entry.getValue());
+      if (value != null) {
+        values.put(entry.getKey(), value);
+      }
+    }
+    return new Attributes(values);
+  }
+
+  private Object toPlainValue(JsonNode node) {
+    if (node == null || node.isNull() || node.isMissingNode()) {
+      return null;
+    }
+    if (node.isObject()) {
+      var map = new LinkedHashMap<String, Object>();
+      for (var entry : node.properties()) {
+        var value = toPlainValue(entry.getValue());
+        if (value != null) {
+          map.put(entry.getKey(), value);
+        }
+      }
+      return Map.copyOf(map);
+    }
+    if (node.isArray()) {
+      var items = new ArrayList<>(node.size());
+      for (var child : node) {
+        var value = toPlainValue(child);
+        if (value != null) {
+          items.add(value);
+        }
+      }
+      return List.copyOf(items);
+    }
+    if (node.isBoolean()) {
+      return node.asBoolean();
+    }
+    if (node.isIntegralNumber()) {
+      return node.asLong();
+    }
+    if (node.isNumber()) {
+      return node.asDouble();
+    }
+    return node.asString();
   }
 
   private String mentionText(JsonNode attrs) {

@@ -4,7 +4,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import dev.nthings.adf4j.AttachmentReference;
+import dev.nthings.adf4j.metadata.AttachmentReference;
 import dev.nthings.adf4j.internal.AttachmentReferences;
 
 public record ConfluenceRenderContext(

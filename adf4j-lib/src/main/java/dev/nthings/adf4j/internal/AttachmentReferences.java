@@ -5,7 +5,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Stream;
 
-import dev.nthings.adf4j.AttachmentReference;
+import dev.nthings.adf4j.metadata.AttachmentReference;
 import dev.nthings.adf4j.ast.MacroParams;
 
 public final class AttachmentReferences {

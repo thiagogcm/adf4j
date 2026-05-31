@@ -1,4 +1,4 @@
-package dev.nthings.adf4j;
+package dev.nthings.adf4j.result;
 
 import java.util.List;
 

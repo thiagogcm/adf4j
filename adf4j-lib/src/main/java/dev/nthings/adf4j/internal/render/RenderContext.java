@@ -3,12 +3,12 @@ package dev.nthings.adf4j.internal.render;
 import java.util.Map;
 import java.util.Objects;
 
-import dev.nthings.adf4j.AttachmentReference;
-import dev.nthings.adf4j.RenderOptions;
-import dev.nthings.adf4j.UnknownNodePolicy;
+import dev.nthings.adf4j.metadata.AttachmentReference;
+import dev.nthings.adf4j.options.MarkdownOptions;
+import dev.nthings.adf4j.options.UnknownNodePolicy;
 
 /**
- * Immutable, per-render configuration derived once from {@link RenderOptions}. Stays constant for
+ * Immutable, per-render configuration derived once from {@link MarkdownOptions}. Stays constant for
  * the whole traversal; the moving cursor lives in {@link RendererState}.
  */
 record RenderContext(
@@ -16,7 +16,7 @@ record RenderContext(
     Map<String, AttachmentReference> attachmentReferencesByTitle,
     UnknownNodePolicy unknownNodePolicy) {
 
-  static RenderContext from(RenderOptions options, HeadingOutline headingOutline) {
+  static RenderContext from(MarkdownOptions options, HeadingOutline headingOutline) {
     var requiredOptions = Objects.requireNonNull(options, "options");
     var safeOutline = Objects.requireNonNullElseGet(headingOutline, HeadingOutline::empty);
     var confluence = requiredOptions.context();

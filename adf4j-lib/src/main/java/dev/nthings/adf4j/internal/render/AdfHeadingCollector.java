@@ -5,7 +5,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.stream.Stream;
 
-import dev.nthings.adf4j.HeadingReference;
+import dev.nthings.adf4j.metadata.HeadingReference;
 import dev.nthings.adf4j.internal.ConfluenceSupport;
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.AdfDocument;

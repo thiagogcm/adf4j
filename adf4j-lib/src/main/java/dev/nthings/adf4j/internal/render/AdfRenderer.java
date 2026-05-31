@@ -5,7 +5,7 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-import dev.nthings.adf4j.RenderOptions;
+import dev.nthings.adf4j.options.MarkdownOptions;
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.ast.AdfInline;
@@ -54,6 +54,14 @@ import dev.nthings.adf4j.ast.Text;
 import dev.nthings.adf4j.ast.UnknownBlock;
 import dev.nthings.adf4j.ast.UnknownInline;
 
+import org.commonmark.ext.gfm.alerts.AlertsExtension;
+import org.commonmark.ext.gfm.strikethrough.StrikethroughExtension;
+import org.commonmark.ext.gfm.tables.TablesExtension;
+import org.commonmark.ext.heading.anchor.HeadingAnchorExtension;
+import org.commonmark.ext.image.attributes.ImageAttributesExtension;
+import org.commonmark.ext.task.list.items.TaskListItemsExtension;
+import org.commonmark.parser.Parser;
+import org.commonmark.renderer.html.HtmlRenderer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,7 +69,6 @@ public final class AdfRenderer {
 
   private static final Logger log = LoggerFactory.getLogger(AdfRenderer.class);
 
-  private final AdfHeadingCollector headingCollector;
   private final TextMarkRenderer markRenderer;
   private final ListRenderer listRenderer;
   private final TableRenderer tableRenderer;
@@ -70,14 +77,12 @@ public final class AdfRenderer {
   private final CardRenderer cardRenderer;
 
   public AdfRenderer(
-      AdfHeadingCollector headingCollector,
       TextMarkRenderer markRenderer,
       ListRenderer listRenderer,
       TableRenderer tableRenderer,
       MediaRenderer mediaRenderer,
       MacroRenderer macroRenderer,
       CardRenderer cardRenderer) {
-    this.headingCollector = headingCollector;
     this.markRenderer = markRenderer;
     this.listRenderer = listRenderer;
     this.tableRenderer = tableRenderer;
@@ -86,14 +91,42 @@ public final class AdfRenderer {
     this.cardRenderer = cardRenderer;
   }
 
+  /** Assembles a renderer with its default delegates, keeping the CommonMark dependency a render detail. */
+  public static AdfRenderer createDefault() {
+    return new AdfRenderer(
+        new TextMarkRenderer(),
+        new ListRenderer(),
+        new TableRenderer(markdownRenderingSupport()),
+        new MediaRenderer(),
+        new MacroRenderer(),
+        new CardRenderer());
+  }
+
+  private static MarkdownRenderingSupport markdownRenderingSupport() {
+    var extensions = commonmarkExtensions();
+    var parser = Parser.builder().extensions(extensions).build();
+    var htmlRenderer = HtmlRenderer.builder().extensions(extensions).sanitizeUrls(false).build();
+    return new MarkdownRenderingSupport(parser, htmlRenderer);
+  }
+
+  private static List<org.commonmark.Extension> commonmarkExtensions() {
+    return List.of(
+        TablesExtension.create(),
+        StrikethroughExtension.create(),
+        TaskListItemsExtension.create(),
+        HeadingAnchorExtension.create(),
+        ImageAttributesExtension.create(),
+        AlertsExtension.create());
+  }
+
   public String render(
-      AdfDocument document, RenderOptions options, HeadingOutline headingOutline) {
+      AdfDocument document, MarkdownOptions options, HeadingOutline headingOutline) {
     if (document == null) {
       return "";
     }
 
     var requiredOptions = Objects.requireNonNull(options, "options");
-    var outline = headingOutline == null ? headingCollector.collect(document) : headingOutline;
+    var outline = headingOutline == null ? HeadingOutline.empty() : headingOutline;
     var context = RendererState.root(requiredOptions, outline);
     return joinBlocks(renderBlocks(document.content(), context));
   }

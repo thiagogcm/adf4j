@@ -3,19 +3,24 @@ package dev.nthings.adf4j;
 import java.util.List;
 
 import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
+import dev.nthings.adf4j.metadata.AttachmentReference;
+import dev.nthings.adf4j.metadata.ExternalReference;
+import dev.nthings.adf4j.metadata.HeadingReference;
+import dev.nthings.adf4j.metadata.PageReference;
+import dev.nthings.adf4j.options.MarkdownOptions;
 
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class AdfConverterMetadataTests {
+class AdfToMarkdownMetadataTests {
 
   private final AdfTestSupport testSupport = AdfTestSupport.create();
 
   @Test
   void extract_collects_external_refs_and_durable_attachment_refs_from_db_derived_viewpdf_case()
       throws Exception {
-    var options = RenderOptions.defaults()
+    var options = MarkdownOptions.defaults()
         .withContext(
             ConfluenceRenderContext.empty()
                 .withAttachmentReferences(
@@ -25,9 +30,9 @@ class AdfConverterMetadataTests {
                             "Open_Finance_cadastro_diretorio_passo_a_passo.pdf",
                             "application/pdf"))));
 
-    var metadata = testSupport
-        .processor()
-        .metadata(testSupport.caseDocument("lista-participantes-viewpdf"), options);
+    var metadata = AdfToMarkdown.with(options)
+        .convert(testSupport.caseDocument("lista-participantes-viewpdf"))
+        .metadata();
 
     assertThat(metadata.pageRefs()).isEmpty();
     assertThat(metadata.externalRefs())
@@ -49,13 +54,13 @@ class AdfConverterMetadataTests {
   void extract_deduplicates_repeated_refs_and_preserves_first_seen_encounter_order()
       throws Exception {
     var adf = testSupport.caseDocument("deduplicate-references");
-    var options = RenderOptions.defaults()
+    var options = MarkdownOptions.defaults()
         .withContext(
             ConfluenceRenderContext.empty()
                 .withAttachmentReferences(
                     List.of(new AttachmentReference("file-pdf-1", "guide.pdf", "application/pdf"))));
 
-    var metadata = testSupport.processor().metadata(adf, options);
+    var metadata = AdfToMarkdown.with(options).convert(adf).metadata();
 
     assertThat(metadata.pageRefs())
         .extracting(PageReference::pageNodeId)
@@ -72,9 +77,9 @@ class AdfConverterMetadataTests {
 
   @Test
   void extract_populates_the_heading_outline_with_levels_text_and_anchors() throws Exception {
-    var metadata = testSupport
-        .processor()
-        .metadata(testSupport.caseDocument("anchor-macros"), RenderOptions.defaults());
+    var metadata = testSupport.processor()
+        .convert(testSupport.caseDocument("anchor-macros"))
+        .metadata();
 
     assertThat(metadata.outline())
         .containsExactly(new HeadingReference(2, "Section A", "custom-section"));
@@ -82,9 +87,8 @@ class AdfConverterMetadataTests {
 
   @Test
   void extract_generates_stable_anchor_suffixes_for_repeated_headings() throws Exception {
-    var metadata = testSupport
-        .processor()
-        .metadata(
+    var metadata = testSupport.processor()
+        .convert(
             testSupport.parseDocument(
                 """
                 {
@@ -96,8 +100,8 @@ class AdfConverterMetadataTests {
                     {"type": "heading", "attrs": {"level": 3}, "content": [{"type": "text", "text": "Section"}]}
                   ]
                 }
-                """),
-            RenderOptions.defaults());
+                """))
+        .metadata();
 
     assertThat(metadata.outline())
         .containsExactly(

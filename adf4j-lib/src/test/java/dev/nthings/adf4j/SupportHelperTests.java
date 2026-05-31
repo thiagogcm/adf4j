@@ -5,6 +5,7 @@ import java.util.List;
 import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
 import dev.nthings.adf4j.internal.AttachmentReferences;
 import dev.nthings.adf4j.internal.ConfluenceSupport;
+import dev.nthings.adf4j.metadata.AttachmentReference;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;

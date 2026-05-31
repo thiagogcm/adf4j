@@ -3,30 +3,34 @@ package dev.nthings.adf4j;
 import java.util.List;
 
 import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
+import dev.nthings.adf4j.metadata.AttachmentReference;
+import dev.nthings.adf4j.metadata.ContentMetadata;
+import dev.nthings.adf4j.options.MarkdownOptions;
+import dev.nthings.adf4j.options.UnknownNodePolicy;
 
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-class AdfConverterRenderingTests {
+class AdfToMarkdownRenderingTests {
 
   private final AdfTestSupport testSupport = AdfTestSupport.create();
-  private final AdfConverter processor = testSupport.processor();
+  private final AdfToMarkdown processor = testSupport.processor();
 
   @Test
-  void render_returns_empty_metadata_for_blank_input() {
-    var result = processor.render("   ", RenderOptions.defaults());
+  void convert_returns_empty_metadata_for_blank_input() {
+    var result = processor.convert("   ");
 
     assertThat(result.body()).isEmpty();
     assertThat(result.metadata()).isEqualTo(ContentMetadata.empty());
   }
 
   @Test
-  void render_returns_empty_result_with_diagnostics_for_invalid_adf_roots() {
+  void convert_returns_empty_result_with_diagnostics_for_invalid_adf_roots() {
     var rawPayload = "{\"type\":\"paragraph\",\"version\":1,\"content\":[]}";
 
-    var result = processor.render(rawPayload, RenderOptions.defaults());
+    var result = processor.convert(rawPayload);
 
     assertThat(result.body()).isEmpty();
     assertThat(result.metadata()).isEqualTo(ContentMetadata.empty());
@@ -34,9 +38,8 @@ class AdfConverterRenderingTests {
   }
 
   @Test
-  void render_matches_the_reporte_regression_case() throws Exception {
-    var result = processor.render(
-        testSupport.caseInput("reporte"), RenderOptions.defaults());
+  void convert_matches_the_reporte_regression_case() throws Exception {
+    var result = processor.convert(testSupport.caseInput("reporte"));
 
     assertThat(result.body())
         .isEqualToNormalizingNewlines(testSupport.caseOutput("reporte", ".md"))
@@ -47,15 +50,15 @@ class AdfConverterRenderingTests {
   }
 
   @Test
-  void render_resolves_viewpdf_macros_with_attachment_context() throws Exception {
+  void convert_resolves_viewpdf_macros_with_attachment_context() throws Exception {
     var rawPayload = testSupport.caseInput("viewpdf-macros");
-    var options = RenderOptions.defaults()
+    var options = MarkdownOptions.defaults()
         .withContext(
             ConfluenceRenderContext.empty()
                 .withAttachmentReferences(
                     List.of(new AttachmentReference("file-pdf-1", "guide.pdf", "application/pdf"))));
 
-    var result = processor.render(rawPayload, options);
+    var result = AdfToMarkdown.with(options).convert(rawPayload);
 
     assertThat(result.body()).isEqualTo("[PDF: guide.pdf](attachment:file-pdf-1)");
     assertThat(result.metadata().attachmentRefs())
@@ -64,49 +67,45 @@ class AdfConverterRenderingTests {
   }
 
   @Test
-  void render_applies_the_unknown_node_policy() throws Exception {
+  void convert_applies_the_unknown_node_policy() throws Exception {
     var rawPayload = testSupport.caseInput("unknown-node-policy");
 
     assertThat(
-        processor.toMarkdown(
-            rawPayload,
-            RenderOptions.defaults()
-                .withUnknownNodePolicy(UnknownNodePolicy.PLACEHOLDER)))
+        AdfToMarkdown.with(
+                MarkdownOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.PLACEHOLDER))
+            .toMarkdown(rawPayload))
         .contains("[Unsupported: mysteryBlock]");
     assertThat(
-        processor.toMarkdown(
-            rawPayload,
-            RenderOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.SKIP)))
+        AdfToMarkdown.with(MarkdownOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.SKIP))
+            .toMarkdown(rawPayload))
         .isEmpty();
     assertThatThrownBy(
-        () -> processor.toMarkdown(
-            rawPayload,
-            RenderOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.FAIL)))
+        () -> AdfToMarkdown.with(
+                MarkdownOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.FAIL))
+            .toMarkdown(rawPayload))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("mysteryBlock");
   }
 
   @Test
-  void render_supports_generic_options_without_context() throws Exception {
-    var markdown = processor.toMarkdown(
-        testSupport.caseInput("unknown-node-policy"),
-        RenderOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.SKIP));
+  void convert_supports_generic_options_without_context() throws Exception {
+    var markdown = AdfToMarkdown.with(
+            MarkdownOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.SKIP))
+        .toMarkdown(testSupport.caseInput("unknown-node-policy"));
 
     assertThat(markdown).isEmpty();
   }
 
   @Test
-  void render_keeps_children_macros_as_placeholders_for_db_derived_cases() throws Exception {
-    var markdown = processor.toMarkdown(
-        testSupport.caseInput("especificacoes-reporte-children"),
-        RenderOptions.defaults());
+  void convert_keeps_children_macros_as_placeholders_for_db_derived_cases() throws Exception {
+    var markdown = processor.toMarkdown(testSupport.caseInput("especificacoes-reporte-children"));
 
     assertThat(markdown).contains("{{children}}").contains("Reporting Specifications");
   }
 
   @Test
-  void render_resolves_db_derived_viewpdf_cases_with_attachment_context() throws Exception {
-    var options = RenderOptions.defaults()
+  void convert_resolves_db_derived_viewpdf_cases_with_attachment_context() throws Exception {
+    var options = MarkdownOptions.defaults()
         .withContext(
             ConfluenceRenderContext.empty()
                 .withAttachmentReferences(
@@ -116,8 +115,7 @@ class AdfConverterRenderingTests {
                             "Open_Finance_cadastro_diretorio_passo_a_passo.pdf",
                             "application/pdf"))));
 
-    var result = processor.render(
-        testSupport.caseInput("lista-participantes-viewpdf"), options);
+    var result = AdfToMarkdown.with(options).convert(testSupport.caseInput("lista-participantes-viewpdf"));
 
     assertThat(result.body())
         .contains("[PDF: Open_Finance_cadastro_diretorio_passo_a_passo.pdf](attachment:file-pdf-123)");

@@ -15,12 +15,12 @@ final class AdfTestSupport {
 
   private final JsonMapper mapper;
   private final AdfAstParser astParser;
-  private final AdfConverter processor;
+  private final AdfToMarkdown processor;
 
   private AdfTestSupport(
       JsonMapper mapper,
       AdfAstParser astParser,
-      AdfConverter processor) {
+      AdfToMarkdown processor) {
     this.mapper = mapper;
     this.astParser = astParser;
     this.processor = processor;
@@ -28,10 +28,10 @@ final class AdfTestSupport {
 
   static AdfTestSupport create() {
     var mapper = JsonMapper.builder().build();
-    return new AdfTestSupport(mapper, new AdfAstParser(mapper), new AdfConverter());
+    return new AdfTestSupport(mapper, new AdfAstParser(mapper), AdfToMarkdown.create());
   }
 
-  AdfConverter processor() {
+  AdfToMarkdown processor() {
     return processor;
   }
 

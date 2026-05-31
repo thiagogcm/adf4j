@@ -2,7 +2,7 @@ package dev.nthings.adf4j.confluence;
 
 import java.util.List;
 
-import dev.nthings.adf4j.AttachmentReference;
+import dev.nthings.adf4j.metadata.AttachmentReference;
 
 import org.junit.jupiter.api.Test;
 

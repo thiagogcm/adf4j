@@ -3,10 +3,10 @@ package dev.nthings.adf4j.internal.render;
 import java.util.List;
 import java.util.Map;
 
-import dev.nthings.adf4j.AttachmentReference;
-import dev.nthings.adf4j.HeadingReference;
-import dev.nthings.adf4j.RenderOptions;
-import dev.nthings.adf4j.UnknownNodePolicy;
+import dev.nthings.adf4j.metadata.AttachmentReference;
+import dev.nthings.adf4j.metadata.HeadingReference;
+import dev.nthings.adf4j.options.MarkdownOptions;
+import dev.nthings.adf4j.options.UnknownNodePolicy;
 import dev.nthings.adf4j.ast.Heading;
 
 /**
@@ -16,7 +16,7 @@ import dev.nthings.adf4j.ast.Heading;
  */
 record RendererState(RenderContext context, int listDepth, boolean inTable) {
 
-  static RendererState root(RenderOptions options, HeadingOutline headingOutline) {
+  static RendererState root(MarkdownOptions options, HeadingOutline headingOutline) {
     return new RendererState(RenderContext.from(options, headingOutline), 0, false);
   }
 
