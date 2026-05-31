@@ -22,10 +22,6 @@ public final class AdfParsingService {
   private final JsonMapper mapper;
   private final AdfAstParser astParser;
 
-  AdfParsingService(JsonMapper mapper) {
-    this(mapper, new AdfAstParser(mapper));
-  }
-
   AdfParsingService(JsonMapper mapper, AdfAstParser astParser) {
     this.mapper = mapper;
     this.astParser = astParser;

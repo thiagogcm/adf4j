@@ -1,7 +1,6 @@
 package dev.nthings.adf4j;
 
 import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
-import dev.nthings.adf4j.UnknownNodePolicy;
 
 public record RenderOptions(
     UnknownNodePolicy unknownNodePolicy,

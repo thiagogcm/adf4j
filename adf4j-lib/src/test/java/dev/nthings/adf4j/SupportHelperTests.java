@@ -76,7 +76,7 @@ class SupportHelperTests {
   void attachment_references_prefers_normalized_title_matches_over_raw_ids()
       throws Exception {
     var context =
-        ConfluenceRenderContext.forPage("Fixture")
+        ConfluenceRenderContext.empty()
             .withAttachmentReferences(
                 List.of(
                     new AttachmentReference("resolved-id", "Guide.PDF", "application/pdf")));

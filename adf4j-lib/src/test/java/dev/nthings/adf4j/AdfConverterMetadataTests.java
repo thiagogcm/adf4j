@@ -17,7 +17,7 @@ class AdfConverterMetadataTests {
       throws Exception {
     var options = RenderOptions.defaults()
         .withContext(
-            ConfluenceRenderContext.forPage("Participant Guide")
+            ConfluenceRenderContext.empty()
                 .withAttachmentReferences(
                     List.of(
                         new AttachmentReference(
@@ -51,7 +51,7 @@ class AdfConverterMetadataTests {
     var adf = testSupport.caseDocument("deduplicate-references");
     var options = RenderOptions.defaults()
         .withContext(
-            ConfluenceRenderContext.forPage("Metadata Fixture")
+            ConfluenceRenderContext.empty()
                 .withAttachmentReferences(
                     List.of(new AttachmentReference("file-pdf-1", "guide.pdf", "application/pdf"))));
 

@@ -9,18 +9,10 @@ import tools.jackson.databind.json.JsonMapper;
 /** Default dependency wiring shared by {@link dev.nthings.adf4j.AdfConverter}. */
 public final class AdfServices {
 
-  private final JsonMapper mapper;
-  private final AdfAstParser astParser;
   private final AdfParsingService parsingService;
   private final AdfDocumentWorkflow workflow;
 
-  private AdfServices(
-      JsonMapper mapper,
-      AdfAstParser astParser,
-      AdfParsingService parsingService,
-      AdfDocumentWorkflow workflow) {
-    this.mapper = mapper;
-    this.astParser = astParser;
+  private AdfServices(AdfParsingService parsingService, AdfDocumentWorkflow workflow) {
     this.parsingService = parsingService;
     this.workflow = workflow;
   }
@@ -34,15 +26,7 @@ public final class AdfServices {
     var parsingService = new AdfParsingService(mapper, astParser);
     var workflow =
         new AdfDocumentWorkflow(parsingService, headingCollector, renderer, metadataExtractor);
-    return new AdfServices(mapper, astParser, parsingService, workflow);
-  }
-
-  public JsonMapper mapper() {
-    return mapper;
-  }
-
-  public AdfAstParser astParser() {
-    return astParser;
+    return new AdfServices(parsingService, workflow);
   }
 
   public AdfParsingService parsingService() {

@@ -7,7 +7,6 @@ import java.util.stream.Stream;
 
 import dev.nthings.adf4j.HeadingReference;
 import dev.nthings.adf4j.internal.ConfluenceSupport;
-import dev.nthings.adf4j.internal.render.MarkdownText;
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.ast.AdfInline;

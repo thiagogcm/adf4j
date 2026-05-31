@@ -5,17 +5,14 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import dev.nthings.adf4j.HeadingReference;
-import dev.nthings.adf4j.ast.AdfInline;
 import dev.nthings.adf4j.ast.BodiedExtension;
 import dev.nthings.adf4j.ast.BodiedSyncBlock;
 import dev.nthings.adf4j.ast.Extension;
 import dev.nthings.adf4j.ast.InlineExtension;
 import dev.nthings.adf4j.ast.MacroParams;
 import dev.nthings.adf4j.ast.SyncBlock;
-import dev.nthings.adf4j.ast.Text;
 import dev.nthings.adf4j.internal.AttachmentReferences;
 import dev.nthings.adf4j.internal.ConfluenceSupport;
-import dev.nthings.adf4j.confluence.ExcerptKey;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,34 +21,18 @@ final class MacroRenderer {
 
   private static final Logger log = LoggerFactory.getLogger(MacroRenderer.class);
 
-  String renderExtension(Extension node, RendererState context, AdfRenderer adfRenderer) {
+  String renderExtension(Extension node, RendererState context) {
     return renderExtensionCore(
-        node.extensionType(),
-        node.extensionKey(),
-        node.macroParams(),
-        context,
-        adfRenderer,
-        false);
+        node.extensionType(), node.extensionKey(), node.macroParams(), context);
   }
 
-  String renderInlineExtension(
-      InlineExtension node, RendererState context, AdfRenderer adfRenderer) {
+  String renderInlineExtension(InlineExtension node, RendererState context) {
     return renderExtensionCore(
-        node.extensionType(),
-        node.extensionKey(),
-        node.macroParams(),
-        context,
-        adfRenderer,
-        true);
+        node.extensionType(), node.extensionKey(), node.macroParams(), context);
   }
 
   private String renderExtensionCore(
-      String extensionType,
-      String extensionKey,
-      MacroParams macroParams,
-      RendererState context,
-      AdfRenderer adfRenderer,
-      boolean inline) {
+      String extensionType, String extensionKey, MacroParams macroParams, RendererState context) {
     if (!ConfluenceSupport.isConfluenceMacroExtension(extensionType)) {
       return renderExtensionPlaceholder(extensionType, extensionKey);
     }
@@ -62,7 +43,6 @@ final class MacroRenderer {
       case "anchor" -> "";
       case "iframe" -> renderIframeMacro(macroParams);
       case "viewpdf" -> renderViewPdfMacro(macroParams, context);
-      case "excerpt-include" -> renderExcerptIncludeMacro(macroParams, context, adfRenderer, inline);
       case "chart:default" -> renderChartMacro(macroParams);
       default -> null;
     };
@@ -102,37 +82,6 @@ final class MacroRenderer {
     return blocks;
   }
 
-  InlineExtension extractStandaloneExcerptInclude(List<AdfInline> content) {
-    if (content == null || content.isEmpty()) {
-      return null;
-    }
-
-    InlineExtension candidate = null;
-    for (var node : content) {
-      if (node instanceof Text text) {
-        if (!text.text().isBlank()) {
-          return null;
-        }
-        continue;
-      }
-
-      if (!(node instanceof InlineExtension extension)) {
-        return null;
-      }
-
-      if (!ConfluenceSupport.isConfluenceMacroExtension(extension.extensionType())
-          || !"excerpt-include".equals(extension.extensionKey())) {
-        return null;
-      }
-
-      if (candidate != null) {
-        return null;
-      }
-      candidate = extension;
-    }
-    return candidate;
-  }
-
   private String renderChildrenPlaceholder(MacroParams macroParams) {
     var all = allChildrenValue(macroParams);
     if (all != null && "true".equalsIgnoreCase(all)) {
@@ -154,7 +103,7 @@ final class MacroRenderer {
   }
 
   private String renderTocMacro(MacroParams macroParams, RendererState context) {
-    var headings = context.macroContext() == null ? List.<HeadingReference>of() : context.macroContext().headings();
+    var headings = context.headings();
     if (headings.isEmpty()) {
       return "";
     }
@@ -201,7 +150,8 @@ final class MacroRenderer {
 
   private String renderViewPdfMacro(MacroParams macroParams, RendererState context) {
     var name = macroParams.value("name");
-    var attachmentReference = AttachmentReferences.resolve(macroParams, context.attachmentReferencesByTitle());
+    var attachmentReference =
+        AttachmentReferences.resolve(macroParams, context.attachmentReferencesByTitle());
     if (attachmentReference == null
         || attachmentReference.fileId() == null
         || attachmentReference.fileId().isBlank()) {
@@ -217,39 +167,6 @@ final class MacroRenderer {
     return title == null || title.isBlank() ? "[Chart]" : "[Chart: %s]".formatted(title);
   }
 
-  private String renderExcerptIncludeMacro(
-      MacroParams macroParams, RendererState context, AdfRenderer adfRenderer, boolean inline) {
-    var pageTitle = Stream.of(macroParams.value(""), context.pageTitle())
-        .filter(s -> s != null && !s.isBlank())
-        .findFirst()
-        .orElse(null);
-    var excerptName = Stream.of(macroParams.value("name"))
-        .filter(s -> s != null && !s.isBlank())
-        .findFirst()
-        .orElse(null);
-    var placeholder = "[Excerpt include: %s]".formatted(label(pageTitle, excerptName));
-
-    if (context.macroContext() == null || pageTitle == null || pageTitle.isBlank()) {
-      return placeholder;
-    }
-
-    var key = new ExcerptKey(pageTitle, excerptName);
-    if (context.isExcerptActive(key)) {
-      return placeholder;
-    }
-
-    var excerptBlocks = context.macroContext().excerpts().get(key);
-    if (excerptBlocks == null || excerptBlocks.isEmpty()) {
-      return placeholder;
-    }
-
-    var rendered = adfRenderer.joinBlocks(adfRenderer.renderBlocks(excerptBlocks, context.withExcerpt(key)));
-    if (!inline || context.inTable()) {
-      return rendered;
-    }
-    return rendered.replace("\n", "<br>");
-  }
-
   private int parseIntOrDefault(String raw, int fallback) {
     if (raw == null || raw.isBlank()) {
       return fallback;
@@ -259,11 +176,6 @@ final class MacroRenderer {
     } catch (NumberFormatException _) {
       return fallback;
     }
-  }
-
-  private String label(String pageTitle, String excerptName) {
-    return String.join(
-        " / ", Stream.of(pageTitle, excerptName).filter(s -> s != null && !s.isBlank()).toList());
   }
 
   private String renderExtensionPlaceholder(String extensionType, String extensionKey) {

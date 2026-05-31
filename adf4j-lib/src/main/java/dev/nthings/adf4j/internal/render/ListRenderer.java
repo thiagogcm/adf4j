@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import dev.nthings.adf4j.internal.render.MarkdownText;
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.BlockTaskItem;
 import dev.nthings.adf4j.ast.BulletList;

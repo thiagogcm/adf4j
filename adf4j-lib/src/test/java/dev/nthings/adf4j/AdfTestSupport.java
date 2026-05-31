@@ -4,7 +4,6 @@ import java.io.IOException;
 
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.ast.MacroParams;
-import dev.nthings.adf4j.internal.engine.AdfServices;
 import dev.nthings.adf4j.internal.parser.AdfAstParser;
 import dev.nthings.adf4j.testing.TestResources;
 
@@ -28,11 +27,8 @@ final class AdfTestSupport {
   }
 
   static AdfTestSupport create() {
-    var services = AdfServices.createDefault();
-    return new AdfTestSupport(
-        services.mapper(),
-        services.astParser(),
-        new AdfConverter(services));
+    var mapper = JsonMapper.builder().build();
+    return new AdfTestSupport(mapper, new AdfAstParser(mapper), new AdfConverter());
   }
 
   AdfConverter processor() {

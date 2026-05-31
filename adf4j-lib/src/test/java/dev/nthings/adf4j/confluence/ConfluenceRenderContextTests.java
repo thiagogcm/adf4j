@@ -12,7 +12,7 @@ class ConfluenceRenderContextTests {
 
   @Test
   void with_attachment_references_normalizes_titles_skips_invalid_entries_and_keeps_first_match() {
-    var context = ConfluenceRenderContext.forPage("Fixture")
+    var context = ConfluenceRenderContext.empty()
         .withAttachmentReferences(
             List.of(
                 new AttachmentReference(
@@ -24,10 +24,10 @@ class ConfluenceRenderContextTests {
                 new AttachmentReference("", "ignored.txt", "text/plain"),
                 new AttachmentReference("file-4", "   ", "text/plain")));
 
-    assertThat(context.attachmentReferencesByTitle()).hasSize(2);
-    assertThat(context.attachmentReference(" guide.pdf ").fileId()).isEqualTo("file-1");
-    assertThat(context.attachmentReference("GUIDE.PDF").mediaType()).isEqualTo("application/pdf");
-    assertThat(context.attachmentReference("diagram.png").fileId()).isEqualTo("file-3");
-    assertThat(context.attachmentReference("missing.pdf")).isNull();
+    var byTitle = context.attachmentReferencesByTitle();
+    assertThat(byTitle).containsOnlyKeys("guide.pdf", "diagram.png");
+    assertThat(byTitle.get("guide.pdf").fileId()).isEqualTo("file-1");
+    assertThat(byTitle.get("guide.pdf").mediaType()).isEqualTo("application/pdf");
+    assertThat(byTitle.get("diagram.png").fileId()).isEqualTo("file-3");
   }
 }

@@ -6,7 +6,6 @@ import java.util.Objects;
 import java.util.stream.Stream;
 
 import dev.nthings.adf4j.RenderOptions;
-import dev.nthings.adf4j.internal.render.MarkdownText;
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.ast.AdfInline;
@@ -127,15 +126,15 @@ public final class AdfRenderer {
       case LayoutSection layout -> List.of(renderLayoutSection(layout, context));
       case LayoutColumn column -> renderBlocks(column.content(), context);
       case MediaSingle mediaSingle -> List.of(mediaRenderer.renderMediaSingle(mediaSingle, context, this));
-      case MediaGroup mediaGroup -> List.of(mediaRenderer.renderMediaGroup(mediaGroup, context, this));
-      case Media media -> List.of(mediaRenderer.renderMedia(media, context, this));
+      case MediaGroup mediaGroup -> List.of(mediaRenderer.renderMediaGroup(mediaGroup, this));
+      case Media media -> List.of(mediaRenderer.renderMedia(media, this));
       case Caption caption -> List.of(mediaRenderer.renderCaption(caption, context, this));
-      case Extension extension -> List.of(macroRenderer.renderExtension(extension, context, this));
+      case Extension extension -> List.of(macroRenderer.renderExtension(extension, context));
       case BodiedExtension bodied -> macroRenderer.renderBodiedExtension(bodied, context, this);
       case SyncBlock sync -> List.of(macroRenderer.renderSyncBlock(sync));
       case BodiedSyncBlock sync -> macroRenderer.renderBodiedSyncBlock(sync, context, this);
-      case BlockCard blockCard -> List.of(cardRenderer.renderBlockCard(blockCard.attrs(), context));
-      case EmbedCard embedCard -> List.of(cardRenderer.renderEmbedCard(embedCard.attrs(), context));
+      case BlockCard blockCard -> List.of(cardRenderer.renderBlockCard(blockCard.attrs()));
+      case EmbedCard embedCard -> List.of(cardRenderer.renderEmbedCard(embedCard.attrs()));
       case UnknownBlock unknown -> renderUnknownBlockByPolicy(unknown.type(), context);
     };
   }
@@ -160,9 +159,8 @@ public final class AdfRenderer {
     return builder.toString();
   }
 
-  public String applyMarks(String text, List<AdfMark> marks, RendererState context) {
-    return markRenderer.applyMarks(
-        text, marks, (href, renderedLabel) -> cardRenderer.resolveLink(href, renderedLabel, context));
+  public String applyMarks(String text, List<AdfMark> marks) {
+    return markRenderer.applyMarks(text, marks);
   }
 
   public String joinBlocks(List<String> blocks) {
@@ -171,27 +169,22 @@ public final class AdfRenderer {
 
   private String renderInline(AdfInline node, RendererState context) {
     return switch (node) {
-      case Text text -> renderText(text, context);
+      case Text text -> renderText(text);
       case HardBreak _ -> hardBreakMarker(context);
-      case InlineCard card -> cardRenderer.renderInlineCard(card.attrs(), context);
-      case MediaInline media -> mediaRenderer.renderMediaInline(media, context, this);
+      case InlineCard card -> cardRenderer.renderInlineCard(card.attrs());
+      case MediaInline media -> mediaRenderer.renderMediaInline(media, this);
       case Date date -> MarkdownText.dateFromTimestamp(date.timestamp());
       case Emoji emoji -> renderEmoji(emoji);
       case Mention mention -> renderMention(mention);
       case Placeholder placeholder -> placeholder.text();
       case Status status -> renderStatus(status);
       case InlineExtension extension ->
-        macroRenderer.renderInlineExtension(extension, context, this);
+        macroRenderer.renderInlineExtension(extension, context);
       case UnknownInline unknown -> renderUnknownInlineByPolicy(unknown.type(), context);
     };
   }
 
   private String renderParagraph(Paragraph paragraph, RendererState context) {
-    var standaloneExcerpt = macroRenderer.extractStandaloneExcerptInclude(paragraph.content());
-    if (standaloneExcerpt != null) {
-      return macroRenderer.renderInlineExtension(standaloneExcerpt, context, this);
-    }
-
     return renderInlineNodes(paragraph.content(), context);
   }
 
@@ -281,8 +274,8 @@ public final class AdfRenderer {
     return "<details>" + summary + "\n\n" + body + "\n\n</details>";
   }
 
-  private String renderText(Text text, RendererState context) {
-    return applyMarks(text.text(), text.marks(), context);
+  private String renderText(Text text) {
+    return applyMarks(text.text(), text.marks());
   }
 
   private String hardBreakMarker(RendererState context) {

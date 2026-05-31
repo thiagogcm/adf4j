@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-import dev.nthings.adf4j.internal.render.MarkdownText;
 
 final class RenderBuffer {
 

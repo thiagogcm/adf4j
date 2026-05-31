@@ -2,8 +2,6 @@ package dev.nthings.adf4j;
 
 import java.util.List;
 
-import dev.nthings.adf4j.ParseIssue;
-
 public record RenderResult(String body, ContentMetadata metadata, List<ParseIssue> diagnostics) {
 
   public RenderResult {

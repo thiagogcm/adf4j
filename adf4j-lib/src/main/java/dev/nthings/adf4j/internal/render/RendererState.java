@@ -1,56 +1,32 @@
 package dev.nthings.adf4j.internal.render;
 
-import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import dev.nthings.adf4j.AttachmentReference;
 import dev.nthings.adf4j.HeadingReference;
-import dev.nthings.adf4j.confluence.PageTitleResolver;
 import dev.nthings.adf4j.RenderOptions;
-import dev.nthings.adf4j.ast.Heading;
-import dev.nthings.adf4j.confluence.ExcerptKey;
-import dev.nthings.adf4j.confluence.PageLinkResolver;
 import dev.nthings.adf4j.UnknownNodePolicy;
+import dev.nthings.adf4j.ast.Heading;
 
 /**
  * The traversal cursor: a shared immutable {@link RenderContext} plus the position-dependent state
- * that changes as the renderer descends (list depth, table scope, active excerpts). Transitions
- * copy only the cursor fields and keep the same {@link RenderContext} reference.
+ * that changes as the renderer descends (list depth, table scope). Transitions copy only the cursor
+ * fields and keep the same {@link RenderContext} reference.
  */
-record RendererState(
-    RenderContext context,
-    int listDepth,
-    boolean inTable,
-    Set<ExcerptKey> activeExcerpts) {
+record RendererState(RenderContext context, int listDepth, boolean inTable) {
 
   static RendererState root(RenderOptions options, HeadingOutline headingOutline) {
-    return new RendererState(RenderContext.from(options, headingOutline), 0, false, Set.of());
+    return new RendererState(RenderContext.from(options, headingOutline), 0, false);
   }
 
   // Delegating accessors onto the shared context so renderer call sites stay stable.
-  String pageTitle() {
-    return context.pageTitle();
-  }
-
-  String currentPageId() {
-    return context.currentPageId();
-  }
-
-  MacroContext macroContext() {
-    return context.macroContext();
+  List<HeadingReference> headings() {
+    return context.headingOutline().headings();
   }
 
   Map<String, AttachmentReference> attachmentReferencesByTitle() {
     return context.attachmentReferencesByTitle();
-  }
-
-  PageLinkResolver linkResolver() {
-    return context.linkResolver();
-  }
-
-  PageTitleResolver pageTitleResolver() {
-    return context.pageTitleResolver();
   }
 
   UnknownNodePolicy unknownNodePolicy() {
@@ -63,20 +39,10 @@ record RendererState(
 
   // Cursor transitions.
   RendererState withListDepth(int depth) {
-    return new RendererState(context, depth, inTable, activeExcerpts);
+    return new RendererState(context, depth, inTable);
   }
 
   RendererState withTable(boolean table) {
-    return new RendererState(context, listDepth, table, activeExcerpts);
-  }
-
-  boolean isExcerptActive(ExcerptKey key) {
-    return activeExcerpts.contains(key);
-  }
-
-  RendererState withExcerpt(ExcerptKey key) {
-    var next = new LinkedHashSet<>(activeExcerpts);
-    next.add(key);
-    return new RendererState(context, listDepth, inTable, Set.copyOf(next));
+    return new RendererState(context, listDepth, table);
   }
 }

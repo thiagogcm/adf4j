@@ -17,10 +17,7 @@ public final class AdfConverter {
   private final AdfDocumentWorkflow workflow;
 
   public AdfConverter() {
-    this(AdfServices.createDefault());
-  }
-
-  AdfConverter(AdfServices services) {
+    var services = AdfServices.createDefault();
     this.parsingService = services.parsingService();
     this.workflow = services.workflow();
   }

@@ -24,19 +24,11 @@ import dev.nthings.adf4j.ast.TextColor;
 import dev.nthings.adf4j.ast.Underline;
 import dev.nthings.adf4j.ast.UnknownMark;
 
-record ResolvedLink(String href, String label) {
-}
-
-@FunctionalInterface
-interface LinkTargetResolver {
-  ResolvedLink resolve(String href, String renderedLabel);
-}
-
 final class TextMarkRenderer {
 
   private static final Comparator<AdfMark> INLINE_MARK_ORDER = Comparator.comparingInt(TextMarkRenderer::canonicalRank);
 
-  String applyMarks(String value, List<AdfMark> marks, LinkTargetResolver linkResolver) {
+  String applyMarks(String value, List<AdfMark> marks) {
     if (marks == null || marks.isEmpty()) {
       return value;
     }
@@ -69,20 +61,11 @@ final class TextMarkRenderer {
     if (linkMark != null) {
       var href = linkMark.href();
       if (href != null && !href.isBlank()) {
-        var resolvedLink = linkResolver == null ? null : linkResolver.resolve(href, rendered);
-        var finalHref = resolvedLink == null || resolvedLink.href() == null || resolvedLink.href().isBlank()
-            ? href
-            : resolvedLink.href();
-        var fallbackLabel = (rendered == null || rendered.isBlank()) ? finalHref : rendered;
-        var label = resolvedLink == null
-            ? fallbackLabel
-            : (resolvedLink.label() == null || resolvedLink.label().isBlank())
-                ? fallbackLabel
-                : resolvedLink.label();
+        var label = (rendered == null || rendered.isBlank()) ? href : rendered;
         var title = linkMark.title();
         rendered = (title == null || title.isBlank())
-            ? "[%s](%s)".formatted(label, finalHref)
-            : "[%s](%s \"%s\")".formatted(label, finalHref, escapeLinkTitle(title));
+            ? "[%s](%s)".formatted(label, href)
+            : "[%s](%s \"%s\")".formatted(label, href, escapeLinkTitle(title));
       }
     }
 

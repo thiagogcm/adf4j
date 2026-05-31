@@ -3,7 +3,6 @@ package dev.nthings.adf4j;
 import java.util.List;
 
 import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
-import dev.nthings.adf4j.UnknownNodePolicy;
 
 import org.junit.jupiter.api.Test;
 
@@ -37,7 +36,7 @@ class AdfConverterRenderingTests {
   @Test
   void render_matches_the_reporte_regression_case() throws Exception {
     var result = processor.render(
-        testSupport.caseInput("reporte"), optionsForPage("Report Fixture"));
+        testSupport.caseInput("reporte"), RenderOptions.defaults());
 
     assertThat(result.body())
         .isEqualToNormalizingNewlines(testSupport.caseOutput("reporte", ".md"))
@@ -52,7 +51,7 @@ class AdfConverterRenderingTests {
     var rawPayload = testSupport.caseInput("viewpdf-macros");
     var options = RenderOptions.defaults()
         .withContext(
-            ConfluenceRenderContext.forPage("Guide Fixture")
+            ConfluenceRenderContext.empty()
                 .withAttachmentReferences(
                     List.of(new AttachmentReference("file-pdf-1", "guide.pdf", "application/pdf"))));
 
@@ -100,7 +99,7 @@ class AdfConverterRenderingTests {
   void render_keeps_children_macros_as_placeholders_for_db_derived_cases() throws Exception {
     var markdown = processor.toMarkdown(
         testSupport.caseInput("especificacoes-reporte-children"),
-        optionsForPage("Reporting Specifications"));
+        RenderOptions.defaults());
 
     assertThat(markdown).contains("{{children}}").contains("Reporting Specifications");
   }
@@ -109,7 +108,7 @@ class AdfConverterRenderingTests {
   void render_resolves_db_derived_viewpdf_cases_with_attachment_context() throws Exception {
     var options = RenderOptions.defaults()
         .withContext(
-            ConfluenceRenderContext.forPage("Participant Guide")
+            ConfluenceRenderContext.empty()
                 .withAttachmentReferences(
                     List.of(
                         new AttachmentReference(
@@ -128,9 +127,5 @@ class AdfConverterRenderingTests {
           assertThat(ref.fileId()).isEqualTo("file-pdf-123");
           assertThat(ref.title()).isEqualTo("Open_Finance_cadastro_diretorio_passo_a_passo.pdf");
         });
-  }
-
-  private static RenderOptions optionsForPage(String pageTitle) {
-    return RenderOptions.defaults().withContext(ConfluenceRenderContext.forPage(pageTitle));
   }
 }

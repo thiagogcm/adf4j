@@ -20,7 +20,7 @@ final class MediaRenderer {
     var blocks = new ArrayList<String>();
     for (var item : node.content()) {
       if (item instanceof Media media) {
-        blocks.add(renderMedia(media, context, adfRenderer));
+        blocks.add(renderMedia(media, adfRenderer));
       } else if (item instanceof Caption caption) {
         var rendered = renderCaption(caption, context, adfRenderer);
         if (!rendered.isBlank()) {
@@ -36,7 +36,7 @@ final class MediaRenderer {
     return adfRenderer.renderInlineNodes(node.content(), context);
   }
 
-  String renderMediaGroup(MediaGroup node, RendererState context, AdfRenderer adfRenderer) {
+  String renderMediaGroup(MediaGroup node, AdfRenderer adfRenderer) {
     if (node.content().isEmpty()) {
       return "";
     }
@@ -44,20 +44,20 @@ final class MediaRenderer {
     var lines = new ArrayList<String>();
     for (var item : node.content()) {
       if (item instanceof Media media) {
-        lines.add(renderMedia(media, context, adfRenderer));
+        lines.add(renderMedia(media, adfRenderer));
       }
     }
     return String.join("\n", lines);
   }
 
-  String renderMedia(Media node, RendererState context, AdfRenderer adfRenderer) {
+  String renderMedia(Media node, AdfRenderer adfRenderer) {
     var rendered = renderMediaBlock(node.attrs());
-    return adfRenderer.applyMarks(rendered, node.marks(), context);
+    return adfRenderer.applyMarks(rendered, node.marks());
   }
 
-  String renderMediaInline(MediaInline node, RendererState context, AdfRenderer adfRenderer) {
+  String renderMediaInline(MediaInline node, AdfRenderer adfRenderer) {
     var rendered = renderMediaBlock(node.attrs());
-    return adfRenderer.applyMarks(rendered, node.marks(), context);
+    return adfRenderer.applyMarks(rendered, node.marks());
   }
 
   private String renderMediaBlock(MediaAttrs attrs) {

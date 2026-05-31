@@ -7,8 +7,4 @@ public record ConfluenceMetadata(String linkType, String pageId, String contentI
   public static ConfluenceMetadata empty() {
     return EMPTY;
   }
-
-  public boolean isEmpty() {
-    return linkType == null && pageId == null && contentId == null && id == null;
-  }
 }

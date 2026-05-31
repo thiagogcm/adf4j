@@ -10,8 +10,4 @@ public final class Adf {
   public static String toMarkdown(String adfJson) {
     return SHARED.toMarkdown(adfJson, RenderOptions.defaults());
   }
-
-  public static RenderResult render(String adfJson, RenderOptions options) {
-    return SHARED.render(adfJson, options);
-  }
 }

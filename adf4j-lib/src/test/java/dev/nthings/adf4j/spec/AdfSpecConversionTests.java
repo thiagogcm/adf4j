@@ -13,7 +13,6 @@ import java.util.stream.Stream;
 
 import dev.nthings.adf4j.AdfConverter;
 import dev.nthings.adf4j.RenderOptions;
-import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
 import dev.nthings.adf4j.testing.TestResources;
 
 import org.junit.jupiter.api.Test;
@@ -34,8 +33,7 @@ class AdfSpecConversionTests {
   private static final String EXPECTED_SUFFIX = ".md";
   private static final JsonMapper MAPPER = JsonMapper.builder().build();
   private static final AdfConverter PROCESSOR = new AdfConverter();
-  private static final RenderOptions DEFAULT_OPTIONS =
-      RenderOptions.defaults().withContext(ConfluenceRenderContext.forPage("Spec Fixture"));
+  private static final RenderOptions DEFAULT_OPTIONS = RenderOptions.defaults();
   private static final Supplier<Stream<Arguments>> markdown_specs = () -> specCases().map(SpecCase::toArguments);
 
   record SpecCase(String name) {
