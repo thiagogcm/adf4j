@@ -115,7 +115,7 @@
                             <verbose>true</verbose>
                             <buildArgs>
                                 <buildArg>--no-fallback</buildArg>
-                                <buildArg>--target=wasm32-wasi</buildArg>
+                                <buildArg>--tool:svm-wasm</buildArg>
                             </buildArgs>
                             <metadataRepository>
                                 <enabled>true</enabled>

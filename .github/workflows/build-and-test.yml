@@ -85,7 +85,8 @@ jobs:
             - name: Prepare WASM artifact
               run: |
                   mkdir -p dist
-                  cp adf4j-cli/target/adf4j-cli.wasm dist/adf4j-cli.wasm
+                  cp adf4j-cli/target/adf4j-cli.js dist/adf4j-cli.js
+                  cp adf4j-cli/target/adf4j-cli.js.wasm dist/adf4j-cli.js.wasm
 
             - name: Upload WASM Artifact
               uses: actions/upload-artifact@v4
