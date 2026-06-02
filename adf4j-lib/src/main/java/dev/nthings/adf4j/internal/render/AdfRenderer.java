@@ -1,5 +1,6 @@
 package dev.nthings.adf4j.internal.render;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -160,8 +161,8 @@ public final class AdfRenderer {
       case LayoutSection layout -> List.of(renderLayoutSection(layout, context));
       case LayoutColumn column -> renderBlocks(column.content(), context);
       case MediaSingle mediaSingle -> List.of(mediaRenderer.renderMediaSingle(mediaSingle, context, this));
-      case MediaGroup mediaGroup -> List.of(mediaRenderer.renderMediaGroup(mediaGroup, this));
-      case Media media -> List.of(mediaRenderer.renderMedia(media, this));
+      case MediaGroup mediaGroup -> List.of(mediaRenderer.renderMediaGroup(mediaGroup, context, this));
+      case Media media -> List.of(mediaRenderer.renderMedia(media, context, this));
       case Caption caption -> List.of(mediaRenderer.renderCaption(caption, context, this));
       case Extension extension -> List.of(macroRenderer.renderExtension(extension, context));
       case BodiedExtension bodied -> macroRenderer.renderBodiedExtension(bodied, context, this);
@@ -191,7 +192,7 @@ public final class AdfRenderer {
     }
     var builder = new StringBuilder();
     var atLineStart = startAtLineStart;
-    for (var node : nodes) {
+    for (var node : coalesceAdjacentText(nodes)) {
       var rendered = renderInline(node, context, atLineStart);
       builder.append(rendered);
       if (node instanceof HardBreak) {
@@ -202,6 +203,42 @@ public final class AdfRenderer {
       }
     }
     return builder.toString();
+  }
+
+  /**
+   * Merges consecutive {@link Text} inlines with the same mark set into one node, so an adjacent
+   * same-mark run gets a single set of delimiters instead of one per node. Non-Text inlines break a run.
+   */
+  private static List<AdfInline> coalesceAdjacentText(List<AdfInline> nodes) {
+    var result = new ArrayList<AdfInline>(nodes.size());
+    Text pending = null;
+    for (var node : nodes) {
+      if (node instanceof Text text) {
+        if (pending != null && sameMarkSet(pending.marks(), text.marks())) {
+          pending = new Text(pending.text() + text.text(), pending.marks());
+        } else {
+          if (pending != null) {
+            result.add(pending);
+          }
+          pending = text;
+        }
+      } else {
+        if (pending != null) {
+          result.add(pending);
+          pending = null;
+        }
+        result.add(node);
+      }
+    }
+    if (pending != null) {
+      result.add(pending);
+    }
+    return result;
+  }
+
+  // Order-insensitive value equality.
+  private static boolean sameMarkSet(List<AdfMark> left, List<AdfMark> right) {
+    return left.size() == right.size() && left.containsAll(right) && right.containsAll(left);
   }
 
   public String applyMarks(String text, List<AdfMark> marks) {
@@ -218,7 +255,7 @@ public final class AdfRenderer {
       case Text text -> renderText(text, context, atLineStart);
       case HardBreak _ -> hardBreakMarker(context);
       case InlineCard card -> cardRenderer.renderInlineCard(card.attrs());
-      case MediaInline media -> mediaRenderer.renderMediaInline(media, this);
+      case MediaInline media -> mediaRenderer.renderMediaInline(media, context, this);
       case Date date -> MarkdownText.dateFromTimestamp(date.timestamp());
       case Emoji emoji -> renderEmoji(emoji);
       case Mention mention -> renderMention(mention);
@@ -267,10 +304,11 @@ public final class AdfRenderer {
    * don't glue (e.g. {@code ![icon](src) Title}). All-text headings are unaffected.
    */
   private String renderHeadingInlines(List<AdfInline> nodes, RendererState context) {
+    var headingContext = context.withHeading(true);
     var builder = new StringBuilder();
     AdfInline previous = null;
-    for (var node : nodes) {
-      var rendered = renderInline(node, context, false);
+    for (var node : coalesceAdjacentText(nodes)) {
+      var rendered = renderInline(node, headingContext, false);
       if (rendered.isEmpty()) {
         continue;
       }
@@ -376,6 +414,10 @@ public final class AdfRenderer {
   }
 
   private String hardBreakMarker(RendererState context) {
+    // An interior break would terminate an ATX heading, so collapse it to a space.
+    if (context.inHeading()) {
+      return " ";
+    }
     return context.inTable() ? "\n" : "  \n";
   }
 

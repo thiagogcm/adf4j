@@ -1,0 +1,13 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "paragraph",
+      "content": [
+        { "type": "text", "text": "foo", "marks": [ { "type": "code" } ] },
+        { "type": "text", "text": "Bar", "marks": [ { "type": "code" } ] }
+      ]
+    }
+  ]
+}

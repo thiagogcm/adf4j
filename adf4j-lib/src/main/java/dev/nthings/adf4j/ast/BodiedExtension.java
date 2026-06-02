@@ -3,7 +3,11 @@ package dev.nthings.adf4j.ast;
 import java.util.List;
 
 public record BodiedExtension(
-    String extensionType, String extensionKey, MacroParams macroParams, List<AdfBlock> content)
+    String extensionType,
+    String extensionKey,
+    String text,
+    MacroParams macroParams,
+    List<AdfBlock> content)
     implements AdfBlock {
 
   public BodiedExtension {

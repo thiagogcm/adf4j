@@ -1,0 +1,21 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "extension",
+      "attrs": {
+        "extensionType": "com.atlassian.confluence.macro.core",
+        "extensionKey": "toc",
+        "parameters": {
+          "macroParams": {
+            "minLevel": { "value": "1" },
+            "maxLevel": { "value": "6" }
+          }
+        }
+      }
+    },
+    { "type": "heading", "attrs": { "level": 1 }, "content": [ { "type": "text", "text": "Overview" } ] },
+    { "type": "heading", "attrs": { "level": 2 }, "content": [ { "type": "text", "text": "Details — [draft]" } ] }
+  ]
+}

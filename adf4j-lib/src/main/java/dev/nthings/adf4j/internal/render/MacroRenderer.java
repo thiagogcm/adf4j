@@ -23,18 +23,22 @@ final class MacroRenderer {
 
   String renderExtension(Extension node, RendererState context) {
     return renderExtensionCore(
-        node.extensionType(), node.extensionKey(), node.macroParams(), context);
+        node.extensionType(), node.extensionKey(), node.text(), node.macroParams(), context);
   }
 
   String renderInlineExtension(InlineExtension node, RendererState context) {
     return renderExtensionCore(
-        node.extensionType(), node.extensionKey(), node.macroParams(), context);
+        node.extensionType(), node.extensionKey(), node.text(), node.macroParams(), context);
   }
 
   private String renderExtensionCore(
-      String extensionType, String extensionKey, MacroParams macroParams, RendererState context) {
+      String extensionType,
+      String extensionKey,
+      String text,
+      MacroParams macroParams,
+      RendererState context) {
     if (!ConfluenceSupport.isConfluenceMacroExtension(extensionType)) {
-      return renderExtensionPlaceholder(extensionType, extensionKey);
+      return extensionFallback(text, extensionType, extensionKey);
     }
 
     var rendered = switch (extensionKey != null ? extensionKey : "") {
@@ -46,7 +50,7 @@ final class MacroRenderer {
       case "chart:default" -> renderChartMacro(macroParams);
       default -> null;
     };
-    return rendered != null ? rendered : renderExtensionPlaceholder(extensionType, extensionKey);
+    return rendered != null ? rendered : extensionFallback(text, extensionType, extensionKey);
   }
 
   List<String> renderBodiedExtension(
@@ -57,9 +61,16 @@ final class MacroRenderer {
     }
 
     var blocks = new ArrayList<String>();
-    blocks.add(renderExtensionPlaceholder(node.extensionType(), node.extensionKey()));
+    blocks.add(extensionFallback(node.text(), node.extensionType(), node.extensionKey()));
     blocks.addAll(adfRenderer.renderBlocks(node.content(), context));
     return blocks;
+  }
+
+  private String extensionFallback(String text, String extensionType, String extensionKey) {
+    if (text != null && !text.isBlank()) {
+      return text;
+    }
+    return renderExtensionPlaceholder(extensionType, extensionKey);
   }
 
   String renderSyncBlock(SyncBlock node) {
@@ -124,10 +135,11 @@ final class MacroRenderer {
     var lines = new ArrayList<String>();
     for (var heading : filtered) {
       var indent = RenderBuffer.LIST_INDENT.repeat(Math.max(0, heading.level() - baseLevel));
+      var label = MarkdownText.escapeLinkText(heading.text());
       if (heading.anchor() != null && !heading.anchor().isBlank()) {
-        lines.add(indent + "- [" + heading.text() + "](#" + heading.anchor() + ")");
+        lines.add(indent + "- [" + label + "](#" + heading.anchor() + ")");
       } else {
-        lines.add(indent + "- " + heading.text());
+        lines.add(indent + "- " + label);
       }
     }
     return String.join("\n", lines);

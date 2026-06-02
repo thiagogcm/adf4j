@@ -7,7 +7,11 @@ import java.util.stream.IntStream;
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.BulletList;
 import dev.nthings.adf4j.ast.ListItem;
+import dev.nthings.adf4j.ast.Media;
+import dev.nthings.adf4j.ast.MediaGroup;
+import dev.nthings.adf4j.ast.MediaSingle;
 import dev.nthings.adf4j.ast.OrderedList;
+import dev.nthings.adf4j.ast.Paragraph;
 import dev.nthings.adf4j.ast.Table;
 import dev.nthings.adf4j.ast.TableCell;
 import dev.nthings.adf4j.ast.TableRow;
@@ -136,13 +140,20 @@ final class TableRenderer {
           return true;
         }
         for (var child : cell.content()) {
-          if (child instanceof BulletList || child instanceof OrderedList) {
+          if (!isGfmCellSafe(child)) {
             return true;
           }
         }
       }
     }
     return false;
+  }
+
+  private boolean isGfmCellSafe(AdfBlock block) {
+    return block instanceof Paragraph
+        || block instanceof MediaSingle
+        || block instanceof MediaGroup
+        || block instanceof Media;
   }
 
   private String renderHtmlTable(

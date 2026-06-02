@@ -393,7 +393,8 @@ public final class AdfAstParser {
     var layout = JsonFields.text(attrs, "layout");
     var widthType = JsonFields.text(attrs, "widthType");
     var width = JsonFields.text(attrs, "width");
-    return new MediaSingle(layout, widthType, width, parseMediaBlocks(node.get("content")));
+    return new MediaSingle(
+        layout, widthType, width, parseMediaBlocks(node.get("content")), parseMarks(node.get("marks")));
   }
 
   private List<AdfBlock> parseMediaBlocks(JsonNode arrayNode) {
@@ -433,6 +434,7 @@ public final class AdfAstParser {
     return new Extension(
         JsonFields.text(attrs, "extensionType"),
         JsonFields.text(attrs, "extensionKey"),
+        JsonFields.text(attrs, "text"),
         parseMacroParams(attrs.path("parameters").path("macroParams")));
   }
 
@@ -441,6 +443,7 @@ public final class AdfAstParser {
     return new BodiedExtension(
         JsonFields.text(attrs, "extensionType"),
         JsonFields.text(attrs, "extensionKey"),
+        JsonFields.text(attrs, "text"),
         parseMacroParams(attrs.path("parameters").path("macroParams")),
         parseBlocks(node.get("content")));
   }
@@ -450,6 +453,7 @@ public final class AdfAstParser {
     return new InlineExtension(
         JsonFields.text(attrs, "extensionType"),
         JsonFields.text(attrs, "extensionKey"),
+        JsonFields.text(attrs, "text"),
         parseMacroParams(attrs.path("parameters").path("macroParams")));
   }
 

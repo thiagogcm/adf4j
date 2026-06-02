@@ -14,7 +14,8 @@ import dev.nthings.adf4j.options.UnknownNodePolicy;
 record RenderContext(
     HeadingOutline headingOutline,
     Map<String, AttachmentReference> attachmentReferencesByTitle,
-    UnknownNodePolicy unknownNodePolicy) {
+    UnknownNodePolicy unknownNodePolicy,
+    boolean imageSizeAttributes) {
 
   static RenderContext from(MarkdownOptions options, HeadingOutline headingOutline) {
     var requiredOptions = Objects.requireNonNull(options, "options");
@@ -23,6 +24,7 @@ record RenderContext(
     return new RenderContext(
         safeOutline,
         confluence.attachmentReferencesByTitle(),
-        requiredOptions.unknownNodePolicy());
+        requiredOptions.unknownNodePolicy(),
+        requiredOptions.imageSizeAttributes());
   }
 }

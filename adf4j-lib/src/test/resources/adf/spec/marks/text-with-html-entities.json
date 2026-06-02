@@ -1,0 +1,12 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "paragraph",
+      "content": [
+        { "type": "text", "text": "AT&amp;T, 5 &lt; 6, &#39;q&#39;" }
+      ]
+    }
+  ]
+}

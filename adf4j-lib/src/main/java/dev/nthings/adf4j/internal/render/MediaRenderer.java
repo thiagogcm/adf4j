@@ -17,17 +17,26 @@ final class MediaRenderer {
       return "";
     }
 
-    var blocks = new ArrayList<String>();
+    // A mediaSingle-level link mark wraps the image only; any caption stays a separate block.
+    var imageBlocks = new ArrayList<String>();
+    var captionBlocks = new ArrayList<String>();
     for (var item : node.content()) {
       if (item instanceof Media media) {
-        blocks.add(renderMedia(media, adfRenderer));
+        imageBlocks.add(renderMedia(media, context, adfRenderer));
       } else if (item instanceof Caption caption) {
         var rendered = renderCaption(caption, context, adfRenderer);
         if (!rendered.isBlank()) {
-          blocks.add(rendered);
+          captionBlocks.add(rendered);
         }
       }
     }
+
+    var blocks = new ArrayList<String>();
+    if (!imageBlocks.isEmpty()) {
+      var imageString = String.join("\n\n", imageBlocks);
+      blocks.add(adfRenderer.applyMarks(imageString, node.marks()));
+    }
+    blocks.addAll(captionBlocks);
 
     return String.join("\n\n", blocks);
   }
@@ -37,7 +46,7 @@ final class MediaRenderer {
     return adfRenderer.renderInlineNodes(node.content(), context, true);
   }
 
-  String renderMediaGroup(MediaGroup node, AdfRenderer adfRenderer) {
+  String renderMediaGroup(MediaGroup node, RendererState context, AdfRenderer adfRenderer) {
     if (node.content().isEmpty()) {
       return "";
     }
@@ -45,25 +54,29 @@ final class MediaRenderer {
     var lines = new ArrayList<String>();
     for (var item : node.content()) {
       if (item instanceof Media media) {
-        lines.add(renderMedia(media, adfRenderer));
+        lines.add(renderMedia(media, context, adfRenderer));
       }
     }
     return String.join("\n", lines);
   }
 
-  String renderMedia(Media node, AdfRenderer adfRenderer) {
-    var rendered = renderMediaBlock(node.attrs());
+  String renderMedia(Media node, RendererState context, AdfRenderer adfRenderer) {
+    var rendered = renderMediaBlock(node.attrs(), context);
     return adfRenderer.applyMarks(rendered, node.marks());
   }
 
-  String renderMediaInline(MediaInline node, AdfRenderer adfRenderer) {
-    var rendered = renderMediaBlock(node.attrs());
+  String renderMediaInline(MediaInline node, RendererState context, AdfRenderer adfRenderer) {
+    var rendered = renderMediaBlock(node.attrs(), context);
     return adfRenderer.applyMarks(rendered, node.marks());
   }
 
-  private String renderMediaBlock(MediaAttrs attrs) {
+  private String renderMediaBlock(MediaAttrs attrs, RendererState context) {
     var details = mediaDetails(attrs);
-    var attributeSuffix = renderImageAttributeSuffix(details.width(), details.height());
+    // The {width= height=} suffix is non-GFM; emit only when opted in.
+    var attributeSuffix =
+        context.imageSizeAttributes()
+            ? renderImageAttributeSuffix(details.width(), details.height())
+            : "";
     return "![%s](%s)%s"
         .formatted(
             MarkdownText.escapeAltText(details.safeAlt()),

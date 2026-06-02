@@ -1,6 +1,7 @@
 package dev.nthings.adf4j.ast;
 
-public record Extension(String extensionType, String extensionKey, MacroParams macroParams)
+public record Extension(
+    String extensionType, String extensionKey, String text, MacroParams macroParams)
     implements AdfBlock {
 
   public Extension {

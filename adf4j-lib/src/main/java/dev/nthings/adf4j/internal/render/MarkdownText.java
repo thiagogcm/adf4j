@@ -64,7 +64,7 @@ final class MarkdownText {
   }
 
   /**
-   * Backslash-escapes CommonMark inline punctuation ({@code \ ` * _ [ ] ( ) ~ <}) in literal text;
+   * Backslash-escapes CommonMark inline punctuation ({@code \ ` * _ [ ] ( ) ~ < &}) in literal text;
    * when {@code atLineStart}, also neutralises a leading block marker (#, &gt;, -, +, ordered "1.",
    * or an indented-code whitespace run). Null is treated as empty.
    */
@@ -99,7 +99,7 @@ final class MarkdownText {
 
   private static boolean isInlinePunctuation(char c) {
     return switch (c) {
-      case '\\', '`', '*', '_', '[', ']', '(', ')', '~', '<' -> true;
+      case '\\', '`', '*', '_', '[', ']', '(', ')', '~', '<', '&' -> true;
       default -> false;
     };
   }
@@ -156,8 +156,9 @@ final class MarkdownText {
 
   /**
    * Makes a URL safe inside a markdown {@code (...)} destination: returned unchanged when clean,
-   * wrapped as {@code <url>} when it holds a space/control char, or with space/parens percent-encoded
-   * when angle-wrapping is unavailable. Null/blank is returned unchanged.
+   * wrapped as {@code <url>} when it holds a space/control char or unbalanced parentheses, or with
+   * space/parens percent-encoded when angle-wrapping is unavailable. Null/blank is returned
+   * unchanged.
    */
   public static String escapeUrlDestination(String url) {
     if (url == null || url.isBlank()) {
@@ -168,13 +169,29 @@ final class MarkdownText {
         || url.indexOf('\r') >= 0;
 
     if (!hasAngleOrNewline) {
-      if (hasSpaceOrControl(url)) {
+      if (hasSpaceOrControl(url) || hasUnbalancedParens(url)) {
         return "<" + url + ">";
       }
       return url;
     }
 
     return url.replace(" ", "%20").replace("(", "%28").replace(")", "%29");
+  }
+
+  private static boolean hasUnbalancedParens(String url) {
+    var depth = 0;
+    for (var i = 0; i < url.length(); i++) {
+      var c = url.charAt(i);
+      if (c == '(') {
+        depth++;
+      } else if (c == ')') {
+        depth--;
+        if (depth < 0) {
+          return true;
+        }
+      }
+    }
+    return depth != 0;
   }
 
   private static boolean hasSpaceOrControl(String url) {

@@ -1,0 +1,28 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "mediaSingle",
+      "attrs": {
+        "layout": "center"
+      },
+      "marks": [
+        {
+          "type": "link",
+          "attrs": { "href": "https://e.com/target" }
+        }
+      ],
+      "content": [
+        {
+          "type": "media",
+          "attrs": {
+            "type": "external",
+            "url": "https://e.com/p.png",
+            "alt": "pic"
+          }
+        }
+      ]
+    }
+  ]
+}
