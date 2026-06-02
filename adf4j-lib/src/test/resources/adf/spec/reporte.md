@@ -5,7 +5,6 @@ A metrics report captures a request flow between institutions.
 >
 > The exchange follows the governance security rules.
 
-<a id="flow"></a>
 ## Flow
 
 Consider the following steps:

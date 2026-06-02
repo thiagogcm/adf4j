@@ -1,0 +1,19 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "mediaSingle",
+      "content": [
+        {
+          "type": "media",
+          "attrs": { "type": "external", "url": "https://example.com/pic.png", "alt": "img" }
+        },
+        {
+          "type": "caption",
+          "content": [ { "type": "text", "text": "# not a title" } ]
+        }
+      ]
+    }
+  ]
+}

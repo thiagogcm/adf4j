@@ -37,7 +37,7 @@ final class ListRenderer {
 
   String renderTaskItem(TaskItem node, RendererState context, AdfRenderer adfRenderer) {
     var checked = "DONE".equalsIgnoreCase(node.state());
-    var content = adfRenderer.renderInlineNodes(node.content(), context);
+    var content = adfRenderer.renderInlineNodes(node.content(), context, false);
     var prefix = checklistPrefix(context, checked);
     if (content.isBlank()) {
       return prefix.stripTrailing();
@@ -61,11 +61,12 @@ final class ListRenderer {
     var first = blocks.getFirst();
     var lines = new ArrayList<String>();
     if (first instanceof Paragraph paragraph) {
+      // Checkbox markers are 2 wide, so keep the depth-based 2-space continuation indent.
       lines.addAll(
           prefixParagraph(
               prefix,
-              adfRenderer.renderInlineNodes(paragraph.content(), context),
-              context.listDepth() + 1));
+              adfRenderer.renderInlineNodes(paragraph.content(), context, false),
+              RenderBuffer.LIST_INDENT.repeat(context.listDepth() + 1)));
     } else {
       lines.add(prefix.stripTrailing());
       lines.addAll(indentedBlock(first, context, adfRenderer));
@@ -88,11 +89,23 @@ final class ListRenderer {
   }
 
   String renderBulletList(BulletList node, RendererState context, AdfRenderer adfRenderer) {
-    return renderListItems(node.content(), context, adfRenderer, false, 1);
+    return renderBulletList(node, context, adfRenderer, "");
   }
 
   String renderOrderedList(OrderedList node, RendererState context, AdfRenderer adfRenderer) {
-    return renderListItems(node.content(), context, adfRenderer, true, node.order());
+    return renderOrderedList(node, context, adfRenderer, "");
+  }
+
+  // parentIndent: whitespace shared by this list's markers ("" at top level), so nested lists track
+  // the parent's actual marker width rather than a fixed 2 per depth ("10. " is 4 wide).
+  private String renderBulletList(
+      BulletList node, RendererState context, AdfRenderer adfRenderer, String parentIndent) {
+    return renderListItems(node.content(), context, adfRenderer, false, 1, parentIndent);
+  }
+
+  private String renderOrderedList(
+      OrderedList node, RendererState context, AdfRenderer adfRenderer, String parentIndent) {
+    return renderListItems(node.content(), context, adfRenderer, true, node.order(), parentIndent);
   }
 
   private String renderListItems(
@@ -100,7 +113,8 @@ final class ListRenderer {
       RendererState context,
       AdfRenderer adfRenderer,
       boolean ordered,
-      int start) {
+      int start,
+      String parentIndent) {
     if (items.isEmpty()) {
       return "";
     }
@@ -112,20 +126,23 @@ final class ListRenderer {
                 context,
                 adfRenderer,
                 ordered,
-                ordered ? start + index : null))
+                ordered ? start + index : null,
+                parentIndent))
         .flatMap(List::stream)
         .collect(Collectors.joining("\n"));
   }
 
-  List<String> renderListItem(
+  private List<String> renderListItem(
       ListItem node,
       RendererState context,
       AdfRenderer adfRenderer,
       boolean ordered,
-      Integer number) {
-    var indent = RenderBuffer.LIST_INDENT.repeat(Math.max(0, context.listDepth()));
+      Integer number,
+      String parentIndent) {
     var marker = ordered && number != null ? number + "." : "-";
-    var prefix = indent + marker + " ";
+    var prefix = parentIndent + marker + " ";
+    // This item's content column: parentIndent + width of "marker + ' '" (so "10. " gives 4).
+    var childIndent = parentIndent + " ".repeat(marker.length() + 1);
 
     var children = node.content();
     if (children.isEmpty()) {
@@ -138,43 +155,45 @@ final class ListRenderer {
       lines.addAll(
           prefixParagraph(
               prefix,
-              adfRenderer.renderInlineNodes(paragraph.content(), context),
-              context.listDepth() + 1));
+              // First paragraph is at the content column (block start), so escape leading markers.
+              adfRenderer.renderInlineNodes(paragraph.content(), context, true),
+              childIndent));
     } else {
       lines.add(prefix.stripTrailing());
-      lines.addAll(renderListItemBlock(first, context, adfRenderer));
+      lines.addAll(renderListItemBlock(first, context, adfRenderer, childIndent));
     }
 
     for (var index = 1; index < children.size(); index++) {
-      lines.addAll(renderListItemBlock(children.get(index), context, adfRenderer));
+      var block = children.get(index);
+      // Nested sublists stay tight; any other continuation block needs a blank line so it isn't
+      // soft-wrapped into the previous paragraph.
+      if (!(block instanceof BulletList) && !(block instanceof OrderedList)) {
+        lines.add("");
+      }
+      lines.addAll(renderListItemBlock(block, context, adfRenderer, childIndent));
     }
 
     return lines;
   }
 
-  List<String> renderListItemBlock(AdfBlock block, RendererState context, AdfRenderer adfRenderer) {
+  private List<String> renderListItemBlock(
+      AdfBlock block, RendererState context, AdfRenderer adfRenderer, String childIndent) {
+    // Depth still increments for inner logic; indentation comes from childIndent, not depth.
     var childContext = context.withListDepth(context.listDepth() + 1);
 
     if (block instanceof BulletList bulletList) {
-      var nested = renderBulletList(bulletList, childContext, adfRenderer);
+      var nested = renderBulletList(bulletList, childContext, adfRenderer, childIndent);
       return nested.isBlank() ? List.of() : MarkdownText.splitLines(nested);
     }
     if (block instanceof OrderedList orderedList) {
-      var nested = renderOrderedList(orderedList, childContext, adfRenderer);
+      var nested = renderOrderedList(orderedList, childContext, adfRenderer, childIndent);
       return nested.isBlank() ? List.of() : MarkdownText.splitLines(nested);
     }
 
+    // Known limitation: a list nested inside a non-list block (e.g. a panel) re-enters via
+    // renderBlock and can't receive childIndent, falling back to depth-based indent.
     var text = adfRenderer.joinBlocks(adfRenderer.renderBlock(block, childContext));
-    if (text.isBlank()) {
-      return List.of();
-    }
-
-    var indent = RenderBuffer.LIST_INDENT.repeat(context.listDepth() + 1);
-    var lines = new ArrayList<String>();
-    for (var line : MarkdownText.splitLines(text)) {
-      lines.add(line.isBlank() ? indent.stripTrailing() : indent + line);
-    }
-    return lines;
+    return RenderBuffer.indentLines(text, childIndent);
   }
 
   String renderDecisionList(DecisionList node, RendererState context, AdfRenderer adfRenderer) {
@@ -192,7 +211,7 @@ final class ListRenderer {
   String renderDecisionItem(DecisionItem node, RendererState context, AdfRenderer adfRenderer) {
     var state = node.state();
     var label = state == null || state.isBlank() ? "[decision]" : "[decision:%s]".formatted(state);
-    var content = adfRenderer.renderInlineNodes(node.content(), context);
+    var content = adfRenderer.renderInlineNodes(node.content(), context, false);
     var prefix = RenderBuffer.LIST_INDENT.repeat(Math.max(0, context.listDepth())) + "- ";
     if (content.isBlank()) {
       return prefix + label;
@@ -205,7 +224,8 @@ final class ListRenderer {
     return indent + "- [" + (checked ? "x" : " ") + "] ";
   }
 
-  private List<String> prefixParagraph(String prefix, String text, int indentDepth) {
+  // continuationIndent aligns the wrapped lines of the first paragraph to the item's content column.
+  private List<String> prefixParagraph(String prefix, String text, String continuationIndent) {
     if (text.isBlank()) {
       return List.of(prefix.stripTrailing());
     }
@@ -213,9 +233,8 @@ final class ListRenderer {
     var parts = MarkdownText.splitLines(text);
     var lines = new ArrayList<String>(parts.size());
     lines.add(prefix + parts.getFirst());
-    var indent = RenderBuffer.LIST_INDENT.repeat(indentDepth);
     for (var index = 1; index < parts.size(); index++) {
-      lines.add(indent + parts.get(index));
+      lines.add(continuationIndent + parts.get(index));
     }
     return lines;
   }

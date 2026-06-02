@@ -1,0 +1,22 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "paragraph",
+      "content": [ { "type": "text", "text": "# Not a heading" } ]
+    },
+    {
+      "type": "paragraph",
+      "content": [ { "type": "text", "text": "- not a bullet" } ]
+    },
+    {
+      "type": "paragraph",
+      "content": [ { "type": "text", "text": "1. not ordered" } ]
+    },
+    {
+      "type": "paragraph",
+      "content": [ { "type": "text", "text": "> not a quote" } ]
+    }
+  ]
+}

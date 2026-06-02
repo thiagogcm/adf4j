@@ -1,1 +1,1 @@
-Card: [Inline card]
+Card: Hidden

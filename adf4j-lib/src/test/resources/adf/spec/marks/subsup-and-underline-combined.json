@@ -1,0 +1,22 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "paragraph",
+      "content": [
+        { "type": "text", "text": "x" },
+        {
+          "type": "text",
+          "text": "2",
+          "marks": [
+            { "type": "strong" },
+            { "type": "subsup", "attrs": { "type": "sup" } },
+            { "type": "underline" }
+          ]
+        },
+        { "type": "text", "text": " end" }
+      ]
+    }
+  ]
+}

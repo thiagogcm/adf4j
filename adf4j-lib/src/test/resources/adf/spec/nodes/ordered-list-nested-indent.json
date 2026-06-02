@@ -1,0 +1,35 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "orderedList",
+      "attrs": { "order": 10 },
+      "content": [
+        {
+          "type": "listItem",
+          "content": [
+            { "type": "paragraph", "content": [ { "type": "text", "text": "Ten" } ] },
+            {
+              "type": "orderedList",
+              "content": [
+                {
+                  "type": "listItem",
+                  "content": [
+                    { "type": "paragraph", "content": [ { "type": "text", "text": "Ten-a" } ] }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "listItem",
+          "content": [
+            { "type": "paragraph", "content": [ { "type": "text", "text": "Eleven" } ] }
+          ]
+        }
+      ]
+    }
+  ]
+}

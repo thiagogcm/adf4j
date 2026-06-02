@@ -11,6 +11,8 @@ final class MarkdownText {
 
   private static final Pattern LINE_BREAK_PATTERN = Pattern.compile("\\R");
 
+  private static final Pattern LEADING_ORDERED_MARKER = Pattern.compile("^(\\d+)\\.");
+
   private MarkdownText() {
   }
 
@@ -41,5 +43,147 @@ final class MarkdownText {
 
   public static String escapeLinkText(String value) {
     return Objects.requireNonNullElse(value, "").replace("[", "\\[").replace("]", "\\]");
+  }
+
+  /** Length of the longest run of consecutive backticks in {@code value} (0 for null/empty). */
+  public static int longestBacktickRun(String value) {
+    if (value == null || value.isEmpty()) {
+      return 0;
+    }
+    var longest = 0;
+    var current = 0;
+    for (var i = 0; i < value.length(); i++) {
+      if (value.charAt(i) == '`') {
+        current++;
+        longest = Math.max(longest, current);
+      } else {
+        current = 0;
+      }
+    }
+    return longest;
+  }
+
+  /**
+   * Backslash-escapes CommonMark inline punctuation ({@code \ ` * _ [ ] ( ) ~ <}) in literal text;
+   * when {@code atLineStart}, also neutralises a leading block marker (#, &gt;, -, +, ordered "1.",
+   * or an indented-code whitespace run). Null is treated as empty.
+   */
+  public static String escapeInlineText(String text, boolean atLineStart) {
+    var value = Objects.requireNonNullElse(text, "");
+    if (value.isEmpty()) {
+      return value;
+    }
+
+    var escaped = escapeInlinePunctuation(value);
+    return atLineStart ? neutralizeLeadingBlock(escaped) : escaped;
+  }
+
+  // Backslash-escapes CommonMark inline punctuation in one pass, allocating only when an escapable
+  // character is present (the common no-special-char case returns value unchanged).
+  private static String escapeInlinePunctuation(String value) {
+    StringBuilder escaped = null;
+    for (var i = 0; i < value.length(); i++) {
+      var c = value.charAt(i);
+      if (isInlinePunctuation(c)) {
+        if (escaped == null) {
+          escaped = new StringBuilder(value.length() + 8).append(value, 0, i);
+        }
+        escaped.append('\\');
+      }
+      if (escaped != null) {
+        escaped.append(c);
+      }
+    }
+    return escaped == null ? value : escaped.toString();
+  }
+
+  private static boolean isInlinePunctuation(char c) {
+    return switch (c) {
+      case '\\', '`', '*', '_', '[', ']', '(', ')', '~', '<' -> true;
+      default -> false;
+    };
+  }
+
+  // Input is already inline-escaped; at most one leading construct applies.
+  private static String neutralizeLeadingBlock(String s) {
+    if (s.isEmpty()) {
+      return s;
+    }
+
+    // Leading tab or 4+ spaces = indented code; break the run by emitting the first space as &#32;.
+    if (s.charAt(0) == '\t') {
+      return "&#32;" + s.substring(1);
+    }
+    var lead = countLeadingSpaces(s);
+    if (lead >= 4) {
+      return "&#32;" + s.substring(1);
+    }
+
+    // Up to 3 leading spaces still permit a block marker, so neutralise at the first non-space char.
+    var prefix = s.substring(0, lead);
+    var rest = s.substring(lead);
+    if (rest.isEmpty()) {
+      return s;
+    }
+
+    // '*' bullets are already inline-escaped, so only '-' and '+' remain to handle here.
+    var first = rest.charAt(0);
+    if (first == '#' || first == '>' || first == '-' || first == '+') {
+      return prefix + "\\" + rest;
+    }
+    // Ordered marker: escape the dot ("1)" is already safe since ')' is inline-escaped).
+    var ordered = LEADING_ORDERED_MARKER.matcher(rest);
+    if (ordered.find()) {
+      var digits = ordered.group(1);
+      return prefix + digits + "\\." + rest.substring(ordered.end());
+    }
+
+    return s;
+  }
+
+  private static int countLeadingSpaces(String s) {
+    var count = 0;
+    while (count < s.length() && s.charAt(count) == ' ') {
+      count++;
+    }
+    return count;
+  }
+
+  /** Backslash-escapes {@code [ ] ( )} in image alt text. Null is treated as empty. */
+  public static String escapeAltText(String alt) {
+    return escapeLinkText(alt).replace("(", "\\(").replace(")", "\\)");
+  }
+
+  /**
+   * Makes a URL safe inside a markdown {@code (...)} destination: returned unchanged when clean,
+   * wrapped as {@code <url>} when it holds a space/control char, or with space/parens percent-encoded
+   * when angle-wrapping is unavailable. Null/blank is returned unchanged.
+   */
+  public static String escapeUrlDestination(String url) {
+    if (url == null || url.isBlank()) {
+      return url;
+    }
+
+    var hasAngleOrNewline = url.indexOf('<') >= 0 || url.indexOf('>') >= 0 || url.indexOf('\n') >= 0
+        || url.indexOf('\r') >= 0;
+
+    if (!hasAngleOrNewline) {
+      if (hasSpaceOrControl(url)) {
+        return "<" + url + ">";
+      }
+      return url;
+    }
+
+    return url.replace(" ", "%20").replace("(", "%28").replace(")", "%29");
+  }
+
+  private static boolean hasSpaceOrControl(String url) {
+    for (var i = 0; i < url.length(); i++) {
+      var c = url.charAt(i);
+      if (c == ' ' || Character.isISOControl(c)) {
+        return true;
+      }
+    }
+    return false;
   }
 }

@@ -1,2 +1,2 @@
-> [!IMPORTANT]
+> [!NOTE]
 > Heads up.

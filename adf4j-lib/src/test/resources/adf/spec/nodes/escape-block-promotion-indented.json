@@ -1,0 +1,22 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "paragraph",
+      "content": [ { "type": "text", "text": "  # x" } ]
+    },
+    {
+      "type": "paragraph",
+      "content": [ { "type": "text", "text": "   - y" } ]
+    },
+    {
+      "type": "paragraph",
+      "content": [ { "type": "text", "text": "  1. z" } ]
+    },
+    {
+      "type": "paragraph",
+      "content": [ { "type": "text", "text": " > w" } ]
+    }
+  ]
+}

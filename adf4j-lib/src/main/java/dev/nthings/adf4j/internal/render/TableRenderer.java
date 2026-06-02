@@ -31,7 +31,7 @@ final class TableRenderer {
 
     var numberColumn = node.numberColumnEnabled();
 
-    if (numberColumn || !hasHeaderRow(rows) || requiresHtmlTableFallback(rows)) {
+    if (numberColumn || !firstRowIsHeader(rows) || requiresHtmlTableFallback(rows)) {
       return renderHtmlTable(rows, context, adfRenderer, numberColumn);
     }
 
@@ -113,24 +113,13 @@ final class TableRenderer {
     return new Row(rendered, header);
   }
 
-  private boolean hasHeaderRow(List<TableRow> rows) {
+  private boolean firstRowIsHeader(List<TableRow> rows) {
     for (var row : rows) {
       var cells = row.content();
       if (cells.isEmpty()) {
         continue;
       }
-      var allHeaders = true;
-      var hasAny = false;
-      for (var cell : cells) {
-        hasAny = true;
-        if (!cell.header()) {
-          allHeaders = false;
-          break;
-        }
-      }
-      if (hasAny && allHeaders) {
-        return true;
-      }
+      return isHeaderRow(cells);
     }
     return false;
   }

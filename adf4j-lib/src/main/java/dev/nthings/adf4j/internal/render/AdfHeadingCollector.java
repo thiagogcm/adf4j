@@ -111,37 +111,50 @@ public final class AdfHeadingCollector {
     var builder = new StringBuilder();
     for (var node : inlineNodes) {
       switch (node) {
-        case Text text -> builder.append(text.text());
-        case HardBreak _ -> builder.append(' ');
+        case Text text -> appendPlainText(builder, text.text());
+        case HardBreak _ -> appendPlainText(builder, " ");
         case Emoji emoji ->
-            builder.append(
+            appendPlainText(
+                builder,
                 Stream.of(emoji.text(), emoji.shortName())
                     .filter(s -> s != null && !s.isBlank())
                     .findFirst()
                     .orElse(""));
-        case Mention mention -> builder.append(mention.text());
+        case Mention mention -> appendPlainText(builder, mention.text());
         case Status status -> {
           if (status.text() != null && !status.text().isBlank()) {
-            builder.append('[').append(status.text()).append(']');
+            appendPlainText(builder, "[" + status.text() + "]");
           }
         }
-        case InlineCard card -> {
-          var url = card.attrs().url();
-          if (url != null) {
-            builder.append(url);
-          }
-        }
+        case InlineCard card -> appendPlainText(builder, card.attrs().url());
         case MediaInline media -> {
           var alt = media.attrs().alt();
-          builder.append(alt == null || alt.isBlank() ? "media" : alt);
+          appendPlainText(builder, alt == null || alt.isBlank() ? "media" : alt);
         }
-        case Date date -> builder.append(MarkdownText.dateFromTimestamp(date.timestamp()));
-        case Placeholder placeholder -> builder.append(placeholder.text());
+        case Date date -> appendPlainText(builder, MarkdownText.dateFromTimestamp(date.timestamp()));
+        case Placeholder placeholder -> appendPlainText(builder, placeholder.text());
         default -> {
         }
       }
     }
     return builder.toString().trim();
+  }
+
+  /**
+   * Appends a heading-text fragment, inserting one space only when two sources would otherwise fuse
+   * with no whitespace (so an image alt before {@code "Title"} slugs to {@code icon-title}, not
+   * {@code icontitle}). Boundaries that already have whitespace are untouched.
+   */
+  private static void appendPlainText(StringBuilder builder, String fragment) {
+    if (fragment == null || fragment.isEmpty()) {
+      return;
+    }
+    if (!builder.isEmpty()
+        && !Character.isWhitespace(builder.charAt(builder.length() - 1))
+        && !Character.isWhitespace(fragment.charAt(0))) {
+      builder.append(' ');
+    }
+    builder.append(fragment);
   }
 
   private static boolean isAnchorExtension(AdfInline node) {
@@ -181,7 +194,13 @@ public final class AdfHeadingCollector {
     return rebuild.apply(filtered);
   }
 
-  private String extractAnchorId(List<AdfInline> content) {
+  /** True iff the heading carries an explicit Confluence {@code anchor} macro with a non-blank id. */
+  static boolean hasExplicitAnchor(List<AdfInline> content) {
+    var anchorId = extractAnchorId(content);
+    return anchorId != null && !anchorId.isBlank();
+  }
+
+  static String extractAnchorId(List<AdfInline> content) {
     if (content == null || content.isEmpty()) {
       return null;
     }

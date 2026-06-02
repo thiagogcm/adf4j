@@ -33,7 +33,8 @@ final class MediaRenderer {
   }
 
   String renderCaption(Caption node, RendererState context, AdfRenderer adfRenderer) {
-    return adfRenderer.renderInlineNodes(node.content(), context);
+    // A caption renders as its own block at column 0, so its first inline is at a block start.
+    return adfRenderer.renderInlineNodes(node.content(), context, true);
   }
 
   String renderMediaGroup(MediaGroup node, AdfRenderer adfRenderer) {
@@ -64,7 +65,10 @@ final class MediaRenderer {
     var details = mediaDetails(attrs);
     var attributeSuffix = renderImageAttributeSuffix(details.width(), details.height());
     return "![%s](%s)%s"
-        .formatted(details.safeAlt(), details.markdownSource(), attributeSuffix);
+        .formatted(
+            MarkdownText.escapeAltText(details.safeAlt()),
+            MarkdownText.escapeUrlDestination(details.markdownSource()),
+            attributeSuffix);
   }
 
   private String resolveMediaSource(MediaAttrs attrs) {

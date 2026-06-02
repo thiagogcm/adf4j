@@ -50,7 +50,7 @@ final class TextMarkRenderer {
     var rendered = value;
 
     if (codeMark) {
-      rendered = "`" + rendered + "`";
+      rendered = wrapCodeSpan(rendered);
     } else {
       nonLinkMarks.sort(INLINE_MARK_ORDER);
       for (var mark : nonLinkMarks) {
@@ -62,10 +62,11 @@ final class TextMarkRenderer {
       var href = linkMark.href();
       if (href != null && !href.isBlank()) {
         var label = (rendered == null || rendered.isBlank()) ? href : rendered;
+        var destination = MarkdownText.escapeUrlDestination(href);
         var title = linkMark.title();
         rendered = (title == null || title.isBlank())
-            ? "[%s](%s)".formatted(label, href)
-            : "[%s](%s \"%s\")".formatted(label, href, escapeLinkTitle(title));
+            ? "[%s](%s)".formatted(label, destination)
+            : "[%s](%s \"%s\")".formatted(label, destination, escapeLinkTitle(title));
       }
     }
 
@@ -90,14 +91,14 @@ final class TextMarkRenderer {
 
   private boolean isVisualOnlyHtmlMark(AdfMark mark) {
     return switch (mark) {
-      case Underline _,SubSup _,TextColor _,BackgroundColor _,Border _,FontSize _ -> true;
-      case Alignment _,Annotation _,Breakout _,Code _,DataConsumer _,Em _,Fragment _,Indentation _,Link _,Strike _,Strong _,UnknownMark _ ->
+      case TextColor _,BackgroundColor _,Border _,FontSize _ -> true;
+      case Alignment _,Annotation _,Breakout _,Code _,DataConsumer _,Em _,Fragment _,Indentation _,Link _,Strike _,Strong _,SubSup _,Underline _,UnknownMark _ ->
         false;
     };
   }
 
   private String applyInlineMark(String value, AdfMark mark) {
-    // Visual-only marks (colour, size, underline, …) carry no Markdown equivalent and are dropped.
+    // Pure-visual marks (colour/background/border/size) are dropped; sub/sup and underline map to HTML.
     if (isVisualOnlyHtmlMark(mark)) {
       return value;
     }
@@ -106,30 +107,49 @@ final class TextMarkRenderer {
       case Strong _ -> wrapDelimited(value, "**");
       case Em _ -> wrapDelimited(value, "*");
       case Strike _ -> wrapDelimited(value, "~~");
-      case Underline _,SubSup _,TextColor _,BackgroundColor _,Border _,FontSize _,Alignment _,Indentation _,Annotation _,Fragment _,DataConsumer _,Breakout _,Link _,Code _,UnknownMark _ ->
+      case SubSup subSup -> wrapTag(value, "sup".equalsIgnoreCase(subSup.subSupType()) ? "sup" : "sub");
+      case Underline _ -> wrapTag(value, "u");
+      case TextColor _,BackgroundColor _,Border _,FontSize _,Alignment _,Indentation _,Annotation _,Fragment _,DataConsumer _,Breakout _,Link _,Code _,UnknownMark _ ->
         value;
     };
   }
 
   private String wrapDelimited(String value, String delimiter) {
+    return wrap(value, delimiter, delimiter);
+  }
+
+  private String wrapTag(String value, String tag) {
+    return wrap(value, "<" + tag + ">", "</" + tag + ">");
+  }
+
+  // Wraps value's non-whitespace core with the open/close affixes, leaving any surrounding
+  // whitespace outside; a blank value is returned unchanged.
+  private String wrap(String value, String open, String close) {
     if (value.isBlank()) {
       return value;
     }
 
     var leadingWhitespaceLength = value.length() - value.stripLeading().length();
-    var trailingWhitespaceLength = value.length() - value.stripTrailing().length();
-    var contentEnd = value.length() - trailingWhitespaceLength;
-    var leadingWhitespace = value.substring(0, leadingWhitespaceLength);
-    var trailingWhitespace = value.substring(contentEnd);
+    var contentEnd = value.stripTrailing().length();
     var content = value.substring(leadingWhitespaceLength, contentEnd);
     if (content.isBlank()) {
       return value;
     }
 
-    return leadingWhitespace + delimiter + content + delimiter + trailingWhitespace;
+    return value.substring(0, leadingWhitespaceLength) + open + content + close
+        + value.substring(contentEnd);
   }
 
   private String escapeLinkTitle(String title) {
     return title.replace("\\", "\\\\").replace("\"", "\\\"");
+  }
+
+  // Inline code span: the fence must exceed the longest backtick run in the content.
+  private String wrapCodeSpan(String content) {
+    var fence = "`".repeat(MarkdownText.longestBacktickRun(content) + 1);
+    // Pad a space each side when content borders a backtick; CommonMark strips one space per side.
+    var needsPadding = !content.isEmpty()
+        && (content.charAt(0) == '`' || content.charAt(content.length() - 1) == '`');
+    return needsPadding ? fence + " " + content + " " + fence : fence + content + fence;
   }
 }

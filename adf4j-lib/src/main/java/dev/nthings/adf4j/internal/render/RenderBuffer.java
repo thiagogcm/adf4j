@@ -26,11 +26,14 @@ final class RenderBuffer {
   }
 
   static List<String> indentLines(String value, int depth, String indentUnit) {
+    return indentLines(value, indentUnit.repeat(Math.max(0, depth)));
+  }
+
+  static List<String> indentLines(String value, String indent) {
     if (value == null || value.isBlank()) {
       return List.of();
     }
 
-    var indent = indentUnit.repeat(Math.max(0, depth));
     var lines = new ArrayList<String>();
     for (var line : MarkdownText.splitLines(value)) {
       lines.add(line.isBlank() ? indent.stripTrailing() : indent + line);

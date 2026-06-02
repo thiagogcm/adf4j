@@ -17,6 +17,7 @@ import dev.nthings.adf4j.ast.BodiedExtension;
 import dev.nthings.adf4j.ast.BodiedSyncBlock;
 import dev.nthings.adf4j.ast.BulletList;
 import dev.nthings.adf4j.ast.Caption;
+import dev.nthings.adf4j.ast.Code;
 import dev.nthings.adf4j.ast.CodeBlock;
 import dev.nthings.adf4j.ast.Date;
 import dev.nthings.adf4j.ast.DecisionItem;
@@ -181,13 +182,24 @@ public final class AdfRenderer {
         .toList();
   }
 
-  public String renderInlineNodes(List<AdfInline> nodes, RendererState context) {
+  // startAtLineStart enables leading-block escaping for inlines at output column 0 (paragraphs, a
+  // list item's first paragraph, a caption); false for mid-line text (headings, task/decision items).
+  String renderInlineNodes(
+      List<AdfInline> nodes, RendererState context, boolean startAtLineStart) {
     if (nodes == null || nodes.isEmpty()) {
       return "";
     }
     var builder = new StringBuilder();
+    var atLineStart = startAtLineStart;
     for (var node : nodes) {
-      builder.append(renderInline(node, context));
+      var rendered = renderInline(node, context, atLineStart);
+      builder.append(rendered);
+      if (node instanceof HardBreak) {
+        // A hard break starts a fresh output line, so the next node sits at line start again.
+        atLineStart = true;
+      } else if (!rendered.isEmpty()) {
+        atLineStart = false;
+      }
     }
     return builder.toString();
   }
@@ -200,9 +212,10 @@ public final class AdfRenderer {
     return RenderBuffer.joinBlocks(blocks);
   }
 
-  private String renderInline(AdfInline node, RendererState context) {
+  private String renderInline(AdfInline node, RendererState context, boolean atLineStart) {
     return switch (node) {
-      case Text text -> renderText(text);
+      // Only literal Text nodes are escaped; every other inline kind ignores the line-start flag.
+      case Text text -> renderText(text, context, atLineStart);
       case HardBreak _ -> hardBreakMarker(context);
       case InlineCard card -> cardRenderer.renderInlineCard(card.attrs());
       case MediaInline media -> mediaRenderer.renderMediaInline(media, this);
@@ -218,7 +231,8 @@ public final class AdfRenderer {
   }
 
   private String renderParagraph(Paragraph paragraph, RendererState context) {
-    return renderInlineNodes(paragraph.content(), context);
+    // Paragraphs start at column 0, so the first inline is at line start (the promotion-prone case).
+    return renderInlineNodes(paragraph.content(), context, true);
   }
 
   private String renderHeading(Heading heading, RendererState context) {
@@ -231,7 +245,10 @@ public final class AdfRenderer {
     var headingInfo = context.headingInfo(heading);
     var anchor = headingInfo == null ? null : headingInfo.anchor();
     var markup = "%s %s".formatted("#".repeat(level), text).trim();
-    if (anchor != null && !anchor.isBlank()) {
+    // Inject <a id> only for explicit Confluence anchors; for auto-slug headings GitHub emits its own
+    // anchor (same id), so injecting would duplicate it. The slug is still kept on HeadingReference.
+    if (anchor != null && !anchor.isBlank()
+        && AdfHeadingCollector.hasExplicitAnchor(heading.content())) {
       return HtmlFragments.anchor(anchor) + "\n" + markup;
     }
     return markup;
@@ -242,7 +259,40 @@ public final class AdfRenderer {
     if (headingNodes.isEmpty()) {
       return "";
     }
-    return renderInlineNodes(headingNodes, context).strip();
+    return renderHeadingInlines(headingNodes, context).strip();
+  }
+
+  /**
+   * Renders heading inlines, inserting one space between an inline image and adjacent text so they
+   * don't glue (e.g. {@code ![icon](src) Title}). All-text headings are unaffected.
+   */
+  private String renderHeadingInlines(List<AdfInline> nodes, RendererState context) {
+    var builder = new StringBuilder();
+    AdfInline previous = null;
+    for (var node : nodes) {
+      var rendered = renderInline(node, context, false);
+      if (rendered.isEmpty()) {
+        continue;
+      }
+      if (needsImageSeparator(previous, node, builder, rendered)) {
+        builder.append(' ');
+      }
+      builder.append(rendered);
+      previous = node;
+    }
+    return builder.toString();
+  }
+
+  private static boolean needsImageSeparator(
+      AdfInline previous, AdfInline current, StringBuilder builder, String rendered) {
+    if (!(previous instanceof MediaInline) && !(current instanceof MediaInline)) {
+      return false;
+    }
+    if (builder.isEmpty()) {
+      return false;
+    }
+    return !Character.isWhitespace(builder.charAt(builder.length() - 1))
+        && !Character.isWhitespace(rendered.charAt(0));
   }
 
   private String renderBlockQuote(Blockquote blockquote, RendererState context) {
@@ -259,12 +309,16 @@ public final class AdfRenderer {
     return alertHeader + "\n" + toBlockQuote(content);
   }
 
+  /**
+   * Maps an Atlassian panel type to a GFM alert keyword: info/note/custom/unknown -&gt; NOTE,
+   * warning -&gt; WARNING, error -&gt; CAUTION, tip/success -&gt; TIP (GFM has no success alert).
+   */
   private static String gfmAlertType(String panelType) {
     if (panelType == null) {
       return "NOTE";
     }
     return switch (panelType.toLowerCase(Locale.ROOT)) {
-      case "info" -> "IMPORTANT";
+      case "info" -> "NOTE";
       case "warning" -> "WARNING";
       case "error" -> "CAUTION";
       case "tip", "success" -> "TIP";
@@ -282,8 +336,11 @@ public final class AdfRenderer {
 
   private String renderCodeBlock(CodeBlock codeBlock) {
     var language = codeBlock.language();
-    var fence = "```" + (language == null ? "" : language);
-    return "%s\n%s\n```".formatted(fence.stripTrailing(), codeBlock.text()).stripTrailing();
+    var body = codeBlock.text();
+    // Fence must exceed the longest backtick run in the body, else an embedded ``` would close it.
+    var ticks = "`".repeat(Math.max(3, MarkdownText.longestBacktickRun(body) + 1));
+    var openingFence = (ticks + (language == null ? "" : language)).stripTrailing();
+    return "%s\n%s\n%s".formatted(openingFence, body, ticks).stripTrailing();
   }
 
   private String renderLayoutSection(LayoutSection layout, RendererState context) {
@@ -307,8 +364,15 @@ public final class AdfRenderer {
     return "<details>" + summary + "\n\n" + body + "\n\n</details>";
   }
 
-  private String renderText(Text text) {
-    return applyMarks(text.text(), text.marks());
+  private String renderText(Text text, RendererState context, boolean atLineStart) {
+    // Code-marked text is literal (applyMarks wraps it in backticks), so it must not be escaped.
+    var hasCodeMark = text.marks().stream().anyMatch(Code.class::isInstance);
+    if (hasCodeMark) {
+      return applyMarks(text.text(), text.marks());
+    }
+    // Suppress leading-block escaping in table cells (inline context); inline escaping still applies.
+    var escaped = MarkdownText.escapeInlineText(text.text(), atLineStart && !context.inTable());
+    return applyMarks(escaped, text.marks());
   }
 
   private String hardBreakMarker(RendererState context) {
