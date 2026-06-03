@@ -1,0 +1,27 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "multiBodiedExtension",
+      "attrs": {
+        "extensionType": "com.atlassian.confluence.macro.core",
+        "extensionKey": "tabs-group"
+      },
+      "content": [
+        {
+          "type": "extensionFrame",
+          "content": [
+            { "type": "paragraph", "content": [ { "type": "text", "text": "First tab body." } ] }
+          ]
+        },
+        {
+          "type": "extensionFrame",
+          "content": [
+            { "type": "paragraph", "content": [ { "type": "text", "text": "Second tab body." } ] }
+          ]
+        }
+      ]
+    }
+  ]
+}

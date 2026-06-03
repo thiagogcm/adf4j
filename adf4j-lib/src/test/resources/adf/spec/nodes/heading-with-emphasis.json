@@ -1,0 +1,16 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "heading",
+      "attrs": { "level": 2 },
+      "content": [
+        { "type": "text", "text": "Plain and " },
+        { "type": "text", "text": "bold", "marks": [{ "type": "strong" }] },
+        { "type": "text", "text": " and " },
+        { "type": "text", "text": "italic", "marks": [{ "type": "em" }] }
+      ]
+    }
+  ]
+}

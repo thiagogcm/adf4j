@@ -1,0 +1,27 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "extension",
+      "attrs": {
+        "extensionType": "com.atlassian.confluence.macro.core",
+        "extensionKey": "toc",
+        "parameters": {
+          "macroParams": {
+            "minLevel": { "value": "1" },
+            "maxLevel": { "value": "6" }
+          }
+        }
+      }
+    },
+    {
+      "type": "heading",
+      "attrs": { "level": 1 },
+      "content": [
+        { "type": "text", "text": "Ticket " },
+        { "type": "inlineCard", "attrs": { "data": { "@type": "Object", "name": "Bug 7", "url": "https://ex.com/9" } } }
+      ]
+    }
+  ]
+}

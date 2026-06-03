@@ -1,0 +1,28 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "bulletList",
+      "content": [
+        {
+          "type": "listItem",
+          "content": [
+            { "type": "paragraph", "content": [ { "type": "text", "text": "Outer" } ] },
+            {
+              "type": "taskList",
+              "attrs": { "localId": "list-1" },
+              "content": [
+                {
+                  "type": "taskItem",
+                  "attrs": { "localId": "item-1", "state": "TODO" },
+                  "content": [ { "type": "text", "text": "nested" } ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

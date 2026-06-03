@@ -66,8 +66,9 @@ final class MarkdownText {
   /**
    * Backslash-escapes CommonMark inline punctuation ({@code \ ` * _ [ ] ( ) ~ < &}) in literal text,
    * and neutralises a leading block marker (#, &gt;, -, +, ordered "1.", indented-code run) on each
-   * line — the first line only when {@code atLineStart}, every later line unconditionally. Null is
-   * treated as empty.
+   * line — the first line only when {@code atLineStart}, every later line unconditionally. An
+   * intra-word {@code _} (one flanked by word characters on both sides) is left literal, since
+   * CommonMark never treats it as emphasis there. Null is treated as empty.
    */
   public static String escapeInlineText(String text, boolean atLineStart) {
     var value = Objects.requireNonNullElse(text, "");
@@ -94,12 +95,14 @@ final class MarkdownText {
   }
 
   // Backslash-escapes CommonMark inline punctuation in one pass, allocating only when an escapable
-  // character is present (the common no-special-char case returns value unchanged).
+  // character is present (the common no-special-char case returns value unchanged). An intra-word
+  // '_' is left literal — CommonMark never reads it as emphasis there.
   private static String escapeInlinePunctuation(String value) {
     StringBuilder escaped = null;
     for (var i = 0; i < value.length(); i++) {
       var c = value.charAt(i);
-      if (isInlinePunctuation(c)) {
+      var escape = c == '_' ? !isIntraWordUnderscore(value, i) : isInlinePunctuation(c);
+      if (escape) {
         if (escaped == null) {
           escaped = new StringBuilder(value.length() + 8).append(value, 0, i);
         }
@@ -112,9 +115,19 @@ final class MarkdownText {
     return escaped == null ? value : escaped.toString();
   }
 
+  // An '_' with a word character on each side can neither open nor close emphasis.
+  private static boolean isIntraWordUnderscore(String value, int i) {
+    return i > 0 && isWordChar(value.charAt(i - 1))
+        && i + 1 < value.length() && isWordChar(value.charAt(i + 1));
+  }
+
+  private static boolean isWordChar(char c) {
+    return Character.isLetterOrDigit(c);
+  }
+
   private static boolean isInlinePunctuation(char c) {
     return switch (c) {
-      case '\\', '`', '*', '_', '[', ']', '(', ')', '~', '<', '&' -> true;
+      case '\\', '`', '*', '[', ']', '(', ')', '~', '<', '&' -> true;
       default -> false;
     };
   }

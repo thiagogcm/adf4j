@@ -36,6 +36,7 @@ import dev.nthings.adf4j.ast.EmbedCard;
 import dev.nthings.adf4j.ast.Emoji;
 import dev.nthings.adf4j.ast.Expand;
 import dev.nthings.adf4j.ast.Extension;
+import dev.nthings.adf4j.ast.ExtensionFrame;
 import dev.nthings.adf4j.ast.FontSize;
 import dev.nthings.adf4j.ast.Fragment;
 import dev.nthings.adf4j.ast.HardBreak;
@@ -54,6 +55,7 @@ import dev.nthings.adf4j.ast.MediaGroup;
 import dev.nthings.adf4j.ast.MediaInline;
 import dev.nthings.adf4j.ast.MediaSingle;
 import dev.nthings.adf4j.ast.Mention;
+import dev.nthings.adf4j.ast.MultiBodiedExtension;
 import dev.nthings.adf4j.ast.NestedExpand;
 import dev.nthings.adf4j.ast.OrderedList;
 import dev.nthings.adf4j.ast.Panel;
@@ -146,6 +148,8 @@ public final class AdfAstParser {
           node.path("attrs").path("width").asInt(0), parseBlocks(node.get("content")));
       case "extension" -> parseExtension(node);
       case "bodiedExtension" -> parseBodiedExtension(node);
+      case "multiBodiedExtension" -> parseMultiBodiedExtension(node);
+      case "extensionFrame" -> new ExtensionFrame(parseBlocks(node.get("content")));
       case "syncBlock" -> new SyncBlock(JsonFields.text(node.path("attrs"), "resourceId"));
       case "bodiedSyncBlock" -> new BodiedSyncBlock(
           JsonFields.text(node.path("attrs"), "resourceId"), parseBlocks(node.get("content")));
@@ -319,7 +323,8 @@ public final class AdfAstParser {
         continue;
       }
       var type = JsonFields.text(child, "type", "");
-      if (!"taskItem".equals(type) && !"blockTaskItem".equals(type)) {
+      // A nested taskList is schema-valid; parse it as a TaskList block so the renderer can recurse.
+      if (!"taskItem".equals(type) && !"blockTaskItem".equals(type) && !"taskList".equals(type)) {
         continue;
       }
       items.add(parseBlock(child));
@@ -444,6 +449,16 @@ public final class AdfAstParser {
   private BodiedExtension parseBodiedExtension(JsonNode node) {
     var attrs = node.path("attrs");
     return new BodiedExtension(
+        JsonFields.text(attrs, "extensionType"),
+        JsonFields.text(attrs, "extensionKey"),
+        JsonFields.text(attrs, "text"),
+        parseMacroParams(attrs.path("parameters").path("macroParams")),
+        parseBlocks(node.get("content")));
+  }
+
+  private MultiBodiedExtension parseMultiBodiedExtension(JsonNode node) {
+    var attrs = node.path("attrs");
+    return new MultiBodiedExtension(
         JsonFields.text(attrs, "extensionType"),
         JsonFields.text(attrs, "extensionKey"),
         JsonFields.text(attrs, "text"),

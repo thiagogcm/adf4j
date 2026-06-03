@@ -126,7 +126,7 @@ The output depends on what is present:
 | Has URL | Has title | Output |
 |:---:|:---:|---|
 | yes | yes | `[title](url)` |
-| yes | no | `<url>` (or `[url](url)` if the URL is not clean) |
+| yes | no | `<url>` when the URL is an absolute URI (has a scheme) and clean; otherwise `[url](url)` — so a relative/scheme-less link (e.g. `/wiki/x/123`) stays a working link instead of an invalid autolink |
 | no | yes | the title as plain text |
 | no | no | `[Inline card]` / `[Card]` / `[Embed card]` (per kind) |
 
@@ -230,6 +230,11 @@ inside another list.
 Placeholder text produced for `status`, `decision`, and cards (e.g. `[Done]`, `[decision]`,
 `[Inline card]`) cannot accidentally form a Markdown link when it is immediately followed by `(` or
 `[` in the surrounding text. In text nodes, inline punctuation — including `(`, `)`, `[`, and `]`
-(alongside `` \ ` * _ ~ < & ``) — is **unconditionally backslash-escaped**. So a sequence like a
+(alongside `` \ ` * ~ < & ``) — is **unconditionally backslash-escaped**. So a sequence like a
 status `[Done]` followed by literal text `(see ticket)` cannot be misread as `[Done](see ticket)`:
 the literal parentheses are escaped to `\(see ticket\)`.
+
+`_` is escaped the same way **except** when it sits between word characters (e.g. the `_` in
+`snake_case`): CommonMark never treats an intra-word `_` as emphasis, so escaping it would be
+pointless noise and it is left literal. A `_` at a word boundary (e.g. `_word_`) is still escaped, as
+it could otherwise open or close emphasis.

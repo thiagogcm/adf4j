@@ -1,0 +1,62 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "table",
+      "content": [
+        {
+          "type": "tableRow",
+          "content": [
+            {
+              "type": "tableCell",
+              "content": [
+                { "type": "paragraph", "content": [ { "type": "text", "text": "# hash" } ] }
+              ]
+            },
+            {
+              "type": "tableCell",
+              "content": [
+                { "type": "paragraph", "content": [ { "type": "text", "text": "> quote" } ] }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "tableRow",
+          "content": [
+            {
+              "type": "tableCell",
+              "content": [
+                { "type": "paragraph", "content": [ { "type": "text", "text": "- item" } ] }
+              ]
+            },
+            {
+              "type": "tableCell",
+              "content": [
+                { "type": "paragraph", "content": [ { "type": "text", "text": "1. one" } ] }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "tableRow",
+          "content": [
+            {
+              "type": "tableCell",
+              "content": [
+                { "type": "paragraph", "content": [ { "type": "text", "text": "plain" } ] }
+              ]
+            },
+            {
+              "type": "tableCell",
+              "content": [
+                { "type": "paragraph", "content": [ { "type": "text", "text": "+ plus" } ] }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

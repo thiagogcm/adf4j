@@ -1,0 +1,28 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "taskList",
+      "attrs": { "localId": "list-1" },
+      "content": [
+        {
+          "type": "taskItem",
+          "attrs": { "localId": "item-1", "state": "DONE" },
+          "content": [ { "type": "text", "text": "Parent" } ]
+        },
+        {
+          "type": "taskList",
+          "attrs": { "localId": "list-2" },
+          "content": [
+            {
+              "type": "taskItem",
+              "attrs": { "localId": "item-2", "state": "TODO" },
+              "content": [ { "type": "text", "text": "Child" } ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

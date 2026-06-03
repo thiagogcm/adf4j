@@ -88,4 +88,17 @@ class AdfToMarkdownParsingTests {
     assertThat(result.issues()).isEmpty();
     assertThat(result.document().version()).isEqualTo(1);
   }
+
+  @Test
+  void parse_renders_best_effort_for_unsupported_version() {
+    var json =
+        "{\"type\":\"doc\",\"version\":2,\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Hi\"}]}]}";
+    var result = processor.parse(json);
+
+    assertThat(result.validAdfRoot()).isTrue();
+    assertThat(result.document()).isNotNull();
+    assertThat(result.document().version()).isEqualTo(2);
+    assertThat(result.issues()).extracting(ParseIssue::code).containsExactly("UNSUPPORTED_VERSION");
+    assertThat(processor.toMarkdown(json)).isEqualTo("Hi");
+  }
 }

@@ -16,10 +16,10 @@ import dev.nthings.adf4j.ast.Heading;
  * that changes as the renderer descends (list depth, table scope). Transitions copy only the cursor
  * fields and keep the same {@link RenderContext} reference.
  */
-record RendererState(RenderContext context, int listDepth, boolean inTable, boolean inHeading) {
+record RendererState(RenderContext context, int listDepth, TableCellKind tableCell, boolean inHeading) {
 
   static RendererState root(MarkdownOptions options, HeadingOutline headingOutline) {
-    return new RendererState(RenderContext.from(options, headingOutline), 0, false, false);
+    return new RendererState(RenderContext.from(options, headingOutline), 0, TableCellKind.NONE, false);
   }
 
   // Delegating accessors onto the shared context so renderer call sites stay stable.
@@ -53,14 +53,14 @@ record RendererState(RenderContext context, int listDepth, boolean inTable, bool
 
   // Cursor transitions.
   RendererState withListDepth(int depth) {
-    return new RendererState(context, depth, inTable, inHeading);
+    return new RendererState(context, depth, tableCell, inHeading);
   }
 
-  RendererState withTable(boolean table) {
-    return new RendererState(context, listDepth, table, inHeading);
+  RendererState withTableCell(TableCellKind cell) {
+    return new RendererState(context, listDepth, cell, inHeading);
   }
 
   RendererState withHeading(boolean heading) {
-    return new RendererState(context, listDepth, inTable, heading);
+    return new RendererState(context, listDepth, tableCell, heading);
   }
 }

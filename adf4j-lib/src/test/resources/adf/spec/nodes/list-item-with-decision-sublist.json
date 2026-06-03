@@ -1,0 +1,28 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "bulletList",
+      "content": [
+        {
+          "type": "listItem",
+          "content": [
+            { "type": "paragraph", "content": [ { "type": "text", "text": "Outer" } ] },
+            {
+              "type": "decisionList",
+              "attrs": { "localId": "decisions-1" },
+              "content": [
+                {
+                  "type": "decisionItem",
+                  "attrs": { "localId": "d1", "state": "DECIDED" },
+                  "content": [ { "type": "text", "text": "nested" } ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

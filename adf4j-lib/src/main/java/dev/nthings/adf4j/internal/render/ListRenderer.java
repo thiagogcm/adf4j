@@ -29,6 +29,13 @@ final class ListRenderer {
         lines.add(renderTaskItem(taskItem, context, adfRenderer));
       } else if (item instanceof BlockTaskItem blockTaskItem) {
         lines.addAll(renderBlockTaskItemLines(blockTaskItem, context, adfRenderer));
+      } else if (item instanceof TaskList nested) {
+        // Recurse one level deeper so checklistPrefix indents the nested checkboxes.
+        var rendered =
+            renderTaskList(nested, context.withListDepth(context.listDepth() + 1), adfRenderer);
+        if (!rendered.isBlank()) {
+          lines.add(rendered);
+        }
       }
     }
 
@@ -167,13 +174,21 @@ final class ListRenderer {
       var block = children.get(index);
       // Nested sublists stay tight; any other continuation block needs a blank line so it isn't
       // soft-wrapped into the previous paragraph.
-      if (!(block instanceof BulletList) && !(block instanceof OrderedList)) {
+      if (!isNestedListBlock(block)) {
         lines.add("");
       }
       lines.addAll(renderListItemBlock(block, context, adfRenderer, childIndent));
     }
 
     return lines;
+  }
+
+  // List blocks nest as tight, marker-aligned sub-lists; other continuation blocks get a blank line.
+  private static boolean isNestedListBlock(AdfBlock block) {
+    return block instanceof BulletList
+        || block instanceof OrderedList
+        || block instanceof TaskList
+        || block instanceof DecisionList;
   }
 
   private List<String> renderListItemBlock(
@@ -188,6 +203,15 @@ final class ListRenderer {
     if (block instanceof OrderedList orderedList) {
       var nested = renderOrderedList(orderedList, childContext, adfRenderer, childIndent);
       return nested.isBlank() ? List.of() : MarkdownText.splitLines(nested);
+    }
+    // childIndent already encodes the content column, so render at depth 0 and indent once.
+    if (block instanceof TaskList taskList) {
+      var nested = renderTaskList(taskList, context.withListDepth(0), adfRenderer);
+      return nested.isBlank() ? List.of() : RenderBuffer.indentLines(nested, childIndent);
+    }
+    if (block instanceof DecisionList decisionList) {
+      var nested = renderDecisionList(decisionList, context.withListDepth(0), adfRenderer);
+      return nested.isBlank() ? List.of() : RenderBuffer.indentLines(nested, childIndent);
     }
 
     // Known limitation: a list nested inside a non-list block (e.g. a panel) re-enters via

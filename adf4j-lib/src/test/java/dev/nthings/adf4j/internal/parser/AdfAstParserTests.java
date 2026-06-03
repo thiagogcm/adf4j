@@ -11,6 +11,8 @@ import dev.nthings.adf4j.ast.InlineCard;
 import dev.nthings.adf4j.ast.Mention;
 import dev.nthings.adf4j.ast.Paragraph;
 import dev.nthings.adf4j.ast.Status;
+import dev.nthings.adf4j.ast.TaskItem;
+import dev.nthings.adf4j.ast.TaskList;
 import dev.nthings.adf4j.ast.Text;
 import dev.nthings.adf4j.ast.UnknownBlock;
 import dev.nthings.adf4j.ast.UnknownInline;
@@ -105,6 +107,48 @@ class AdfAstParserTests {
     assertThat(unknown.type()).isEqualTo("newMark");
     assertThat(mapper.readTree(unknown.rawJson()))
         .isEqualTo(mapper.readTree("{\"type\":\"newMark\",\"attrs\":{\"x\":1}}"));
+  }
+
+  @Test
+  void nested_task_list_parses_as_task_list_inside_task_list_content() throws Exception {
+    var raw = """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {
+              "type": "taskList",
+              "attrs": {"localId": "list-1"},
+              "content": [
+                {
+                  "type": "taskItem",
+                  "attrs": {"localId": "item-1", "state": "DONE"},
+                  "content": [{"type": "text", "text": "Parent"}]
+                },
+                {
+                  "type": "taskList",
+                  "attrs": {"localId": "list-2"},
+                  "content": [
+                    {
+                      "type": "taskItem",
+                      "attrs": {"localId": "item-2", "state": "TODO"},
+                      "content": [{"type": "text", "text": "Child"}]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """;
+    var document = parser.parseDocument(mapper.readTree(raw));
+
+    var taskList = (TaskList) document.content().getFirst();
+    assertThat(taskList.content()).hasSize(2);
+    assertThat(taskList.content().get(0)).isInstanceOf(TaskItem.class);
+    AdfBlock nested = taskList.content().get(1);
+    assertThat(nested).as("a taskList nested in a taskList is preserved").isInstanceOf(TaskList.class);
+    assertThat(((TaskList) nested).content()).singleElement().isInstanceOf(TaskItem.class);
   }
 
   @Test

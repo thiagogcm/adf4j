@@ -28,6 +28,8 @@ public sealed interface AdfBlock extends AdfNode
         LayoutColumn,
         Extension,
         BodiedExtension,
+        MultiBodiedExtension,
+        ExtensionFrame,
         SyncBlock,
         BodiedSyncBlock,
         BlockCard,

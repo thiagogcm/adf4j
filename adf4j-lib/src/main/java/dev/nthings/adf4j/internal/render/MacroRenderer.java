@@ -5,11 +5,13 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import dev.nthings.adf4j.metadata.HeadingReference;
+import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.BodiedExtension;
 import dev.nthings.adf4j.ast.BodiedSyncBlock;
 import dev.nthings.adf4j.ast.Extension;
 import dev.nthings.adf4j.ast.InlineExtension;
 import dev.nthings.adf4j.ast.MacroParams;
+import dev.nthings.adf4j.ast.MultiBodiedExtension;
 import dev.nthings.adf4j.ast.SyncBlock;
 import dev.nthings.adf4j.internal.AttachmentReferences;
 import dev.nthings.adf4j.internal.ConfluenceSupport;
@@ -59,10 +61,28 @@ final class MacroRenderer {
         && "excerpt".equals(node.extensionKey())) {
       return adfRenderer.renderBlocks(node.content(), context);
     }
+    return fallbackHeaderThenBodies(
+        node.text(), node.extensionType(), node.extensionKey(), node.content(), context, adfRenderer);
+  }
 
+  List<String> renderMultiBodiedExtension(
+      MultiBodiedExtension node, RendererState context, AdfRenderer adfRenderer) {
+    // The schema predates this node; salvage the frame bodies.
+    return fallbackHeaderThenBodies(
+        node.text(), node.extensionType(), node.extensionKey(), node.content(), context, adfRenderer);
+  }
+
+  // Fallback header (macro text or "[Extension: …]" placeholder) then the rendered body blocks.
+  private List<String> fallbackHeaderThenBodies(
+      String text,
+      String extensionType,
+      String extensionKey,
+      List<AdfBlock> content,
+      RendererState context,
+      AdfRenderer adfRenderer) {
     var blocks = new ArrayList<String>();
-    blocks.add(extensionFallback(node.text(), node.extensionType(), node.extensionKey()));
-    blocks.addAll(adfRenderer.renderBlocks(node.content(), context));
+    blocks.add(extensionFallback(text, extensionType, extensionKey));
+    blocks.addAll(adfRenderer.renderBlocks(content, context));
     return blocks;
   }
 

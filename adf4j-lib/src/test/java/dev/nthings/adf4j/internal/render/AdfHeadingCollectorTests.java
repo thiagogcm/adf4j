@@ -26,7 +26,7 @@ class AdfHeadingCollectorTests {
   private static final List<Arguments> normalized_heading_content =
       List.of(
           argumentSet(
-              "emphasis marks are removed before heading markdown is rendered",
+              "emphasis marks are preserved on the heading render path",
               new NormalizedHeadingCase(
                   """
                   [
@@ -37,7 +37,7 @@ class AdfHeadingCollectorTests {
                     }
                   ]
                   """,
-                  List.of(new ExpectedInlineNode("Code Heading", List.of("code"))))),
+                  List.of(new ExpectedInlineNode("Code Heading", List.of("strong", "code", "em"))))),
           argumentSet(
               "plain text nodes pass through without synthetic marks",
               new NormalizedHeadingCase(
@@ -205,7 +205,7 @@ class AdfHeadingCollectorTests {
   }
 
   @Test
-  void normalized_heading_nodes_do_not_mutate_the_original_inline_list() throws Exception {
+  void normalized_heading_nodes_preserve_emphasis_marks() throws Exception {
     var inlineList = PARSER.parseInlines(
         MAPPER.readTree(
             """
@@ -224,7 +224,7 @@ class AdfHeadingCollectorTests {
     assertThat(inlineList.getFirst()).isInstanceOf(Text.class);
     assertThat(((Text) inlineList.getFirst()).marks()).hasSize(1);
     assertThat(normalized).hasSize(1);
-    assertThat(((Text) normalized.getFirst()).marks()).isEmpty();
+    assertThat(((Text) normalized.getFirst()).marks()).hasSize(1);
   }
 
   @ParameterizedTest(name = "{argumentSetName}")

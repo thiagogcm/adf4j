@@ -27,6 +27,7 @@ import dev.nthings.adf4j.ast.EmbedCard;
 import dev.nthings.adf4j.ast.Emoji;
 import dev.nthings.adf4j.ast.Expand;
 import dev.nthings.adf4j.ast.Extension;
+import dev.nthings.adf4j.ast.ExtensionFrame;
 import dev.nthings.adf4j.ast.HardBreak;
 import dev.nthings.adf4j.ast.Heading;
 import dev.nthings.adf4j.ast.InlineCard;
@@ -39,6 +40,7 @@ import dev.nthings.adf4j.ast.MediaGroup;
 import dev.nthings.adf4j.ast.MediaInline;
 import dev.nthings.adf4j.ast.MediaSingle;
 import dev.nthings.adf4j.ast.Mention;
+import dev.nthings.adf4j.ast.MultiBodiedExtension;
 import dev.nthings.adf4j.ast.NestedExpand;
 import dev.nthings.adf4j.ast.OrderedList;
 import dev.nthings.adf4j.ast.Panel;
@@ -166,6 +168,8 @@ public final class AdfRenderer {
       case Caption caption -> List.of(mediaRenderer.renderCaption(caption, context, this));
       case Extension extension -> List.of(macroRenderer.renderExtension(extension, context));
       case BodiedExtension bodied -> macroRenderer.renderBodiedExtension(bodied, context, this);
+      case MultiBodiedExtension mbe -> macroRenderer.renderMultiBodiedExtension(mbe, context, this);
+      case ExtensionFrame frame -> renderBlocks(frame.content(), context);
       case SyncBlock sync -> List.of(macroRenderer.renderSyncBlock(sync));
       case BodiedSyncBlock sync -> macroRenderer.renderBodiedSyncBlock(sync, context, this);
       case BlockCard blockCard -> List.of(cardRenderer.renderBlockCard(blockCard.attrs()));
@@ -410,8 +414,10 @@ public final class AdfRenderer {
     if (hasCodeMark) {
       return applyMarks(text.text(), text.marks());
     }
-    // Suppress leading-block escaping in table cells (inline context); inline escaping still applies.
-    var escaped = MarkdownText.escapeInlineText(text.text(), atLineStart && !context.inTable());
+    // Suppress leading-block escaping only in a GFM pipe cell (inline context). An HTML-fragment cell
+    // is re-parsed as a block document, so a leading marker there must still be neutralized.
+    var atLineStartEscaping = atLineStart && context.tableCell() != TableCellKind.GFM;
+    var escaped = MarkdownText.escapeInlineText(text.text(), atLineStartEscaping);
     return applyMarks(escaped, text.marks());
   }
 
@@ -420,7 +426,8 @@ public final class AdfRenderer {
     if (context.inHeading()) {
       return " ";
     }
-    return context.inTable() ? "\n" : "  \n";
+    // In any table cell a break is a single "\n" (one <br> after unwrap), not the two-space form.
+    return context.tableCell() != TableCellKind.NONE ? "\n" : "  \n";
   }
 
   private String renderEmoji(Emoji emoji) {

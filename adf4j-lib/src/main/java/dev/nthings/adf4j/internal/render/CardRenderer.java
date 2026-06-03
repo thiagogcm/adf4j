@@ -51,7 +51,9 @@ final class CardRenderer {
             MarkdownText.escapeLinkText(title), MarkdownText.escapeUrlDestination(url));
       }
       var destination = MarkdownText.escapeUrlDestination(url);
-      return destination.equals(url) ? "<%s>".formatted(url) : "[%s](%s)".formatted(url, destination);
+      return destination.equals(url) && isAbsoluteUri(url)
+          ? "<%s>".formatted(url)
+          : "[%s](%s)".formatted(url, destination);
     }
 
     if (hasTitle) {
@@ -59,5 +61,20 @@ final class CardRenderer {
     }
 
     return null;
+  }
+
+  // A CommonMark absolute-URI scheme: a letter, then letters/digits/+/-/., then ':' (min 2 chars).
+  private static boolean isAbsoluteUri(String url) {
+    var colon = url.indexOf(':');
+    if (colon < 2 || !Character.isLetter(url.charAt(0))) {
+      return false;
+    }
+    for (var i = 1; i < colon; i++) {
+      var c = url.charAt(i);
+      if (!Character.isLetterOrDigit(c) && c != '+' && c != '.' && c != '-') {
+        return false;
+      }
+    }
+    return true;
   }
 }

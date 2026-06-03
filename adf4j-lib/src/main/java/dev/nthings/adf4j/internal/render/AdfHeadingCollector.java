@@ -10,7 +10,6 @@ import dev.nthings.adf4j.internal.ConfluenceSupport;
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.ast.AdfInline;
-import dev.nthings.adf4j.ast.AdfMark;
 import dev.nthings.adf4j.ast.BlockTaskItem;
 import dev.nthings.adf4j.ast.Blockquote;
 import dev.nthings.adf4j.ast.BodiedExtension;
@@ -20,9 +19,9 @@ import dev.nthings.adf4j.ast.Caption;
 import dev.nthings.adf4j.ast.Date;
 import dev.nthings.adf4j.ast.DecisionItem;
 import dev.nthings.adf4j.ast.DecisionList;
-import dev.nthings.adf4j.ast.Em;
 import dev.nthings.adf4j.ast.Emoji;
 import dev.nthings.adf4j.ast.Expand;
+import dev.nthings.adf4j.ast.ExtensionFrame;
 import dev.nthings.adf4j.ast.HardBreak;
 import dev.nthings.adf4j.ast.Heading;
 import dev.nthings.adf4j.ast.InlineCard;
@@ -32,13 +31,13 @@ import dev.nthings.adf4j.ast.LayoutSection;
 import dev.nthings.adf4j.ast.ListItem;
 import dev.nthings.adf4j.ast.MediaInline;
 import dev.nthings.adf4j.ast.Mention;
+import dev.nthings.adf4j.ast.MultiBodiedExtension;
 import dev.nthings.adf4j.ast.NestedExpand;
 import dev.nthings.adf4j.ast.OrderedList;
 import dev.nthings.adf4j.ast.Panel;
 import dev.nthings.adf4j.ast.Paragraph;
 import dev.nthings.adf4j.ast.Placeholder;
 import dev.nthings.adf4j.ast.Status;
-import dev.nthings.adf4j.ast.Strong;
 import dev.nthings.adf4j.ast.Table;
 import dev.nthings.adf4j.ast.TableCell;
 import dev.nthings.adf4j.ast.TableRow;
@@ -98,7 +97,6 @@ public final class AdfHeadingCollector {
 
     return content.subList(start, end).stream()
         .filter(node -> !isAnchorExtension(node))
-        .map(AdfHeadingCollector::stripEmphasisMarks)
         .toList();
   }
 
@@ -126,7 +124,10 @@ public final class AdfHeadingCollector {
             appendPlainText(builder, "[" + status.text() + "]");
           }
         }
-        case InlineCard card -> appendPlainText(builder, card.attrs().url());
+        case InlineCard card -> {
+          var title = card.attrs().title();
+          appendPlainText(builder, title == null || title.isBlank() ? card.attrs().url() : title);
+        }
         case MediaInline media -> {
           var alt = media.attrs().alt();
           appendPlainText(builder, alt == null || alt.isBlank() ? "media" : alt);
@@ -163,35 +164,6 @@ public final class AdfHeadingCollector {
     }
     return ConfluenceSupport.isConfluenceMacroExtension(extension.extensionType())
         && "anchor".equals(extension.extensionKey());
-  }
-
-  private static AdfInline stripEmphasisMarks(AdfInline node) {
-    return switch (node) {
-      case Text text -> withFilteredMarks(text, text.marks(), filtered -> new Text(text.text(), filtered));
-      case MediaInline media ->
-          withFilteredMarks(media, media.marks(), filtered -> new MediaInline(media.attrs(), filtered));
-      default -> node;
-    };
-  }
-
-  private static <T extends AdfInline> AdfInline withFilteredMarks(
-      T original, List<AdfMark> marks, java.util.function.Function<List<AdfMark>, AdfInline> rebuild) {
-    if (marks.isEmpty()) {
-      return original;
-    }
-    var filtered = new ArrayList<AdfMark>(marks.size());
-    var changed = false;
-    for (var mark : marks) {
-      if (mark instanceof Strong || mark instanceof Em) {
-        changed = true;
-        continue;
-      }
-      filtered.add(mark);
-    }
-    if (!changed) {
-      return original;
-    }
-    return rebuild.apply(filtered);
   }
 
   /** True iff the heading carries an explicit Confluence {@code anchor} macro with a non-blank id. */
@@ -259,6 +231,8 @@ public final class AdfHeadingCollector {
       case LayoutSection layout -> layout.content().forEach(column -> walkBlock(column, headings));
       case LayoutColumn column -> walkBlocks(column.content(), headings);
       case BodiedExtension extension -> walkBlocks(extension.content(), headings);
+      case MultiBodiedExtension mbe -> walkBlocks(mbe.content(), headings);
+      case ExtensionFrame frame -> walkBlocks(frame.content(), headings);
       case BodiedSyncBlock sync -> walkBlocks(sync.content(), headings);
       default -> {
       }

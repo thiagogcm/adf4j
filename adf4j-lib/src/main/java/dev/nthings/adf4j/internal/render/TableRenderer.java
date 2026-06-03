@@ -117,7 +117,7 @@ final class TableRenderer {
 
   String renderTableCell(TableCell cell, RendererState context, AdfRenderer adfRenderer) {
     var text = adfRenderer
-        .joinBlocks(adfRenderer.renderBlocks(cell.content(), context.withTable(true)))
+        .joinBlocks(adfRenderer.renderBlocks(cell.content(), context.withTableCell(TableCellKind.GFM)))
         .trim();
     if (text.isBlank()) {
       return "";
@@ -236,7 +236,7 @@ final class TableRenderer {
       element.attr("rowspan", Integer.toString(cell.rowspan()));
     }
 
-    var value = renderHtmlTableCellContent(cell.content(), context.withTable(true), adfRenderer);
+    var value = renderHtmlTableCellContent(cell.content(), context.withTableCell(TableCellKind.HTML), adfRenderer);
     element.html(value);
     return element;
   }
@@ -266,7 +266,7 @@ final class TableRenderer {
 
   private String renderHtmlTableCellLeafBlock(
       AdfBlock block, RendererState context, AdfRenderer adfRenderer) {
-    var rendered = adfRenderer.joinBlocks(adfRenderer.renderBlock(block, context.withTable(true))).trim();
+    var rendered = adfRenderer.joinBlocks(adfRenderer.renderBlock(block, context.withTableCell(TableCellKind.HTML))).trim();
     if (rendered.isBlank()) {
       return "";
     }
@@ -297,7 +297,7 @@ final class TableRenderer {
       ListItem item, RendererState context, AdfRenderer adfRenderer) {
     var fragments = new ArrayList<String>();
     for (var block : item.content()) {
-      var rendered = renderHtmlTableCellBlock(block, context.withTable(true), adfRenderer);
+      var rendered = renderHtmlTableCellBlock(block, context.withTableCell(TableCellKind.HTML), adfRenderer);
       if (rendered != null && !rendered.isBlank()) {
         fragments.add(rendered);
       }

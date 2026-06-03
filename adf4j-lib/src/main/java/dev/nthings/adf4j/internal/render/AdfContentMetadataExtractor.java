@@ -35,6 +35,7 @@ import dev.nthings.adf4j.ast.DecisionList;
 import dev.nthings.adf4j.ast.EmbedCard;
 import dev.nthings.adf4j.ast.Expand;
 import dev.nthings.adf4j.ast.Extension;
+import dev.nthings.adf4j.ast.ExtensionFrame;
 import dev.nthings.adf4j.ast.Heading;
 import dev.nthings.adf4j.ast.InlineCard;
 import dev.nthings.adf4j.ast.InlineExtension;
@@ -48,6 +49,7 @@ import dev.nthings.adf4j.ast.MediaAttrs;
 import dev.nthings.adf4j.ast.MediaGroup;
 import dev.nthings.adf4j.ast.MediaInline;
 import dev.nthings.adf4j.ast.MediaSingle;
+import dev.nthings.adf4j.ast.MultiBodiedExtension;
 import dev.nthings.adf4j.ast.NestedExpand;
 import dev.nthings.adf4j.ast.OrderedList;
 import dev.nthings.adf4j.ast.Panel;
@@ -118,6 +120,11 @@ public final class AdfContentMetadataExtractor {
         collectExtension(bodied.extensionType(), bodied.extensionKey(), bodied.macroParams(), state);
         bodied.content().forEach(child -> collectBlock(child, state));
       }
+      case MultiBodiedExtension mbe -> {
+        collectExtension(mbe.extensionType(), mbe.extensionKey(), mbe.macroParams(), state);
+        mbe.content().forEach(child -> collectBlock(child, state));
+      }
+      case ExtensionFrame frame -> frame.content().forEach(child -> collectBlock(child, state));
       case BodiedSyncBlock sync -> sync.content().forEach(child -> collectBlock(child, state));
       case BlockCard blockCard -> collectCardLink(blockCard.attrs(), state);
       case EmbedCard embedCard -> collectCardLink(embedCard.attrs(), state);

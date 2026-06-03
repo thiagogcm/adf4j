@@ -37,10 +37,12 @@ public final class AdfParsingService {
     try {
       var jsonRoot = mapper.readTree(rawAdf);
       var issues = validateRoot(jsonRoot);
-      if (!issues.isEmpty()) {
-        issues.forEach(issue -> log.warn("ADF validation issue [{}]: {}", issue.code(), issue.message()));
+      var fatal = issues.stream().anyMatch(issue -> !"UNSUPPORTED_VERSION".equals(issue.code()));
+      issues.forEach(issue -> log.warn("ADF validation issue [{}]: {}", issue.code(), issue.message()));
+      if (fatal) {
         return new ParseResult(null, issues, false);
       }
+      // Only UNSUPPORTED_VERSION (or nothing): parse best-effort, keeping the warning in diagnostics.
       return new ParseResult(astParser.parseDocument(jsonRoot), issues, true);
     } catch (JacksonException exception) {
       log.error("Failed to parse ADF JSON payload: {}", exception.getMessage(), exception);
