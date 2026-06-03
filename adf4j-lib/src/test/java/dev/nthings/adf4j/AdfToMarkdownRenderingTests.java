@@ -74,7 +74,7 @@ class AdfToMarkdownRenderingTests {
         AdfToMarkdown.with(
                 MarkdownOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.PLACEHOLDER))
             .toMarkdown(rawPayload))
-        .contains("[Unsupported: mysteryBlock]");
+        .contains("\\[Unsupported: mysteryBlock\\]");
     assertThat(
         AdfToMarkdown.with(MarkdownOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.SKIP))
             .toMarkdown(rawPayload))

@@ -68,8 +68,21 @@ class TableFallbackOptionsTests {
       """;
 
   @Test
-  void default_keeps_a_headerless_table_as_raw_html() {
+  void default_promotes_the_first_row_of_a_headerless_table() {
     var markdown = AdfToMarkdown.create().toMarkdown(HEADERLESS_TABLE).strip();
+
+    assertThat(markdown)
+        .isEqualTo(
+            """
+            | a1  | a2  |
+            | --- | --- |
+            | b1  | b2  |""");
+  }
+
+  @Test
+  void html_fallback_keeps_a_headerless_table_as_raw_html() {
+    var options = MarkdownOptions.defaults().withTableFallback(TableFallback.HTML);
+    var markdown = AdfToMarkdown.with(options).toMarkdown(HEADERLESS_TABLE).strip();
 
     assertThat(markdown)
         .isEqualTo(

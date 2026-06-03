@@ -1,2 +1,3 @@
 > [!NOTE]
+> **Note**
 > Take note.

@@ -1,8 +1,8 @@
 package dev.nthings.adf4j.internal.render;
 
 import java.util.ArrayList;
-import java.util.Optional;
 
+import dev.nthings.adf4j.internal.AttachmentReferences;
 import dev.nthings.adf4j.ast.Caption;
 import dev.nthings.adf4j.ast.Media;
 import dev.nthings.adf4j.ast.MediaAttrs;
@@ -34,7 +34,7 @@ final class MediaRenderer {
     var blocks = new ArrayList<String>();
     if (!imageBlocks.isEmpty()) {
       var imageString = String.join("\n\n", imageBlocks);
-      blocks.add(adfRenderer.applyMarks(imageString, node.marks()));
+      blocks.add(adfRenderer.applyMarks(imageString, node.marks(), context.htmlVisualMarks()));
     }
     blocks.addAll(captionBlocks);
 
@@ -63,26 +63,52 @@ final class MediaRenderer {
 
   String renderMedia(Media node, RendererState context, AdfRenderer adfRenderer) {
     var rendered = renderMediaBlock(node.attrs(), context);
-    return adfRenderer.applyMarks(rendered, node.marks());
+    return adfRenderer.applyMarks(rendered, node.marks(), context.htmlVisualMarks());
   }
 
   String renderMediaInline(MediaInline node, RendererState context, AdfRenderer adfRenderer) {
     var rendered = renderMediaBlock(node.attrs(), context);
-    return adfRenderer.applyMarks(rendered, node.marks());
+    return adfRenderer.applyMarks(rendered, node.marks(), context.htmlVisualMarks());
   }
 
   private String renderMediaBlock(MediaAttrs attrs, RendererState context) {
-    var details = mediaDetails(attrs, context);
+    var resolved = resolveMediaSource(attrs, context);
+    var source = MarkdownText.escapeUrlDestination(resolved == null ? "media" : resolved);
+
+    // Non-image attachments (PDF, video, archive, …) render as a link; an image embed would break.
+    if (!isImage(attrs)) {
+      return "[%s](%s)".formatted(MarkdownText.escapeLinkText(linkLabel(attrs)), source);
+    }
+
+    var alt = attrs.alt();
+    var safeAlt = alt == null || alt.isBlank() ? "media" : alt;
     // The {width= height=} suffix is non-GFM; emit only when opted in.
     var attributeSuffix =
         context.imageSizeAttributes()
-            ? renderImageAttributeSuffix(details.width(), details.height())
+            ? renderImageAttributeSuffix(positiveInteger(attrs.width()), positiveInteger(attrs.height()))
             : "";
-    return "![%s](%s)%s"
-        .formatted(
-            MarkdownText.escapeAltText(details.safeAlt()),
-            MarkdownText.escapeUrlDestination(details.markdownSource()),
-            attributeSuffix);
+    return "![%s](%s)%s".formatted(MarkdownText.escapeAltText(safeAlt), source, attributeSuffix);
+  }
+
+  private boolean isImage(MediaAttrs attrs) {
+    var mimeOrType =
+        firstNonBlank(attrs.fileMimeType(), attrs.mediaType());
+    var fileName = firstNonBlank(attrs.fileName(), attrs.name());
+    return AttachmentReferences.isImage(mimeOrType, fileName);
+  }
+
+  private String linkLabel(MediaAttrs attrs) {
+    var label = firstNonBlank(attrs.name(), attrs.fileName(), attrs.alt());
+    return label == null ? "file" : label;
+  }
+
+  private static String firstNonBlank(String... values) {
+    for (var value : values) {
+      if (value != null && !value.isBlank()) {
+        return value;
+      }
+    }
+    return null;
   }
 
   private String resolveMediaSource(MediaAttrs attrs, RendererState context) {
@@ -111,16 +137,6 @@ final class MediaRenderer {
     return "media:%s/%s".formatted(collection, id);
   }
 
-  private MediaDetails mediaDetails(MediaAttrs attrs, RendererState context) {
-    var alt = attrs.alt();
-    var safeAlt = alt == null || alt.isBlank() ? "media" : alt;
-    return new MediaDetails(
-        safeAlt,
-        Optional.ofNullable(resolveMediaSource(attrs, context)),
-        positiveInteger(attrs.width()),
-        positiveInteger(attrs.height()));
-  }
-
   private String renderImageAttributeSuffix(Integer width, Integer height) {
     var attributes = new ArrayList<String>();
     if (width != null) {
@@ -144,18 +160,6 @@ final class MediaRenderer {
       return parsed > 0 ? parsed : null;
     } catch (NumberFormatException _) {
       return null;
-    }
-  }
-
-  private record MediaDetails(
-      String safeAlt, Optional<String> source, Integer width, Integer height) {
-
-    private MediaDetails {
-      source = source == null ? Optional.empty() : source;
-    }
-
-    private String markdownSource() {
-      return source.orElse("media");
     }
   }
 }

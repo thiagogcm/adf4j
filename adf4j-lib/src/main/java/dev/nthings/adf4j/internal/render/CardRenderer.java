@@ -18,19 +18,19 @@ final class CardRenderer {
         .findFirst()
         .orElse(null);
     if (identifier == null) {
-      return "[Card]";
+      return MarkdownText.labelToken("Card");
     }
-    return "[Card: %s]".formatted(identifier);
+    return MarkdownText.labelToken("Card: " + identifier);
   }
 
   String renderInlineCard(CardAttrs attrs) {
     var link = renderCardLink(attrs);
-    return link != null ? link : "[Inline card]";
+    return link != null ? link : MarkdownText.labelToken("Inline card");
   }
 
   String renderEmbedCard(CardAttrs attrs) {
     var link = renderCardLink(attrs);
-    return link != null ? link : "[Embed card]";
+    return link != null ? link : MarkdownText.labelToken("Embed card");
   }
 
   /**

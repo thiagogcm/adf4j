@@ -30,6 +30,7 @@ import dev.nthings.adf4j.ast.Extension;
 import dev.nthings.adf4j.ast.ExtensionFrame;
 import dev.nthings.adf4j.ast.HardBreak;
 import dev.nthings.adf4j.ast.Heading;
+import dev.nthings.adf4j.ast.Indentation;
 import dev.nthings.adf4j.ast.InlineCard;
 import dev.nthings.adf4j.ast.InlineExtension;
 import dev.nthings.adf4j.ast.LayoutColumn;
@@ -245,8 +246,8 @@ public final class AdfRenderer {
     return left.size() == right.size() && left.containsAll(right) && right.containsAll(left);
   }
 
-  public String applyMarks(String text, List<AdfMark> marks) {
-    return markRenderer.applyMarks(text, marks);
+  public String applyMarks(String text, List<AdfMark> marks, boolean htmlVisualMarks) {
+    return markRenderer.applyMarks(text, marks, htmlVisualMarks);
   }
 
   public String joinBlocks(List<String> blocks) {
@@ -255,16 +256,18 @@ public final class AdfRenderer {
 
   private String renderInline(AdfInline node, RendererState context, boolean atLineStart) {
     return switch (node) {
-      // Only literal Text nodes are escaped; every other inline kind ignores the line-start flag.
       case Text text -> renderText(text, context, atLineStart);
       case HardBreak _ -> hardBreakMarker(context);
       case InlineCard card -> cardRenderer.renderInlineCard(card.attrs());
       case MediaInline media -> mediaRenderer.renderMediaInline(media, context, this);
-      case Date date -> MarkdownText.dateFromTimestamp(date.timestamp());
-      case Emoji emoji -> renderEmoji(emoji);
-      case Mention mention -> renderMention(mention);
-      case Placeholder placeholder -> placeholder.text();
-      case Status status -> renderStatus(status);
+      // Attribute-derived text is escaped like literal text, honouring atLineStart.
+      case Date date ->
+        MarkdownText.escapeInlineText(MarkdownText.dateFromTimestamp(date.timestamp()), atLineStart);
+      case Emoji emoji -> MarkdownText.escapeInlineText(renderEmoji(emoji), atLineStart);
+      case Mention mention -> MarkdownText.escapeInlineText(renderMention(mention), atLineStart);
+      case Placeholder placeholder ->
+        MarkdownText.escapeInlineText(placeholder.text(), atLineStart);
+      case Status status -> MarkdownText.labelToken(statusLabel(status));
       case InlineExtension extension ->
         macroRenderer.renderInlineExtension(extension, context);
       case UnknownInline unknown -> renderUnknownInlineByPolicy(unknown.type(), context);
@@ -273,7 +276,9 @@ public final class AdfRenderer {
 
   private String renderParagraph(Paragraph paragraph, RendererState context) {
     // Paragraphs start at column 0, so the first inline is at line start (the promotion-prone case).
-    return renderInlineNodes(paragraph.content(), context, true);
+    var rendered = renderInlineNodes(paragraph.content(), context, true);
+    // Prefix after escaping, so the nbsp indent run isn't itself marker-neutralised.
+    return rendered.isBlank() ? rendered : indentationPrefix(paragraph.marks()) + rendered;
   }
 
   private String renderHeading(Heading heading, RendererState context) {
@@ -285,11 +290,12 @@ public final class AdfRenderer {
 
     var headingInfo = context.headingInfo(heading);
     var anchor = headingInfo == null ? null : headingInfo.anchor();
-    var markup = "%s %s".formatted("#".repeat(level), text).trim();
-    // Inject <a id> only for explicit Confluence anchors; for auto-slug headings GitHub emits its own
-    // anchor (same id), so injecting would duplicate it. The slug is still kept on HeadingReference.
+    var markup = "%s %s%s".formatted("#".repeat(level), indentationPrefix(heading.marks()), text).trim();
+    // Inject the stored-slug <a id> for explicit anchors and toc-linked headings, so toc links don't
+    // depend on the consumer's slugger matching commonmark's.
     if (anchor != null && !anchor.isBlank()
-        && AdfHeadingCollector.hasExplicitAnchor(heading.content())) {
+        && (AdfHeadingCollector.hasExplicitAnchor(heading.content())
+            || context.isTocReferenced(heading))) {
       return HtmlFragments.anchor(anchor) + "\n" + markup;
     }
     return markup;
@@ -337,35 +343,59 @@ public final class AdfRenderer {
         && !Character.isWhitespace(rendered.charAt(0));
   }
 
+  // U+00A0 per indent step; ASCII spaces are unreliable as leading indent (4+ become a code block).
+  private static final String INDENT_UNIT = "    ";
+
+  // A run of non-breaking spaces for the block's Indentation mark (level 1..6), or "" when absent.
+  private static String indentationPrefix(List<AdfMark> marks) {
+    for (var mark : marks) {
+      if (mark instanceof Indentation indentation) {
+        return INDENT_UNIT.repeat(Math.clamp(indentation.level(), 0, 6));
+      }
+    }
+    return "";
+  }
+
   private String renderBlockQuote(Blockquote blockquote, RendererState context) {
     var content = joinBlocks(renderBlocks(blockquote.content(), context));
     return toBlockQuote(content);
   }
 
   private String renderPanel(Panel panel, RendererState context) {
-    var alertHeader = "> [!" + gfmAlertType(panel.panelType()) + "]";
+    var alert = gfmAlert(panel.panelType());
+    var header = new StringBuilder("> [!").append(alert.keyword()).append("]");
+    // The bolded label is the first blockquote body line, distinguishing types GFM collapses
+    // (success vs tip, note vs info) without re-labelling those that already match their alert.
+    if (alert.label() != null) {
+      header.append("\n> **").append(alert.label()).append("**");
+    }
     var content = joinBlocks(renderBlocks(panel.content(), context));
     if (content.isBlank()) {
-      return alertHeader;
+      return header.toString();
     }
-    return alertHeader + "\n" + toBlockQuote(content);
+    return header + "\n" + toBlockQuote(content);
   }
 
   /**
-   * Maps an Atlassian panel type to a GFM alert keyword: info/note/custom/unknown -&gt; NOTE,
-   * warning -&gt; WARNING, error -&gt; CAUTION, tip/success -&gt; TIP (GFM has no success alert).
+   * Maps an Atlassian panel type to a GFM alert keyword plus an optional bolded label line:
+   * info/custom/unknown -&gt; NOTE, note -&gt; NOTE + "Note", warning -&gt; WARNING, error -&gt;
+   * CAUTION, tip -&gt; TIP, success -&gt; TIP + "Success" (GFM has neither a note nor a success alert).
    */
-  private static String gfmAlertType(String panelType) {
+  private static GfmAlert gfmAlert(String panelType) {
     if (panelType == null) {
-      return "NOTE";
+      return new GfmAlert("NOTE", null);
     }
     return switch (panelType.toLowerCase(Locale.ROOT)) {
-      case "info" -> "NOTE";
-      case "warning" -> "WARNING";
-      case "error" -> "CAUTION";
-      case "tip", "success" -> "TIP";
-      default -> "NOTE";
+      case "warning" -> new GfmAlert("WARNING", null);
+      case "error" -> new GfmAlert("CAUTION", null);
+      case "tip" -> new GfmAlert("TIP", null);
+      case "success" -> new GfmAlert("TIP", "Success");
+      case "note" -> new GfmAlert("NOTE", "Note");
+      default -> new GfmAlert("NOTE", null);
     };
+  }
+
+  private record GfmAlert(String keyword, String label) {
   }
 
   private String toBlockQuote(String value) {
@@ -412,13 +442,13 @@ public final class AdfRenderer {
     // Code-marked text is literal (applyMarks wraps it in backticks), so it must not be escaped.
     var hasCodeMark = text.marks().stream().anyMatch(Code.class::isInstance);
     if (hasCodeMark) {
-      return applyMarks(text.text(), text.marks());
+      return applyMarks(text.text(), text.marks(), context.htmlVisualMarks());
     }
     // Suppress leading-block escaping only in a GFM pipe cell (inline context). An HTML-fragment cell
     // is re-parsed as a block document, so a leading marker there must still be neutralized.
     var atLineStartEscaping = atLineStart && context.tableCell() != TableCellKind.GFM;
     var escaped = MarkdownText.escapeInlineText(text.text(), atLineStartEscaping);
-    return applyMarks(escaped, text.marks());
+    return applyMarks(escaped, text.marks(), context.htmlVisualMarks());
   }
 
   private String hardBreakMarker(RendererState context) {
@@ -440,20 +470,13 @@ public final class AdfRenderer {
 
   private String renderMention(Mention mention) {
     var text = mention.text();
-    if (text != null && !text.isBlank()) {
-      return text;
-    }
-    var id = mention.id();
-    if (id != null && !id.isBlank()) {
-      return "@" + id;
-    }
-    return "@mention";
+    // Fall back to a neutral marker rather than an opaque ARI/UUID id, which is unsightly.
+    return text != null && !text.isBlank() ? text : "@unknown";
   }
 
-  private String renderStatus(Status status) {
+  private String statusLabel(Status status) {
     var text = status.text();
-    var safeText = text == null || text.isBlank() ? "status" : text;
-    return "[%s]".formatted(safeText);
+    return text == null || text.isBlank() ? "status" : text;
   }
 
   private List<String> renderUnknownBlockByPolicy(String nodeType, RendererState context) {
@@ -466,8 +489,9 @@ public final class AdfRenderer {
       case FAIL -> throw new IllegalStateException("Unsupported ADF block node type: " + label);
       case PLACEHOLDER -> {
         log.warn("Rendering placeholder for unsupported ADF block node type: {}", label);
-        var placeholder = nodeType == null || nodeType.isBlank() ? "" : "[Unsupported: " + nodeType + "]";
-        yield placeholder.isBlank() ? List.of() : List.of(placeholder);
+        yield nodeType == null || nodeType.isBlank()
+            ? List.of()
+            : List.of(MarkdownText.labelToken("Unsupported: " + nodeType));
       }
     };
   }
@@ -482,7 +506,9 @@ public final class AdfRenderer {
       case FAIL -> throw new IllegalStateException("Unsupported ADF inline node type: " + label);
       case PLACEHOLDER -> {
         log.warn("Rendering placeholder for unsupported ADF inline node type: {}", label);
-        yield nodeType == null || nodeType.isBlank() ? "" : "[Unsupported inline: " + nodeType + "]";
+        yield nodeType == null || nodeType.isBlank()
+            ? ""
+            : MarkdownText.labelToken("Unsupported inline: " + nodeType);
       }
     };
   }

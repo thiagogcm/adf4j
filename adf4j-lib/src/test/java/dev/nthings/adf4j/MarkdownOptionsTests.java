@@ -21,11 +21,11 @@ class MarkdownOptionsTests {
 
   @Test
   void constructor_and_copy_methods_normalize_null_policy_and_context() {
-    var options = new MarkdownOptions(null, null, false, null, null);
+    var options = new MarkdownOptions(null, null, false, null, null, false);
 
     assertThat(options.unknownNodePolicy()).isEqualTo(UnknownNodePolicy.PLACEHOLDER);
     assertThat(options.context()).isEqualTo(ConfluenceRenderContext.empty());
-    assertThat(options.tableFallback()).isEqualTo(TableFallback.HTML);
+    assertThat(options.tableFallback()).isEqualTo(TableFallback.GFM_PROMOTE_FIRST_ROW);
     assertThat(options.mediaResolver()).isNull();
     assertThat(options.withUnknownNodePolicy(UnknownNodePolicy.SKIP).unknownNodePolicy())
         .isEqualTo(UnknownNodePolicy.SKIP);
@@ -35,15 +35,15 @@ class MarkdownOptionsTests {
   @Test
   void table_fallback_and_media_resolver_default_and_carry_through_other_withers() {
     var options = MarkdownOptions.defaults();
-    assertThat(options.tableFallback()).isEqualTo(TableFallback.HTML);
+    assertThat(options.tableFallback()).isEqualTo(TableFallback.GFM_PROMOTE_FIRST_ROW);
     assertThat(options.mediaResolver()).isNull();
 
-    var fallback = options.withTableFallback(TableFallback.GFM_PROMOTE_FIRST_ROW);
-    assertThat(fallback.tableFallback()).isEqualTo(TableFallback.GFM_PROMOTE_FIRST_ROW);
+    var fallback = options.withTableFallback(TableFallback.HTML);
+    assertThat(fallback.tableFallback()).isEqualTo(TableFallback.HTML);
     assertThat(fallback.withUnknownNodePolicy(UnknownNodePolicy.SKIP).tableFallback())
-        .isEqualTo(TableFallback.GFM_PROMOTE_FIRST_ROW);
+        .isEqualTo(TableFallback.HTML);
     assertThat(fallback.withImageSizeAttributes(true).tableFallback())
-        .isEqualTo(TableFallback.GFM_PROMOTE_FIRST_ROW);
+        .isEqualTo(TableFallback.HTML);
 
     var resolver = options.withMediaResolver(attrs -> "https://cdn.example.com/" + attrs.id());
     assertThat(resolver.mediaResolver()).isNotNull();
@@ -62,6 +62,17 @@ class MarkdownOptionsTests {
     assertThat(enabled.imageSizeAttributes()).isTrue();
     assertThat(enabled.withUnknownNodePolicy(UnknownNodePolicy.SKIP).imageSizeAttributes()).isTrue();
     assertThat(enabled.withContext(ConfluenceRenderContext.empty()).imageSizeAttributes()).isTrue();
+  }
+
+  @Test
+  void html_visual_marks_default_off_and_carry_through_other_withers() {
+    var options = MarkdownOptions.defaults();
+    assertThat(options.htmlVisualMarks()).isFalse();
+
+    var enabled = options.withHtmlVisualMarks(true);
+    assertThat(enabled.htmlVisualMarks()).isTrue();
+    assertThat(enabled.withUnknownNodePolicy(UnknownNodePolicy.SKIP).htmlVisualMarks()).isTrue();
+    assertThat(enabled.withTableFallback(TableFallback.HTML).htmlVisualMarks()).isTrue();
   }
 
   @Test

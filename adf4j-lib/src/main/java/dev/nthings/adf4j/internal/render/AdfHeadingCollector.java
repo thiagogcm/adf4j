@@ -1,8 +1,10 @@
 package dev.nthings.adf4j.internal.render;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import dev.nthings.adf4j.metadata.HeadingReference;
@@ -21,6 +23,7 @@ import dev.nthings.adf4j.ast.DecisionItem;
 import dev.nthings.adf4j.ast.DecisionList;
 import dev.nthings.adf4j.ast.Emoji;
 import dev.nthings.adf4j.ast.Expand;
+import dev.nthings.adf4j.ast.Extension;
 import dev.nthings.adf4j.ast.ExtensionFrame;
 import dev.nthings.adf4j.ast.HardBreak;
 import dev.nthings.adf4j.ast.Heading;
@@ -29,6 +32,7 @@ import dev.nthings.adf4j.ast.InlineExtension;
 import dev.nthings.adf4j.ast.LayoutColumn;
 import dev.nthings.adf4j.ast.LayoutSection;
 import dev.nthings.adf4j.ast.ListItem;
+import dev.nthings.adf4j.ast.MacroParams;
 import dev.nthings.adf4j.ast.MediaInline;
 import dev.nthings.adf4j.ast.Mention;
 import dev.nthings.adf4j.ast.MultiBodiedExtension;
@@ -54,11 +58,14 @@ public final class AdfHeadingCollector {
       return HeadingOutline.empty();
     }
 
+    var walk = new Walk();
+    walk.blocks(document.content());
+
     var headings = new ArrayList<HeadingReference>();
     var idGenerator = IdGenerator.builder().defaultId("section").build();
     var headingsByNode = new IdentityHashMap<Heading, HeadingReference>();
 
-    for (var heading : walkHeadings(document)) {
+    for (var heading : walk.headings) {
       var level = MarkdownText.clampHeadingLevel(heading.level());
       var headingText = extractHeadingPlainText(heading.content());
       if (headingText.isBlank()) {
@@ -75,7 +82,7 @@ public final class AdfHeadingCollector {
       headingsByNode.put(heading, headingRef);
     }
 
-    return HeadingOutline.of(headings, headingsByNode);
+    return HeadingOutline.of(headings, headingsByNode, walk.tocReferencedLevels);
   }
 
   static List<AdfInline> normalizedHeadingNodes(List<AdfInline> content) {
@@ -191,50 +198,69 @@ public final class AdfHeadingCollector {
     return null;
   }
 
-  private List<Heading> walkHeadings(AdfDocument document) {
-    var headings = new ArrayList<Heading>();
-    walkBlocks(document.content(), headings);
-    return headings;
-  }
+  // A single pass that records every heading and the union of all toc macros' level ranges, so the
+  // injected-anchor set equals the set the rendered toc actually links.
+  private static final class Walk {
 
-  private void walkBlocks(List<AdfBlock> blocks, List<Heading> headings) {
-    for (var block : blocks) {
-      walkBlock(block, headings);
+    private final List<Heading> headings = new ArrayList<>();
+    private final Set<Integer> tocReferencedLevels = new HashSet<>();
+
+    private void blocks(List<AdfBlock> blocks) {
+      for (var block : blocks) {
+        block(block);
+      }
     }
-  }
 
-  private void walkBlock(AdfBlock block, List<Heading> headings) {
-    switch (block) {
-      case Heading heading -> {
-        headings.add(heading);
-      }
-      case Paragraph _, ListItem _, TaskItem _, DecisionItem _, Caption _ -> {
-        // No nested headings inside inline-bearing leaves.
-      }
-      case Blockquote bq -> walkBlocks(bq.content(), headings);
-      case Panel p -> walkBlocks(p.content(), headings);
-      case BulletList bl -> bl.content().forEach(item -> walkBlocks(item.content(), headings));
-      case OrderedList ol -> ol.content().forEach(item -> walkBlocks(item.content(), headings));
-      case TaskList tl -> walkBlocks(tl.content(), headings);
-      case BlockTaskItem bti -> walkBlocks(bti.content(), headings);
-      case DecisionList dl -> {
-        // Decision items only carry inlines.
-        for (var item : dl.content()) {
-          walkBlock(item, headings);
+    private void block(AdfBlock block) {
+      switch (block) {
+        case Heading heading -> headings.add(heading);
+        case Paragraph p -> inlines(p.content());
+        case TaskItem item -> inlines(item.content());
+        case DecisionItem item -> inlines(item.content());
+        case Caption caption -> inlines(caption.content());
+        case ListItem item -> blocks(item.content());
+        case Extension extension -> recordToc(extension.extensionType(), extension.extensionKey(),
+            extension.macroParams());
+        case Blockquote bq -> blocks(bq.content());
+        case Panel p -> blocks(p.content());
+        case BulletList bl -> bl.content().forEach(item -> blocks(item.content()));
+        case OrderedList ol -> ol.content().forEach(item -> blocks(item.content()));
+        case TaskList tl -> blocks(tl.content());
+        case BlockTaskItem bti -> blocks(bti.content());
+        case DecisionList dl -> dl.content().forEach(this::block);
+        case Table table -> table.content().forEach(this::block);
+        case TableRow row -> row.content().forEach(this::block);
+        case TableCell cell -> blocks(cell.content());
+        case Expand expand -> blocks(expand.content());
+        case NestedExpand expand -> blocks(expand.content());
+        case LayoutSection layout -> layout.content().forEach(this::block);
+        case LayoutColumn column -> blocks(column.content());
+        case BodiedExtension extension -> blocks(extension.content());
+        case MultiBodiedExtension mbe -> blocks(mbe.content());
+        case ExtensionFrame frame -> blocks(frame.content());
+        case BodiedSyncBlock sync -> blocks(sync.content());
+        default -> {
         }
       }
-      case Table table -> table.content().forEach(row -> walkBlock(row, headings));
-      case TableRow row -> row.content().forEach(cell -> walkBlock(cell, headings));
-      case TableCell cell -> walkBlocks(cell.content(), headings);
-      case Expand expand -> walkBlocks(expand.content(), headings);
-      case NestedExpand expand -> walkBlocks(expand.content(), headings);
-      case LayoutSection layout -> layout.content().forEach(column -> walkBlock(column, headings));
-      case LayoutColumn column -> walkBlocks(column.content(), headings);
-      case BodiedExtension extension -> walkBlocks(extension.content(), headings);
-      case MultiBodiedExtension mbe -> walkBlocks(mbe.content(), headings);
-      case ExtensionFrame frame -> walkBlocks(frame.content(), headings);
-      case BodiedSyncBlock sync -> walkBlocks(sync.content(), headings);
-      default -> {
+    }
+
+    private void inlines(List<AdfInline> inlines) {
+      for (var inline : inlines) {
+        if (inline instanceof InlineExtension extension) {
+          recordToc(
+              extension.extensionType(), extension.extensionKey(), extension.macroParams());
+        }
+      }
+    }
+
+    private void recordToc(String extensionType, String extensionKey, MacroParams macroParams) {
+      if (!ConfluenceSupport.isConfluenceMacroExtension(extensionType)
+          || !"toc".equals(extensionKey)) {
+        return;
+      }
+      var range = TocLevelRange.of(macroParams);
+      for (var level = range.min(); level <= range.max(); level++) {
+        tocReferencedLevels.add(level);
       }
     }
   }

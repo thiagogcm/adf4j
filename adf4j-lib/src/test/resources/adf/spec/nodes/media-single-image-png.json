@@ -1,0 +1,22 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "mediaSingle",
+      "attrs": { "layout": "center" },
+      "content": [
+        {
+          "type": "media",
+          "attrs": {
+            "type": "file",
+            "id": "file-png",
+            "collection": "contentId-2",
+            "mediaType": "image/png",
+            "alt": "Screenshot"
+          }
+        }
+      ]
+    }
+  ]
+}

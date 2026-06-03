@@ -19,7 +19,8 @@ record RenderContext(
     UnknownNodePolicy unknownNodePolicy,
     boolean imageSizeAttributes,
     TableFallback tableFallback,
-    MediaResolver mediaResolver) {
+    MediaResolver mediaResolver,
+    boolean htmlVisualMarks) {
 
   static RenderContext from(MarkdownOptions options, HeadingOutline headingOutline) {
     var requiredOptions = Objects.requireNonNull(options, "options");
@@ -31,6 +32,7 @@ record RenderContext(
         requiredOptions.unknownNodePolicy(),
         requiredOptions.imageSizeAttributes(),
         requiredOptions.tableFallback(),
-        requiredOptions.mediaResolver());
+        requiredOptions.mediaResolver(),
+        requiredOptions.htmlVisualMarks());
   }
 }

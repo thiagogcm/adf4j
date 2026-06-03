@@ -45,6 +45,11 @@ final class MarkdownText {
     return Objects.requireNonNullElse(value, "").replace("[", "\\[").replace("]", "\\]");
   }
 
+  /** A literal {@code [inner]} label token, fully inline-escaped so it can't parse as a link. */
+  public static String labelToken(String inner) {
+    return escapeInlineText("[" + Objects.requireNonNullElse(inner, "") + "]", false);
+  }
+
   /** Length of the longest run of consecutive backticks in {@code value} (0 for null/empty). */
   public static int longestBacktickRun(String value) {
     if (value == null || value.isEmpty()) {
@@ -203,6 +208,8 @@ final class MarkdownText {
       return url;
     }
 
+    // Known limitation: a literal '<'/'>' in the URL is left as-is (a valid bare CommonMark
+    // destination) and an embedded newline here is not percent-encoded.
     return url.replace(" ", "%20").replace("(", "%28").replace(")", "%29");
   }
 

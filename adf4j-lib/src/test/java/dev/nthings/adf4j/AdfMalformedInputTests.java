@@ -18,7 +18,8 @@ class AdfMalformedInputTests {
 
   @Test
   void table_row_with_a_non_cell_child_does_not_throw() {
-    // A paragraph where a tableCell belongs: the bogus child is dropped, leaving an empty table.
+    // A paragraph where a tableCell belongs: the bogus child is dropped, leaving no renderable cells
+    // (under the default promote-first-row fallback an all-empty table renders nothing).
     var adf = """
         {
           "type": "doc",
@@ -35,7 +36,7 @@ class AdfMalformedInputTests {
 
     assertThatCode(() -> processor.toMarkdown(adf)).doesNotThrowAnyException();
     var markdown = processor.toMarkdown(adf);
-    assertThat(markdown).isNotNull().isEqualTo("<table></table>");
+    assertThat(markdown).isNotNull().isEmpty();
   }
 
   @Test
@@ -60,7 +61,8 @@ class AdfMalformedInputTests {
 
   @Test
   void table_row_with_a_stray_text_node_does_not_throw() {
-    // Loose inline text directly under a tableRow (where cells belong) is dropped.
+    // Loose inline text directly under a tableRow (where cells belong) is dropped, leaving no
+    // renderable cells (the default promote-first-row fallback renders an all-empty table as nothing).
     var adf = """
         {
           "type": "doc",
@@ -77,7 +79,7 @@ class AdfMalformedInputTests {
 
     assertThatCode(() -> processor.toMarkdown(adf)).doesNotThrowAnyException();
     var markdown = processor.toMarkdown(adf);
-    assertThat(markdown).isNotNull().isEqualTo("<table></table>");
+    assertThat(markdown).isNotNull().isEmpty();
   }
 
   @Test

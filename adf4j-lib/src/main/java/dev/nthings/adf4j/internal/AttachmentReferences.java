@@ -42,6 +42,26 @@ public final class AttachmentReferences {
     return stripped.toLowerCase(Locale.ROOT);
   }
 
+  /** Classifies media as image by MIME/type then filename extension; unknown defaults to image. */
+  public static boolean isImage(String mimeOrType, String fileName) {
+    var classification = classify(mimeOrType);
+    if (classification == null) {
+      classification = classify(inferMediaType(fileName));
+    }
+    return classification == null || classification;
+  }
+
+  private static Boolean classify(String mimeOrType) {
+    var normalized = mimeOrType == null ? null : mimeOrType.strip().toLowerCase(Locale.ROOT);
+    if (normalized == null || normalized.isEmpty()) {
+      return null;
+    }
+    if (normalized.equals("image") || normalized.startsWith("image/")) {
+      return Boolean.TRUE;
+    }
+    return normalized.indexOf('/') >= 0 ? Boolean.FALSE : null;
+  }
+
   public static AttachmentReference resolve(
       MacroParams macroParams,
       Map<String, AttachmentReference> attachmentReferencesByTitle) {
@@ -72,7 +92,7 @@ public final class AttachmentReferences {
     return new AttachmentReference(fileId, name, inferMediaType(name));
   }
 
-  private static String inferMediaType(String fileName) {
+  static String inferMediaType(String fileName) {
     if (fileName == null) {
       return null;
     }

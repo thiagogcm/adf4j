@@ -3,7 +3,9 @@ package dev.nthings.adf4j.internal.render;
 import java.util.ArrayList;
 import java.util.List;
 
+import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.ast.AdfInline;
+import dev.nthings.adf4j.ast.Heading;
 import dev.nthings.adf4j.ast.Text;
 import dev.nthings.adf4j.internal.parser.AdfAstParser;
 
@@ -248,6 +250,80 @@ class AdfHeadingCollectorTests {
 
     assertThat(outline.headings()).isEmpty();
   }
+
+  @Test
+  void headings_without_any_toc_macro_are_not_toc_referenced() throws Exception {
+    var document = PARSER.parseDocument(MAPPER.readTree(adfWithHeading(2, "Getting Started")));
+    var outline = collector.collect(document);
+
+    assertThat(tocReferencedFlags(document, outline)).containsExactly(false);
+  }
+
+  @Test
+  void a_toc_macro_marks_every_heading_in_its_level_range_as_toc_referenced() throws Exception {
+    var document = PARSER.parseDocument(MAPPER.readTree(TOC_WITH_HEADINGS));
+    var outline = collector.collect(document);
+
+    // The toc covers levels 1..2, so both the level-1 and level-2 headings are referenced.
+    assertThat(tocReferencedFlags(document, outline)).containsExactly(true, true);
+  }
+
+  @Test
+  void a_toc_macro_does_not_reference_headings_outside_its_level_range() throws Exception {
+    var document = PARSER.parseDocument(MAPPER.readTree(TOC_LEVEL_1_ONLY));
+    var outline = collector.collect(document);
+
+    // minLevel=maxLevel=1, so only the level-1 heading is referenced.
+    assertThat(tocReferencedFlags(document, outline)).containsExactly(true, false);
+  }
+
+  private static List<Boolean> tocReferencedFlags(AdfDocument document, HeadingOutline outline) {
+    return document.content().stream()
+        .filter(Heading.class::isInstance)
+        .map(Heading.class::cast)
+        .map(outline::isTocReferenced)
+        .toList();
+  }
+
+  private static final String TOC_WITH_HEADINGS =
+      """
+      {
+        "type": "doc",
+        "version": 1,
+        "content": [
+          {
+            "type": "extension",
+            "attrs": {
+              "extensionType": "com.atlassian.confluence.macro.core",
+              "extensionKey": "toc",
+              "parameters": {"macroParams": {"minLevel": {"value": "1"}, "maxLevel": {"value": "2"}}}
+            }
+          },
+          {"type": "heading", "attrs": {"level": 1}, "content": [{"type": "text", "text": "Top"}]},
+          {"type": "heading", "attrs": {"level": 2}, "content": [{"type": "text", "text": "Sub"}]}
+        ]
+      }
+      """;
+
+  private static final String TOC_LEVEL_1_ONLY =
+      """
+      {
+        "type": "doc",
+        "version": 1,
+        "content": [
+          {
+            "type": "extension",
+            "attrs": {
+              "extensionType": "com.atlassian.confluence.macro.core",
+              "extensionKey": "toc",
+              "parameters": {"macroParams": {"minLevel": {"value": "1"}, "maxLevel": {"value": "1"}}}
+            }
+          },
+          {"type": "heading", "attrs": {"level": 1}, "content": [{"type": "text", "text": "Top"}]},
+          {"type": "heading", "attrs": {"level": 2}, "content": [{"type": "text", "text": "Sub"}]}
+        ]
+      }
+      """;
 
   private static String adfWithHeading(int level, String text) {
     return

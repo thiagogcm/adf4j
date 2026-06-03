@@ -1,0 +1,12 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "paragraph",
+      "content": [
+        { "type": "mention", "attrs": { "id": "user-7", "text": "- dash-led name" } }
+      ]
+    }
+  ]
+}

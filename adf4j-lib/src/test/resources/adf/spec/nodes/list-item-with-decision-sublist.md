@@ -1,2 +1,2 @@
 - Outer
-  - [decision:DECIDED] nested
+  - \[decision:DECIDED\] nested

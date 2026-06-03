@@ -47,8 +47,16 @@ record RendererState(RenderContext context, int listDepth, TableCellKind tableCe
     return context.mediaResolver();
   }
 
+  boolean htmlVisualMarks() {
+    return context.htmlVisualMarks();
+  }
+
   HeadingReference headingInfo(Heading heading) {
     return context.headingOutline().infoFor(heading);
+  }
+
+  boolean isTocReferenced(Heading heading) {
+    return context.headingOutline().isTocReferenced(heading);
   }
 
   // Cursor transitions.

@@ -1,2 +1,2 @@
-- [decision:DECIDED] Ship it.
-- [decision:UNDECIDED] Still discussing.
+- \[decision:DECIDED\] Ship it.
+- \[decision:UNDECIDED\] Still discussing.

@@ -3,21 +3,29 @@ package dev.nthings.adf4j.internal.render;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import dev.nthings.adf4j.metadata.HeadingReference;
 import dev.nthings.adf4j.ast.Heading;
 
 public final class HeadingOutline {
 
-  private static final HeadingOutline EMPTY = new HeadingOutline(List.of(), new IdentityHashMap<>());
+  private static final HeadingOutline EMPTY =
+      new HeadingOutline(List.of(), new IdentityHashMap<>(), Set.of());
 
   private final List<HeadingReference> headings;
   private final Map<Heading, HeadingReference> headingsByNode;
+  // Clamped heading levels covered by at least one toc macro; their headings get an injected anchor.
+  private final Set<Integer> tocReferencedLevels;
 
   private HeadingOutline(
-      List<HeadingReference> headings, Map<Heading, HeadingReference> headingsByNode) {
+      List<HeadingReference> headings,
+      Map<Heading, HeadingReference> headingsByNode,
+      Set<Integer> tocReferencedLevels) {
     this.headings = headings == null ? List.of() : List.copyOf(headings);
     this.headingsByNode = headingsByNode == null ? new IdentityHashMap<>() : headingsByNode;
+    this.tocReferencedLevels =
+        tocReferencedLevels == null ? Set.of() : Set.copyOf(tocReferencedLevels);
   }
 
   public static HeadingOutline empty() {
@@ -25,12 +33,15 @@ public final class HeadingOutline {
   }
 
   static HeadingOutline of(
-      List<HeadingReference> headings, IdentityHashMap<Heading, HeadingReference> headingsByNode) {
+      List<HeadingReference> headings,
+      IdentityHashMap<Heading, HeadingReference> headingsByNode,
+      Set<Integer> tocReferencedLevels) {
     if ((headings == null || headings.isEmpty())
         && (headingsByNode == null || headingsByNode.isEmpty())) {
       return EMPTY;
     }
-    return new HeadingOutline(headings, new IdentityHashMap<>(headingsByNode));
+    return new HeadingOutline(
+        headings, new IdentityHashMap<>(headingsByNode), tocReferencedLevels);
   }
 
   public List<HeadingReference> headings() {
@@ -39,5 +50,9 @@ public final class HeadingOutline {
 
   HeadingReference infoFor(Heading heading) {
     return headingsByNode.get(heading);
+  }
+
+  boolean isTocReferenced(Heading heading) {
+    return tocReferencedLevels.contains(MarkdownText.clampHeadingLevel(heading.level()));
   }
 }

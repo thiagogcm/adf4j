@@ -234,7 +234,8 @@ final class ListRenderer {
 
   String renderDecisionItem(DecisionItem node, RendererState context, AdfRenderer adfRenderer) {
     var state = node.state();
-    var label = state == null || state.isBlank() ? "[decision]" : "[decision:%s]".formatted(state);
+    var label = MarkdownText.labelToken(
+        state == null || state.isBlank() ? "decision" : "decision:" + state);
     var content = adfRenderer.renderInlineNodes(node.content(), context, false);
     var prefix = RenderBuffer.LIST_INDENT.repeat(Math.max(0, context.listDepth())) + "- ";
     if (content.isBlank()) {

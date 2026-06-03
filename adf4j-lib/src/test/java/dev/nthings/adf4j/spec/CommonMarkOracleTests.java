@@ -66,6 +66,50 @@ class CommonMarkOracleTests {
   }
 
   @Test
+  void indented_paragraph_stays_a_paragraph_and_does_not_promote_to_a_code_block() {
+    // The nbsp indent run is plain text, so a deeply-indented paragraph must stay a <p>, never a
+    // 4-space indented <pre><code> block.
+    var adf = """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {"type": "paragraph",
+             "marks": [{"type": "indentation", "attrs": {"level": 2}}],
+             "content": [{"type": "text", "text": "Indented twice."}]}
+          ]
+        }
+        """;
+
+    var document = Jsoup.parse(toHtml(adf));
+
+    assertThat(document.select("pre, code")).isEmpty();
+    assertThat(document.select("p")).hasSize(1);
+    assertThat(document.selectFirst("p").text()).endsWith("Indented twice.");
+  }
+
+  @Test
+  void indented_heading_stays_a_heading() {
+    // The nbsp run sits after the "# " marker, so the block is still parsed as an ATX heading.
+    var adf = """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {"type": "heading", "attrs": {"level": 2},
+             "marks": [{"type": "indentation", "attrs": {"level": 1}}],
+             "content": [{"type": "text", "text": "Indented heading"}]}
+          ]
+        }
+        """;
+
+    var document = Jsoup.parse(toHtml(adf));
+
+    assertThat(document.select("h2")).hasSize(1);
+    assertThat(document.selectFirst("h2").text()).endsWith("Indented heading");
+  }
+
+  @Test
   void paragraph_that_merely_starts_with_text_does_not_produce_a_stray_heading() {
     // "# notes" inside a paragraph's text must render as a paragraph, never an ATX heading.
     var adf = """
@@ -181,6 +225,117 @@ class CommonMarkOracleTests {
   }
 
   @Test
+  void placeholder_with_link_and_emphasis_metacharacters_stays_inert_text() {
+    // A placeholder carrying "[label](http://evil) *x*" must not parse into an anchor or emphasis.
+    var adf = """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {"type": "paragraph", "content": [
+              {"type": "text", "text": "Owner: "},
+              {"type": "placeholder", "attrs": {"text": "[label](http://evil) *x*"}}
+            ]}
+          ]
+        }
+        """;
+
+    var document = Jsoup.parse(toHtml(adf));
+
+    assertThat(document.select("a")).isEmpty();
+    assertThat(document.select("em")).isEmpty();
+    assertThat(document.selectFirst("p").text()).isEqualTo("Owner: [label](http://evil) *x*");
+  }
+
+  @Test
+  void placeholder_as_first_inline_starting_with_hash_does_not_become_a_heading() {
+    // A placeholder is a block's first inline; its "# ..." text must stay a paragraph.
+    var adf = """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {"type": "paragraph", "content": [
+              {"type": "placeholder", "attrs": {"text": "# fill in the title"}}
+            ]}
+          ]
+        }
+        """;
+
+    var document = Jsoup.parse(toHtml(adf));
+
+    assertThat(document.select("h1, h2, h3, h4, h5, h6")).isEmpty();
+    assertThat(document.select("p")).hasSize(1);
+    assertThat(document.selectFirst("p").text()).isEqualTo("# fill in the title");
+  }
+
+  @Test
+  void mention_as_first_inline_starting_with_dash_does_not_become_a_list() {
+    // A mention's "- ..." text at line start must not promote to a bullet list item.
+    var adf = """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {"type": "paragraph", "content": [
+              {"type": "mention", "attrs": {"id": "user-7", "text": "- dash-led name"}}
+            ]}
+          ]
+        }
+        """;
+
+    var document = Jsoup.parse(toHtml(adf));
+
+    assertThat(document.select("ul, ol, li")).isEmpty();
+    assertThat(document.select("p")).hasSize(1);
+    assertThat(document.selectFirst("p").text()).isEqualTo("- dash-led name");
+  }
+
+  @Test
+  void non_numeric_date_as_first_inline_starting_with_gt_does_not_become_a_blockquote() {
+    // A non-numeric date timestamp passes through verbatim; a leading ">" must not start a quote.
+    var adf = """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {"type": "paragraph", "content": [
+              {"type": "date", "attrs": {"timestamp": "> see linked page"}}
+            ]}
+          ]
+        }
+        """;
+
+    var document = Jsoup.parse(toHtml(adf));
+
+    assertThat(document.select("blockquote")).isEmpty();
+    assertThat(document.select("p")).hasSize(1);
+    assertThat(document.selectFirst("p").text()).isEqualTo("> see linked page");
+  }
+
+  @Test
+  void status_then_placeholder_with_leading_paren_does_not_inject_a_link() {
+    // "[Done]" (status) glued to "(see ref)" (placeholder) must not parse into an inline link.
+    var adf = """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {"type": "paragraph", "content": [
+              {"type": "status", "attrs": {"text": "Done", "color": "green"}},
+              {"type": "placeholder", "attrs": {"text": "(see ref)"}}
+            ]}
+          ]
+        }
+        """;
+
+    var document = Jsoup.parse(toHtml(adf));
+
+    assertThat(document.select("a")).isEmpty();
+    assertThat(document.selectFirst("p").text()).isEqualTo("[Done](see ref)");
+  }
+
+  @Test
   void gfm_table_with_header_row_parses_to_a_table_with_a_header_cell() {
     var adf = """
         {
@@ -211,5 +366,33 @@ class CommonMarkOracleTests {
     assertThat(document.select("th")).hasSize(2);
     assertThat(document.select("th").eachText()).containsExactly("Name", "Score");
     assertThat(document.select("td")).hasSize(2);
+  }
+
+  @Test
+  void toc_referenced_heading_emits_an_anchor_that_matches_its_toc_link() {
+    // A duplicate heading name slugs to "dup" / "dup-1"; the injected <a id> for each must equal the
+    // toc link target so the link resolves on any consumer, not just a commonmark-compatible slugger.
+    var adf = """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {"type": "extension", "attrs": {"extensionType": "com.atlassian.confluence.macro.core",
+              "extensionKey": "toc"}},
+            {"type": "heading", "attrs": {"level": 1}, "content": [{"type": "text", "text": "Dup"}]},
+            {"type": "heading", "attrs": {"level": 1}, "content": [{"type": "text", "text": "Dup"}]}
+          ]
+        }
+        """;
+
+    var document = Jsoup.parse(toHtml(adf));
+
+    var tocTargets = document.select("ul a").eachAttr("href");
+    assertThat(tocTargets).containsExactly("#dup", "#dup-1");
+    for (var target : tocTargets) {
+      assertThat(document.select("a[id=" + target.substring(1) + "]"))
+          .as("injected anchor for %s", target)
+          .hasSize(1);
+    }
   }
 }

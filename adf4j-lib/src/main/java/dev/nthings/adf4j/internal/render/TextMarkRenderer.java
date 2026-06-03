@@ -28,7 +28,7 @@ final class TextMarkRenderer {
 
   private static final Comparator<AdfMark> INLINE_MARK_ORDER = Comparator.comparingInt(TextMarkRenderer::canonicalRank);
 
-  String applyMarks(String value, List<AdfMark> marks) {
+  String applyMarks(String value, List<AdfMark> marks, boolean htmlVisualMarks) {
     if (marks == null || marks.isEmpty()) {
       return value;
     }
@@ -55,6 +55,13 @@ final class TextMarkRenderer {
       nonLinkMarks.sort(INLINE_MARK_ORDER);
       for (var mark : nonLinkMarks) {
         rendered = applyInlineMark(rendered, mark);
+      }
+      // Opt-in: preserve visual-only marks as one combined <span style> instead of dropping them.
+      if (htmlVisualMarks) {
+        var style = visualStyle(nonLinkMarks);
+        if (!style.isEmpty()) {
+          rendered = wrap(rendered, "<span style=\"" + style + "\">", "</span>");
+        }
       }
     }
 
@@ -87,6 +94,39 @@ final class TextMarkRenderer {
       case Alignment _,Annotation _,Breakout _,Code _,DataConsumer _,Fragment _,Indentation _,Link _,UnknownMark _ ->
         99;
     };
+  }
+
+  // CSS for the visual-only marks, in canonical order, guarded against HTML-attribute breakout
+  // (the colour/size values are arbitrary JSON). Empty when there are no visual marks.
+  private String visualStyle(List<AdfMark> marks) {
+    var declarations = new ArrayList<String>();
+    for (var mark : marks) {
+      switch (mark) {
+        case FontSize fontSize -> addDeclaration(declarations, "font-size", fontSize.fontSize());
+        case TextColor textColor -> addDeclaration(declarations, "color", textColor.color());
+        case BackgroundColor backgroundColor ->
+          addDeclaration(declarations, "background-color", backgroundColor.color());
+        case Border border -> addBorderDeclaration(declarations, border);
+        default -> { }
+      }
+    }
+    return String.join("; ", declarations);
+  }
+
+  private void addDeclaration(List<String> declarations, String property, String value) {
+    if (value != null && !value.isBlank()) {
+      declarations.add(property + ":" + HtmlFragments.escapeHtmlText(value));
+    }
+  }
+
+  private void addBorderDeclaration(List<String> declarations, Border border) {
+    var size = border.size();
+    var color = border.color();
+    if (size == null || size.isBlank() || color == null || color.isBlank()) {
+      return;
+    }
+    declarations.add(
+        "border:" + HtmlFragments.escapeHtmlText(size) + "px solid " + HtmlFragments.escapeHtmlText(color));
   }
 
   private boolean isVisualOnlyHtmlMark(AdfMark mark) {

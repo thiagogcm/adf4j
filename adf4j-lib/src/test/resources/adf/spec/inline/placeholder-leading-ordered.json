@@ -1,0 +1,12 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "paragraph",
+      "content": [
+        { "type": "placeholder", "attrs": { "text": "1. first step" } }
+      ]
+    }
+  ]
+}

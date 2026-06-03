@@ -1,1 +1,1 @@
-Result: [Blocked]
+Result: \[Blocked\]

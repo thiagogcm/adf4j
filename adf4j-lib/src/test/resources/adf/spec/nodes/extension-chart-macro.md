@@ -1,1 +1,1 @@
-[Chart: Monthly metrics]
+\[Chart: Monthly metrics\]

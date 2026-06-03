@@ -1,1 +1,1 @@
-[Sync block: abc-123]
+\[Sync block: abc-123\]

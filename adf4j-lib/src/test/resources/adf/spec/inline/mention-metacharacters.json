@@ -1,0 +1,13 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "paragraph",
+      "content": [
+        { "type": "text", "text": "By " },
+        { "type": "mention", "attrs": { "id": "user-2", "text": "[ref](x)" } }
+      ]
+    }
+  ]
+}

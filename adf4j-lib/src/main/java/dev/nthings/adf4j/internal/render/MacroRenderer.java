@@ -88,29 +88,27 @@ final class MacroRenderer {
 
   private String extensionFallback(String text, String extensionType, String extensionKey) {
     if (text != null && !text.isBlank()) {
-      return text;
+      // Attribute-derived text; a block extension emits it at column 0, so neutralise leading markers.
+      return MarkdownText.escapeInlineText(text, true);
     }
     return renderExtensionPlaceholder(extensionType, extensionKey);
   }
 
   String renderSyncBlock(SyncBlock node) {
-    var resourceId = node.resourceId();
-    if (resourceId == null || resourceId.isBlank()) {
-      return "[Sync block]";
-    }
-    return "[Sync block: %s]".formatted(resourceId);
+    return syncBlockLabel(node.resourceId());
   }
 
   List<String> renderBodiedSyncBlock(
       BodiedSyncBlock node, RendererState context, AdfRenderer adfRenderer) {
     var blocks = new ArrayList<String>();
-    var resourceId = node.resourceId();
-    blocks.add(
-        resourceId == null || resourceId.isBlank()
-            ? "[Sync block]"
-            : "[Sync block: %s]".formatted(resourceId));
+    blocks.add(syncBlockLabel(node.resourceId()));
     blocks.addAll(adfRenderer.renderBlocks(node.content(), context));
     return blocks;
+  }
+
+  private String syncBlockLabel(String resourceId) {
+    return MarkdownText.labelToken(
+        resourceId == null || resourceId.isBlank() ? "Sync block" : "Sync block: " + resourceId);
   }
 
   private String renderChildrenPlaceholder(MacroParams macroParams) {
@@ -139,13 +137,9 @@ final class MacroRenderer {
       return "";
     }
 
-    var rawMin = parseIntOrDefault(macroParams.value("minLevel"), 1);
-    var rawMax = parseIntOrDefault(macroParams.value("maxLevel"), 6);
-    var minLevel = Math.clamp(Math.min(rawMin, rawMax), 1, 6);
-    var maxLevel = Math.clamp(Math.max(rawMin, rawMax), 1, 6);
-
+    var range = TocLevelRange.of(macroParams);
     var filtered = headings.stream()
-        .filter(heading -> heading.level() >= minLevel && heading.level() <= maxLevel)
+        .filter(heading -> range.includes(heading.level()))
         .toList();
     if (filtered.isEmpty()) {
       return "";
@@ -175,7 +169,7 @@ final class MacroRenderer {
   private String renderIframeMacro(MacroParams macroParams) {
     var src = macroParams.value("src");
     if (src == null || src.isBlank()) {
-      return "[Embedded content]";
+      return MarkdownText.labelToken("Embedded content");
     }
     return "[Embedded content](%s)".formatted(src);
   }
@@ -187,7 +181,7 @@ final class MacroRenderer {
     if (attachmentReference == null
         || attachmentReference.fileId() == null
         || attachmentReference.fileId().isBlank()) {
-      return name == null || name.isBlank() ? "[PDF]" : "[PDF: %s]".formatted(name);
+      return MarkdownText.labelToken(name == null || name.isBlank() ? "PDF" : "PDF: " + name);
     }
 
     var label = (name == null || name.isBlank()) ? "PDF" : "PDF: " + name;
@@ -196,30 +190,19 @@ final class MacroRenderer {
 
   private String renderChartMacro(MacroParams macroParams) {
     var title = macroParams.value("title");
-    return title == null || title.isBlank() ? "[Chart]" : "[Chart: %s]".formatted(title);
-  }
-
-  private int parseIntOrDefault(String raw, int fallback) {
-    if (raw == null || raw.isBlank()) {
-      return fallback;
-    }
-    try {
-      return Integer.parseInt(raw);
-    } catch (NumberFormatException _) {
-      return fallback;
-    }
+    return MarkdownText.labelToken(title == null || title.isBlank() ? "Chart" : "Chart: " + title);
   }
 
   private String renderExtensionPlaceholder(String extensionType, String extensionKey) {
     if (extensionType != null && extensionKey != null) {
       log.debug("Rendering placeholder for unsupported extension: {}/{}", extensionType, extensionKey);
-      return "[Extension: %s/%s]".formatted(extensionType, extensionKey);
+      return MarkdownText.labelToken("Extension: " + extensionType + "/" + extensionKey);
     }
     if (extensionKey != null) {
       log.debug("Rendering placeholder for unsupported extension key: {}", extensionKey);
-      return "[Extension: %s]".formatted(extensionKey);
+      return MarkdownText.labelToken("Extension: " + extensionKey);
     }
     log.debug("Rendering placeholder for extension with no type/key");
-    return "[Extension]";
+    return MarkdownText.labelToken("Extension");
   }
 }

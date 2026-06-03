@@ -1,0 +1,22 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "mediaSingle",
+      "attrs": { "layout": "center" },
+      "content": [
+        {
+          "type": "media",
+          "attrs": {
+            "type": "file",
+            "id": "file-pdf",
+            "collection": "contentId-1",
+            "__fileMimeType": "application/pdf",
+            "__fileName": "report.pdf"
+          }
+        }
+      ]
+    }
+  ]
+}

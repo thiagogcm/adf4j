@@ -1,0 +1,22 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "paragraph",
+      "content": [
+        { "type": "text", "text": "Download " },
+        {
+          "type": "mediaInline",
+          "attrs": {
+            "type": "file",
+            "id": "media-zip",
+            "collection": "c1",
+            "__fileMimeType": "application/zip",
+            "__fileName": "bundle.zip"
+          }
+        }
+      ]
+    }
+  ]
+}

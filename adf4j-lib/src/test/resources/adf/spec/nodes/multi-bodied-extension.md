@@ -1,4 +1,4 @@
-[Extension: com.atlassian.confluence.macro.core/tabs-group]
+\[Extension: com.atlassian.confluence.macro.core/tabs-group\]
 
 First tab body.
 

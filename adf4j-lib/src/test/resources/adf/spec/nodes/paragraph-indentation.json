@@ -1,0 +1,11 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "paragraph",
+      "marks": [ { "type": "indentation", "attrs": { "level": 2 } } ],
+      "content": [ { "type": "text", "text": "Indented twice." } ]
+    }
+  ]
+}
