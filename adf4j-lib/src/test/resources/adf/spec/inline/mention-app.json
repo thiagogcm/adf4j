@@ -1,0 +1,14 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "paragraph",
+      "content": [
+        { "type": "text", "text": "Notified by " },
+        { "type": "mention", "attrs": { "id": "app-7", "text": "@Automation", "userType": "APP" } },
+        { "type": "text", "text": "." }
+      ]
+    }
+  ]
+}

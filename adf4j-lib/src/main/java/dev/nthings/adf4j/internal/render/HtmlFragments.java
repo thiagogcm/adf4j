@@ -19,6 +19,18 @@ final class HtmlFragments {
     return outerHtml(element);
   }
 
+  /** Escapes the HTML text-significant characters so an ADF string is safe inside element text. */
+  static String escapeHtmlText(String value) {
+    if (value == null) {
+      return "";
+    }
+    return value
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("\"", "&quot;");
+  }
+
   static String outerHtml(Element element) {
     var document = Document.createShell("");
     document.outputSettings(new Document.OutputSettings().prettyPrint(false));

@@ -4,8 +4,9 @@ import java.util.Map;
 
 /**
  * Generic, immutable view over a node's raw ADF {@code attrs}. Holds only plain JSON-shaped values
- * (String, Long, Double, Boolean, nested {@link Map}/{@link List}, never null), so the core AST
- * stays free of any product-specific or JSON-library types. Product layers such as
+ * (String, Long, Double, Boolean, nested {@link Map}/{@link List}); map values are never null, but a
+ * nested list may contain null elements so a JSON {@code null} keeps its array index. This keeps the
+ * core AST free of any product-specific or JSON-library types. Product layers such as
  * {@code dev.nthings.adf4j.confluence} read their extras from here, which keeps the dependency
  * pointing from those layers to the AST and never the other way around.
  */

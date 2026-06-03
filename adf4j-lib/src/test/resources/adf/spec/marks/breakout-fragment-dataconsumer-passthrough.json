@@ -1,0 +1,20 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "type": "text",
+          "text": "Survives",
+          "marks": [
+            { "type": "breakout", "attrs": { "mode": "wide" } },
+            { "type": "fragment", "attrs": { "localId": "frag-1" } },
+            { "type": "dataConsumer", "attrs": { "sources": ["src-1"] } }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -5,6 +5,8 @@ import java.util.Objects;
 
 import dev.nthings.adf4j.metadata.AttachmentReference;
 import dev.nthings.adf4j.options.MarkdownOptions;
+import dev.nthings.adf4j.options.MediaResolver;
+import dev.nthings.adf4j.options.TableFallback;
 import dev.nthings.adf4j.options.UnknownNodePolicy;
 
 /**
@@ -15,7 +17,9 @@ record RenderContext(
     HeadingOutline headingOutline,
     Map<String, AttachmentReference> attachmentReferencesByTitle,
     UnknownNodePolicy unknownNodePolicy,
-    boolean imageSizeAttributes) {
+    boolean imageSizeAttributes,
+    TableFallback tableFallback,
+    MediaResolver mediaResolver) {
 
   static RenderContext from(MarkdownOptions options, HeadingOutline headingOutline) {
     var requiredOptions = Objects.requireNonNull(options, "options");
@@ -25,6 +29,8 @@ record RenderContext(
         safeOutline,
         confluence.attachmentReferencesByTitle(),
         requiredOptions.unknownNodePolicy(),
-        requiredOptions.imageSizeAttributes());
+        requiredOptions.imageSizeAttributes(),
+        requiredOptions.tableFallback(),
+        requiredOptions.mediaResolver());
   }
 }

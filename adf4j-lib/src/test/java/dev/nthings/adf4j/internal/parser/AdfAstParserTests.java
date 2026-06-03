@@ -1,10 +1,13 @@
 package dev.nthings.adf4j.internal.parser;
 
+import java.util.List;
+
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.AdfInline;
 import dev.nthings.adf4j.ast.AdfMark;
 import dev.nthings.adf4j.ast.Date;
 import dev.nthings.adf4j.ast.Emoji;
+import dev.nthings.adf4j.ast.InlineCard;
 import dev.nthings.adf4j.ast.Mention;
 import dev.nthings.adf4j.ast.Paragraph;
 import dev.nthings.adf4j.ast.Status;
@@ -183,5 +186,40 @@ class AdfAstParserTests {
     assertThat(params.value("objectNoValue")).isNull();
     assertThat(params.value("objectNonScalar")).isNull();
     assertThat(params.value("nullValue")).isNull();
+  }
+
+  @Test
+  void attributes_preserve_array_index_positions_including_an_interior_null() throws Exception {
+    // A colwidth-style array with a hole in the middle must keep its shape: index 1 stays null so
+    // positional readers (e.g. column N's width) don't shift. Integral JSON numbers become Long.
+    var raw = """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "inlineCard",
+                  "attrs": {"url": "https://example.com", "colwidth": [100, null, 200]}
+                }
+              ]
+            }
+          ]
+        }
+        """;
+    var document = parser.parseDocument(mapper.readTree(raw));
+
+    var paragraph = (Paragraph) document.content().getFirst();
+    var card = (InlineCard) paragraph.content().getFirst();
+    var attributes = card.attrs().attrs();
+
+    assertThat(attributes.values().get("colwidth")).isInstanceOf(List.class);
+    var colwidth = (List<?>) attributes.values().get("colwidth");
+    assertThat(colwidth).hasSize(3);
+    assertThat(colwidth.get(0)).isEqualTo(100L);
+    assertThat(colwidth.get(1)).as("the interior null keeps its index").isNull();
+    assertThat(colwidth.get(2)).isEqualTo(200L);
   }
 }

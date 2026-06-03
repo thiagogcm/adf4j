@@ -12,6 +12,11 @@ import dev.nthings.adf4j.result.ParseResult;
  * Converts Atlassian Document Format (ADF) JSON to Markdown. Immutable and thread-safe: configure
  * once with {@link #with(MarkdownOptions)} (or {@link #create()} for defaults) and reuse. For the
  * zero-config one-liner, see {@link Adf}.
+ *
+ * <p>The target is GitHub-Flavored Markdown. Some ADF constructs are lossy or by-design (dropped
+ * visual marks, the table HTML fallback, synthetic {@code media:} placeholders, and the fact that
+ * URL schemes are emitted verbatim and are <em>not</em> sanitized). These behaviors and the
+ * available {@link MarkdownOptions} are documented in {@code docs/markdown-conversion.md}.
  */
 public final class AdfToMarkdown {
 

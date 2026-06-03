@@ -6,7 +6,7 @@
       "type": "paragraph",
       "content": [
         { "type": "text", "text": "Card: " },
-        { "type": "inlineCard", "attrs": { "data": { "title": "Hidden" } } }
+        { "type": "inlineCard", "attrs": { "data": { "@type": "Object", "name": "Ticket 9", "url": "https://example.com/ticket/9" } } }
       ]
     }
   ]

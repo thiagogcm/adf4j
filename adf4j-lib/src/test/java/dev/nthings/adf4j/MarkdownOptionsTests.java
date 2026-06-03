@@ -2,6 +2,7 @@ package dev.nthings.adf4j;
 
 import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
 import dev.nthings.adf4j.options.MarkdownOptions;
+import dev.nthings.adf4j.options.TableFallback;
 import dev.nthings.adf4j.options.UnknownNodePolicy;
 
 import org.junit.jupiter.api.Test;
@@ -20,13 +21,36 @@ class MarkdownOptionsTests {
 
   @Test
   void constructor_and_copy_methods_normalize_null_policy_and_context() {
-    var options = new MarkdownOptions(null, null, false);
+    var options = new MarkdownOptions(null, null, false, null, null);
 
     assertThat(options.unknownNodePolicy()).isEqualTo(UnknownNodePolicy.PLACEHOLDER);
     assertThat(options.context()).isEqualTo(ConfluenceRenderContext.empty());
+    assertThat(options.tableFallback()).isEqualTo(TableFallback.HTML);
+    assertThat(options.mediaResolver()).isNull();
     assertThat(options.withUnknownNodePolicy(UnknownNodePolicy.SKIP).unknownNodePolicy())
         .isEqualTo(UnknownNodePolicy.SKIP);
     assertThat(options.withContext(null).context()).isEqualTo(ConfluenceRenderContext.empty());
+  }
+
+  @Test
+  void table_fallback_and_media_resolver_default_and_carry_through_other_withers() {
+    var options = MarkdownOptions.defaults();
+    assertThat(options.tableFallback()).isEqualTo(TableFallback.HTML);
+    assertThat(options.mediaResolver()).isNull();
+
+    var fallback = options.withTableFallback(TableFallback.GFM_PROMOTE_FIRST_ROW);
+    assertThat(fallback.tableFallback()).isEqualTo(TableFallback.GFM_PROMOTE_FIRST_ROW);
+    assertThat(fallback.withUnknownNodePolicy(UnknownNodePolicy.SKIP).tableFallback())
+        .isEqualTo(TableFallback.GFM_PROMOTE_FIRST_ROW);
+    assertThat(fallback.withImageSizeAttributes(true).tableFallback())
+        .isEqualTo(TableFallback.GFM_PROMOTE_FIRST_ROW);
+
+    var resolver = options.withMediaResolver(attrs -> "https://cdn.example.com/" + attrs.id());
+    assertThat(resolver.mediaResolver()).isNotNull();
+    assertThat(resolver.withUnknownNodePolicy(UnknownNodePolicy.SKIP).mediaResolver())
+        .isSameAs(resolver.mediaResolver());
+    assertThat(resolver.withTableFallback(TableFallback.GFM_EMPTY_HEADER).mediaResolver())
+        .isSameAs(resolver.mediaResolver());
   }
 
   @Test

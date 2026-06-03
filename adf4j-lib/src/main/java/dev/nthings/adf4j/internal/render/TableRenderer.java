@@ -1,6 +1,7 @@
 package dev.nthings.adf4j.internal.render;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.IntStream;
 
@@ -34,11 +35,25 @@ final class TableRenderer {
     }
 
     var numberColumn = node.numberColumnEnabled();
-
-    if (numberColumn || !firstRowIsHeader(rows) || requiresHtmlTableFallback(rows)) {
+    // Number column, colspan/rowspan, or non-GFM cell content can't be a GFM table.
+    if (numberColumn || requiresHtmlTableFallback(rows)) {
       return renderHtmlTable(rows, context, adfRenderer, numberColumn);
     }
+    if (firstRowIsHeader(rows)) {
+      return renderGfmTable(rows, context, adfRenderer, HeaderMode.NATURAL);
+    }
+    // GFM-safe but headerless: apply the fallback policy.
+    return switch (context.tableFallback()) {
+      case HTML -> renderHtmlTable(rows, context, adfRenderer, numberColumn);
+      case GFM_PROMOTE_FIRST_ROW -> renderGfmTable(rows, context, adfRenderer, HeaderMode.PROMOTE_FIRST_ROW);
+      case GFM_EMPTY_HEADER -> renderGfmTable(rows, context, adfRenderer, HeaderMode.SYNTHESIZE_EMPTY);
+    };
+  }
 
+  private enum HeaderMode { NATURAL, PROMOTE_FIRST_ROW, SYNTHESIZE_EMPTY }
+
+  private String renderGfmTable(
+      List<TableRow> rows, RendererState context, AdfRenderer adfRenderer, HeaderMode mode) {
     var renderedRows = new ArrayList<Row>();
     var maxColumns = 0;
 
@@ -53,6 +68,14 @@ final class TableRenderer {
 
     if (renderedRows.isEmpty()) {
       return "";
+    }
+
+    // Make the first emitted row the GFM-required header. The synthetic cells are read-only
+    // (withPadding returns them unchanged at exact column count), so an immutable list is safe.
+    if (mode == HeaderMode.SYNTHESIZE_EMPTY) {
+      renderedRows.add(0, new Row(Collections.nCopies(maxColumns, ""), true));
+    } else if (mode == HeaderMode.PROMOTE_FIRST_ROW) {
+      renderedRows.set(0, new Row(renderedRows.get(0).cells(), true));
     }
 
     final int columns = maxColumns;
@@ -72,13 +95,14 @@ final class TableRenderer {
     var separator = renderTableSeparator(widths);
     var lines = new ArrayList<String>();
 
-    for (var row : normalizedRows) {
+    for (var rowIndex = 0; rowIndex < normalizedRows.size(); rowIndex++) {
+      var row = normalizedRows.get(rowIndex);
       var padded = new ArrayList<String>();
       for (var index = 0; index < row.cells().size(); index++) {
         padded.add(padRight(row.cells().get(index), widths[index]));
       }
       lines.add("| " + String.join(" | ", padded) + " |");
-      if (row.header() && lines.size() == 1) {
+      if (rowIndex == 0) {
         lines.add(separator);
       }
     }

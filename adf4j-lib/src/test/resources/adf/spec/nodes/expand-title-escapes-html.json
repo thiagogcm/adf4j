@@ -1,0 +1,13 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "expand",
+      "attrs": { "title": "A <b>B</b> & C" },
+      "content": [
+        { "type": "paragraph", "content": [ { "type": "text", "text": "Body." } ] }
+      ]
+    }
+  ]
+}

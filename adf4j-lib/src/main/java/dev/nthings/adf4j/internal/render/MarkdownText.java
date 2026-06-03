@@ -64,9 +64,10 @@ final class MarkdownText {
   }
 
   /**
-   * Backslash-escapes CommonMark inline punctuation ({@code \ ` * _ [ ] ( ) ~ < &}) in literal text;
-   * when {@code atLineStart}, also neutralises a leading block marker (#, &gt;, -, +, ordered "1.",
-   * or an indented-code whitespace run). Null is treated as empty.
+   * Backslash-escapes CommonMark inline punctuation ({@code \ ` * _ [ ] ( ) ~ < &}) in literal text,
+   * and neutralises a leading block marker (#, &gt;, -, +, ordered "1.", indented-code run) on each
+   * line — the first line only when {@code atLineStart}, every later line unconditionally. Null is
+   * treated as empty.
    */
   public static String escapeInlineText(String text, boolean atLineStart) {
     var value = Objects.requireNonNullElse(text, "");
@@ -75,7 +76,21 @@ final class MarkdownText {
     }
 
     var escaped = escapeInlinePunctuation(value);
-    return atLineStart ? neutralizeLeadingBlock(escaped) : escaped;
+    if (escaped.indexOf('\n') < 0 && escaped.indexOf('\r') < 0) {
+      return atLineStart ? neutralizeLeadingBlock(escaped) : escaped;
+    }
+
+    // Each line after an embedded break starts at column 0, so neutralise every line's leading
+    // marker (line endings normalise to \n).
+    var lines = LINE_BREAK_PATTERN.split(escaped, -1);
+    var result = new StringBuilder(escaped.length() + 8);
+    for (var i = 0; i < lines.length; i++) {
+      if (i > 0) {
+        result.append('\n');
+      }
+      result.append(i == 0 && !atLineStart ? lines[i] : neutralizeLeadingBlock(lines[i]));
+    }
+    return result.toString();
   }
 
   // Backslash-escapes CommonMark inline punctuation in one pass, allocating only when an escapable

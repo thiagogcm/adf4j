@@ -6,6 +6,8 @@ import java.util.Map;
 import dev.nthings.adf4j.metadata.AttachmentReference;
 import dev.nthings.adf4j.metadata.HeadingReference;
 import dev.nthings.adf4j.options.MarkdownOptions;
+import dev.nthings.adf4j.options.MediaResolver;
+import dev.nthings.adf4j.options.TableFallback;
 import dev.nthings.adf4j.options.UnknownNodePolicy;
 import dev.nthings.adf4j.ast.Heading;
 
@@ -35,6 +37,14 @@ record RendererState(RenderContext context, int listDepth, boolean inTable, bool
 
   boolean imageSizeAttributes() {
     return context.imageSizeAttributes();
+  }
+
+  TableFallback tableFallback() {
+    return context.tableFallback();
+  }
+
+  MediaResolver mediaResolver() {
+    return context.mediaResolver();
   }
 
   HeadingReference headingInfo(Heading heading) {

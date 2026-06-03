@@ -395,7 +395,9 @@ public final class AdfRenderer {
   private String renderExpand(String title, List<AdfBlock> content, RendererState context) {
     var safeTitle = title == null ? "" : title.trim();
     var body = joinBlocks(renderBlocks(content, context));
-    var summary = safeTitle.isBlank() ? "<summary></summary>" : "<summary>" + safeTitle + "</summary>";
+    var summary = safeTitle.isBlank()
+        ? "<summary></summary>"
+        : "<summary>" + HtmlFragments.escapeHtmlText(safeTitle) + "</summary>";
     if (body.isBlank()) {
       return "<details>" + summary + "</details>";
     }
@@ -431,10 +433,14 @@ public final class AdfRenderer {
 
   private String renderMention(Mention mention) {
     var text = mention.text();
-    if (text == null || text.isBlank()) {
-      return "@mention";
+    if (text != null && !text.isBlank()) {
+      return text;
     }
-    return text;
+    var id = mention.id();
+    if (id != null && !id.isBlank()) {
+      return "@" + id;
+    }
+    return "@mention";
   }
 
   private String renderStatus(Status status) {

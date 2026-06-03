@@ -57,6 +57,7 @@ final class MediaRenderer {
         lines.add(renderMedia(media, context, adfRenderer));
       }
     }
+    // Single soft break: a media group renders as one visual cluster.
     return String.join("\n", lines);
   }
 
@@ -71,7 +72,7 @@ final class MediaRenderer {
   }
 
   private String renderMediaBlock(MediaAttrs attrs, RendererState context) {
-    var details = mediaDetails(attrs);
+    var details = mediaDetails(attrs, context);
     // The {width= height=} suffix is non-GFM; emit only when opted in.
     var attributeSuffix =
         context.imageSizeAttributes()
@@ -84,10 +85,18 @@ final class MediaRenderer {
             attributeSuffix);
   }
 
-  private String resolveMediaSource(MediaAttrs attrs) {
+  private String resolveMediaSource(MediaAttrs attrs, RendererState context) {
     var url = attrs.url();
     if (url != null && !url.isBlank()) {
       return url;
+    }
+
+    var resolver = context.mediaResolver();
+    if (resolver != null) {
+      var resolved = resolver.resolve(attrs);
+      if (resolved != null && !resolved.isBlank()) {
+        return resolved;
+      }
     }
 
     var id = attrs.id();
@@ -102,12 +111,12 @@ final class MediaRenderer {
     return "media:%s/%s".formatted(collection, id);
   }
 
-  private MediaDetails mediaDetails(MediaAttrs attrs) {
+  private MediaDetails mediaDetails(MediaAttrs attrs, RendererState context) {
     var alt = attrs.alt();
     var safeAlt = alt == null || alt.isBlank() ? "media" : alt;
     return new MediaDetails(
         safeAlt,
-        Optional.ofNullable(resolveMediaSource(attrs)),
+        Optional.ofNullable(resolveMediaSource(attrs, context)),
         positiveInteger(attrs.width()),
         positiveInteger(attrs.height()));
   }

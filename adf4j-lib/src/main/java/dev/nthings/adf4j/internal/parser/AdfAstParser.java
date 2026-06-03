@@ -1,6 +1,7 @@
 package dev.nthings.adf4j.internal.parser;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -174,6 +175,8 @@ public final class AdfAstParser {
       case "text" -> new Text(JsonFields.text(node, "text", ""), parseMarks(node.get("marks")));
       case "hardBreak" -> new HardBreak();
       case "inlineCard" -> new InlineCard(parseCardAttrs(node.path("attrs")));
+      case "embedCard" -> new InlineCard(parseCardAttrs(node.path("attrs")));
+      case "blockCard" -> new InlineCard(parseCardAttrs(node.path("attrs")));
       case "mediaInline" -> new MediaInline(parseMediaAttrs(node.path("attrs")), parseMarks(node.get("marks")));
       case "date" -> new Date(
           JsonFields.text(node.path("attrs"), "timestamp"),
@@ -461,10 +464,14 @@ public final class AdfAstParser {
     if (attrs == null || !attrs.isObject()) {
       return new CardAttrs(null, null, null, null, Attributes.empty());
     }
+    var data = attrs.path("data");
     var url = JsonFields.text(attrs, "url");
+    if (url == null || url.isBlank()) {
+      url = JsonFields.text(data, "url");
+    }
     var datasourceId = JsonFields.text(attrs.path("datasource"), "id");
     var localId = JsonFields.text(attrs, "localId");
-    var title = JsonFields.text(attrs.path("data"), "title");
+    var title = JsonFields.text(data, "name");
     return new CardAttrs(url, datasourceId, localId, title, toAttributes(attrs));
   }
 
@@ -521,14 +528,12 @@ public final class AdfAstParser {
       return Map.copyOf(map);
     }
     if (node.isArray()) {
+      // Keep null elements so array indices are preserved (List.copyOf would reject the nulls).
       var items = new ArrayList<>(node.size());
       for (var child : node) {
-        var value = toPlainValue(child);
-        if (value != null) {
-          items.add(value);
-        }
+        items.add(toPlainValue(child));
       }
-      return List.copyOf(items);
+      return Collections.unmodifiableList(items);
     }
     if (node.isBoolean()) {
       return node.asBoolean();
