@@ -12,7 +12,6 @@
             "type": "file",
             "id": "file-png",
             "collection": "contentId-2",
-            "mediaType": "image/png",
             "alt": "Screenshot"
           }
         }

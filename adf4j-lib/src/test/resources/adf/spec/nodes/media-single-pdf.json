@@ -12,8 +12,7 @@
             "type": "file",
             "id": "file-pdf",
             "collection": "contentId-1",
-            "__fileMimeType": "application/pdf",
-            "__fileName": "report.pdf"
+            "alt": "report.pdf"
           }
         }
       ]

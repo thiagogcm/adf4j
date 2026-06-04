@@ -294,7 +294,8 @@ public final class AdfRenderer implements BlockRecursion {
     }
     // Prefix after escaping, so the nbsp indent run isn't itself marker-neutralised.
     var prefixed = indentationPrefix(paragraph.marks()) + rendered;
-    return alignmentWrap(prefixed, paragraph.marks(), context.htmlVisualMarks());
+    var styled = applyMarks(prefixed, paragraph.marks(), context.htmlVisualMarks());
+    return alignmentWrap(styled, paragraph.marks(), context.htmlVisualMarks());
   }
 
   private String renderHeading(Heading heading, RendererState context) {

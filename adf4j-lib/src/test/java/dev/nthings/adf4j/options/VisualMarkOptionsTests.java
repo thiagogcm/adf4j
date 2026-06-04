@@ -59,11 +59,11 @@ class VisualMarkOptionsTests {
         "content": [
           {
             "type": "paragraph",
+            "marks": [ { "type": "fontSize", "attrs": { "fontSize": "small" } } ],
             "content": [
               {
                 "type": "text",
-                "text": "tiny",
-                "marks": [ { "type": "fontSize", "attrs": { "fontSize": "small" } } ]
+                "text": "tiny"
               }
             ]
           }

@@ -92,7 +92,7 @@ public final class AttachmentReferences {
     return new AttachmentReference(fileId, name, inferMediaType(name));
   }
 
-  static String inferMediaType(String fileName) {
+  public static String inferMediaType(String fileName) {
     if (fileName == null) {
       return null;
     }

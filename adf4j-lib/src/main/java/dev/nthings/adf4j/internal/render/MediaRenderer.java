@@ -93,7 +93,7 @@ final class MediaRenderer {
   private boolean isImage(MediaAttrs attrs) {
     var mimeOrType =
         firstNonBlank(attrs.fileMimeType(), attrs.mediaType());
-    var fileName = firstNonBlank(attrs.fileName(), attrs.name());
+    var fileName = firstNonBlank(attrs.fileName(), attrs.name(), attrs.alt());
     return AttachmentReferences.isImage(mimeOrType, fileName);
   }
 

@@ -52,7 +52,7 @@ final class RootValidator {
     if (versionNode.isNumber()) {
       return versionNode.asInt();
     }
-    if (versionNode.isTextual()) {
+    if (versionNode.isString()) {
       try {
         return Integer.parseInt(versionNode.asString("").trim());
       } catch (NumberFormatException _) {

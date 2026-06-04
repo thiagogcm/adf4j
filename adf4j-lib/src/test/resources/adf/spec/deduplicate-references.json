@@ -24,11 +24,7 @@
             {
               "type": "link",
               "attrs": {
-                "href": "https://example.atlassian.net/wiki/labels/view",
-                "__confluenceMetadata": {
-                  "linkType": "page",
-                  "pageId": "67890"
-                }
+                "href": "https://example.atlassian.net/wiki/spaces/OF/pages/67890"
               }
             }
           ]
@@ -73,8 +69,8 @@
           "attrs": {
             "type": "file",
             "id": "asset-22",
-            "__fileMimeType": "image/png",
-            "__fileName": "diagram.png",
+            "collection": "contentId-asset",
+            "alt": "diagram.png",
             "width": 200,
             "height": 100
           }
@@ -89,8 +85,8 @@
           "attrs": {
             "type": "file",
             "id": "asset-22",
-            "__fileMimeType": "image/png",
-            "__fileName": "diagram.png"
+            "collection": "contentId-asset",
+            "alt": "diagram.png"
           }
         }
       ]

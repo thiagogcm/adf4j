@@ -5,9 +5,9 @@ import java.util.List;
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.AdfInline;
 import dev.nthings.adf4j.ast.AdfMark;
+import dev.nthings.adf4j.ast.BlockCard;
 import dev.nthings.adf4j.ast.Date;
 import dev.nthings.adf4j.ast.Emoji;
-import dev.nthings.adf4j.ast.InlineCard;
 import dev.nthings.adf4j.ast.Mention;
 import dev.nthings.adf4j.ast.Paragraph;
 import dev.nthings.adf4j.ast.Status;
@@ -242,22 +242,22 @@ class AdfAstParserTests {
           "version": 1,
           "content": [
             {
-              "type": "paragraph",
-              "content": [
-                {
-                  "type": "inlineCard",
-                  "attrs": {"url": "https://example.com", "colwidth": [100, null, 200]}
+              "type": "blockCard",
+              "attrs": {
+                "datasource": {
+                  "id": "source-1",
+                  "parameters": {"colwidth": [100, null, 200]},
+                  "views": [{"type": "table"}]
                 }
-              ]
+              }
             }
           ]
         }
         """;
     var document = parser.parseDocument(mapper.readTree(raw));
 
-    var paragraph = (Paragraph) document.content().getFirst();
-    var card = (InlineCard) paragraph.content().getFirst();
-    var attributes = card.attrs().attrs();
+    var card = (BlockCard) document.content().getFirst();
+    var attributes = card.attrs().attrs().object("datasource").object("parameters");
 
     assertThat(attributes.values().get("colwidth")).isInstanceOf(List.class);
     var colwidth = (List<?>) attributes.values().get("colwidth");

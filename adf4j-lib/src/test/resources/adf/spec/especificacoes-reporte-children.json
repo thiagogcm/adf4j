@@ -15,6 +15,7 @@
             "height": 512,
             "alt": "Reporting icon",
             "id": "children-reporting-icon",
+            "collection": "contentId-reporting",
             "type": "image"
           }
         },

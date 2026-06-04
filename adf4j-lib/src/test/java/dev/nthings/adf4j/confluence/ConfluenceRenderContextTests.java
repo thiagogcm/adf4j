@@ -1,7 +1,9 @@
 package dev.nthings.adf4j.confluence;
 
 import java.util.List;
+import java.util.Map;
 
+import dev.nthings.adf4j.ast.Attributes;
 import dev.nthings.adf4j.metadata.AttachmentReference;
 
 import org.junit.jupiter.api.Test;
@@ -29,5 +31,20 @@ class ConfluenceRenderContextTests {
     assertThat(byTitle.get("guide.pdf").fileId()).isEqualTo("file-1");
     assertThat(byTitle.get("guide.pdf").mediaType()).isEqualTo("application/pdf");
     assertThat(byTitle.get("diagram.png").fileId()).isEqualTo("file-3");
+  }
+
+  @Test
+  void confluence_metadata_reads_private_attrs_from_product_neutral_attributes() {
+    var metadata = ConfluenceMetadata.from(new Attributes(
+        Map.<String, Object>of(
+            "__confluenceMetadata",
+            Map.of(
+                "linkType", "page",
+                "pageId", "12345",
+                "contentId", "67890",
+                "id", "content-1"))));
+
+    assertThat(metadata)
+        .isEqualTo(new ConfluenceMetadata("page", "12345", "67890", "content-1"));
   }
 }

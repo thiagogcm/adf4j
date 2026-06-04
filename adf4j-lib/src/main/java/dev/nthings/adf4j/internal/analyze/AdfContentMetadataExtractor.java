@@ -179,14 +179,18 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
   private void upsertAttachmentRef(String fileId, MediaAttrs attrs) {
     var builder = attachmentRefs.computeIfAbsent(fileId, AttachmentRefBuilder::new);
 
-    var mediaType = firstNonBlank(attrs.fileMimeType(), attrs.mediaType(), attrs.type());
+    var title = firstNonBlank(attrs.fileName(), attrs.name(), attrs.alt());
+    var mediaType = firstNonBlank(
+        attrs.fileMimeType(),
+        attrs.mediaType(),
+        AttachmentReferences.inferMediaType(title),
+        attrs.type());
     if (mediaType != null) {
       builder.mediaType = mediaType;
     }
 
-    var fileName = firstNonBlank(attrs.fileName(), attrs.name());
-    if (fileName != null) {
-      builder.title = fileName;
+    if (title != null) {
+      builder.title = title;
     }
   }
 

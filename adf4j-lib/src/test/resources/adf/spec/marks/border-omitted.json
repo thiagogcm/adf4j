@@ -30,7 +30,7 @@
             "collection": "contentId-1",
             "alt": "Clamped"
           },
-          "marks": [ { "type": "border", "attrs": { "size": 7, "color": "#0000ff" } } ]
+          "marks": [ { "type": "border", "attrs": { "size": 3, "color": "#0000ff" } } ]
         }
       ]
     }
