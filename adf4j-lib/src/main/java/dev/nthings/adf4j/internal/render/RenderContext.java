@@ -8,6 +8,7 @@ import dev.nthings.adf4j.options.MarkdownOptions;
 import dev.nthings.adf4j.options.MediaResolver;
 import dev.nthings.adf4j.options.TableFallback;
 import dev.nthings.adf4j.options.UnknownNodePolicy;
+import dev.nthings.adf4j.internal.analyze.HeadingOutline;
 
 /**
  * Immutable, per-render configuration derived once from {@link MarkdownOptions}. Stays constant for

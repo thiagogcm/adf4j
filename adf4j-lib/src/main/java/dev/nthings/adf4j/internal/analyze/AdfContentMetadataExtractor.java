@@ -1,4 +1,4 @@
-package dev.nthings.adf4j.internal.render;
+package dev.nthings.adf4j.internal.analyze;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -63,9 +63,9 @@ import dev.nthings.adf4j.ast.TaskItem;
 import dev.nthings.adf4j.ast.TaskList;
 import dev.nthings.adf4j.ast.Text;
 
-public final class AdfContentMetadataExtractor {
+final class AdfContentMetadataExtractor {
 
-  public ContentMetadata extract(
+  ContentMetadata extract(
       AdfDocument document, MarkdownOptions options, List<HeadingReference> outline) {
     if (document == null) {
       return ContentMetadata.empty();

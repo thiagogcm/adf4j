@@ -1,7 +1,5 @@
 package dev.nthings.adf4j.internal.render;
 
-import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -14,27 +12,6 @@ final class MarkdownText {
   private static final Pattern LEADING_ORDERED_MARKER = Pattern.compile("^(\\d+)\\.");
 
   private MarkdownText() {
-  }
-
-  public static int clampHeadingLevel(int level) {
-    return Math.clamp(level, 1, 6);
-  }
-
-  public static String dateFromTimestamp(String timestamp) {
-    if (timestamp == null || timestamp.isBlank()) {
-      return "";
-    }
-
-    try {
-      var value = Long.parseLong(timestamp);
-      var instant = Math.abs(value) < 100_000_000_000L
-          ? Instant.ofEpochSecond(value)
-          : Instant.ofEpochMilli(value);
-      var date = instant.atZone(ZoneOffset.UTC).toLocalDate();
-      return date.toString();
-    } catch (NumberFormatException _) {
-      return timestamp;
-    }
   }
 
   public static List<String> splitLines(String value) {

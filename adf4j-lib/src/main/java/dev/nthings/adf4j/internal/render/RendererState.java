@@ -10,6 +10,7 @@ import dev.nthings.adf4j.options.MediaResolver;
 import dev.nthings.adf4j.options.TableFallback;
 import dev.nthings.adf4j.options.UnknownNodePolicy;
 import dev.nthings.adf4j.ast.Heading;
+import dev.nthings.adf4j.internal.analyze.HeadingOutline;
 
 /**
  * The traversal cursor: a shared immutable {@link RenderContext} plus the position-dependent state

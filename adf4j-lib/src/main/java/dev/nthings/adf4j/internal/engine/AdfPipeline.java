@@ -8,21 +8,17 @@ import dev.nthings.adf4j.result.MarkdownResult;
 import dev.nthings.adf4j.result.ParseIssue;
 import dev.nthings.adf4j.result.ParseResult;
 import dev.nthings.adf4j.ast.AdfDocument;
-import dev.nthings.adf4j.internal.parser.AdfAstParser;
-import dev.nthings.adf4j.internal.render.AdfContentMetadataExtractor;
-import dev.nthings.adf4j.internal.render.AdfHeadingCollector;
+import dev.nthings.adf4j.internal.analyze.AdfDocumentAnalyzer;
+import dev.nthings.adf4j.internal.parser.AdfParsingService;
 import dev.nthings.adf4j.internal.render.AdfRenderer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import tools.jackson.core.StreamReadConstraints;
-import tools.jackson.core.json.JsonFactory;
-import tools.jackson.databind.json.JsonMapper;
-
 /**
  * Assembles and runs the {@code parse → analyze → render} pipeline behind
- * {@link dev.nthings.adf4j.AdfToMarkdown}. Stateless and thread-safe once built.
+ * {@link dev.nthings.adf4j.AdfToMarkdown}. Stateless and thread-safe once built; each phase owns its
+ * own construction via {@code createDefault()}.
  */
 public final class AdfPipeline {
 
@@ -39,19 +35,11 @@ public final class AdfPipeline {
     this.renderer = renderer;
   }
 
-  // Cap nesting so an adversarially deep payload surfaces as a caught INVALID_JSON, not a thrown error.
-  private static final int MAX_NESTING_DEPTH = 1000;
-
   public static AdfPipeline createDefault() {
-    var factory = JsonFactory.builder()
-        .streamReadConstraints(
-            StreamReadConstraints.builder().maxNestingDepth(MAX_NESTING_DEPTH).build())
-        .build();
-    var mapper = JsonMapper.builder(factory).build();
-    var parsingService = new AdfParsingService(mapper, new AdfAstParser(mapper));
-    var analyzer =
-        new AdfDocumentAnalyzer(new AdfHeadingCollector(), new AdfContentMetadataExtractor());
-    return new AdfPipeline(parsingService, analyzer, AdfRenderer.createDefault());
+    return new AdfPipeline(
+        AdfParsingService.createDefault(),
+        AdfDocumentAnalyzer.createDefault(),
+        AdfRenderer.createDefault());
   }
 
   public ParseResult parse(String adfJson) {

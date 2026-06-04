@@ -1,4 +1,4 @@
-package dev.nthings.adf4j.internal.render;
+package dev.nthings.adf4j.internal.analyze;
 
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -7,7 +7,9 @@ import java.util.Set;
 
 import dev.nthings.adf4j.metadata.HeadingReference;
 import dev.nthings.adf4j.ast.Heading;
+import dev.nthings.adf4j.internal.AdfText;
 
+/** The analyze phase's heading model, consumed by the render phase. */
 public final class HeadingOutline {
 
   private static final HeadingOutline EMPTY =
@@ -48,11 +50,11 @@ public final class HeadingOutline {
     return headings;
   }
 
-  HeadingReference infoFor(Heading heading) {
+  public HeadingReference infoFor(Heading heading) {
     return headingsByNode.get(heading);
   }
 
-  boolean isTocReferenced(Heading heading) {
-    return tocReferencedLevels.contains(MarkdownText.clampHeadingLevel(heading.level()));
+  public boolean isTocReferenced(Heading heading) {
+    return tocReferencedLevels.contains(AdfText.clampHeadingLevel(heading.level()));
   }
 }

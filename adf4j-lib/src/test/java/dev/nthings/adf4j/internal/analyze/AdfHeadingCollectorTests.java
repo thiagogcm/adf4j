@@ -1,4 +1,4 @@
-package dev.nthings.adf4j.internal.render;
+package dev.nthings.adf4j.internal.analyze;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -196,7 +196,7 @@ class AdfHeadingCollectorTests {
   void normalized_heading_nodes_keep_only_heading_text_that_affects_rendering(
       NormalizedHeadingCase input) throws Exception {
     var inlineList = PARSER.parseInlines(MAPPER.readTree(input.contentJson()));
-    var nodes = AdfHeadingCollector.normalizedHeadingNodes(inlineList);
+    var nodes = HeadingContent.normalizedHeadingNodes(inlineList);
 
     assertThat(nodes)
         .extracting(AdfHeadingCollectorTests::textOf, AdfHeadingCollectorTests::markTypes)
@@ -220,7 +220,7 @@ class AdfHeadingCollectorTests {
             ]
             """));
 
-    var normalized = AdfHeadingCollector.normalizedHeadingNodes(inlineList);
+    var normalized = HeadingContent.normalizedHeadingNodes(inlineList);
 
     assertThat(inlineList).hasSize(1);
     assertThat(inlineList.getFirst()).isInstanceOf(Text.class);

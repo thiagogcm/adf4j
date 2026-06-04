@@ -1,4 +1,4 @@
-package dev.nthings.adf4j.internal.engine;
+package dev.nthings.adf4j.internal.parser;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -6,18 +6,26 @@ import java.util.Objects;
 
 import dev.nthings.adf4j.result.ParseIssue;
 import dev.nthings.adf4j.result.ParseResult;
-import dev.nthings.adf4j.internal.parser.AdfAstParser;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import tools.jackson.core.JacksonException;
+import tools.jackson.core.StreamReadConstraints;
+import tools.jackson.core.json.JsonFactory;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
+/**
+ * The parse phase: reads ADF JSON, validates the root, and maps it to an {@link dev.nthings.adf4j.ast.AdfDocument}
+ * with diagnostics. Owns its JSON hardening (nesting-depth cap) and mapper behind {@link #createDefault()}.
+ */
 public final class AdfParsingService {
 
   private static final Logger log = LoggerFactory.getLogger(AdfParsingService.class);
+
+  // Cap nesting so an adversarially deep payload surfaces as a caught INVALID_JSON, not a thrown error.
+  private static final int MAX_NESTING_DEPTH = 1000;
 
   private final JsonMapper mapper;
   private final AdfAstParser astParser;
@@ -25,6 +33,15 @@ public final class AdfParsingService {
   AdfParsingService(JsonMapper mapper, AdfAstParser astParser) {
     this.mapper = mapper;
     this.astParser = astParser;
+  }
+
+  public static AdfParsingService createDefault() {
+    var factory = JsonFactory.builder()
+        .streamReadConstraints(
+            StreamReadConstraints.builder().maxNestingDepth(MAX_NESTING_DEPTH).build())
+        .build();
+    var mapper = JsonMapper.builder(factory).build();
+    return new AdfParsingService(mapper, new AdfAstParser(mapper));
   }
 
   public ParseResult parse(String rawAdf) {

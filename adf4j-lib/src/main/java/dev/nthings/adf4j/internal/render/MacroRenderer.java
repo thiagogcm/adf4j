@@ -15,6 +15,7 @@ import dev.nthings.adf4j.ast.MultiBodiedExtension;
 import dev.nthings.adf4j.ast.SyncBlock;
 import dev.nthings.adf4j.internal.AttachmentReferences;
 import dev.nthings.adf4j.internal.ConfluenceSupport;
+import dev.nthings.adf4j.internal.analyze.TocLevelRange;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

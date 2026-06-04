@@ -1,15 +1,13 @@
-package dev.nthings.adf4j.internal.engine;
+package dev.nthings.adf4j.internal.analyze;
 
 import dev.nthings.adf4j.options.MarkdownOptions;
 import dev.nthings.adf4j.ast.AdfDocument;
-import dev.nthings.adf4j.internal.render.AdfContentMetadataExtractor;
-import dev.nthings.adf4j.internal.render.AdfHeadingCollector;
 
 /**
  * The analyze phase: a single logical pass that collects the heading outline and extracts content
  * metadata, sitting between parsing and rendering.
  */
-final class AdfDocumentAnalyzer {
+public final class AdfDocumentAnalyzer {
 
   private final AdfHeadingCollector headingCollector;
   private final AdfContentMetadataExtractor metadataExtractor;
@@ -20,7 +18,11 @@ final class AdfDocumentAnalyzer {
     this.metadataExtractor = metadataExtractor;
   }
 
-  DocumentAnalysis analyze(AdfDocument document, MarkdownOptions options) {
+  public static AdfDocumentAnalyzer createDefault() {
+    return new AdfDocumentAnalyzer(new AdfHeadingCollector(), new AdfContentMetadataExtractor());
+  }
+
+  public DocumentAnalysis analyze(AdfDocument document, MarkdownOptions options) {
     if (document == null) {
       return DocumentAnalysis.empty();
     }

@@ -7,6 +7,9 @@ import java.util.Objects;
 import java.util.stream.Stream;
 
 import dev.nthings.adf4j.options.MarkdownOptions;
+import dev.nthings.adf4j.internal.AdfText;
+import dev.nthings.adf4j.internal.analyze.HeadingContent;
+import dev.nthings.adf4j.internal.analyze.HeadingOutline;
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.ast.AdfInline;
@@ -267,7 +270,7 @@ public final class AdfRenderer {
       case MediaInline media -> mediaRenderer.renderMediaInline(media, context, this);
       // Attribute-derived text is escaped like literal text, honouring atLineStart.
       case Date date ->
-        MarkdownText.escapeInlineText(MarkdownText.dateFromTimestamp(date.timestamp()), atLineStart);
+        MarkdownText.escapeInlineText(AdfText.dateFromTimestamp(date.timestamp()), atLineStart);
       case Emoji emoji -> MarkdownText.escapeInlineText(renderEmoji(emoji), atLineStart);
       case Mention mention -> MarkdownText.escapeInlineText(renderMention(mention), atLineStart);
       case Placeholder placeholder ->
@@ -291,10 +294,10 @@ public final class AdfRenderer {
   }
 
   private String renderHeading(Heading heading, RendererState context) {
-    var level = MarkdownText.clampHeadingLevel(heading.level());
+    var level = AdfText.clampHeadingLevel(heading.level());
     var text = renderHeadingText(heading.content(), context);
     if (text.isBlank()) {
-      var blankAnchor = AdfHeadingCollector.extractAnchorId(heading.content());
+      var blankAnchor = HeadingContent.extractAnchorId(heading.content());
       return blankAnchor == null || blankAnchor.isBlank() ? "" : HtmlFragments.anchor(blankAnchor);
     }
 
@@ -304,7 +307,7 @@ public final class AdfRenderer {
     // Inject the stored-slug <a id> for explicit anchors and toc-linked headings, so toc links don't
     // depend on the consumer's slugger matching commonmark's.
     if (anchor != null && !anchor.isBlank()
-        && (AdfHeadingCollector.hasExplicitAnchor(heading.content())
+        && (HeadingContent.hasExplicitAnchor(heading.content())
             || context.isTocReferenced(heading))) {
       markup = HtmlFragments.anchor(anchor) + "\n" + markup;
     }
@@ -333,7 +336,7 @@ public final class AdfRenderer {
   }
 
   private String renderHeadingText(List<AdfInline> content, RendererState context) {
-    var headingNodes = AdfHeadingCollector.normalizedHeadingNodes(content);
+    var headingNodes = HeadingContent.normalizedHeadingNodes(content);
     if (headingNodes.isEmpty()) {
       return "";
     }

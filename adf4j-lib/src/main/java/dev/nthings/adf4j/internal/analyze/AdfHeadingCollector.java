@@ -1,4 +1,4 @@
-package dev.nthings.adf4j.internal.render;
+package dev.nthings.adf4j.internal.analyze;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 import dev.nthings.adf4j.metadata.HeadingReference;
+import dev.nthings.adf4j.internal.AdfText;
 import dev.nthings.adf4j.internal.ConfluenceSupport;
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.AdfDocument;
@@ -51,9 +52,9 @@ import dev.nthings.adf4j.ast.Text;
 
 import org.commonmark.ext.heading.anchor.IdGenerator;
 
-public final class AdfHeadingCollector {
+final class AdfHeadingCollector {
 
-  public HeadingOutline collect(AdfDocument document) {
+  HeadingOutline collect(AdfDocument document) {
     if (document == null) {
       return HeadingOutline.empty();
     }
@@ -66,13 +67,13 @@ public final class AdfHeadingCollector {
     var headingsByNode = new IdentityHashMap<Heading, HeadingReference>();
 
     for (var heading : walk.headings) {
-      var level = MarkdownText.clampHeadingLevel(heading.level());
+      var level = AdfText.clampHeadingLevel(heading.level());
       var headingText = extractHeadingPlainText(heading.content());
       if (headingText.isBlank()) {
         continue;
       }
 
-      var anchor = extractAnchorId(heading.content());
+      var anchor = HeadingContent.extractAnchorId(heading.content());
       if (anchor == null || anchor.isBlank()) {
         anchor = idGenerator.generateId(headingText);
       }
@@ -85,30 +86,8 @@ public final class AdfHeadingCollector {
     return HeadingOutline.of(headings, headingsByNode, walk.tocReferencedLevels);
   }
 
-  static List<AdfInline> normalizedHeadingNodes(List<AdfInline> content) {
-    if (content == null || content.isEmpty()) {
-      return List.of();
-    }
-
-    var start = 0;
-    while (start < content.size() && content.get(start) instanceof HardBreak) {
-      start++;
-    }
-    var end = content.size();
-    while (end > start && content.get(end - 1) instanceof HardBreak) {
-      end--;
-    }
-    if (start >= end) {
-      return List.of();
-    }
-
-    return content.subList(start, end).stream()
-        .filter(node -> !isAnchorExtension(node))
-        .toList();
-  }
-
   private static String extractHeadingPlainText(List<AdfInline> content) {
-    var inlineNodes = normalizedHeadingNodes(content);
+    var inlineNodes = HeadingContent.normalizedHeadingNodes(content);
     if (inlineNodes.isEmpty()) {
       return "";
     }
@@ -139,7 +118,7 @@ public final class AdfHeadingCollector {
           var alt = media.attrs().alt();
           appendPlainText(builder, alt == null || alt.isBlank() ? "media" : alt);
         }
-        case Date date -> appendPlainText(builder, MarkdownText.dateFromTimestamp(date.timestamp()));
+        case Date date -> appendPlainText(builder, AdfText.dateFromTimestamp(date.timestamp()));
         case Placeholder placeholder -> appendPlainText(builder, placeholder.text());
         default -> {
         }
@@ -163,39 +142,6 @@ public final class AdfHeadingCollector {
       builder.append(' ');
     }
     builder.append(fragment);
-  }
-
-  private static boolean isAnchorExtension(AdfInline node) {
-    if (!(node instanceof InlineExtension extension)) {
-      return false;
-    }
-    return ConfluenceSupport.isConfluenceMacroExtension(extension.extensionType())
-        && "anchor".equals(extension.extensionKey());
-  }
-
-  /** True iff the heading carries an explicit Confluence {@code anchor} macro with a non-blank id. */
-  static boolean hasExplicitAnchor(List<AdfInline> content) {
-    var anchorId = extractAnchorId(content);
-    return anchorId != null && !anchorId.isBlank();
-  }
-
-  static String extractAnchorId(List<AdfInline> content) {
-    if (content == null || content.isEmpty()) {
-      return null;
-    }
-    for (var node : content) {
-      if (!(node instanceof InlineExtension extension)) {
-        continue;
-      }
-      if (!isAnchorExtension(extension)) {
-        continue;
-      }
-      var anchorId = ConfluenceSupport.anchorId(extension.macroParams());
-      if (anchorId != null && !anchorId.isBlank()) {
-        return anchorId;
-      }
-    }
-    return null;
   }
 
   // A single pass that records every heading and the union of all toc macros' level ranges, so the
