@@ -125,6 +125,29 @@ class AdfMalformedInputTests {
   }
 
   @Test
+  void json_nested_past_the_parse_depth_cap_degrades_to_an_invalid_json_diagnostic() {
+    // 700 blockquote frames (~1400 JSON levels) exceed the 1000-level cap; the parser catches it and
+    // degrades to an empty body with an INVALID_JSON diagnostic instead of throwing.
+    var depth = 700;
+    var json = new StringBuilder("{\"type\":\"doc\",\"version\":1,\"content\":[");
+    for (var i = 0; i < depth; i++) {
+      json.append("{\"type\":\"blockquote\",\"content\":[");
+    }
+    json.append("{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"deep\"}]}");
+    for (var i = 0; i < depth; i++) {
+      json.append("]}");
+    }
+    json.append("]}");
+    var adf = json.toString();
+
+    assertThatCode(() -> processor.convert(adf)).doesNotThrowAnyException();
+    var result = processor.convert(adf);
+    assertThat(result.body()).isBlank();
+    assertThat(result.diagnostics()).singleElement()
+        .satisfies(issue -> assertThat(issue.code()).isEqualTo("INVALID_JSON"));
+  }
+
+  @Test
   void node_with_an_unknown_type_does_not_throw_and_keeps_known_siblings() {
     // An unrecognised block degrades (placeholder under the default policy) and never derails the
     // known paragraph beside it.

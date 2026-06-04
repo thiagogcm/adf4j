@@ -3,6 +3,7 @@ package dev.nthings.adf4j.spec;
 import java.util.List;
 
 import dev.nthings.adf4j.AdfToMarkdown;
+import dev.nthings.adf4j.options.MarkdownOptions;
 
 import org.commonmark.ext.gfm.alerts.AlertsExtension;
 import org.commonmark.ext.gfm.strikethrough.StrikethroughExtension;
@@ -26,6 +27,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 class CommonMarkOracleTests {
 
   private static final AdfToMarkdown CONVERTER = AdfToMarkdown.create();
+  private static final AdfToMarkdown VISUAL_CONVERTER =
+      AdfToMarkdown.with(MarkdownOptions.defaults().withHtmlVisualMarks(true));
 
   // Same extension list as AdfRenderer.commonmarkExtensions().
   private static final List<org.commonmark.Extension> EXTENSIONS = List.of(
@@ -43,6 +46,10 @@ class CommonMarkOracleTests {
   private static String toHtml(String adfJson) {
     var markdown = CONVERTER.toMarkdown(adfJson);
     return HTML_RENDERER.render(PARSER.parse(markdown));
+  }
+
+  private static String toHtmlVisual(String adfJson) {
+    return HTML_RENDERER.render(PARSER.parse(VISUAL_CONVERTER.toMarkdown(adfJson)));
   }
 
   @Test
@@ -394,5 +401,230 @@ class CommonMarkOracleTests {
           .as("injected anchor for %s", target)
           .hasSize(1);
     }
+  }
+
+  @Test
+  void header_column_table_keeps_the_header_cells_in_the_left_column_of_both_rows() {
+    // A header COLUMN (first cell of each row is a tableHeader) must not be promoted to a GFM header
+    // row: the fallback routes to raw HTML, so the <th> stay in the left column of both rows.
+    var adf = """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {"type": "table", "content": [
+              {"type": "tableRow", "content": [
+                {"type": "tableHeader",
+                 "content": [{"type": "paragraph", "content": [{"type": "text", "text": "R1H"}]}]},
+                {"type": "tableCell",
+                 "content": [{"type": "paragraph", "content": [{"type": "text", "text": "r1c2"}]}]}
+              ]},
+              {"type": "tableRow", "content": [
+                {"type": "tableHeader",
+                 "content": [{"type": "paragraph", "content": [{"type": "text", "text": "R2H"}]}]},
+                {"type": "tableCell",
+                 "content": [{"type": "paragraph", "content": [{"type": "text", "text": "r2c2"}]}]}
+              ]}
+            ]}
+          ]
+        }
+        """;
+
+    var document = Jsoup.parse(toHtml(adf));
+
+    assertThat(document.select("table")).hasSize(1);
+    assertThat(document.select("th").eachText()).containsExactly("R1H", "R2H");
+    for (var row : document.select("tr")) {
+      assertThat(row.child(0).tagName()).as("first cell of each row is the header").isEqualTo("th");
+      assertThat(row.child(1).tagName()).as("second cell of each row is data").isEqualTo("td");
+    }
+  }
+
+  @Test
+  void header_row_that_is_not_first_keeps_its_cells_as_th_outside_the_first_row() {
+    // A header row in second position must stay <th> and must not move to the first row.
+    var adf = """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {"type": "table", "content": [
+              {"type": "tableRow", "content": [
+                {"type": "tableCell",
+                 "content": [{"type": "paragraph", "content": [{"type": "text", "text": "d1"}]}]},
+                {"type": "tableCell",
+                 "content": [{"type": "paragraph", "content": [{"type": "text", "text": "d2"}]}]}
+              ]},
+              {"type": "tableRow", "content": [
+                {"type": "tableHeader",
+                 "content": [{"type": "paragraph", "content": [{"type": "text", "text": "H1"}]}]},
+                {"type": "tableHeader",
+                 "content": [{"type": "paragraph", "content": [{"type": "text", "text": "H2"}]}]}
+              ]}
+            ]}
+          ]
+        }
+        """;
+
+    var document = Jsoup.parse(toHtml(adf));
+
+    assertThat(document.select("table")).hasSize(1);
+    assertThat(document.select("th").eachText()).containsExactly("H1", "H2");
+    var firstRow = document.selectFirst("tr");
+    assertThat(firstRow.select("th")).as("the header cells are not in the first row").isEmpty();
+    assertThat(firstRow.select("td").eachText()).containsExactly("d1", "d2");
+  }
+
+  @Test
+  void info_panel_parses_to_a_gfm_alert_container_keeping_its_body_text() {
+    var adf = """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {"type": "panel", "attrs": {"panelType": "info"},
+             "content": [{"type": "paragraph",
+               "content": [{"type": "text", "text": "Heads up."}]}]}
+          ]
+        }
+        """;
+
+    var document = Jsoup.parse(toHtml(adf));
+
+    assertThat(document.select("div.markdown-alert")).as("the alert container exists").hasSize(1);
+    assertThat(document.selectFirst("div.markdown-alert").text()).contains("Heads up.");
+  }
+
+  @Test
+  void expand_block_parses_to_a_details_summary_disclosure() {
+    var adf = """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {"type": "expand", "attrs": {"title": "More details"},
+             "content": [{"type": "paragraph",
+               "content": [{"type": "text", "text": "Hidden body."}]}]}
+          ]
+        }
+        """;
+
+    var document = Jsoup.parse(toHtml(adf));
+
+    assertThat(document.select("details")).hasSize(1);
+    assertThat(document.selectFirst("details > summary").text()).isEqualTo("More details");
+    assertThat(document.selectFirst("details").text()).contains("Hidden body.");
+  }
+
+  @Test
+  void nested_bullet_list_keeps_its_nesting() {
+    var adf = """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {"type": "bulletList", "content": [
+              {"type": "listItem", "content": [
+                {"type": "paragraph", "content": [{"type": "text", "text": "Outer"}]},
+                {"type": "bulletList", "content": [
+                  {"type": "listItem", "content": [
+                    {"type": "paragraph", "content": [{"type": "text", "text": "Inner"}]}
+                  ]}
+                ]}
+              ]}
+            ]}
+          ]
+        }
+        """;
+
+    var document = Jsoup.parse(toHtml(adf));
+
+    assertThat(document.select("ul ul li")).as("the nested item survives as a nested li").hasSize(1);
+    assertThat(document.selectFirst("ul ul li").text()).isEqualTo("Inner");
+  }
+
+  @Test
+  void bang_before_a_linked_text_node_does_not_form_an_image() {
+    // "Heads up!" glued to a link "the runbook" must not let the "!"+"[" parse into an image.
+    var adf = """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {"type": "paragraph", "content": [
+              {"type": "text", "text": "Heads up!"},
+              {"type": "text", "text": "the runbook",
+               "marks": [{"type": "link", "attrs": {"href": "https://ex.com/r"}}]}
+            ]}
+          ]
+        }
+        """;
+
+    var document = Jsoup.parse(toHtml(adf));
+
+    assertThat(document.select("a")).as("the link survived as an anchor").hasSize(1);
+    assertThat(document.selectFirst("a").attr("href")).isEqualTo("https://ex.com/r");
+    assertThat(document.select("img")).as("the '!'+'[' did not form an image").isEmpty();
+  }
+
+  @Test
+  void inline_card_label_with_metacharacters_stays_inert_link_text() {
+    // An inlineCard whose data.name carries '*', backtick and '!' must escape into the link text
+    // without spawning emphasis, code, or an image.
+    var adf = """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {"type": "paragraph", "content": [
+              {"type": "text", "text": "See "},
+              {"type": "inlineCard", "attrs": {"data": {"@type": "Object",
+                 "name": "Use *bold* `now`!", "url": "https://example.com/x"}}}
+            ]}
+          ]
+        }
+        """;
+
+    var document = Jsoup.parse(toHtml(adf));
+
+    var anchor = document.selectFirst("a[href=https://example.com/x]");
+    assertThat(anchor).as("the card linkified").isNotNull();
+    assertThat(anchor.text()).isEqualTo("Use *bold* `now`!");
+    assertThat(document.select("em")).as("no stray emphasis").isEmpty();
+    assertThat(document.select("code")).as("no stray code span").isEmpty();
+    assertThat(document.select("img")).as("no stray image").isEmpty();
+  }
+
+  @Test
+  void aligned_block_wraps_in_a_div_whose_markdown_still_renders() {
+    // Under htmlVisualMarks an aligned heading + bold text must sit inside <div align> AND keep
+    // being parsed as markdown — i.e. the div must not swallow it as a raw-HTML block.
+    var adf = """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {"type": "heading", "attrs": {"level": 2},
+             "marks": [{"type": "alignment", "attrs": {"align": "center"}}],
+             "content": [{"type": "text", "text": "Centered"}]},
+            {"type": "paragraph",
+             "marks": [{"type": "alignment", "attrs": {"align": "end"}}],
+             "content": [{"type": "text", "text": "right "},
+                         {"type": "text", "text": "bold", "marks": [{"type": "strong"}]}]}
+          ]
+        }
+        """;
+
+    var document = Jsoup.parse(toHtmlVisual(adf));
+
+    var centered = document.selectFirst("div[align=center]");
+    assertThat(centered).as("centered heading is wrapped").isNotNull();
+    assertThat(centered.selectFirst("h2")).as("heading still parses as h2").isNotNull();
+    assertThat(centered.selectFirst("h2").text()).isEqualTo("Centered");
+
+    var right = document.selectFirst("div[align=right]");
+    assertThat(right).as("end-aligned paragraph is wrapped").isNotNull();
+    assertThat(right.selectFirst("strong")).as("bold still parses").isNotNull();
+    assertThat(right.selectFirst("strong").text()).isEqualTo("bold");
   }
 }

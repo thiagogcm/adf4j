@@ -1,6 +1,6 @@
 - [Overview](#overview)
   - [Café ☕ Overview](#café--overview)
-  - [Notes!!! (draft)](#notes-draft)
+  - [Notes\!\!\! \(draft\)](#notes-draft)
 - [Overview](#overview-1)
 
 <a id="overview"></a>
@@ -10,7 +10,7 @@
 ## Café ☕ Overview
 
 <a id="notes-draft"></a>
-## Notes!!! \(draft\)
+## Notes\!\!\! \(draft\)
 
 <a id="overview-1"></a>
 # Overview

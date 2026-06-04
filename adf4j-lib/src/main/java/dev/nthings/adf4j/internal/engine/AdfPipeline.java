@@ -16,6 +16,8 @@ import dev.nthings.adf4j.internal.render.AdfRenderer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import tools.jackson.core.StreamReadConstraints;
+import tools.jackson.core.json.JsonFactory;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -37,8 +39,15 @@ public final class AdfPipeline {
     this.renderer = renderer;
   }
 
+  // Cap nesting so an adversarially deep payload surfaces as a caught INVALID_JSON, not a thrown error.
+  private static final int MAX_NESTING_DEPTH = 1000;
+
   public static AdfPipeline createDefault() {
-    var mapper = JsonMapper.builder().build();
+    var factory = JsonFactory.builder()
+        .streamReadConstraints(
+            StreamReadConstraints.builder().maxNestingDepth(MAX_NESTING_DEPTH).build())
+        .build();
+    var mapper = JsonMapper.builder(factory).build();
     var parsingService = new AdfParsingService(mapper, new AdfAstParser(mapper));
     var analyzer =
         new AdfDocumentAnalyzer(new AdfHeadingCollector(), new AdfContentMetadataExtractor());

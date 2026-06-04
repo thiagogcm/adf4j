@@ -1,0 +1,25 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "paragraph",
+      "content": [
+        { "type": "text", "text": "Jump " },
+        {
+          "type": "inlineExtension",
+          "attrs": {
+            "extensionType": "com.atlassian.confluence.macro.core",
+            "extensionKey": "anchor",
+            "parameters": {
+              "macroParams": {
+                "": { "value": "standalone-anchor" }
+              }
+            }
+          }
+        },
+        { "type": "text", "text": " here" }
+      ]
+    }
+  ]
+}

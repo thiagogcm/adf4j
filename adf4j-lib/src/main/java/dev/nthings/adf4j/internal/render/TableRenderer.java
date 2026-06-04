@@ -35,8 +35,11 @@ final class TableRenderer {
     }
 
     var numberColumn = node.numberColumnEnabled();
-    // Number column, colspan/rowspan, or non-GFM cell content can't be a GFM table.
-    if (numberColumn || requiresHtmlTableFallback(rows)) {
+    // Number column, colspan/rowspan, non-GFM cell content, or a non-canonical header placement
+    // (header column, or header row that isn't first) can't be a GFM table.
+    if (numberColumn
+        || requiresHtmlTableFallback(rows)
+        || (hasHeaderCell(rows) && !firstRowIsHeader(rows))) {
       return renderHtmlTable(rows, context, adfRenderer, numberColumn);
     }
     if (firstRowIsHeader(rows)) {
@@ -139,6 +142,17 @@ final class TableRenderer {
       rendered.add(renderTableCell(cell, context, adfRenderer));
     }
     return new Row(rendered, header);
+  }
+
+  private boolean hasHeaderCell(List<TableRow> rows) {
+    for (var row : rows) {
+      for (var cell : row.content()) {
+        if (cell.header()) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   private boolean firstRowIsHeader(List<TableRow> rows) {

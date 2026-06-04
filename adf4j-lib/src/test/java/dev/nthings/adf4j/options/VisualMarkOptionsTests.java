@@ -71,6 +71,21 @@ class VisualMarkOptionsTests {
       }
       """;
 
+  private static final String CENTERED_PARAGRAPH =
+      """
+      {
+        "type": "doc",
+        "version": 1,
+        "content": [
+          {
+            "type": "paragraph",
+            "marks": [ { "type": "alignment", "attrs": { "align": "center" } } ],
+            "content": [ { "type": "text", "text": "middle" } ]
+          }
+        ]
+      }
+      """;
+
   @Test
   void default_drops_visual_only_marks() {
     assertThat(AdfToMarkdown.create().toMarkdown(TEXT_COLOR).strip()).isEqualTo("danger");
@@ -101,5 +116,18 @@ class VisualMarkOptionsTests {
     var markdown = AdfToMarkdown.with(options).toMarkdown(FONT_SIZE).strip();
 
     assertThat(markdown).isEqualTo("<span style=\"font-size:small\">tiny</span>");
+  }
+
+  @Test
+  void opt_in_wraps_a_centered_block_in_a_div() {
+    var options = MarkdownOptions.defaults().withHtmlVisualMarks(true);
+    var markdown = AdfToMarkdown.with(options).toMarkdown(CENTERED_PARAGRAPH).strip();
+
+    assertThat(markdown).isEqualTo("<div align=\"center\">\n\nmiddle\n\n</div>");
+  }
+
+  @Test
+  void default_drops_alignment_without_a_div() {
+    assertThat(AdfToMarkdown.create().toMarkdown(CENTERED_PARAGRAPH).strip()).isEqualTo("middle");
   }
 }

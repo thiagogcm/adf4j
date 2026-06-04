@@ -1,0 +1,14 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "paragraph",
+      "content": [
+        { "type": "text", "text": "Due on " },
+        { "type": "date", "attrs": { "timestamp": "1745366400" } },
+        { "type": "text", "text": "." }
+      ]
+    }
+  ]
+}

@@ -11,6 +11,7 @@ import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.ast.AdfInline;
 import dev.nthings.adf4j.ast.AdfMark;
+import dev.nthings.adf4j.ast.Alignment;
 import dev.nthings.adf4j.ast.BlockCard;
 import dev.nthings.adf4j.ast.BlockTaskItem;
 import dev.nthings.adf4j.ast.Blockquote;
@@ -216,27 +217,31 @@ public final class AdfRenderer {
    */
   private static List<AdfInline> coalesceAdjacentText(List<AdfInline> nodes) {
     var result = new ArrayList<AdfInline>(nodes.size());
-    Text pending = null;
+    var run = new StringBuilder();
+    List<AdfMark> runMarks = null;
     for (var node : nodes) {
       if (node instanceof Text text) {
-        if (pending != null && sameMarkSet(pending.marks(), text.marks())) {
-          pending = new Text(pending.text() + text.text(), pending.marks());
+        if (runMarks != null && sameMarkSet(runMarks, text.marks())) {
+          run.append(text.text());
         } else {
-          if (pending != null) {
-            result.add(pending);
+          if (runMarks != null) {
+            result.add(new Text(run.toString(), runMarks));
+            run.setLength(0);
           }
-          pending = text;
+          run.append(text.text());
+          runMarks = text.marks();
         }
       } else {
-        if (pending != null) {
-          result.add(pending);
-          pending = null;
+        if (runMarks != null) {
+          result.add(new Text(run.toString(), runMarks));
+          run.setLength(0);
+          runMarks = null;
         }
         result.add(node);
       }
     }
-    if (pending != null) {
-      result.add(pending);
+    if (runMarks != null) {
+      result.add(new Text(run.toString(), runMarks));
     }
     return result;
   }
@@ -277,15 +282,20 @@ public final class AdfRenderer {
   private String renderParagraph(Paragraph paragraph, RendererState context) {
     // Paragraphs start at column 0, so the first inline is at line start (the promotion-prone case).
     var rendered = renderInlineNodes(paragraph.content(), context, true);
+    if (rendered.isBlank()) {
+      return rendered;
+    }
     // Prefix after escaping, so the nbsp indent run isn't itself marker-neutralised.
-    return rendered.isBlank() ? rendered : indentationPrefix(paragraph.marks()) + rendered;
+    var prefixed = indentationPrefix(paragraph.marks()) + rendered;
+    return alignmentWrap(prefixed, paragraph.marks(), context.htmlVisualMarks());
   }
 
   private String renderHeading(Heading heading, RendererState context) {
     var level = MarkdownText.clampHeadingLevel(heading.level());
     var text = renderHeadingText(heading.content(), context);
     if (text.isBlank()) {
-      return "";
+      var blankAnchor = AdfHeadingCollector.extractAnchorId(heading.content());
+      return blankAnchor == null || blankAnchor.isBlank() ? "" : HtmlFragments.anchor(blankAnchor);
     }
 
     var headingInfo = context.headingInfo(heading);
@@ -296,9 +306,30 @@ public final class AdfRenderer {
     if (anchor != null && !anchor.isBlank()
         && (AdfHeadingCollector.hasExplicitAnchor(heading.content())
             || context.isTocReferenced(heading))) {
-      return HtmlFragments.anchor(anchor) + "\n" + markup;
+      markup = HtmlFragments.anchor(anchor) + "\n" + markup;
     }
-    return markup;
+    return alignmentWrap(markup, heading.marks(), context.htmlVisualMarks());
+  }
+
+  // Wraps a block in <div align> for a center/end Alignment mark when htmlVisualMarks is on.
+  private static String alignmentWrap(String body, List<AdfMark> marks, boolean htmlVisualMarks) {
+    if (!htmlVisualMarks || body.isBlank()) {
+      return body;
+    }
+    for (var mark : marks) {
+      if (mark instanceof Alignment alignment) {
+        var align = switch (alignment.align() == null ? "" : alignment.align()) {
+          case "center" -> "center";
+          case "end" -> "right";
+          default -> null;
+        };
+        if (align != null) {
+          // Blank lines around the body so CommonMark parses it as markdown, not a raw-HTML block.
+          return "<div align=\"" + align + "\">\n\n" + body + "\n\n</div>";
+        }
+      }
+    }
+    return body;
   }
 
   private String renderHeadingText(List<AdfInline> content, RendererState context) {
@@ -362,40 +393,28 @@ public final class AdfRenderer {
   }
 
   private String renderPanel(Panel panel, RendererState context) {
-    var alert = gfmAlert(panel.panelType());
-    var header = new StringBuilder("> [!").append(alert.keyword()).append("]");
-    // The bolded label is the first blockquote body line, distinguishing types GFM collapses
-    // (success vs tip, note vs info) without re-labelling those that already match their alert.
-    if (alert.label() != null) {
-      header.append("\n> **").append(alert.label()).append("**");
-    }
+    var header = "> [!" + gfmAlert(panel.panelType()) + "]";
     var content = joinBlocks(renderBlocks(panel.content(), context));
     if (content.isBlank()) {
-      return header.toString();
+      return header;
     }
     return header + "\n" + toBlockQuote(content);
   }
 
   /**
-   * Maps an Atlassian panel type to a GFM alert keyword plus an optional bolded label line:
-   * info/custom/unknown -&gt; NOTE, note -&gt; NOTE + "Note", warning -&gt; WARNING, error -&gt;
-   * CAUTION, tip -&gt; TIP, success -&gt; TIP + "Success" (GFM has neither a note nor a success alert).
+   * Maps an Atlassian panel type to a GFM alert keyword: warning -&gt; WARNING, error -&gt; CAUTION,
+   * tip/success -&gt; TIP, everything else (info/note/custom/unknown) -&gt; NOTE.
    */
-  private static GfmAlert gfmAlert(String panelType) {
+  private static String gfmAlert(String panelType) {
     if (panelType == null) {
-      return new GfmAlert("NOTE", null);
+      return "NOTE";
     }
     return switch (panelType.toLowerCase(Locale.ROOT)) {
-      case "warning" -> new GfmAlert("WARNING", null);
-      case "error" -> new GfmAlert("CAUTION", null);
-      case "tip" -> new GfmAlert("TIP", null);
-      case "success" -> new GfmAlert("TIP", "Success");
-      case "note" -> new GfmAlert("NOTE", "Note");
-      default -> new GfmAlert("NOTE", null);
+      case "warning" -> "WARNING";
+      case "error" -> "CAUTION";
+      case "tip", "success" -> "TIP";
+      default -> "NOTE";
     };
-  }
-
-  private record GfmAlert(String keyword, String label) {
   }
 
   private String toBlockQuote(String value) {
@@ -470,8 +489,15 @@ public final class AdfRenderer {
 
   private String renderMention(Mention mention) {
     var text = mention.text();
-    // Fall back to a neutral marker rather than an opaque ARI/UUID id, which is unsightly.
-    return text != null && !text.isBlank() ? text : "@unknown";
+    if (text != null && !text.isBlank()) {
+      return text;
+    }
+    // Fall back to the account id (or localId) so the mention isn't reduced to an opaque marker.
+    var id = Stream.of(mention.id(), mention.localId())
+        .filter(s -> s != null && !s.isBlank())
+        .findFirst()
+        .orElse(null);
+    return id != null ? "@" + id : "@unknown";
   }
 
   private String statusLabel(Status status) {

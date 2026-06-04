@@ -6,6 +6,7 @@ import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
 import dev.nthings.adf4j.metadata.AttachmentReference;
 import dev.nthings.adf4j.metadata.ExternalReference;
 import dev.nthings.adf4j.metadata.HeadingReference;
+import dev.nthings.adf4j.metadata.MentionReference;
 import dev.nthings.adf4j.metadata.PageReference;
 import dev.nthings.adf4j.options.MarkdownOptions;
 
@@ -73,6 +74,32 @@ class AdfToMarkdownMetadataTests {
         .containsExactly(
             new AttachmentReference("asset-22", "diagram.png", "image/png"),
             new AttachmentReference("file-pdf-1", "guide.pdf", "application/pdf"));
+  }
+
+  @Test
+  void extract_collects_mentions_with_first_non_blank_id() throws Exception {
+    var metadata = testSupport.processor()
+        .convert(
+            testSupport.parseDocument(
+                """
+                {
+                  "type": "doc",
+                  "version": 1,
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {"type": "text", "text": "Owner: "},
+                        {"type": "mention", "attrs": {"id": "user-9", "text": "@Ada"}}
+                      ]
+                    }
+                  ]
+                }
+                """))
+        .metadata();
+
+    assertThat(metadata.mentionRefs())
+        .containsExactly(new MentionReference("user-9", "@Ada"));
   }
 
   @Test

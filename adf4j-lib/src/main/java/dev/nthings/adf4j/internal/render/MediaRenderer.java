@@ -77,7 +77,7 @@ final class MediaRenderer {
 
     // Non-image attachments (PDF, video, archive, …) render as a link; an image embed would break.
     if (!isImage(attrs)) {
-      return "[%s](%s)".formatted(MarkdownText.escapeLinkText(linkLabel(attrs)), source);
+      return "[%s](%s)".formatted(MarkdownText.escapeInlineText(linkLabel(attrs), false), source);
     }
 
     var alt = attrs.alt();

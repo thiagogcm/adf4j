@@ -72,10 +72,11 @@ public final class AdfParsingService {
     }
 
     var versionNode = document.get("version");
-    if (versionNode == null || !versionNode.canConvertToInt()) {
+    var version = versionNode == null ? null : versionOf(versionNode);
+    if (version == null) {
       issues.add(
           new ParseIssue("INVALID_VERSION", "ADF root must contain integer version.", null));
-    } else if (versionNode.asInt() != 1) {
+    } else if (version != 1) {
       issues.add(new ParseIssue("UNSUPPORTED_VERSION", "ADF version must be 1.", null));
     }
 
@@ -86,5 +87,20 @@ public final class AdfParsingService {
     }
 
     return List.copyOf(issues);
+  }
+
+  // Accept the version as a JSON number or a numeric string ("1"); anything else yields null.
+  private static Integer versionOf(JsonNode versionNode) {
+    if (versionNode.isNumber()) {
+      return versionNode.asInt();
+    }
+    if (versionNode.isTextual()) {
+      try {
+        return Integer.parseInt(versionNode.asString("").trim());
+      } catch (NumberFormatException _) {
+        return null;
+      }
+    }
+    return null;
   }
 }

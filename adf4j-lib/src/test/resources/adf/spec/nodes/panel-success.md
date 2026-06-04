@@ -1,3 +1,2 @@
 > [!TIP]
-> **Success**
 > All good.

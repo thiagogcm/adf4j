@@ -27,7 +27,10 @@ final class MarkdownText {
 
     try {
       var value = Long.parseLong(timestamp);
-      var date = Instant.ofEpochMilli(value).atZone(ZoneOffset.UTC).toLocalDate();
+      var instant = Math.abs(value) < 100_000_000_000L
+          ? Instant.ofEpochSecond(value)
+          : Instant.ofEpochMilli(value);
+      var date = instant.atZone(ZoneOffset.UTC).toLocalDate();
       return date.toString();
     } catch (NumberFormatException _) {
       return timestamp;
@@ -39,10 +42,6 @@ final class MarkdownText {
       return List.of();
     }
     return Arrays.asList(LINE_BREAK_PATTERN.split(value, -1));
-  }
-
-  public static String escapeLinkText(String value) {
-    return Objects.requireNonNullElse(value, "").replace("[", "\\[").replace("]", "\\]");
   }
 
   /** A literal {@code [inner]} label token, fully inline-escaped so it can't parse as a link. */
@@ -132,7 +131,7 @@ final class MarkdownText {
 
   private static boolean isInlinePunctuation(char c) {
     return switch (c) {
-      case '\\', '`', '*', '[', ']', '(', ')', '~', '<', '&' -> true;
+      case '\\', '`', '*', '[', ']', '(', ')', '~', '<', '&', '!' -> true;
       default -> false;
     };
   }
@@ -184,7 +183,8 @@ final class MarkdownText {
 
   /** Backslash-escapes {@code [ ] ( )} in image alt text. Null is treated as empty. */
   public static String escapeAltText(String alt) {
-    return escapeLinkText(alt).replace("(", "\\(").replace(")", "\\)");
+    return Objects.requireNonNullElse(alt, "")
+        .replace("[", "\\[").replace("]", "\\]").replace("(", "\\(").replace(")", "\\)");
   }
 
   /**
@@ -208,9 +208,10 @@ final class MarkdownText {
       return url;
     }
 
-    // Known limitation: a literal '<'/'>' in the URL is left as-is (a valid bare CommonMark
-    // destination) and an embedded newline here is not percent-encoded.
-    return url.replace(" ", "%20").replace("(", "%28").replace(")", "%29");
+    // Angle-wrapping is unavailable (the URL holds '<'/'>'/newline), so percent-encode the
+    // characters that would otherwise break the bare CommonMark destination.
+    return url.replace(" ", "%20").replace("(", "%28").replace(")", "%29")
+        .replace("<", "%3C").replace(">", "%3E").replace("\n", "%0A").replace("\r", "%0D");
   }
 
   private static boolean hasUnbalancedParens(String url) {

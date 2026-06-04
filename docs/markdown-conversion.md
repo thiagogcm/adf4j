@@ -38,7 +38,7 @@ documented default applies.
 |---|---|---|---|
 | `unknownNodePolicy` | `UnknownNodePolicy` | `PLACEHOLDER` | How unrecognised node/mark types are handled (see below). |
 | `imageSizeAttributes` | `boolean` | `false` | When `true`, emits the **non-GFM** `{width= height=}` suffix on images. |
-| `tableFallback` | `TableFallback` | `GFM_PROMOTE_FIRST_ROW` | How a GFM-safe table that lacks an all-header first row is rendered (see Tables). |
+| `tableFallback` | `TableFallback` | `GFM_PROMOTE_FIRST_ROW` | How a GFM-safe table with no header cells is rendered (see Tables). |
 | `htmlVisualMarks` | `boolean` | `false` | When `true`, preserves the visual-only marks (`textColor`/`backgroundColor`/`border`/`fontSize`) as an inline `<span style="…">` instead of dropping them. |
 | `mediaResolver` | `MediaResolver` | `null` | Hook to turn file media (ids, no URL) into a real URL; `null` keeps the `media:` placeholder. |
 | `context` | `ConfluenceRenderContext` | empty | Confluence render context (e.g. resolving `attachment:`/anchor links). |
@@ -70,8 +70,12 @@ GFM tables require a header row (a row, then a `| --- |` separator). `adf4j` ren
 Markdown table **only** when its first row is composed entirely of `tableHeader` cells. Everything
 else either falls back or is forced to HTML:
 
-- **Header-column / header-less tables** (first row is not all-`tableHeader`): governed by
-  `tableFallback`.
+- **Header in a non-first-row position** (a header column, or a header row that isn't first): forced
+  to HTML, so the `<th>` placement is preserved rather than scrambled into a GFM header. (One residual
+  loss: a table whose first row is all-header **and** that also has a header column still renders GFM,
+  so the body-column `<th>` become plain cells — GFM cannot express a header column alongside a
+  header row.)
+- **Header-less tables** (no `tableHeader` cells at all): governed by `tableFallback`.
 - **Always HTML, regardless of `tableFallback`:** a table with a number column
   (`numberColumnEnabled`), any cell with `colspan`/`rowspan` > 1, or any cell whose content is not
   GFM-expressible. Only `paragraph`, `media`, `mediaSingle`, and `mediaGroup` are considered
@@ -116,6 +120,10 @@ Example — a header-less 2x2 data table:
 `inlineCard`, `blockCard`, and `embedCard` render as Markdown links. An `embedCard` or `blockCard`
 that appears **inline** (inside a paragraph) is treated as an inline card and is still linkified — its
 URL survives.
+
+An inline `embedCard`/`blockCard` is folded onto the single inline-card form: the three node kinds
+share one inline rendering, so the embed-vs-block-vs-inline distinction (a rich preview vs. a bare
+link) is not represented in the Markdown — only the link itself carries through.
 
 URL and title are resolved from the card `attrs` (with JSON-LD fallbacks):
 
@@ -163,6 +171,11 @@ media kind is classified from its MIME/`mediaType` (then its filename extension)
   becomes the label), so the attachment is usable instead of a broken image. The opt-in `{width=
   height=}` size suffix is never added to a non-image link.
 
+Classification leans on the MIME/`mediaType` and filename: a media node that carries **neither** a
+MIME type nor a filename defaults to the **image** embed. That default keeps real images working
+(most file media is an image), but a non-image attachment that arrives stripped of all such metadata
+is mis-classified and renders as a `![…]` image embed that will display as broken.
+
 ```java
 MarkdownOptions opts = MarkdownOptions.defaults()
     .withMediaResolver(attrs -> "https://cdn.example.com/file/" + attrs.id());
@@ -195,12 +208,14 @@ Inline marks fall into three buckets. Several have **no GFM representation and a
 | `border` | **dropped** by default; `<span style="border:…">` when `htmlVisualMarks` is on |
 | `fontSize` | **dropped** by default; `<span style="font-size:…">` when `htmlVisualMarks` is on |
 | `indentation` (block) | preserved as a run of non-breaking spaces on the paragraph/heading (see below) |
-| `alignment` (block) | **dropped** — note: alignment carries real intent that is lost |
+| `alignment` (block) | **dropped** by default; a centre/end-aligned paragraph or heading is wrapped in `<div align="…">…</div>` when `htmlVisualMarks` is on |
 
 The dropped marks still parse successfully; only their visual effect is lost. When `htmlVisualMarks`
 is enabled, the four visual marks on a text run are combined into a single `<span style="…">` (the
 style values are escaped to stay inside the attribute). `alignment` is called out because, unlike
-pure colour/size styling, it can change the meaning of a document and has no faithful GFM form.
+pure colour/size styling, it can change the meaning of a document and has no faithful GFM form: by
+default a `center`/`end` alignment is dropped, and only under `htmlVisualMarks` is the block wrapped
+in a `<div align="…">…</div>` so the intent survives (a default `start`/left alignment is a no-op).
 
 `indentation` (a paragraph/heading block mark, level 1–6) is preserved by prefixing the block with a
 run of non-breaking spaces (U+00A0) per level. Ordinary leading spaces are unreliable in Markdown (4+
@@ -214,25 +229,23 @@ keyword, so the mapping is lossy:
 
 | Panel type | GFM alert |
 |---|---|
-| `info`, `custom`, unknown / missing | `[!NOTE]` |
-| `note` | `[!NOTE]` + a `> **Note**` label line |
+| `info`, `note`, `custom`, unknown / missing | `[!NOTE]` |
 | `warning` | `[!WARNING]` |
 | `error` | `[!CAUTION]` |
-| `tip` | `[!TIP]` |
-| `success` | `[!TIP]` + a `> **Success**` label line |
+| `tip`, `success` | `[!TIP]` |
 
-GFM has only five alert kinds, with no distinct "note" vs "info" and no "success". To avoid flattening
-those away, the two types that would otherwise be indistinguishable from another (`note` collapsing
-into `info`'s `NOTE`, `success` into `tip`'s `TIP`) keep a bolded label as the first line inside the
-alert. The types whose name already matches their alert get no extra label.
+GFM has only five alert kinds, with no distinct "note" vs "info" and no "success", so the mapping is
+lossy: `info`/`note` both become `[!NOTE]` and `tip`/`success` both become `[!TIP]`, with the
+within-pair distinction dropped. Only the alert keyword is emitted — no extra label line.
 
 ## Other node behaviors
 
 | Node | Behaviour |
 |---|---|
-| `date` | A numeric epoch-millis `timestamp` renders as an ISO `yyyy-mm-dd` date (UTC). A non-numeric timestamp is passed through verbatim; null/blank renders as empty. |
+| `paragraph` (empty) | An empty or whitespace-only paragraph collapses to nothing — adjacent blocks are joined by a single blank line regardless of how many blank paragraphs sat between them. A blank paragraph used purely as vertical spacing is therefore lost. |
+| `date` | A numeric epoch `timestamp` renders as an ISO `yyyy-mm-dd` date (UTC). The value is read as **epoch-milliseconds**, except an implausibly small magnitude (`< 100000000000`) is read as **epoch-seconds** so a seconds-based timestamp still resolves to a sane date. A non-numeric timestamp is passed through verbatim; null/blank renders as empty. |
 | `emoji` | Renders its `text`, then `shortName`. An emoji carrying only an opaque codepoint `id` (no text/shortName) renders as **empty** — there is no good Markdown form for a bare codepoint. |
-| `mention` | Renders its display `text`; falls back to a neutral `@unknown` when the text is absent (the opaque ARI/UUID id is not surfaced). |
+| `mention` | Renders its display `text`; when the text is absent, falls back to `@<id>` (the `id`, then `localId`), or `@unknown` if no id is present. Every mention is also collected into `ContentMetadata.mentionRefs` so callers can resolve identities. |
 | `status` | Renders as `[text]` (e.g. `[Done]`); falls back to `[status]` when the text is blank. |
 | `decisionItem` | Renders as a list item prefixed with `[decision]` / `[decision:<state>]`. |
 | unknown node / mark types | Follow `unknownNodePolicy` (placeholder / skip / fail). |
@@ -260,10 +273,11 @@ inside another list.
 ## Escaping
 
 **Every attribute-derived string is escaped, not just text nodes.** Inline punctuation — `(`, `)`,
-`[`, `]`, alongside `` \ ` * ~ < & `` — is backslash-escaped in the output of `text`, `placeholder`,
-`mention`, `emoji`, `date`, and an extension's fallback `text`. So none of them can inject a link or
-emphasis into the document (e.g. a placeholder whose text is `[label](http://evil)` renders as the
-literal `\[label\]\(http://evil\)`, not a live link).
+`[`, `]`, `!`, alongside `` \ ` * ~ < & `` — is backslash-escaped in the output of `text`,
+`placeholder`, `mention`, `emoji`, `date`, an extension's fallback `text`, and the labels of links,
+cards, and TOC entries. So none of them can inject a link, image, or emphasis into the document (e.g.
+a placeholder whose text is `[label](http://evil)` renders as the literal `\[label\]\(http://evil\)`,
+not a live link; a `!` before a link can't form an image).
 
 When one of these inlines is the **first thing on a line** (a paragraph, a list item's or caption's
 first paragraph, a block extension's fallback text), a leading block marker (`#`, `-`, `+`, `>`, or

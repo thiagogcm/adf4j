@@ -1,7 +1,6 @@
 A metrics report captures a request flow between institutions.
 
 > [!NOTE]
-> **Note**
 > **Security note**
 >
 > The exchange follows the governance security rules.

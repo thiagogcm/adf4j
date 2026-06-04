@@ -492,21 +492,22 @@ public final class AdfAstParser {
 
   private MediaAttrs parseMediaAttrs(JsonNode attrs) {
     if (attrs == null || !attrs.isObject()) {
-      return new MediaAttrs(null, null, null, null, null, null, null, null, null, null, null, null);
+      return MediaAttrs.builder().build();
     }
-    return new MediaAttrs(
-        JsonFields.text(attrs, "type"),
-        JsonFields.text(attrs, "id"),
-        JsonFields.text(attrs, "localId"),
-        JsonFields.text(attrs, "url"),
-        JsonFields.text(attrs, "collection"),
-        JsonFields.text(attrs, "alt"),
-        JsonFields.text(attrs, "width"),
-        JsonFields.text(attrs, "height"),
-        JsonFields.text(attrs, "mediaType"),
-        JsonFields.text(attrs, "__fileMimeType"),
-        JsonFields.text(attrs, "__fileName"),
-        JsonFields.text(attrs, "name"));
+    return MediaAttrs.builder()
+        .type(JsonFields.text(attrs, "type"))
+        .id(JsonFields.text(attrs, "id"))
+        .localId(JsonFields.text(attrs, "localId"))
+        .url(JsonFields.text(attrs, "url"))
+        .collection(JsonFields.text(attrs, "collection"))
+        .alt(JsonFields.text(attrs, "alt"))
+        .width(JsonFields.text(attrs, "width"))
+        .height(JsonFields.text(attrs, "height"))
+        .mediaType(JsonFields.text(attrs, "mediaType"))
+        .fileMimeType(JsonFields.text(attrs, "__fileMimeType"))
+        .fileName(JsonFields.text(attrs, "__fileName"))
+        .name(JsonFields.text(attrs, "name"))
+        .build();
   }
 
   /**

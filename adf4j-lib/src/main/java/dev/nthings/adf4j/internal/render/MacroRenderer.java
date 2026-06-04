@@ -46,7 +46,7 @@ final class MacroRenderer {
     var rendered = switch (extensionKey != null ? extensionKey : "") {
       case "children" -> renderChildrenPlaceholder(macroParams);
       case "toc" -> renderTocMacro(macroParams, context);
-      case "anchor" -> "";
+      case "anchor" -> HtmlFragments.anchor(ConfluenceSupport.anchorId(macroParams));
       case "iframe" -> renderIframeMacro(macroParams);
       case "viewpdf" -> renderViewPdfMacro(macroParams, context);
       case "chart:default" -> renderChartMacro(macroParams);
@@ -149,7 +149,7 @@ final class MacroRenderer {
     var lines = new ArrayList<String>();
     for (var heading : filtered) {
       var indent = RenderBuffer.LIST_INDENT.repeat(Math.max(0, heading.level() - baseLevel));
-      var label = MarkdownText.escapeLinkText(heading.text());
+      var label = MarkdownText.escapeInlineText(heading.text(), false);
       if (heading.anchor() != null && !heading.anchor().isBlank()) {
         lines.add(indent + "- [" + label + "](#" + heading.anchor() + ")");
       } else {

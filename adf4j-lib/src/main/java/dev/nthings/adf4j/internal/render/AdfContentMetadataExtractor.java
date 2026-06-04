@@ -12,6 +12,7 @@ import dev.nthings.adf4j.metadata.AttachmentReference;
 import dev.nthings.adf4j.metadata.ContentMetadata;
 import dev.nthings.adf4j.metadata.ExternalReference;
 import dev.nthings.adf4j.metadata.HeadingReference;
+import dev.nthings.adf4j.metadata.MentionReference;
 import dev.nthings.adf4j.metadata.PageReference;
 import dev.nthings.adf4j.options.MarkdownOptions;
 import dev.nthings.adf4j.internal.AttachmentReferences;
@@ -49,6 +50,7 @@ import dev.nthings.adf4j.ast.MediaAttrs;
 import dev.nthings.adf4j.ast.MediaGroup;
 import dev.nthings.adf4j.ast.MediaInline;
 import dev.nthings.adf4j.ast.MediaSingle;
+import dev.nthings.adf4j.ast.Mention;
 import dev.nthings.adf4j.ast.MultiBodiedExtension;
 import dev.nthings.adf4j.ast.NestedExpand;
 import dev.nthings.adf4j.ast.OrderedList;
@@ -81,6 +83,7 @@ public final class AdfContentMetadataExtractor {
     return new ContentMetadata(
         state.pageRefs.stream().map(PageReference::new).toList(),
         state.externalRefs.stream().map(ExternalReference::new).toList(),
+        List.copyOf(state.mentionRefs),
         attachmentRefs,
         outline == null ? List.of() : List.copyOf(outline));
   }
@@ -150,10 +153,19 @@ public final class AdfContentMetadataExtractor {
       }
       case InlineExtension extension ->
           collectExtension(extension.extensionType(), extension.extensionKey(), extension.macroParams(), state);
+      case Mention mention -> collectMention(mention, state);
       default -> {
         // Plain inline content carries no references.
       }
     }
+  }
+
+  private void collectMention(Mention mention, State state) {
+    var id = Stream.of(trimToNull(mention.id()), trimToNull(mention.localId()))
+        .filter(Objects::nonNull)
+        .findFirst()
+        .orElse(null);
+    state.mentionRefs.add(new MentionReference(id, mention.text()));
   }
 
   private void collectLinkMarks(List<AdfMark> marks, State state) {
@@ -304,6 +316,7 @@ public final class AdfContentMetadataExtractor {
 
     final LinkedHashSet<String> pageRefs = new LinkedHashSet<>();
     final LinkedHashSet<String> externalRefs = new LinkedHashSet<>();
+    final LinkedHashSet<MentionReference> mentionRefs = new LinkedHashSet<>();
     final LinkedHashMap<String, AttachmentRefBuilder> attachmentRefs = new LinkedHashMap<>();
     final Map<String, AttachmentReference> attachmentReferencesByTitle;
 

@@ -48,7 +48,7 @@ final class CardRenderer {
     if (hasUrl) {
       if (hasTitle) {
         return "[%s](%s)".formatted(
-            MarkdownText.escapeLinkText(title), MarkdownText.escapeUrlDestination(url));
+            MarkdownText.escapeInlineText(title, false), MarkdownText.escapeUrlDestination(url));
       }
       var destination = MarkdownText.escapeUrlDestination(url);
       return destination.equals(url) && isAbsoluteUri(url)
@@ -57,7 +57,7 @@ final class CardRenderer {
     }
 
     if (hasTitle) {
-      return MarkdownText.escapeLinkText(title);
+      return MarkdownText.escapeInlineText(title, false);
     }
 
     return null;

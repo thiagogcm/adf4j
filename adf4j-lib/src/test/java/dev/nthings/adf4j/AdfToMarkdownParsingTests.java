@@ -34,9 +34,9 @@ class AdfToMarkdownParsingTests {
           new InvalidRootCase(
               "{\"type\":\"doc\"}", List.of("INVALID_VERSION", "INVALID_CONTENT"))),
       argumentSet(
-          "string version is not accepted as ADF version 1",
+          "non-numeric string version is not accepted as ADF version",
           new InvalidRootCase(
-              "{\"type\":\"doc\",\"version\":\"1\",\"content\":[]}",
+              "{\"type\":\"doc\",\"version\":\"x\",\"content\":[]}",
               List.of("INVALID_VERSION"))));
 
   private final AdfTestSupport testSupport = AdfTestSupport.create();
@@ -87,6 +87,17 @@ class AdfToMarkdownParsingTests {
     assertThat(result.validAdfRoot()).isTrue();
     assertThat(result.issues()).isEmpty();
     assertThat(result.document().version()).isEqualTo(1);
+  }
+
+  @Test
+  void parse_accepts_a_numeric_string_version() {
+    var json =
+        "{\"type\":\"doc\",\"version\":\"1\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Hi\"}]}]}";
+    var result = processor.parse(json);
+
+    assertThat(result.document()).isNotNull();
+    assertThat(result.validAdfRoot()).isTrue();
+    assertThat(result.issues()).extracting(ParseIssue::code).doesNotContain("INVALID_VERSION");
   }
 
   @Test

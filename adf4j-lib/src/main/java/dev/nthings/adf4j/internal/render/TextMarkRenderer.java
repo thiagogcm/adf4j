@@ -68,7 +68,7 @@ final class TextMarkRenderer {
     if (linkMark != null) {
       var href = linkMark.href();
       if (href != null && !href.isBlank()) {
-        var label = (rendered == null || rendered.isBlank()) ? MarkdownText.escapeLinkText(href) : rendered;
+        var label = (rendered == null || rendered.isBlank()) ? MarkdownText.escapeInlineText(href, false) : rendered;
         var destination = MarkdownText.escapeUrlDestination(href);
         var title = linkMark.title();
         rendered = (title == null || title.isBlank())
