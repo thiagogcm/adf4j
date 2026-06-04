@@ -12,7 +12,7 @@ import dev.nthings.adf4j.ast.MediaSingle;
 
 final class MediaRenderer {
 
-  String renderMediaSingle(MediaSingle node, RendererState context, AdfRenderer adfRenderer) {
+  String renderMediaSingle(MediaSingle node, RendererState context, BlockRecursion recursion) {
     if (node.content().isEmpty()) {
       return "";
     }
@@ -22,9 +22,9 @@ final class MediaRenderer {
     var captionBlocks = new ArrayList<String>();
     for (var item : node.content()) {
       if (item instanceof Media media) {
-        imageBlocks.add(renderMedia(media, context, adfRenderer));
+        imageBlocks.add(renderMedia(media, context, recursion));
       } else if (item instanceof Caption caption) {
-        var rendered = renderCaption(caption, context, adfRenderer);
+        var rendered = renderCaption(caption, context, recursion);
         if (!rendered.isBlank()) {
           captionBlocks.add(rendered);
         }
@@ -34,19 +34,19 @@ final class MediaRenderer {
     var blocks = new ArrayList<String>();
     if (!imageBlocks.isEmpty()) {
       var imageString = String.join("\n\n", imageBlocks);
-      blocks.add(adfRenderer.applyMarks(imageString, node.marks(), context.htmlVisualMarks()));
+      blocks.add(recursion.applyMarks(imageString, node.marks(), context.htmlVisualMarks()));
     }
     blocks.addAll(captionBlocks);
 
     return String.join("\n\n", blocks);
   }
 
-  String renderCaption(Caption node, RendererState context, AdfRenderer adfRenderer) {
+  String renderCaption(Caption node, RendererState context, BlockRecursion recursion) {
     // A caption renders as its own block at column 0, so its first inline is at a block start.
-    return adfRenderer.renderInlineNodes(node.content(), context, true);
+    return recursion.renderInlineNodes(node.content(), context, true);
   }
 
-  String renderMediaGroup(MediaGroup node, RendererState context, AdfRenderer adfRenderer) {
+  String renderMediaGroup(MediaGroup node, RendererState context, BlockRecursion recursion) {
     if (node.content().isEmpty()) {
       return "";
     }
@@ -54,21 +54,21 @@ final class MediaRenderer {
     var lines = new ArrayList<String>();
     for (var item : node.content()) {
       if (item instanceof Media media) {
-        lines.add(renderMedia(media, context, adfRenderer));
+        lines.add(renderMedia(media, context, recursion));
       }
     }
     // Single soft break: a media group renders as one visual cluster.
     return String.join("\n", lines);
   }
 
-  String renderMedia(Media node, RendererState context, AdfRenderer adfRenderer) {
+  String renderMedia(Media node, RendererState context, BlockRecursion recursion) {
     var rendered = renderMediaBlock(node.attrs(), context);
-    return adfRenderer.applyMarks(rendered, node.marks(), context.htmlVisualMarks());
+    return recursion.applyMarks(rendered, node.marks(), context.htmlVisualMarks());
   }
 
-  String renderMediaInline(MediaInline node, RendererState context, AdfRenderer adfRenderer) {
+  String renderMediaInline(MediaInline node, RendererState context, BlockRecursion recursion) {
     var rendered = renderMediaBlock(node.attrs(), context);
-    return adfRenderer.applyMarks(rendered, node.marks(), context.htmlVisualMarks());
+    return recursion.applyMarks(rendered, node.marks(), context.htmlVisualMarks());
   }
 
   private String renderMediaBlock(MediaAttrs attrs, RendererState context) {

@@ -1,33 +1,36 @@
 package dev.nthings.adf4j.internal.analyze;
 
+import java.util.List;
+
 import dev.nthings.adf4j.options.MarkdownOptions;
 import dev.nthings.adf4j.ast.AdfDocument;
 
 /**
- * The analyze phase: a single logical pass that collects the heading outline and extracts content
- * metadata, sitting between parsing and rendering.
+ * The analyze phase: one {@link AdfNodeWalker} pass drives the heading and content-metadata collectors
+ * together into a {@link DocumentAnalysis}. Stateless and thread-safe (the per-document accumulation
+ * lives in the fresh collectors), sitting between parsing and rendering.
  */
 public final class AdfDocumentAnalyzer {
 
-  private final AdfHeadingCollector headingCollector;
-  private final AdfContentMetadataExtractor metadataExtractor;
-
-  AdfDocumentAnalyzer(
-      AdfHeadingCollector headingCollector, AdfContentMetadataExtractor metadataExtractor) {
-    this.headingCollector = headingCollector;
-    this.metadataExtractor = metadataExtractor;
+  private AdfDocumentAnalyzer() {
   }
 
   public static AdfDocumentAnalyzer createDefault() {
-    return new AdfDocumentAnalyzer(new AdfHeadingCollector(), new AdfContentMetadataExtractor());
+    return new AdfDocumentAnalyzer();
   }
 
   public DocumentAnalysis analyze(AdfDocument document, MarkdownOptions options) {
     if (document == null) {
       return DocumentAnalysis.empty();
     }
-    var outline = headingCollector.collect(document);
-    var metadata = metadataExtractor.extract(document, options, outline.headings());
+
+    var headingCollector = new AdfHeadingCollector();
+    var metadataExtractor =
+        new AdfContentMetadataExtractor(options.context().attachmentReferencesByTitle());
+    AdfNodeWalker.walk(document, List.of(headingCollector, metadataExtractor));
+
+    var outline = headingCollector.build();
+    var metadata = metadataExtractor.build(outline.headings());
     return new DocumentAnalysis(outline, metadata);
   }
 }

@@ -57,20 +57,20 @@ final class MacroRenderer {
   }
 
   List<String> renderBodiedExtension(
-      BodiedExtension node, RendererState context, AdfRenderer adfRenderer) {
+      BodiedExtension node, RendererState context, BlockRecursion recursion) {
     if (ConfluenceSupport.isConfluenceMacroExtension(node.extensionType())
         && "excerpt".equals(node.extensionKey())) {
-      return adfRenderer.renderBlocks(node.content(), context);
+      return recursion.renderBlocks(node.content(), context);
     }
     return fallbackHeaderThenBodies(
-        node.text(), node.extensionType(), node.extensionKey(), node.content(), context, adfRenderer);
+        node.text(), node.extensionType(), node.extensionKey(), node.content(), context, recursion);
   }
 
   List<String> renderMultiBodiedExtension(
-      MultiBodiedExtension node, RendererState context, AdfRenderer adfRenderer) {
+      MultiBodiedExtension node, RendererState context, BlockRecursion recursion) {
     // The schema predates this node; salvage the frame bodies.
     return fallbackHeaderThenBodies(
-        node.text(), node.extensionType(), node.extensionKey(), node.content(), context, adfRenderer);
+        node.text(), node.extensionType(), node.extensionKey(), node.content(), context, recursion);
   }
 
   // Fallback header (macro text or "[Extension: …]" placeholder) then the rendered body blocks.
@@ -80,10 +80,10 @@ final class MacroRenderer {
       String extensionKey,
       List<AdfBlock> content,
       RendererState context,
-      AdfRenderer adfRenderer) {
+      BlockRecursion recursion) {
     var blocks = new ArrayList<String>();
     blocks.add(extensionFallback(text, extensionType, extensionKey));
-    blocks.addAll(adfRenderer.renderBlocks(content, context));
+    blocks.addAll(recursion.renderBlocks(content, context));
     return blocks;
   }
 
@@ -100,10 +100,10 @@ final class MacroRenderer {
   }
 
   List<String> renderBodiedSyncBlock(
-      BodiedSyncBlock node, RendererState context, AdfRenderer adfRenderer) {
+      BodiedSyncBlock node, RendererState context, BlockRecursion recursion) {
     var blocks = new ArrayList<String>();
     blocks.add(syncBlockLabel(node.resourceId()));
-    blocks.addAll(adfRenderer.renderBlocks(node.content(), context));
+    blocks.addAll(recursion.renderBlocks(node.content(), context));
     return blocks;
   }
 

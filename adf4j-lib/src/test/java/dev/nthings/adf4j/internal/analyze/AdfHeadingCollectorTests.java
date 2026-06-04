@@ -181,8 +181,6 @@ class AdfHeadingCollectorTests {
                   """,
                   List.of(new ExpectedHeading(2, "Section A", "custom-section")))));
 
-  private final AdfHeadingCollector collector = new AdfHeadingCollector();
-
   record NormalizedHeadingCase(String contentJson, List<ExpectedInlineNode> expectedNodes) {}
 
   record ExpectedInlineNode(String text, List<String> markTypes) {}
@@ -234,7 +232,7 @@ class AdfHeadingCollectorTests {
   void collect_builds_heading_outline_from_rendered_heading_text(HeadingOutlineCase input)
       throws Exception {
     var document = PARSER.parseDocument(MAPPER.readTree(input.adfJson()));
-    var outline = collector.collect(document);
+    var outline = AdfHeadingCollector.collect(document);
 
     assertThat(outline.headings())
         .extracting("level", "text", "anchor")
@@ -246,7 +244,7 @@ class AdfHeadingCollectorTests {
 
   @Test
   void collect_returns_empty_outline_for_null_adf_input() {
-    var outline = collector.collect(null);
+    var outline = AdfHeadingCollector.collect(null);
 
     assertThat(outline.headings()).isEmpty();
   }
@@ -254,7 +252,7 @@ class AdfHeadingCollectorTests {
   @Test
   void headings_without_any_toc_macro_are_not_toc_referenced() throws Exception {
     var document = PARSER.parseDocument(MAPPER.readTree(adfWithHeading(2, "Getting Started")));
-    var outline = collector.collect(document);
+    var outline = AdfHeadingCollector.collect(document);
 
     assertThat(tocReferencedFlags(document, outline)).containsExactly(false);
   }
@@ -262,7 +260,7 @@ class AdfHeadingCollectorTests {
   @Test
   void a_toc_macro_marks_every_heading_in_its_level_range_as_toc_referenced() throws Exception {
     var document = PARSER.parseDocument(MAPPER.readTree(TOC_WITH_HEADINGS));
-    var outline = collector.collect(document);
+    var outline = AdfHeadingCollector.collect(document);
 
     // The toc covers levels 1..2, so both the level-1 and level-2 headings are referenced.
     assertThat(tocReferencedFlags(document, outline)).containsExactly(true, true);
@@ -271,7 +269,7 @@ class AdfHeadingCollectorTests {
   @Test
   void a_toc_macro_does_not_reference_headings_outside_its_level_range() throws Exception {
     var document = PARSER.parseDocument(MAPPER.readTree(TOC_LEVEL_1_ONLY));
-    var outline = collector.collect(document);
+    var outline = AdfHeadingCollector.collect(document);
 
     // minLevel=maxLevel=1, so only the level-1 heading is referenced.
     assertThat(tocReferencedFlags(document, outline)).containsExactly(true, false);

@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.AdfDocument;
@@ -94,25 +95,44 @@ public final class AdfAstParser {
     if (root == null || !root.isObject()) {
       return new AdfDocument(1, List.of());
     }
-    var version = root.path("version").asInt(1);
-    return new AdfDocument(version, parseBlocks(root.get("content")));
+    return new AdfDocument(JsonFields.integer(root, "version", 1), parseBlocks(root.get("content")));
   }
 
-  public List<AdfBlock> parseBlocks(JsonNode arrayNode) {
+  // Maps every object element of a JSON array through fn, skipping non-objects and any null fn maps to.
+  // The single place array traversal lives; type-filtered lists differ only by what their fn returns.
+  private <T> List<T> mapArray(JsonNode arrayNode, Function<JsonNode, T> fn) {
     if (arrayNode == null || !arrayNode.isArray() || arrayNode.isEmpty()) {
       return List.of();
     }
-    var blocks = new ArrayList<AdfBlock>(arrayNode.size());
+    var result = new ArrayList<T>(arrayNode.size());
     for (var child : arrayNode) {
       if (child == null || !child.isObject()) {
         continue;
       }
-      blocks.add(parseBlock(child));
+      var mapped = fn.apply(child);
+      if (mapped != null) {
+        result.add(mapped);
+      }
     }
-    return blocks;
+    return result;
   }
 
-  public AdfBlock parseBlock(JsonNode node) {
+  // True when node's "type" field equals any of the given values.
+  private static boolean isType(JsonNode node, String... types) {
+    var type = JsonFields.text(node, "type", "");
+    for (var candidate : types) {
+      if (candidate.equals(type)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  List<AdfBlock> parseBlocks(JsonNode arrayNode) {
+    return mapArray(arrayNode, this::parseBlock);
+  }
+
+  AdfBlock parseBlock(JsonNode node) {
     var type = JsonFields.text(node, "type", "");
     return switch (type) {
       case "paragraph" -> new Paragraph(parseInlines(node.get("content")), parseMarks(node.get("marks")));
@@ -137,7 +157,7 @@ public final class AdfAstParser {
       case "tableCell" -> parseTableCell(node, false);
       case "tableHeader" -> parseTableCell(node, true);
       case "mediaSingle" -> parseMediaSingle(node);
-      case "mediaGroup" -> new MediaGroup(parseMediaBlocks(node.get("content")));
+      case "mediaGroup" -> new MediaGroup(parseBlocks(node.get("content")));
       case "media" -> new Media(parseMediaAttrs(node.path("attrs")), parseMarks(node.get("marks")));
       case "caption" -> new Caption(parseInlines(node.get("content")));
       case "expand" -> new Expand(JsonFields.text(node.path("attrs"), "title", ""), parseBlocks(node.get("content")));
@@ -145,7 +165,7 @@ public final class AdfAstParser {
           JsonFields.text(node.path("attrs"), "title", ""), parseBlocks(node.get("content")));
       case "layoutSection" -> new LayoutSection(parseLayoutColumns(node.get("content")));
       case "layoutColumn" -> new LayoutColumn(
-          node.path("attrs").path("width").asInt(0), parseBlocks(node.get("content")));
+          JsonFields.integer(node.path("attrs"), "width", 0), parseBlocks(node.get("content")));
       case "extension" -> parseExtension(node);
       case "bodiedExtension" -> parseBodiedExtension(node);
       case "multiBodiedExtension" -> parseMultiBodiedExtension(node);
@@ -160,20 +180,10 @@ public final class AdfAstParser {
   }
 
   public List<AdfInline> parseInlines(JsonNode arrayNode) {
-    if (arrayNode == null || !arrayNode.isArray() || arrayNode.isEmpty()) {
-      return List.of();
-    }
-    var inlines = new ArrayList<AdfInline>(arrayNode.size());
-    for (var child : arrayNode) {
-      if (child == null || !child.isObject()) {
-        continue;
-      }
-      inlines.add(parseInline(child));
-    }
-    return inlines;
+    return mapArray(arrayNode, this::parseInline);
   }
 
-  public AdfInline parseInline(JsonNode node) {
+  AdfInline parseInline(JsonNode node) {
     var type = JsonFields.text(node, "type", "");
     return switch (type) {
       case "text" -> new Text(JsonFields.text(node, "text", ""), parseMarks(node.get("marks")));
@@ -206,21 +216,11 @@ public final class AdfAstParser {
     };
   }
 
-  public List<AdfMark> parseMarks(JsonNode arrayNode) {
-    if (arrayNode == null || !arrayNode.isArray() || arrayNode.isEmpty()) {
-      return List.of();
-    }
-    var marks = new ArrayList<AdfMark>(arrayNode.size());
-    for (var mark : arrayNode) {
-      if (mark == null || !mark.isObject()) {
-        continue;
-      }
-      marks.add(parseMark(mark));
-    }
-    return marks;
+  List<AdfMark> parseMarks(JsonNode arrayNode) {
+    return mapArray(arrayNode, this::parseMark);
   }
 
-  public AdfMark parseMark(JsonNode node) {
+  AdfMark parseMark(JsonNode node) {
     var type = JsonFields.text(node, "type", "");
     var attrs = node.path("attrs");
     return switch (type) {
@@ -237,7 +237,7 @@ public final class AdfAstParser {
       case "textColor" -> new TextColor(JsonFields.text(attrs, "color"));
       case "backgroundColor" -> new BackgroundColor(JsonFields.text(attrs, "color"));
       case "alignment" -> new Alignment(JsonFields.text(attrs, "align"));
-      case "indentation" -> new Indentation(attrs.path("level").asInt(0));
+      case "indentation" -> new Indentation(JsonFields.integer(attrs, "level", 0));
       case "fontSize" -> new FontSize(JsonFields.text(attrs, "fontSize"));
       case "border" -> new Border(JsonFields.text(attrs, "color"), JsonFields.text(attrs, "size"));
       case "annotation" -> new Annotation();
@@ -275,7 +275,7 @@ public final class AdfAstParser {
   }
 
   private Heading parseHeading(JsonNode node) {
-    var level = Math.clamp(node.path("attrs").path("level").asInt(1), 1, 6);
+    var level = Math.clamp(JsonFields.integer(node.path("attrs"), "level", 1), 1, 6);
     return new Heading(level, parseInlines(node.get("content")), parseMarks(node.get("marks")));
   }
 
@@ -292,106 +292,49 @@ public final class AdfAstParser {
   }
 
   private List<ListItem> parseListItems(JsonNode arrayNode) {
-    if (arrayNode == null || !arrayNode.isArray() || arrayNode.isEmpty()) {
-      return List.of();
-    }
-    var items = new ArrayList<ListItem>(arrayNode.size());
-    for (var child : arrayNode) {
-      if (child == null || !child.isObject()) {
-        continue;
-      }
-      if (!"listItem".equals(JsonFields.text(child, "type"))) {
-        continue;
-      }
-      items.add(new ListItem(parseBlocks(child.get("content"))));
-    }
-    return items;
+    return mapArray(arrayNode, child ->
+        isType(child, "listItem") ? new ListItem(parseBlocks(child.get("content"))) : null);
   }
 
   private OrderedList parseOrderedList(JsonNode node) {
-    var order = node.path("attrs").path("order").asInt(1);
+    var order = JsonFields.integer(node.path("attrs"), "order", 1);
     return new OrderedList(order, parseListItems(node.get("content")));
   }
 
+  // A nested taskList is schema-valid; parse it as a TaskList block so the renderer can recurse.
   private List<AdfBlock> parseTaskListItems(JsonNode arrayNode) {
-    if (arrayNode == null || !arrayNode.isArray() || arrayNode.isEmpty()) {
-      return List.of();
-    }
-    var items = new ArrayList<AdfBlock>(arrayNode.size());
-    for (var child : arrayNode) {
-      if (child == null || !child.isObject()) {
-        continue;
-      }
-      var type = JsonFields.text(child, "type", "");
-      // A nested taskList is schema-valid; parse it as a TaskList block so the renderer can recurse.
-      if (!"taskItem".equals(type) && !"blockTaskItem".equals(type) && !"taskList".equals(type)) {
-        continue;
-      }
-      items.add(parseBlock(child));
-    }
-    return items;
+    return mapArray(arrayNode, child ->
+        isType(child, "taskItem", "blockTaskItem", "taskList") ? parseBlock(child) : null);
   }
 
   private List<DecisionItem> parseDecisionItems(JsonNode arrayNode) {
-    if (arrayNode == null || !arrayNode.isArray() || arrayNode.isEmpty()) {
-      return List.of();
-    }
-    var items = new ArrayList<DecisionItem>(arrayNode.size());
-    for (var child : arrayNode) {
-      if (child == null || !child.isObject()) {
-        continue;
-      }
-      if (!"decisionItem".equals(JsonFields.text(child, "type"))) {
-        continue;
-      }
-      items.add(
-          new DecisionItem(
-              JsonFields.text(child.path("attrs"), "state"), parseInlines(child.get("content"))));
-    }
-    return items;
+    return mapArray(arrayNode, child ->
+        isType(child, "decisionItem")
+            ? new DecisionItem(
+                JsonFields.text(child.path("attrs"), "state"), parseInlines(child.get("content")))
+            : null);
   }
 
   private Table parseTable(JsonNode node) {
-    var numberColumnEnabled = node.path("attrs").path("isNumberColumnEnabled").asBoolean(false);
-    var rowsNode = node.get("content");
-    if (rowsNode == null || !rowsNode.isArray() || rowsNode.isEmpty()) {
-      return new Table(numberColumnEnabled, List.of());
-    }
-    var rows = new ArrayList<TableRow>(rowsNode.size());
-    for (var rowNode : rowsNode) {
-      if (rowNode == null || !rowNode.isObject()) {
-        continue;
-      }
-      if (!"tableRow".equals(JsonFields.text(rowNode, "type"))) {
-        continue;
-      }
-      rows.add(new TableRow(parseTableCells(rowNode.get("content"))));
-    }
+    var numberColumnEnabled = JsonFields.bool(node.path("attrs"), "isNumberColumnEnabled", false);
+    var rows = mapArray(node.get("content"), rowNode ->
+        isType(rowNode, "tableRow")
+            ? new TableRow(parseTableCells(rowNode.get("content")))
+            : null);
     return new Table(numberColumnEnabled, rows);
   }
 
   private List<TableCell> parseTableCells(JsonNode arrayNode) {
-    if (arrayNode == null || !arrayNode.isArray() || arrayNode.isEmpty()) {
-      return List.of();
-    }
-    var cells = new ArrayList<TableCell>(arrayNode.size());
-    for (var cellNode : arrayNode) {
-      if (cellNode == null || !cellNode.isObject()) {
-        continue;
-      }
-      var type = JsonFields.text(cellNode, "type", "");
-      if (!"tableCell".equals(type) && !"tableHeader".equals(type)) {
-        continue;
-      }
-      cells.add(parseTableCell(cellNode, "tableHeader".equals(type)));
-    }
-    return cells;
+    return mapArray(arrayNode, cellNode ->
+        isType(cellNode, "tableCell", "tableHeader")
+            ? parseTableCell(cellNode, isType(cellNode, "tableHeader"))
+            : null);
   }
 
   private TableCell parseTableCell(JsonNode node, boolean header) {
     var attrs = node.path("attrs");
-    var colspan = attrs.path("colspan").asInt(1);
-    var rowspan = attrs.path("rowspan").asInt(1);
+    var colspan = JsonFields.integer(attrs, "colspan", 1);
+    var rowspan = JsonFields.integer(attrs, "rowspan", 1);
     var background = JsonFields.text(attrs, "background");
     return new TableCell(header, colspan, rowspan, background, parseBlocks(node.get("content")));
   }
@@ -402,77 +345,50 @@ public final class AdfAstParser {
     var widthType = JsonFields.text(attrs, "widthType");
     var width = JsonFields.text(attrs, "width");
     return new MediaSingle(
-        layout, widthType, width, parseMediaBlocks(node.get("content")), parseMarks(node.get("marks")));
-  }
-
-  private List<AdfBlock> parseMediaBlocks(JsonNode arrayNode) {
-    if (arrayNode == null || !arrayNode.isArray() || arrayNode.isEmpty()) {
-      return List.of();
-    }
-    var blocks = new ArrayList<AdfBlock>(arrayNode.size());
-    for (var child : arrayNode) {
-      if (child == null || !child.isObject()) {
-        continue;
-      }
-      blocks.add(parseBlock(child));
-    }
-    return blocks;
+        layout, widthType, width, parseBlocks(node.get("content")), parseMarks(node.get("marks")));
   }
 
   private List<LayoutColumn> parseLayoutColumns(JsonNode arrayNode) {
-    if (arrayNode == null || !arrayNode.isArray() || arrayNode.isEmpty()) {
-      return List.of();
-    }
-    var columns = new ArrayList<LayoutColumn>(arrayNode.size());
-    for (var child : arrayNode) {
-      if (child == null || !child.isObject()) {
-        continue;
-      }
-      if (!"layoutColumn".equals(JsonFields.text(child, "type"))) {
-        continue;
-      }
-      var width = child.path("attrs").path("width").asInt(0);
-      columns.add(new LayoutColumn(width, parseBlocks(child.get("content"))));
-    }
-    return columns;
+    return mapArray(arrayNode, child ->
+        isType(child, "layoutColumn")
+            ? new LayoutColumn(
+                JsonFields.integer(child.path("attrs"), "width", 0), parseBlocks(child.get("content")))
+            : null);
   }
 
-  private Extension parseExtension(JsonNode node) {
-    var attrs = node.path("attrs");
-    return new Extension(
+  private record ExtensionFields(String type, String key, String text, MacroParams macroParams) {
+  }
+
+  private ExtensionFields extensionFields(JsonNode attrs) {
+    return new ExtensionFields(
         JsonFields.text(attrs, "extensionType"),
         JsonFields.text(attrs, "extensionKey"),
         JsonFields.text(attrs, "text"),
         parseMacroParams(attrs.path("parameters").path("macroParams")));
   }
 
+  private Extension parseExtension(JsonNode node) {
+    var fields = extensionFields(node.path("attrs"));
+    return new Extension(fields.type(), fields.key(), fields.text(), fields.macroParams());
+  }
+
   private BodiedExtension parseBodiedExtension(JsonNode node) {
-    var attrs = node.path("attrs");
+    var fields = extensionFields(node.path("attrs"));
     return new BodiedExtension(
-        JsonFields.text(attrs, "extensionType"),
-        JsonFields.text(attrs, "extensionKey"),
-        JsonFields.text(attrs, "text"),
-        parseMacroParams(attrs.path("parameters").path("macroParams")),
+        fields.type(), fields.key(), fields.text(), fields.macroParams(),
         parseBlocks(node.get("content")));
   }
 
   private MultiBodiedExtension parseMultiBodiedExtension(JsonNode node) {
-    var attrs = node.path("attrs");
+    var fields = extensionFields(node.path("attrs"));
     return new MultiBodiedExtension(
-        JsonFields.text(attrs, "extensionType"),
-        JsonFields.text(attrs, "extensionKey"),
-        JsonFields.text(attrs, "text"),
-        parseMacroParams(attrs.path("parameters").path("macroParams")),
+        fields.type(), fields.key(), fields.text(), fields.macroParams(),
         parseBlocks(node.get("content")));
   }
 
   private InlineExtension parseInlineExtension(JsonNode node) {
-    var attrs = node.path("attrs");
-    return new InlineExtension(
-        JsonFields.text(attrs, "extensionType"),
-        JsonFields.text(attrs, "extensionKey"),
-        JsonFields.text(attrs, "text"),
-        parseMacroParams(attrs.path("parameters").path("macroParams")));
+    var fields = extensionFields(node.path("attrs"));
+    return new InlineExtension(fields.type(), fields.key(), fields.text(), fields.macroParams());
   }
 
   private CardAttrs parseCardAttrs(JsonNode attrs) {
@@ -565,11 +481,7 @@ public final class AdfAstParser {
 
   private String mentionText(JsonNode attrs) {
     var raw = JsonFields.text(attrs, "text");
-    if (raw == null) {
-      return "";
-    }
-    var trimmed = raw.strip();
-    return trimmed;
+    return raw == null ? "" : raw.strip();
   }
 
   private String rawJson(JsonNode node) {

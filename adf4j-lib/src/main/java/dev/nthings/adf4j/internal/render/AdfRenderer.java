@@ -74,7 +74,7 @@ import org.commonmark.renderer.html.HtmlRenderer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public final class AdfRenderer {
+public final class AdfRenderer implements BlockRecursion {
 
   private static final Logger log = LoggerFactory.getLogger(AdfRenderer.class);
 
@@ -140,6 +140,7 @@ public final class AdfRenderer {
     return joinBlocks(renderBlocks(document.content(), context));
   }
 
+  @Override
   public List<String> renderBlock(AdfBlock block, RendererState context) {
     return switch (block) {
       case Paragraph paragraph -> List.of(renderParagraph(paragraph, context));
@@ -183,6 +184,7 @@ public final class AdfRenderer {
     };
   }
 
+  @Override
   public List<String> renderBlocks(List<AdfBlock> blocks, RendererState context) {
     if (blocks == null || blocks.isEmpty()) {
       return List.of();
@@ -194,7 +196,8 @@ public final class AdfRenderer {
 
   // startAtLineStart enables leading-block escaping for inlines at output column 0 (paragraphs, a
   // list item's first paragraph, a caption); false for mid-line text (headings, task/decision items).
-  String renderInlineNodes(
+  @Override
+  public String renderInlineNodes(
       List<AdfInline> nodes, RendererState context, boolean startAtLineStart) {
     if (nodes == null || nodes.isEmpty()) {
       return "";
@@ -254,11 +257,12 @@ public final class AdfRenderer {
     return left.size() == right.size() && left.containsAll(right) && right.containsAll(left);
   }
 
+  @Override
   public String applyMarks(String text, List<AdfMark> marks, boolean htmlVisualMarks) {
     return markRenderer.applyMarks(text, marks, htmlVisualMarks);
   }
 
-  public String joinBlocks(List<String> blocks) {
+  private String joinBlocks(List<String> blocks) {
     return RenderBuffer.joinBlocks(blocks);
   }
 
