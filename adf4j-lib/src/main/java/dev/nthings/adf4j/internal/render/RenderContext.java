@@ -1,8 +1,10 @@
 package dev.nthings.adf4j.internal.render;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import dev.nthings.adf4j.extension.ExtensionRenderer;
 import dev.nthings.adf4j.metadata.AttachmentReference;
 import dev.nthings.adf4j.options.MarkdownOptions;
 import dev.nthings.adf4j.options.MediaResolver;
@@ -21,7 +23,8 @@ record RenderContext(
     boolean imageSizeAttributes,
     TableFallback tableFallback,
     MediaResolver mediaResolver,
-    boolean htmlVisualMarks) {
+    boolean htmlVisualMarks,
+    List<ExtensionRenderer> extensionRenderers) {
 
   static RenderContext from(MarkdownOptions options, HeadingOutline headingOutline) {
     var requiredOptions = Objects.requireNonNull(options, "options");
@@ -34,6 +37,7 @@ record RenderContext(
         requiredOptions.imageSizeAttributes(),
         requiredOptions.tableFallback(),
         requiredOptions.mediaResolver(),
-        requiredOptions.htmlVisualMarks());
+        requiredOptions.htmlVisualMarks(),
+        requiredOptions.extensionRenderers());
   }
 }

@@ -3,6 +3,7 @@ package dev.nthings.adf4j.internal.render;
 import java.util.List;
 import java.util.Map;
 
+import dev.nthings.adf4j.extension.ExtensionRenderer;
 import dev.nthings.adf4j.metadata.AttachmentReference;
 import dev.nthings.adf4j.metadata.HeadingReference;
 import dev.nthings.adf4j.options.MarkdownOptions;
@@ -50,6 +51,10 @@ record RendererState(RenderContext context, int listDepth, TableCellKind tableCe
 
   boolean htmlVisualMarks() {
     return context.htmlVisualMarks();
+  }
+
+  List<ExtensionRenderer> extensionRenderers() {
+    return context.extensionRenderers();
   }
 
   HeadingReference headingInfo(Heading heading) {

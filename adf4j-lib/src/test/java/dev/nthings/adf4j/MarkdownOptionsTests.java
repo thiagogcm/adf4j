@@ -21,12 +21,13 @@ class MarkdownOptionsTests {
 
   @Test
   void constructor_and_copy_methods_normalize_null_policy_and_context() {
-    var options = new MarkdownOptions(null, null, false, null, null, false);
+    var options = new MarkdownOptions(null, null, false, null, null, false, null);
 
     assertThat(options.unknownNodePolicy()).isEqualTo(UnknownNodePolicy.PLACEHOLDER);
     assertThat(options.context()).isEqualTo(ConfluenceRenderContext.empty());
     assertThat(options.tableFallback()).isEqualTo(TableFallback.GFM_PROMOTE_FIRST_ROW);
     assertThat(options.mediaResolver()).isNull();
+    assertThat(options.extensionRenderers()).isEmpty();
     assertThat(options.withUnknownNodePolicy(UnknownNodePolicy.SKIP).unknownNodePolicy())
         .isEqualTo(UnknownNodePolicy.SKIP);
     assertThat(options.withContext(null).context()).isEqualTo(ConfluenceRenderContext.empty());

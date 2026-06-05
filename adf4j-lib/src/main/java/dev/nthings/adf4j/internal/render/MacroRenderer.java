@@ -2,8 +2,10 @@ package dev.nthings.adf4j.internal.render;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 
+import dev.nthings.adf4j.extension.ExtensionContext;
 import dev.nthings.adf4j.metadata.HeadingReference;
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.BodiedExtension;
@@ -40,6 +42,10 @@ final class MacroRenderer {
       String text,
       MacroParams macroParams,
       RendererState context) {
+    var custom = renderCustom(extensionType, extensionKey, text, macroParams, context);
+    if (custom.isPresent()) {
+      return custom.get();
+    }
     if (!ConfluenceSupport.isConfluenceMacroExtension(extensionType)) {
       return extensionFallback(text, extensionType, extensionKey);
     }
@@ -62,29 +68,56 @@ final class MacroRenderer {
         && "excerpt".equals(node.extensionKey())) {
       return recursion.renderBlocks(node.content(), context);
     }
-    return fallbackHeaderThenBodies(
-        node.text(), node.extensionType(), node.extensionKey(), node.content(), context, recursion);
+    return headerThenBodies(
+        node.text(), node.extensionType(), node.extensionKey(), node.macroParams(),
+        node.content(), context, recursion);
   }
 
   List<String> renderMultiBodiedExtension(
       MultiBodiedExtension node, RendererState context, BlockRecursion recursion) {
     // The schema predates this node; salvage the frame bodies.
-    return fallbackHeaderThenBodies(
-        node.text(), node.extensionType(), node.extensionKey(), node.content(), context, recursion);
+    return headerThenBodies(
+        node.text(), node.extensionType(), node.extensionKey(), node.macroParams(),
+        node.content(), context, recursion);
   }
 
-  // Fallback header (macro text or "[Extension: …]" placeholder) then the rendered body blocks.
-  private List<String> fallbackHeaderThenBodies(
+  // Header (custom renderer, else macro text or "[Extension: …]" placeholder) then the body blocks.
+  private List<String> headerThenBodies(
       String text,
       String extensionType,
       String extensionKey,
+      MacroParams macroParams,
       List<AdfBlock> content,
       RendererState context,
       BlockRecursion recursion) {
     var blocks = new ArrayList<String>();
-    blocks.add(extensionFallback(text, extensionType, extensionKey));
+    blocks.add(
+        renderCustom(extensionType, extensionKey, text, macroParams, context)
+            .orElseGet(() -> extensionFallback(text, extensionType, extensionKey)));
     blocks.addAll(recursion.renderBlocks(content, context));
     return blocks;
+  }
+
+  // Custom renderers, consulted in order (first non-empty wins); empty defers to the next, then default.
+  private Optional<String> renderCustom(
+      String extensionType,
+      String extensionKey,
+      String text,
+      MacroParams macroParams,
+      RendererState context) {
+    var renderers = context.extensionRenderers();
+    if (renderers.isEmpty()) {
+      return Optional.empty();
+    }
+    var extension = new ExtensionContext(
+        extensionType, extensionKey, text, macroParams == null ? null : macroParams.values());
+    for (var renderer : renderers) {
+      var rendered = renderer.render(extension);
+      if (rendered != null && rendered.isPresent()) {
+        return rendered;
+      }
+    }
+    return Optional.empty();
   }
 
   private String extensionFallback(String text, String extensionType, String extensionKey) {
