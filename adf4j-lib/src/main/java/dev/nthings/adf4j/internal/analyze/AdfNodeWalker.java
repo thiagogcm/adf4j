@@ -5,20 +5,25 @@ import java.util.List;
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.ast.AdfInline;
+import dev.nthings.adf4j.ast.BlockCard;
 import dev.nthings.adf4j.ast.BlockTaskItem;
 import dev.nthings.adf4j.ast.Blockquote;
 import dev.nthings.adf4j.ast.BodiedExtension;
 import dev.nthings.adf4j.ast.BodiedSyncBlock;
 import dev.nthings.adf4j.ast.BulletList;
 import dev.nthings.adf4j.ast.Caption;
+import dev.nthings.adf4j.ast.CodeBlock;
 import dev.nthings.adf4j.ast.DecisionItem;
 import dev.nthings.adf4j.ast.DecisionList;
+import dev.nthings.adf4j.ast.EmbedCard;
 import dev.nthings.adf4j.ast.Expand;
+import dev.nthings.adf4j.ast.Extension;
 import dev.nthings.adf4j.ast.ExtensionFrame;
 import dev.nthings.adf4j.ast.Heading;
 import dev.nthings.adf4j.ast.LayoutColumn;
 import dev.nthings.adf4j.ast.LayoutSection;
 import dev.nthings.adf4j.ast.ListItem;
+import dev.nthings.adf4j.ast.Media;
 import dev.nthings.adf4j.ast.MediaGroup;
 import dev.nthings.adf4j.ast.MediaSingle;
 import dev.nthings.adf4j.ast.MultiBodiedExtension;
@@ -26,11 +31,14 @@ import dev.nthings.adf4j.ast.NestedExpand;
 import dev.nthings.adf4j.ast.OrderedList;
 import dev.nthings.adf4j.ast.Panel;
 import dev.nthings.adf4j.ast.Paragraph;
+import dev.nthings.adf4j.ast.Rule;
+import dev.nthings.adf4j.ast.SyncBlock;
 import dev.nthings.adf4j.ast.Table;
 import dev.nthings.adf4j.ast.TableCell;
 import dev.nthings.adf4j.ast.TableRow;
 import dev.nthings.adf4j.ast.TaskItem;
 import dev.nthings.adf4j.ast.TaskList;
+import dev.nthings.adf4j.ast.UnknownBlock;
 
 /**
  * The analyze phase's one tree-walk: descends a document in order, handing every block and inline to
@@ -88,8 +96,8 @@ final class AdfNodeWalker {
       case MultiBodiedExtension node -> blocks(node.content());
       case ExtensionFrame node -> blocks(node.content());
       case BodiedSyncBlock node -> blocks(node.content());
-      // Leaf blocks (Media, Extension, cards, code, rule, sync, unknown) have no children to descend.
-      default -> {
+      // Leaf blocks: no children. Exhaustive (no default) so new block types must be triaged here.
+      case CodeBlock _, Rule _, Media _, Extension _, SyncBlock _, BlockCard _, EmbedCard _, UnknownBlock _ -> {
       }
     }
   }

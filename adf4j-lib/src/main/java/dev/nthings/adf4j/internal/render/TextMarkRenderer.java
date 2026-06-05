@@ -3,6 +3,7 @@ package dev.nthings.adf4j.internal.render;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.Function;
 
 import dev.nthings.adf4j.ast.AdfMark;
 import dev.nthings.adf4j.ast.Alignment;
@@ -32,52 +33,63 @@ final class TextMarkRenderer {
     if (marks == null || marks.isEmpty()) {
       return value;
     }
+    return markDecorator(marks, htmlVisualMarks).apply(value);
+  }
 
-    Link linkMark = null;
-    var codeMark = false;
-    var nonLinkMarks = new ArrayList<AdfMark>();
-
+  // Inside-out decorator chain: format marks (canonical order) innermost, then an optional combined
+  // visual <span>, then the link outermost. A code mark makes the text literal, superseding the
+  // format/visual layers. identity().andThen(...) nests so the first decorator added wraps innermost.
+  private Function<String, String> markDecorator(List<AdfMark> marks, boolean htmlVisualMarks) {
+    Link link = null;
+    var hasCode = false;
+    var formatMarks = new ArrayList<AdfMark>();
     for (var mark : marks) {
-      if (mark instanceof Link link) {
-        linkMark = link;
-      } else if (mark instanceof Code) {
-        codeMark = true;
-      } else if (!(mark instanceof UnknownMark)) {
-        nonLinkMarks.add(mark);
+      switch (mark) {
+        case Link found -> link = found;
+        case Code _ -> hasCode = true;
+        case UnknownMark _ -> { }
+        default -> formatMarks.add(mark);
       }
     }
 
-    var rendered = value;
-
-    if (codeMark) {
-      rendered = wrapCodeSpan(rendered);
+    Function<String, String> decorator = Function.identity();
+    if (hasCode) {
+      decorator = decorator.andThen(this::wrapCodeSpan);
     } else {
-      nonLinkMarks.sort(INLINE_MARK_ORDER);
-      for (var mark : nonLinkMarks) {
-        rendered = applyInlineMark(rendered, mark);
+      formatMarks.sort(INLINE_MARK_ORDER);
+      for (var mark : formatMarks) {
+        decorator = decorator.andThen(text -> applyInlineMark(text, mark));
       }
       // Opt-in: preserve visual-only marks as one combined <span style> instead of dropping them.
       if (htmlVisualMarks) {
-        var style = visualStyle(nonLinkMarks);
+        var style = visualStyle(formatMarks);
         if (!style.isEmpty()) {
-          rendered = wrap(rendered, "<span style=\"" + style + "\">", "</span>");
+          var open = "<span style=\"" + style + "\">";
+          decorator = decorator.andThen(text -> wrap(text, open, "</span>"));
         }
       }
     }
-
-    if (linkMark != null) {
-      var href = linkMark.href();
-      if (href != null && !href.isBlank()) {
-        var label = (rendered == null || rendered.isBlank()) ? MarkdownText.escapeInlineText(href, false) : rendered;
-        var destination = MarkdownText.escapeUrlDestination(href);
-        var title = linkMark.title();
-        rendered = (title == null || title.isBlank())
-            ? "[%s](%s)".formatted(label, destination)
-            : "[%s](%s \"%s\")".formatted(label, destination, escapeLinkTitle(title));
-      }
+    if (link != null) {
+      var linkMark = link;
+      decorator = decorator.andThen(text -> applyLink(text, linkMark));
     }
+    return decorator;
+  }
 
-    return rendered;
+  // Wraps formatted text in a Markdown link, or returns it unchanged when the link has no href.
+  private String applyLink(String rendered, Link link) {
+    var href = link.href();
+    if (href == null || href.isBlank()) {
+      return rendered;
+    }
+    var label = (rendered == null || rendered.isBlank())
+        ? MarkdownText.escapeInlineText(href, false)
+        : rendered;
+    var destination = MarkdownText.escapeUrlDestination(href);
+    var title = link.title();
+    return (title == null || title.isBlank())
+        ? "[%s](%s)".formatted(label, destination)
+        : "[%s](%s \"%s\")".formatted(label, destination, escapeLinkTitle(title));
   }
 
   private static int canonicalRank(AdfMark mark) {
