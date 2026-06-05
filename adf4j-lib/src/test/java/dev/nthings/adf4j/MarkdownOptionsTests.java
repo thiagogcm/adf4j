@@ -1,7 +1,10 @@
 package dev.nthings.adf4j;
 
 import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
+import dev.nthings.adf4j.options.AttachmentResolver;
 import dev.nthings.adf4j.options.MarkdownOptions;
+import dev.nthings.adf4j.options.MediaResolver;
+import dev.nthings.adf4j.options.PageLinkResolver;
 import dev.nthings.adf4j.options.TableFallback;
 import dev.nthings.adf4j.options.UnknownNodePolicy;
 
@@ -86,6 +89,48 @@ class MarkdownOptionsTests {
     var both = attachment.withPageLinkResolver(pageNodeId -> "pages/" + pageNodeId);
     assertThat(both.attachmentResolver()).isSameAs(attachment.attachmentResolver());
     assertThat(both.pageLinkResolver()).isNotNull();
+  }
+
+  @Test
+  void passing_null_to_a_resolver_setter_clears_it() {
+    var options = MarkdownOptions.defaults()
+        .withMediaResolver(attrs -> "x")
+        .withAttachmentResolver(reference -> "y")
+        .withPageLinkResolver(pageNodeId -> "z");
+
+    assertThat(options.withMediaResolver(null).mediaResolver()).isNull();
+    assertThat(options.withAttachmentResolver(null).attachmentResolver()).isNull();
+    assertThat(options.withPageLinkResolver(null).pageLinkResolver()).isNull();
+  }
+
+  @Test
+  void builder_with_no_setters_equals_defaults() {
+    assertThat(MarkdownOptions.builder().build()).isEqualTo(MarkdownOptions.defaults());
+  }
+
+  @Test
+  void builder_sets_each_field() {
+    MediaResolver media = attrs -> "m";
+    AttachmentResolver attachment = reference -> "a";
+    PageLinkResolver pageLink = pageNodeId -> "p";
+
+    var options = MarkdownOptions.builder()
+        .unknownNodePolicy(UnknownNodePolicy.SKIP)
+        .imageSizeAttributes(true)
+        .tableFallback(TableFallback.HTML)
+        .mediaResolver(media)
+        .htmlVisualMarks(true)
+        .attachmentResolver(attachment)
+        .pageLinkResolver(pageLink)
+        .build();
+
+    assertThat(options.unknownNodePolicy()).isEqualTo(UnknownNodePolicy.SKIP);
+    assertThat(options.imageSizeAttributes()).isTrue();
+    assertThat(options.tableFallback()).isEqualTo(TableFallback.HTML);
+    assertThat(options.mediaResolver()).isSameAs(media);
+    assertThat(options.htmlVisualMarks()).isTrue();
+    assertThat(options.attachmentResolver()).isSameAs(attachment);
+    assertThat(options.pageLinkResolver()).isSameAs(pageLink);
   }
 
   @Test

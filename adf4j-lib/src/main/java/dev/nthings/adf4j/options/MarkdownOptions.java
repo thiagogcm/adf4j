@@ -19,6 +19,10 @@ import dev.nthings.adf4j.extension.ExtensionRenderer;
  * link; {@code null} keeps the {@code attachment:<fileId>} placeholder. {@code pageLinkResolver}
  * rewrites inter-page links/cards to caller-supplied destinations by page node id; {@code null} keeps
  * the original href.
+ *
+ * <p>Construct via {@link #defaults()} plus the {@code withX(...)} withers, or via {@link #builder()};
+ * both are forward-compatible. Avoid {@code new MarkdownOptions(...)}: the canonical constructor is not
+ * a stable API — its parameter list grows whenever an option is added.
  */
 public record MarkdownOptions(
     UnknownNodePolicy unknownNodePolicy,
@@ -77,6 +81,7 @@ public record MarkdownOptions(
         extensionRenderers, attachmentResolver, pageLinkResolver);
   }
 
+  /** Sets the media resolver; {@code null} clears it (the default {@code media:} placeholder path). */
   public MarkdownOptions withMediaResolver(MediaResolver resolver) {
     return new MarkdownOptions(
         unknownNodePolicy, context, imageSizeAttributes, tableFallback, resolver, htmlVisualMarks,
@@ -95,15 +100,93 @@ public record MarkdownOptions(
         renderers, attachmentResolver, pageLinkResolver);
   }
 
+  /** Sets the attachment resolver; {@code null} clears it (the default {@code attachment:} path). */
   public MarkdownOptions withAttachmentResolver(AttachmentResolver resolver) {
     return new MarkdownOptions(
         unknownNodePolicy, context, imageSizeAttributes, tableFallback, mediaResolver, htmlVisualMarks,
         extensionRenderers, resolver, pageLinkResolver);
   }
 
+  /** Sets the page-link resolver; {@code null} clears it (links keep their original href). */
   public MarkdownOptions withPageLinkResolver(PageLinkResolver resolver) {
     return new MarkdownOptions(
         unknownNodePolicy, context, imageSizeAttributes, tableFallback, mediaResolver, htmlVisualMarks,
         extensionRenderers, attachmentResolver, resolver);
+  }
+
+  /** A new {@link Builder} whose unset fields take the same defaults as {@link #defaults()}. */
+  public static Builder builder() {
+    return new Builder();
+  }
+
+  /**
+   * Fluent, forward-compatible builder for {@link MarkdownOptions}. Unset fields take the
+   * {@link #defaults()} values; passing {@code null} to a resolver setter leaves that resolver unset.
+   */
+  public static final class Builder {
+
+    private UnknownNodePolicy unknownNodePolicy;
+    private ConfluenceRenderContext context;
+    private boolean imageSizeAttributes;
+    private TableFallback tableFallback;
+    private MediaResolver mediaResolver;
+    private boolean htmlVisualMarks;
+    private List<ExtensionRenderer> extensionRenderers;
+    private AttachmentResolver attachmentResolver;
+    private PageLinkResolver pageLinkResolver;
+
+    private Builder() {
+    }
+
+    public Builder unknownNodePolicy(UnknownNodePolicy policy) {
+      this.unknownNodePolicy = policy;
+      return this;
+    }
+
+    public Builder context(ConfluenceRenderContext renderContext) {
+      this.context = renderContext;
+      return this;
+    }
+
+    public Builder imageSizeAttributes(boolean enabled) {
+      this.imageSizeAttributes = enabled;
+      return this;
+    }
+
+    public Builder tableFallback(TableFallback fallback) {
+      this.tableFallback = fallback;
+      return this;
+    }
+
+    public Builder mediaResolver(MediaResolver resolver) {
+      this.mediaResolver = resolver;
+      return this;
+    }
+
+    public Builder htmlVisualMarks(boolean enabled) {
+      this.htmlVisualMarks = enabled;
+      return this;
+    }
+
+    public Builder extensionRenderers(List<ExtensionRenderer> renderers) {
+      this.extensionRenderers = renderers;
+      return this;
+    }
+
+    public Builder attachmentResolver(AttachmentResolver resolver) {
+      this.attachmentResolver = resolver;
+      return this;
+    }
+
+    public Builder pageLinkResolver(PageLinkResolver resolver) {
+      this.pageLinkResolver = resolver;
+      return this;
+    }
+
+    public MarkdownOptions build() {
+      return new MarkdownOptions(
+          unknownNodePolicy, context, imageSizeAttributes, tableFallback, mediaResolver,
+          htmlVisualMarks, extensionRenderers, attachmentResolver, pageLinkResolver);
+    }
   }
 }

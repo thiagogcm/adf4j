@@ -4,6 +4,7 @@ import java.util.Objects;
 
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.internal.engine.AdfPipeline;
+import dev.nthings.adf4j.metadata.ContentMetadata;
 import dev.nthings.adf4j.options.MarkdownOptions;
 import dev.nthings.adf4j.result.MarkdownResult;
 import dev.nthings.adf4j.result.ParseResult;
@@ -43,6 +44,32 @@ public final class AdfToMarkdown {
   /** Parses ADF JSON into an {@link AdfDocument} with diagnostics, without rendering. */
   public ParseResult parse(String adfJson) {
     return pipeline.parse(adfJson);
+  }
+
+  /**
+   * Extracts {@link ContentMetadata} (references, attachments, outline) using the bound options,
+   * running parse + analyze without rendering — e.g. to plan fetches from
+   * {@link ContentMetadata#referencedFileIds()} before producing Markdown. Attachment-macro references
+   * resolve against {@code options.context()}, so supply the attachment context here too. Returns
+   * {@link ContentMetadata#empty()} for blank or invalid input.
+   */
+  public ContentMetadata analyze(String adfJson) {
+    return pipeline.analyze(adfJson, options);
+  }
+
+  /** Extracts {@link ContentMetadata} from ADF JSON with options supplied for this call. */
+  public ContentMetadata analyze(String adfJson, MarkdownOptions perCallOptions) {
+    return pipeline.analyze(adfJson, Objects.requireNonNull(perCallOptions, "options"));
+  }
+
+  /** Extracts {@link ContentMetadata} from an already-parsed {@link AdfDocument} using bound options. */
+  public ContentMetadata analyze(AdfDocument document) {
+    return pipeline.analyze(document, options);
+  }
+
+  /** Extracts {@link ContentMetadata} from an {@link AdfDocument} with options supplied for this call. */
+  public ContentMetadata analyze(AdfDocument document, MarkdownOptions perCallOptions) {
+    return pipeline.analyze(document, Objects.requireNonNull(perCallOptions, "options"));
   }
 
   /** Converts ADF JSON to Markdown using the bound options. */

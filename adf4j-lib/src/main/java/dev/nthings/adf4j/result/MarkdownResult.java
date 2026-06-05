@@ -19,15 +19,19 @@ public record MarkdownResult(String body, ContentMetadata metadata, List<ParseIs
 
   /**
    * {@code true} when any diagnostic is a {@link ParseIssue.Severity#WARNING} or
-   * {@link ParseIssue.Severity#ERROR} — i.e. the document did not convert cleanly. This covers
-   * structural parse problems, content dropped/placeholdered under the active
-   * {@code UnknownNodePolicy}, and unsupported marks dropped from the output. A convenience for
-   * flagging documents to review without inspecting every diagnostic.
+   * {@link ParseIssue.Severity#ERROR} — i.e. the document did not convert cleanly: structural parse
+   * problems, content dropped/placeholdered under the active {@code UnknownNodePolicy}, or unsupported
+   * marks dropped. Gate "real loss" on this (or {@link ParseIssue#severity()}), not "any diagnostic
+   * present" — some diagnostics are informational. Under
+   * {@link dev.nthings.adf4j.options.UnknownNodePolicy#PRESERVE_RAW}:
+   * <ul>
+   *   <li>an unknown <em>node</em> is preserved as raw JSON ({@link ParseIssue.Severity#INFO}) — not lossy;
+   *   <li>an unknown <em>mark</em> has no standalone form and is dropped ({@link ParseIssue.Severity#WARNING}) — lossy.
+   * </ul>
    *
-   * <p>It does <em>not</em> flag by-design, configuration-driven lossiness — synthetic
-   * {@code media:}/{@code attachment:} placeholders emitted when no resolver is supplied, visual-only
-   * marks dropped when {@code htmlVisualMarks} is off, or the table HTML fallback — since those are
-   * controlled by {@code MarkdownOptions} rather than being defects in the input.
+   * <p>It does <em>not</em> flag by-design, options-driven lossiness — {@code media:}/{@code attachment:}
+   * placeholders when no resolver is set, visual-only marks dropped with {@code htmlVisualMarks} off, or
+   * the table HTML fallback.
    */
   public boolean wasLossy() {
     return diagnostics.stream()

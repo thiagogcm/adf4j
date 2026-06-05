@@ -5,7 +5,16 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-/** References and outline extracted from an ADF document during conversion. */
+/**
+ * References and outline extracted from an ADF document during conversion.
+ *
+ * <p>{@code attachmentRefs} (and {@link #referencedFileIds()}) come from two sources:
+ * {@code media}/{@code mediaInline} nodes contribute their file id unconditionally, while a Confluence
+ * attachment macro ({@code viewpdf}/"view file") contributes one only when its title resolves against
+ * the references supplied via {@code ConfluenceRenderContext.withAttachmentReferences(...)}. Seed that
+ * context before pruning downloads, or a macro-only attachment is silently absent even though the body
+ * links it.
+ */
 public record ContentMetadata(
     List<PageReference> pageRefs,
     List<ExternalReference> externalRefs,
@@ -29,9 +38,11 @@ public record ContentMetadata(
   }
 
   /**
-   * The distinct, non-blank attachment file ids the document body actually references (the
-   * {@link #attachmentRefs()} keys), in first-seen order. A downloading consumer can fetch only these
-   * and skip attachments that are merely attached to the page but never embedded.
+   * The distinct, non-blank attachment file ids the body references ({@link #attachmentRefs()} keys),
+   * in first-seen order — fetch these and skip attachments that are attached but never embedded.
+   * Coverage depends on the options used (see the class note): for attachment macros this is exactly
+   * what {@code AttachmentResolver} is asked to resolve; media ids are always included, even when a
+   * media node's own {@code url} bypasses {@code MediaResolver}.
    */
   public Set<String> referencedFileIds() {
     var ids = new LinkedHashSet<String>();

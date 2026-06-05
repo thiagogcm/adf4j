@@ -47,6 +47,24 @@ public final class AdfPipeline {
     return parsingService.parse(adfJson);
   }
 
+  public ContentMetadata analyze(String adfJson, MarkdownOptions options) {
+    if (adfJson == null || adfJson.isBlank()) {
+      return ContentMetadata.empty();
+    }
+    var parsed = parsingService.parse(adfJson);
+    if (parsed.document() == null || !parsed.validAdfRoot()) {
+      return ContentMetadata.empty();
+    }
+    return analyze(parsed.document(), options);
+  }
+
+  public ContentMetadata analyze(AdfDocument document, MarkdownOptions options) {
+    if (document == null) {
+      return ContentMetadata.empty();
+    }
+    return analyzer.analyze(document, options).metadata();
+  }
+
   public MarkdownResult convert(String adfJson, MarkdownOptions options) {
     if (adfJson == null || adfJson.isBlank()) {
       return MarkdownResult.empty();
