@@ -4,6 +4,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import dev.nthings.adf4j.ast.MacroParams;
+import dev.nthings.adf4j.confluence.ConfluenceMetadata;
 
 public final class ConfluenceSupport {
 
@@ -30,6 +31,37 @@ public final class ConfluenceSupport {
 
     var matcher = CONFLUENCE_PAGE_URL_PATTERN.matcher(normalizedUrl);
     return matcher.matches() ? matcher.group(1) : null;
+  }
+
+  /**
+   * The Confluence page node id a link points at, or {@code null} when the link is not an internal
+   * page reference. Combines the id inferred from a page URL with the {@code linkType}/id carried in
+   * the node's Confluence metadata: a reference counts as a page when the URL parses to a page id, the
+   * metadata carries a page id, or the metadata's {@code linkType} is {@code "page"}. The single
+   * source of truth shared by metadata extraction and {@code PageLinkResolver} rewriting, so both
+   * agree on which links are pages.
+   */
+  public static String pageNodeId(String url, ConfluenceMetadata metadata) {
+    var normalizedUrl = url == null ? null : url.strip();
+    if (normalizedUrl == null || normalizedUrl.isEmpty() || "#".equals(normalizedUrl)) {
+      return null;
+    }
+
+    var inferredNodeId = pageId(normalizedUrl);
+    var metadataNodeId = metadata == null
+        ? null
+        : Stream.of(metadata.pageId(), metadata.contentId(), metadata.id())
+            .filter(value -> value != null && !value.isBlank())
+            .map(String::strip)
+            .findFirst()
+            .orElse(null);
+    var linkType = metadata == null || metadata.linkType() == null ? null : metadata.linkType().strip();
+    if (!"page".equalsIgnoreCase(linkType)
+        && inferredNodeId == null
+        && metadataNodeId == null) {
+      return null;
+    }
+    return inferredNodeId != null ? inferredNodeId : metadataNodeId;
   }
 
   public static String anchorId(MacroParams macroParams) {

@@ -21,13 +21,15 @@ class MarkdownOptionsTests {
 
   @Test
   void constructor_and_copy_methods_normalize_null_policy_and_context() {
-    var options = new MarkdownOptions(null, null, false, null, null, false, null);
+    var options = new MarkdownOptions(null, null, false, null, null, false, null, null, null);
 
     assertThat(options.unknownNodePolicy()).isEqualTo(UnknownNodePolicy.PLACEHOLDER);
     assertThat(options.context()).isEqualTo(ConfluenceRenderContext.empty());
     assertThat(options.tableFallback()).isEqualTo(TableFallback.GFM_PROMOTE_FIRST_ROW);
     assertThat(options.mediaResolver()).isNull();
     assertThat(options.extensionRenderers()).isEmpty();
+    assertThat(options.attachmentResolver()).isNull();
+    assertThat(options.pageLinkResolver()).isNull();
     assertThat(options.withUnknownNodePolicy(UnknownNodePolicy.SKIP).unknownNodePolicy())
         .isEqualTo(UnknownNodePolicy.SKIP);
     assertThat(options.withContext(null).context()).isEqualTo(ConfluenceRenderContext.empty());
@@ -63,6 +65,27 @@ class MarkdownOptionsTests {
     assertThat(enabled.imageSizeAttributes()).isTrue();
     assertThat(enabled.withUnknownNodePolicy(UnknownNodePolicy.SKIP).imageSizeAttributes()).isTrue();
     assertThat(enabled.withContext(ConfluenceRenderContext.empty()).imageSizeAttributes()).isTrue();
+  }
+
+  @Test
+  void attachment_and_page_link_resolvers_default_null_and_carry_through_other_withers() {
+    var options = MarkdownOptions.defaults();
+    assertThat(options.attachmentResolver()).isNull();
+    assertThat(options.pageLinkResolver()).isNull();
+
+    var attachment = options.withAttachmentResolver(reference -> "files/" + reference.fileId());
+    assertThat(attachment.attachmentResolver()).isNotNull();
+    assertThat(attachment.withUnknownNodePolicy(UnknownNodePolicy.SKIP).attachmentResolver())
+        .isSameAs(attachment.attachmentResolver());
+
+    var pageLink = options.withPageLinkResolver(pageNodeId -> "pages/" + pageNodeId);
+    assertThat(pageLink.pageLinkResolver()).isNotNull();
+    assertThat(pageLink.withTableFallback(TableFallback.HTML).pageLinkResolver())
+        .isSameAs(pageLink.pageLinkResolver());
+    // The two resolvers are independent and coexist.
+    var both = attachment.withPageLinkResolver(pageNodeId -> "pages/" + pageNodeId);
+    assertThat(both.attachmentResolver()).isSameAs(attachment.attachmentResolver());
+    assertThat(both.pageLinkResolver()).isNotNull();
   }
 
   @Test

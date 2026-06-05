@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Objects;
 
 import dev.nthings.adf4j.result.ParseIssue;
+import dev.nthings.adf4j.result.ParseIssue.Severity;
 
 import tools.jackson.databind.JsonNode;
 
@@ -35,7 +36,9 @@ final class RootValidator {
     if (version == null) {
       issues.add(new ParseIssue("INVALID_VERSION", "ADF root must contain integer version.", null));
     } else if (version != 1) {
-      issues.add(new ParseIssue("UNSUPPORTED_VERSION", "ADF version must be 1.", null));
+      // Non-fatal: the document still parses and renders best-effort, so flag it as a warning.
+      issues.add(
+          new ParseIssue("UNSUPPORTED_VERSION", "ADF version must be 1.", null, Severity.WARNING));
     }
 
     var contentNode = document.get("content");

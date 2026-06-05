@@ -22,6 +22,6 @@ interface BlockRecursion {
   // Renders inline nodes to a string; startAtLineStart enables leading-block escaping at column 0.
   String renderInlineNodes(List<AdfInline> nodes, RendererState context, boolean startAtLineStart);
 
-  // Applies a node's marks to already-rendered text.
-  String applyMarks(String text, List<AdfMark> marks, boolean htmlVisualMarks);
+  // Applies a node's marks to already-rendered text, within the given per-render context.
+  String applyMarks(String text, List<AdfMark> marks, RenderContext context);
 }

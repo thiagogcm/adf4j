@@ -6,8 +6,10 @@ import java.util.Objects;
 
 import dev.nthings.adf4j.extension.ExtensionRenderer;
 import dev.nthings.adf4j.metadata.AttachmentReference;
+import dev.nthings.adf4j.options.AttachmentResolver;
 import dev.nthings.adf4j.options.MarkdownOptions;
 import dev.nthings.adf4j.options.MediaResolver;
+import dev.nthings.adf4j.options.PageLinkResolver;
 import dev.nthings.adf4j.options.TableFallback;
 import dev.nthings.adf4j.options.UnknownNodePolicy;
 import dev.nthings.adf4j.internal.analyze.HeadingOutline;
@@ -24,7 +26,9 @@ record RenderContext(
     TableFallback tableFallback,
     MediaResolver mediaResolver,
     boolean htmlVisualMarks,
-    List<ExtensionRenderer> extensionRenderers) {
+    List<ExtensionRenderer> extensionRenderers,
+    AttachmentResolver attachmentResolver,
+    PageLinkResolver pageLinkResolver) {
 
   static RenderContext from(MarkdownOptions options, HeadingOutline headingOutline) {
     var requiredOptions = Objects.requireNonNull(options, "options");
@@ -38,6 +42,8 @@ record RenderContext(
         requiredOptions.tableFallback(),
         requiredOptions.mediaResolver(),
         requiredOptions.htmlVisualMarks(),
-        requiredOptions.extensionRenderers());
+        requiredOptions.extensionRenderers(),
+        requiredOptions.attachmentResolver(),
+        requiredOptions.pageLinkResolver());
   }
 }

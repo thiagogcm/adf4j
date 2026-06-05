@@ -9,9 +9,11 @@ import dev.nthings.adf4j.result.MarkdownResult;
 import dev.nthings.adf4j.result.ParseResult;
 
 /**
- * Converts Atlassian Document Format (ADF) JSON to Markdown. Immutable and thread-safe: configure
- * once with {@link #with(MarkdownOptions)} (or {@link #create()} for defaults) and reuse. For the
- * zero-config one-liner, see {@link Adf}.
+ * Converts Atlassian Document Format (ADF) JSON to Markdown. Immutable and thread-safe: the pipeline
+ * is built once per instance and reused, so configure once with {@link #with(MarkdownOptions)} (or
+ * {@link #create()} for defaults) and reuse the instance. When options vary per document, reuse one
+ * converter and pass them to the per-call {@link #convert(String, MarkdownOptions)} overload instead
+ * of building a new converter each time. For the zero-config one-liner, see {@link Adf}.
  *
  * <p>The target is GitHub-Flavored Markdown. Some ADF constructs are lossy or by-design (dropped
  * visual marks, the table HTML fallback, synthetic {@code media:} placeholders, and the fact that
@@ -43,18 +45,37 @@ public final class AdfToMarkdown {
     return pipeline.parse(adfJson);
   }
 
-  /** Converts ADF JSON to Markdown, returning the body plus extracted metadata and diagnostics. */
+  /** Converts ADF JSON to Markdown using the bound options. */
   public MarkdownResult convert(String adfJson) {
     return pipeline.convert(adfJson, options);
   }
 
-  /** Converts an already-parsed {@link AdfDocument} to Markdown. */
+  /** Converts an already-parsed {@link AdfDocument} to Markdown using the bound options. */
   public MarkdownResult convert(AdfDocument document) {
     return pipeline.convert(document, options);
+  }
+
+  /**
+   * Converts ADF JSON to Markdown with options supplied for this call, ignoring the bound options.
+   * Lets a single reusable converter handle documents whose options differ (per-page media,
+   * attachment, or page-link context) without rebuilding the pipeline.
+   */
+  public MarkdownResult convert(String adfJson, MarkdownOptions perCallOptions) {
+    return pipeline.convert(adfJson, Objects.requireNonNull(perCallOptions, "options"));
+  }
+
+  /** Converts an already-parsed {@link AdfDocument} to Markdown with options supplied for this call. */
+  public MarkdownResult convert(AdfDocument document, MarkdownOptions perCallOptions) {
+    return pipeline.convert(document, Objects.requireNonNull(perCallOptions, "options"));
   }
 
   /** Convenience for {@code convert(adfJson).body()}. */
   public String toMarkdown(String adfJson) {
     return convert(adfJson).body();
+  }
+
+  /** Convenience for {@code convert(adfJson, perCallOptions).body()}. */
+  public String toMarkdown(String adfJson, MarkdownOptions perCallOptions) {
+    return convert(adfJson, perCallOptions).body();
   }
 }

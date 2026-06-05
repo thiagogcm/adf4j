@@ -27,10 +27,13 @@ public final class AdfDocumentAnalyzer {
     var headingCollector = new AdfHeadingCollector();
     var metadataExtractor =
         new AdfContentMetadataExtractor(options.context().attachmentReferencesByTitle());
-    AdfNodeWalker.walk(document, List.of(headingCollector, metadataExtractor));
+    var lossinessCollector = new AdfLossinessCollector();
+    AdfNodeWalker.walk(
+        document, List.of(headingCollector, metadataExtractor, lossinessCollector));
 
     var outline = headingCollector.build();
     var metadata = metadataExtractor.build(outline.headings());
-    return new DocumentAnalysis(outline, metadata);
+    var diagnostics = lossinessCollector.build(options.unknownNodePolicy());
+    return new DocumentAnalysis(outline, metadata, diagnostics);
   }
 }

@@ -26,6 +26,31 @@ final class MarkdownText {
     return escapeInlineText("[" + Objects.requireNonNullElse(inner, "") + "]", false);
   }
 
+  /**
+   * A fenced code block whose fence is long enough to survive any backtick run in {@code content}
+   * (minimum three), with {@code language} as the info string when non-blank. Null content is treated
+   * as empty.
+   */
+  public static String fencedCodeBlock(String content, String language) {
+    var body = Objects.requireNonNullElse(content, "");
+    var ticks = "`".repeat(Math.max(3, longestBacktickRun(body) + 1));
+    var openingFence = (ticks + (language == null ? "" : language)).stripTrailing();
+    return "%s\n%s\n%s".formatted(openingFence, body, ticks).stripTrailing();
+  }
+
+  /**
+   * An inline code span whose fence exceeds the longest backtick run in {@code content}, padding a
+   * space each side when the content borders a backtick (CommonMark strips one space per side). Null
+   * content is treated as empty.
+   */
+  public static String inlineCodeSpan(String content) {
+    var value = Objects.requireNonNullElse(content, "");
+    var fence = "`".repeat(longestBacktickRun(value) + 1);
+    var needsPadding = !value.isEmpty()
+        && (value.charAt(0) == '`' || value.charAt(value.length() - 1) == '`');
+    return needsPadding ? fence + " " + value + " " + fence : fence + value + fence;
+  }
+
   /** Length of the longest run of consecutive backticks in {@code value} (0 for null/empty). */
   public static int longestBacktickRun(String value) {
     if (value == null || value.isEmpty()) {

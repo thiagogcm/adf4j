@@ -34,7 +34,7 @@ final class MediaRenderer {
     var blocks = new ArrayList<String>();
     if (!imageBlocks.isEmpty()) {
       var imageString = String.join("\n\n", imageBlocks);
-      blocks.add(recursion.applyMarks(imageString, node.marks(), context.htmlVisualMarks()));
+      blocks.add(recursion.applyMarks(imageString, node.marks(), context.context()));
     }
     blocks.addAll(captionBlocks);
 
@@ -63,12 +63,12 @@ final class MediaRenderer {
 
   String renderMedia(Media node, RendererState context, BlockRecursion recursion) {
     var rendered = renderMediaBlock(node.attrs(), context);
-    return recursion.applyMarks(rendered, node.marks(), context.htmlVisualMarks());
+    return recursion.applyMarks(rendered, node.marks(), context.context());
   }
 
   String renderMediaInline(MediaInline node, RendererState context, BlockRecursion recursion) {
     var rendered = renderMediaBlock(node.attrs(), context);
-    return recursion.applyMarks(rendered, node.marks(), context.htmlVisualMarks());
+    return recursion.applyMarks(rendered, node.marks(), context.context());
   }
 
   private String renderMediaBlock(MediaAttrs attrs, RendererState context) {

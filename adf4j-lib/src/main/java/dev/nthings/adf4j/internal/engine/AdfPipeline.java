@@ -1,5 +1,6 @@
 package dev.nthings.adf4j.internal.engine;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import dev.nthings.adf4j.metadata.ContentMetadata;
@@ -69,6 +70,18 @@ public final class AdfPipeline {
     }
     var analysis = analyzer.analyze(document, options);
     var body = renderer.render(document, options, analysis.outline());
-    return new MarkdownResult(body, analysis.metadata(), diagnostics);
+    return new MarkdownResult(body, analysis.metadata(), mergeDiagnostics(diagnostics, analysis.diagnostics()));
+  }
+
+  // Parse-phase diagnostics first, then the analyze-phase lossiness diagnostics, preserving order.
+  private static List<ParseIssue> mergeDiagnostics(
+      List<ParseIssue> parseDiagnostics, List<ParseIssue> analysisDiagnostics) {
+    if (analysisDiagnostics.isEmpty()) {
+      return parseDiagnostics;
+    }
+    var merged = new ArrayList<ParseIssue>(parseDiagnostics.size() + analysisDiagnostics.size());
+    merged.addAll(parseDiagnostics);
+    merged.addAll(analysisDiagnostics);
+    return merged;
   }
 }

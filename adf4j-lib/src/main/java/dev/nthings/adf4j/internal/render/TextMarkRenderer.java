@@ -8,6 +8,7 @@ import java.util.function.Function;
 import dev.nthings.adf4j.ast.AdfMark;
 import dev.nthings.adf4j.ast.Alignment;
 import dev.nthings.adf4j.ast.Annotation;
+import dev.nthings.adf4j.ast.Attributes;
 import dev.nthings.adf4j.ast.BackgroundColor;
 import dev.nthings.adf4j.ast.Border;
 import dev.nthings.adf4j.ast.Breakout;
@@ -24,22 +25,25 @@ import dev.nthings.adf4j.ast.SubSup;
 import dev.nthings.adf4j.ast.TextColor;
 import dev.nthings.adf4j.ast.Underline;
 import dev.nthings.adf4j.ast.UnknownMark;
+import dev.nthings.adf4j.confluence.ConfluenceMetadata;
+import dev.nthings.adf4j.internal.ConfluenceSupport;
 
 final class TextMarkRenderer {
 
   private static final Comparator<AdfMark> INLINE_MARK_ORDER = Comparator.comparingInt(TextMarkRenderer::canonicalRank);
 
-  String applyMarks(String value, List<AdfMark> marks, boolean htmlVisualMarks) {
+  String applyMarks(String value, List<AdfMark> marks, RenderContext context) {
     if (marks == null || marks.isEmpty()) {
       return value;
     }
-    return markDecorator(marks, htmlVisualMarks).apply(value);
+    return markDecorator(marks, context).apply(value);
   }
 
   // Inside-out decorator chain: format marks (canonical order) innermost, then an optional combined
   // visual <span>, then the link outermost. A code mark makes the text literal, superseding the
   // format/visual layers. identity().andThen(...) nests so the first decorator added wraps innermost.
-  private Function<String, String> markDecorator(List<AdfMark> marks, boolean htmlVisualMarks) {
+  private Function<String, String> markDecorator(List<AdfMark> marks, RenderContext context) {
+    var htmlVisualMarks = context.htmlVisualMarks();
     Link link = null;
     var hasCode = false;
     var formatMarks = new ArrayList<AdfMark>();
@@ -71,13 +75,15 @@ final class TextMarkRenderer {
     }
     if (link != null) {
       var linkMark = link;
-      decorator = decorator.andThen(text -> applyLink(text, linkMark));
+      decorator = decorator.andThen(text -> applyLink(text, linkMark, context));
     }
     return decorator;
   }
 
-  // Wraps formatted text in a Markdown link, or returns it unchanged when the link has no href.
-  private String applyLink(String rendered, Link link) {
+  // Wraps formatted text in a Markdown link, or returns it unchanged when the link has no href. A
+  // PageLinkResolver rewrites an internal page href to the caller's destination; the visible label
+  // (the original text, or the original href when the text is blank) is left untouched.
+  private String applyLink(String rendered, Link link, RenderContext context) {
     var href = link.href();
     if (href == null || href.isBlank()) {
       return rendered;
@@ -85,11 +91,26 @@ final class TextMarkRenderer {
     var label = (rendered == null || rendered.isBlank())
         ? MarkdownText.escapeInlineText(href, false)
         : rendered;
-    var destination = MarkdownText.escapeUrlDestination(href);
+    var destination = MarkdownText.escapeUrlDestination(resolvePageHref(href, link.attrs(), context));
     var title = link.title();
     return (title == null || title.isBlank())
         ? "[%s](%s)".formatted(label, destination)
         : "[%s](%s \"%s\")".formatted(label, destination, escapeLinkTitle(title));
+  }
+
+  // The caller-resolved destination for an internal page href, or the original href when there is no
+  // PageLinkResolver, the href is not a page reference, or the resolver declines (null/blank).
+  static String resolvePageHref(String href, Attributes attrs, RenderContext context) {
+    var resolver = context.pageLinkResolver();
+    if (resolver == null) {
+      return href;
+    }
+    var pageNodeId = ConfluenceSupport.pageNodeId(href, ConfluenceMetadata.from(attrs));
+    if (pageNodeId == null) {
+      return href;
+    }
+    var resolved = resolver.resolve(pageNodeId);
+    return (resolved == null || resolved.isBlank()) ? href : resolved;
   }
 
   private static int canonicalRank(AdfMark mark) {
@@ -198,10 +219,6 @@ final class TextMarkRenderer {
 
   // Inline code span: the fence must exceed the longest backtick run in the content.
   private String wrapCodeSpan(String content) {
-    var fence = "`".repeat(MarkdownText.longestBacktickRun(content) + 1);
-    // Pad a space each side when content borders a backtick; CommonMark strips one space per side.
-    var needsPadding = !content.isEmpty()
-        && (content.charAt(0) == '`' || content.charAt(content.length() - 1) == '`');
-    return needsPadding ? fence + " " + content + " " + fence : fence + content + fence;
+    return MarkdownText.inlineCodeSpan(content);
   }
 }

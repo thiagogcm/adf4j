@@ -77,6 +77,39 @@ class AdfToMarkdownMetadataTests {
   }
 
   @Test
+  void referenced_file_ids_expose_only_the_attachments_the_body_embeds() throws Exception {
+    var metadata = testSupport.processor()
+        .convert(
+            testSupport.parseDocument(
+                """
+                {
+                  "type": "doc",
+                  "version": 1,
+                  "content": [
+                    {
+                      "type": "mediaSingle",
+                      "attrs": { "layout": "center" },
+                      "content": [
+                        { "type": "media", "attrs": { "type": "file", "id": "asset-1", "alt": "a" } }
+                      ]
+                    },
+                    {
+                      "type": "mediaGroup",
+                      "content": [
+                        { "type": "media", "attrs": { "type": "file", "id": "asset-2", "fileName": "b.png" } },
+                        { "type": "media", "attrs": { "type": "external", "url": "https://cdn.example.com/c.png" } }
+                      ]
+                    }
+                  ]
+                }
+                """))
+        .metadata();
+
+    // The external media contributes no file id; only the two embedded attachments are referenced.
+    assertThat(metadata.referencedFileIds()).containsExactly("asset-1", "asset-2");
+  }
+
+  @Test
   void extract_collects_mentions_with_first_non_blank_id() throws Exception {
     var metadata = testSupport.processor()
         .convert(

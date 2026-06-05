@@ -7,8 +7,8 @@ import dev.nthings.adf4j.ast.CardAttrs;
 /** Renders smart-link nodes (block/inline/embed cards) to Markdown links. */
 final class CardRenderer {
 
-  String renderBlockCard(CardAttrs attrs) {
-    var link = renderCardLink(attrs);
+  String renderBlockCard(CardAttrs attrs, RenderContext context) {
+    var link = renderCardLink(attrs, context);
     if (link != null) {
       return link;
     }
@@ -23,22 +23,24 @@ final class CardRenderer {
     return MarkdownText.labelToken("Card: " + identifier);
   }
 
-  String renderInlineCard(CardAttrs attrs) {
-    var link = renderCardLink(attrs);
+  String renderInlineCard(CardAttrs attrs, RenderContext context) {
+    var link = renderCardLink(attrs, context);
     return link != null ? link : MarkdownText.labelToken("Inline card");
   }
 
-  String renderEmbedCard(CardAttrs attrs) {
-    var link = renderCardLink(attrs);
+  String renderEmbedCard(CardAttrs attrs, RenderContext context) {
+    var link = renderCardLink(attrs, context);
     return link != null ? link : MarkdownText.labelToken("Embed card");
   }
 
   /**
    * Shared url/title rendering for all three card kinds, or {@code null} when the card has neither:
    * url+title -&gt; {@code [title](url)}; url only -&gt; {@code <url>} (or {@code [url](url)} if not
-   * clean); title only -&gt; the escaped title as plain text.
+   * clean); title only -&gt; the escaped title as plain text. A {@code PageLinkResolver} rewrites an
+   * internal page card's destination; a url-only card whose destination is rewritten keeps the
+   * original url as its visible label.
    */
-  private String renderCardLink(CardAttrs attrs) {
+  private String renderCardLink(CardAttrs attrs, RenderContext context) {
     var url = attrs.url();
     var hasUrl = url != null && !url.isBlank();
 
@@ -46,12 +48,15 @@ final class CardRenderer {
     var hasTitle = title != null && !title.isBlank();
 
     if (hasUrl) {
+      var resolvedUrl = TextMarkRenderer.resolvePageHref(url, attrs.attrs(), context);
+      var destination = MarkdownText.escapeUrlDestination(resolvedUrl);
       if (hasTitle) {
-        return "[%s](%s)".formatted(
-            MarkdownText.escapeInlineText(title, false), MarkdownText.escapeUrlDestination(url));
+        return "[%s](%s)".formatted(MarkdownText.escapeInlineText(title, false), destination);
       }
-      var destination = MarkdownText.escapeUrlDestination(url);
-      return destination.equals(url) && isAbsoluteUri(url)
+      // url-only: an autolink needs label == destination, so it survives only when nothing rewrote
+      // the url; once rewritten, fall back to a labelled link that keeps the original url visible.
+      var rewritten = !resolvedUrl.equals(url);
+      return !rewritten && destination.equals(url) && isAbsoluteUri(url)
           ? "<%s>".formatted(url)
           : "[%s](%s)".formatted(url, destination);
     }

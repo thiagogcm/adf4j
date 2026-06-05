@@ -6,6 +6,7 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import dev.nthings.adf4j.extension.ExtensionContext;
+import dev.nthings.adf4j.metadata.AttachmentReference;
 import dev.nthings.adf4j.metadata.HeadingReference;
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.BodiedExtension;
@@ -219,7 +220,21 @@ final class MacroRenderer {
     }
 
     var label = (name == null || name.isBlank()) ? "PDF" : "PDF: " + name;
-    return "[%s](attachment:%s)".formatted(label, attachmentReference.fileId());
+    var destination = resolveAttachment(attachmentReference, context);
+    return "[%s](%s)".formatted(label, MarkdownText.escapeUrlDestination(destination));
+  }
+
+  // The caller-resolved link for an attachment, or the synthetic attachment:<fileId> placeholder when
+  // there is no AttachmentResolver or it declines (null/blank).
+  private String resolveAttachment(AttachmentReference reference, RendererState context) {
+    var resolver = context.attachmentResolver();
+    if (resolver != null) {
+      var resolved = resolver.resolve(reference);
+      if (resolved != null && !resolved.isBlank()) {
+        return resolved;
+      }
+    }
+    return "attachment:" + reference.fileId();
   }
 
   private String renderChartMacro(MacroParams macroParams) {

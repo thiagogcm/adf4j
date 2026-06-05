@@ -6,8 +6,10 @@ import java.util.Map;
 import dev.nthings.adf4j.extension.ExtensionRenderer;
 import dev.nthings.adf4j.metadata.AttachmentReference;
 import dev.nthings.adf4j.metadata.HeadingReference;
+import dev.nthings.adf4j.options.AttachmentResolver;
 import dev.nthings.adf4j.options.MarkdownOptions;
 import dev.nthings.adf4j.options.MediaResolver;
+import dev.nthings.adf4j.options.PageLinkResolver;
 import dev.nthings.adf4j.options.TableFallback;
 import dev.nthings.adf4j.options.UnknownNodePolicy;
 import dev.nthings.adf4j.ast.Heading;
@@ -55,6 +57,14 @@ record RendererState(RenderContext context, int listDepth, TableCellKind tableCe
 
   List<ExtensionRenderer> extensionRenderers() {
     return context.extensionRenderers();
+  }
+
+  AttachmentResolver attachmentResolver() {
+    return context.attachmentResolver();
+  }
+
+  PageLinkResolver pageLinkResolver() {
+    return context.pageLinkResolver();
   }
 
   HeadingReference headingInfo(Heading heading) {

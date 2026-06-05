@@ -178,9 +178,9 @@ public final class AdfRenderer implements BlockRecursion {
       case ExtensionFrame frame -> renderBlocks(frame.content(), context);
       case SyncBlock sync -> List.of(macroRenderer.renderSyncBlock(sync));
       case BodiedSyncBlock sync -> macroRenderer.renderBodiedSyncBlock(sync, context, this);
-      case BlockCard blockCard -> List.of(cardRenderer.renderBlockCard(blockCard.attrs()));
-      case EmbedCard embedCard -> List.of(cardRenderer.renderEmbedCard(embedCard.attrs()));
-      case UnknownBlock unknown -> renderUnknownBlockByPolicy(unknown.type(), context);
+      case BlockCard blockCard -> List.of(cardRenderer.renderBlockCard(blockCard.attrs(), context.context()));
+      case EmbedCard embedCard -> List.of(cardRenderer.renderEmbedCard(embedCard.attrs(), context.context()));
+      case UnknownBlock unknown -> renderUnknownBlockByPolicy(unknown, context);
     };
   }
 
@@ -258,8 +258,8 @@ public final class AdfRenderer implements BlockRecursion {
   }
 
   @Override
-  public String applyMarks(String text, List<AdfMark> marks, boolean htmlVisualMarks) {
-    return markRenderer.applyMarks(text, marks, htmlVisualMarks);
+  public String applyMarks(String text, List<AdfMark> marks, RenderContext context) {
+    return markRenderer.applyMarks(text, marks, context);
   }
 
   private String joinBlocks(List<String> blocks) {
@@ -270,7 +270,7 @@ public final class AdfRenderer implements BlockRecursion {
     return switch (node) {
       case Text text -> renderText(text, context, atLineStart);
       case HardBreak _ -> hardBreakMarker(context);
-      case InlineCard card -> cardRenderer.renderInlineCard(card.attrs());
+      case InlineCard card -> cardRenderer.renderInlineCard(card.attrs(), context.context());
       case MediaInline media -> mediaRenderer.renderMediaInline(media, context, this);
       // Attribute-derived text is escaped like literal text, honouring atLineStart.
       case Date date ->
@@ -282,7 +282,7 @@ public final class AdfRenderer implements BlockRecursion {
       case Status status -> MarkdownText.labelToken(statusLabel(status));
       case InlineExtension extension ->
         macroRenderer.renderInlineExtension(extension, context);
-      case UnknownInline unknown -> renderUnknownInlineByPolicy(unknown.type(), context);
+      case UnknownInline unknown -> renderUnknownInlineByPolicy(unknown, context);
     };
   }
 
@@ -294,7 +294,7 @@ public final class AdfRenderer implements BlockRecursion {
     }
     // Prefix after escaping, so the nbsp indent run isn't itself marker-neutralised.
     var prefixed = indentationPrefix(paragraph.marks()) + rendered;
-    var styled = applyMarks(prefixed, paragraph.marks(), context.htmlVisualMarks());
+    var styled = applyMarks(prefixed, paragraph.marks(), context.context());
     return alignmentWrap(styled, paragraph.marks(), context.htmlVisualMarks());
   }
 
@@ -434,12 +434,7 @@ public final class AdfRenderer implements BlockRecursion {
   }
 
   private String renderCodeBlock(CodeBlock codeBlock) {
-    var language = codeBlock.language();
-    var body = codeBlock.text();
-    // Fence must exceed the longest backtick run in the body, else an embedded ``` would close it.
-    var ticks = "`".repeat(Math.max(3, MarkdownText.longestBacktickRun(body) + 1));
-    var openingFence = (ticks + (language == null ? "" : language)).stripTrailing();
-    return "%s\n%s\n%s".formatted(openingFence, body, ticks).stripTrailing();
+    return MarkdownText.fencedCodeBlock(codeBlock.text(), codeBlock.language());
   }
 
   private String renderLayoutSection(LayoutSection layout, RendererState context) {
@@ -469,13 +464,13 @@ public final class AdfRenderer implements BlockRecursion {
     // Code-marked text is literal (applyMarks wraps it in backticks), so it must not be escaped.
     var hasCodeMark = text.marks().stream().anyMatch(Code.class::isInstance);
     if (hasCodeMark) {
-      return applyMarks(text.text(), text.marks(), context.htmlVisualMarks());
+      return applyMarks(text.text(), text.marks(), context.context());
     }
     // Suppress leading-block escaping only in a GFM pipe cell (inline context). An HTML-fragment cell
     // is re-parsed as a block document, so a leading marker there must still be neutralized.
     var atLineStartEscaping = atLineStart && context.tableCell() != TableCellKind.GFM;
     var escaped = MarkdownText.escapeInlineText(text.text(), atLineStartEscaping);
-    return applyMarks(escaped, text.marks(), context.htmlVisualMarks());
+    return applyMarks(escaped, text.marks(), context.context());
   }
 
   private String hardBreakMarker(RendererState context) {
@@ -513,7 +508,8 @@ public final class AdfRenderer implements BlockRecursion {
     return text == null || text.isBlank() ? "status" : text;
   }
 
-  private List<String> renderUnknownBlockByPolicy(String nodeType, RendererState context) {
+  private List<String> renderUnknownBlockByPolicy(UnknownBlock node, RendererState context) {
+    var nodeType = node.type();
     var label = (nodeType == null || nodeType.isBlank()) ? "<empty>" : nodeType;
     return switch (context.unknownNodePolicy()) {
       case SKIP -> {
@@ -521,6 +517,13 @@ public final class AdfRenderer implements BlockRecursion {
         yield List.of();
       }
       case FAIL -> throw new IllegalStateException("Unsupported ADF block node type: " + label);
+      case PRESERVE_RAW -> {
+        log.warn("Preserving raw JSON for unsupported ADF block node type: {}", label);
+        var rawJson = node.rawJson();
+        yield rawJson == null || rawJson.isBlank()
+            ? List.of()
+            : List.of(MarkdownText.fencedCodeBlock(rawJson, "json"));
+      }
       case PLACEHOLDER -> {
         log.warn("Rendering placeholder for unsupported ADF block node type: {}", label);
         yield nodeType == null || nodeType.isBlank()
@@ -530,7 +533,8 @@ public final class AdfRenderer implements BlockRecursion {
     };
   }
 
-  private String renderUnknownInlineByPolicy(String nodeType, RendererState context) {
+  private String renderUnknownInlineByPolicy(UnknownInline node, RendererState context) {
+    var nodeType = node.type();
     var label = (nodeType == null || nodeType.isBlank()) ? "<empty>" : nodeType;
     return switch (context.unknownNodePolicy()) {
       case SKIP -> {
@@ -538,6 +542,11 @@ public final class AdfRenderer implements BlockRecursion {
         yield "";
       }
       case FAIL -> throw new IllegalStateException("Unsupported ADF inline node type: " + label);
+      case PRESERVE_RAW -> {
+        log.warn("Preserving raw JSON for unsupported ADF inline node type: {}", label);
+        var rawJson = node.rawJson();
+        yield rawJson == null || rawJson.isBlank() ? "" : MarkdownText.inlineCodeSpan(rawJson);
+      }
       case PLACEHOLDER -> {
         log.warn("Rendering placeholder for unsupported ADF inline node type: {}", label);
         yield nodeType == null || nodeType.isBlank()

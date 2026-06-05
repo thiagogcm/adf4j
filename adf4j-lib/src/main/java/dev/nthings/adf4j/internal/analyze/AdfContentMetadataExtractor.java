@@ -132,30 +132,12 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
     if (normalized == null || "#".equals(normalized)) {
       return;
     }
-    var metadata = ConfluenceMetadata.from(attrs);
-    var pageNodeId = resolvePageNodeId(normalized, metadata);
+    var pageNodeId = ConfluenceSupport.pageNodeId(normalized, ConfluenceMetadata.from(attrs));
     if (pageNodeId != null) {
       pageRefs.add(pageNodeId);
       return;
     }
     externalRefs.add(normalized);
-  }
-
-  private String resolvePageNodeId(String normalizedUrl, ConfluenceMetadata metadata) {
-    var inferredNodeId = ConfluenceSupport.pageId(normalizedUrl);
-    var metadataNodeId = metadata == null
-        ? null
-        : firstNonBlank(metadata.pageId(), metadata.contentId(), metadata.id());
-    var linkType = metadata == null ? null : trimToNull(metadata.linkType());
-    if (!"page".equalsIgnoreCase(linkType)
-        && inferredNodeId == null
-        && metadataNodeId == null) {
-      return null;
-    }
-    return Stream.of(inferredNodeId, metadataNodeId)
-        .filter(Objects::nonNull)
-        .findFirst()
-        .orElse(null);
   }
 
   private void collectMediaAttrs(MediaAttrs attrs) {
