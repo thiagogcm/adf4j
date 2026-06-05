@@ -6,8 +6,11 @@ import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.AdfInline;
 import dev.nthings.adf4j.ast.AdfMark;
 import dev.nthings.adf4j.ast.BlockCard;
+import dev.nthings.adf4j.ast.BodiedExtension;
+import dev.nthings.adf4j.ast.BodiedSyncBlock;
 import dev.nthings.adf4j.ast.Date;
 import dev.nthings.adf4j.ast.Emoji;
+import dev.nthings.adf4j.ast.InlineCard;
 import dev.nthings.adf4j.ast.Mention;
 import dev.nthings.adf4j.ast.Paragraph;
 import dev.nthings.adf4j.ast.Status;
@@ -265,5 +268,152 @@ class AdfAstParserTests {
     assertThat(colwidth.get(0)).isEqualTo(100L);
     assertThat(colwidth.get(1)).as("the interior null keeps its index").isNull();
     assertThat(colwidth.get(2)).isEqualTo(200L);
+  }
+
+  @Test
+  void parses_bodied_extension_with_macro_params_and_nested_body() throws Exception {
+    // The local schema requires extensionType, extensionKey, and at least one block content item for
+    // bodiedExtension nodes.
+    var raw = """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {
+              "type": "bodiedExtension",
+              "attrs": {
+                "extensionType": "com.example.macros",
+                "extensionKey": "callout",
+                "text": "Callout title",
+                "parameters": {
+                  "macroParams": {
+                    "plain": "scalar",
+                    "wrapped": { "value": "wrapped scalar" }
+                  }
+                }
+              },
+              "content": [
+                { "type": "paragraph", "content": [{ "type": "text", "text": "Callout body" }] }
+              ]
+            }
+          ]
+        }
+        """;
+
+    var document = parser.parseDocument(mapper.readTree(raw));
+
+    var extension = (BodiedExtension) document.content().getFirst();
+    assertThat(extension.extensionType()).isEqualTo("com.example.macros");
+    assertThat(extension.extensionKey()).isEqualTo("callout");
+    assertThat(extension.text()).isEqualTo("Callout title");
+    assertThat(extension.macroParams().value("plain")).isEqualTo("scalar");
+    assertThat(extension.macroParams().value("wrapped")).isEqualTo("wrapped scalar");
+    assertThat(extension.content()).singleElement().isInstanceOf(Paragraph.class);
+    var body = (Paragraph) extension.content().getFirst();
+    assertThat(((Text) body.content().getFirst()).text()).isEqualTo("Callout body");
+  }
+
+  @Test
+  void parses_bodied_sync_block_resource_id_and_skips_non_object_content_items() throws Exception {
+    // The schema constrains bodiedSyncBlock content to block nodes. Parser tolerance still skips null
+    // and scalar array entries without losing valid block siblings.
+    var raw = """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {
+              "type": "bodiedSyncBlock",
+              "attrs": { "resourceId": "abc-123", "localId": "sync-1" },
+              "content": [
+                { "type": "paragraph", "content": [{ "type": "text", "text": "Synced body" }] },
+                null,
+                "stray scalar"
+              ]
+            }
+          ]
+        }
+        """;
+
+    var document = parser.parseDocument(mapper.readTree(raw));
+
+    var syncBlock = (BodiedSyncBlock) document.content().getFirst();
+    assertThat(syncBlock.resourceId()).isEqualTo("abc-123");
+    assertThat(syncBlock.content()).singleElement().isInstanceOf(Paragraph.class);
+    var body = (Paragraph) syncBlock.content().getFirst();
+    assertThat(((Text) body.content().getFirst()).text()).isEqualTo("Synced body");
+  }
+
+  @Test
+  void parses_card_attrs_preferring_top_level_url_over_data_url() throws Exception {
+    // The schema documents top-level url/datasource and data-payload card forms; product JSON can
+    // combine them, and the explicit top-level url is the render destination.
+    var raw = """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {
+              "type": "blockCard",
+              "attrs": {
+                "url": "https://example.com/top-level",
+                "localId": "card-1",
+                "data": {
+                  "@type": "Object",
+                  "name": "Data title",
+                  "url": "https://example.com/data"
+                },
+                "datasource": {
+                  "id": "source-1",
+                  "parameters": {},
+                  "views": [{ "type": "table" }]
+                }
+              }
+            }
+          ]
+        }
+        """;
+
+    var document = parser.parseDocument(mapper.readTree(raw));
+
+    var card = (BlockCard) document.content().getFirst();
+    assertThat(card.attrs().url()).isEqualTo("https://example.com/top-level");
+    assertThat(card.attrs().title()).isEqualTo("Data title");
+    assertThat(card.attrs().localId()).isEqualTo("card-1");
+    assertThat(card.attrs().datasourceId()).isEqualTo("source-1");
+    assertThat(card.attrs().attrs().object("data").string("url")).isEqualTo("https://example.com/data");
+  }
+
+  @Test
+  void inline_positioned_embed_and_block_cards_degrade_to_inline_cards() throws Exception {
+    // docs/spec/structure.md lists inlineCard as the card inline node; legacy payloads can still put
+    // embedCard/blockCard inline, and the parser degrades them to InlineCard instead of dropping them.
+    var raw = """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "embedCard",
+                  "attrs": { "url": "https://example.com/embed", "layout": "center" }
+                },
+                { "type": "blockCard", "attrs": { "url": "https://example.com/block" } }
+              ]
+            }
+          ]
+        }
+        """;
+
+    var document = parser.parseDocument(mapper.readTree(raw));
+
+    var paragraph = (Paragraph) document.content().getFirst();
+    assertThat(paragraph.content())
+        .hasSize(2)
+        .allSatisfy(inline -> assertThat(inline).isInstanceOf(InlineCard.class));
+    assertThat(((InlineCard) paragraph.content().get(0)).attrs().url()).isEqualTo("https://example.com/embed");
+    assertThat(((InlineCard) paragraph.content().get(1)).attrs().url()).isEqualTo("https://example.com/block");
   }
 }

@@ -126,4 +126,174 @@ class AdfToMarkdownRenderingTests {
           assertThat(ref.title()).isEqualTo("Open_Finance_cadastro_diretorio_passo_a_passo.pdf");
         });
   }
+
+  @Test
+  void convert_renders_bodied_extension_header_then_body_and_escapes_marker_text() {
+    // bodiedExtension requires a body in the local schema; unknown macro text is still
+    // attribute-derived text and must not promote to a Markdown heading.
+    var adf = """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {
+              "type": "bodiedExtension",
+              "attrs": {
+                "extensionType": "com.example.macros",
+                "extensionKey": "callout",
+                "text": "# Important"
+              },
+              "content": [
+                { "type": "paragraph", "content": [{ "type": "text", "text": "Body text" }] }
+              ]
+            }
+          ]
+        }
+        """;
+
+    var markdown = processor.toMarkdown(adf);
+
+    assertThat(markdown).isEqualToNormalizingNewlines("\\# Important\n\nBody text");
+  }
+
+  @Test
+  void convert_renders_confluence_excerpt_bodied_extension_as_body_only() {
+    var adf = """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {
+              "type": "bodiedExtension",
+              "attrs": {
+                "extensionType": "com.atlassian.confluence.macro.core",
+                "extensionKey": "excerpt",
+                "text": "Excerpt wrapper"
+              },
+              "content": [
+                { "type": "paragraph", "content": [{ "type": "text", "text": "Only this survives" }] }
+              ]
+            }
+          ]
+        }
+        """;
+
+    var markdown = processor.toMarkdown(adf);
+
+    assertThat(markdown).isEqualTo("Only this survives");
+  }
+
+  @Test
+  void convert_renders_bodied_sync_block_label_then_body() {
+    // docs/spec/adf-schema.json requires resourceId/localId for sync blocks; the renderer should keep
+    // the resource id visible and then salvage the block body.
+    var adf = """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {
+              "type": "bodiedSyncBlock",
+              "attrs": { "resourceId": "abc-123", "localId": "sync-1" },
+              "content": [
+                { "type": "paragraph", "content": [{ "type": "text", "text": "Synced paragraph" }] }
+              ]
+            }
+          ]
+        }
+        """;
+
+    var markdown = processor.toMarkdown(adf);
+
+    assertThat(markdown).isEqualToNormalizingNewlines("\\[Sync block: abc-123\\]\n\nSynced paragraph");
+  }
+
+  @Test
+  void convert_renders_card_variants_without_losing_identity_or_escaping() {
+    // Most cases mirror docs/spec card shapes; the final embedCard omits its schema-required url to
+    // pin the malformed fallback instead of letting bad producer data throw.
+    var adf = """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                { "type": "text", "text": "Inline " },
+                { "type": "inlineCard", "attrs": { "url": "https://example.com/ticket/123" } }
+              ]
+            },
+            {
+              "type": "blockCard",
+              "attrs": { "url": "/wiki/spaces/DEV/pages/123" }
+            },
+            {
+              "type": "blockCard",
+              "attrs": {
+                "data": {
+                  "@type": "Object",
+                  "name": "Dashboard *42*",
+                  "url": "https://example.com/dashboards/42"
+                }
+              }
+            },
+            {
+              "type": "blockCard",
+              "attrs": {
+                "datasource": {
+                  "id": "source-1",
+                  "parameters": {},
+                  "views": [{ "type": "table" }]
+                }
+              }
+            },
+            {
+              "type": "embedCard",
+              "attrs": { "layout": "center" }
+            }
+          ]
+        }
+        """;
+
+    var markdown = processor.toMarkdown(adf);
+
+    assertThat(markdown)
+        .isEqualToNormalizingNewlines(
+            """
+            Inline <https://example.com/ticket/123>
+
+            [/wiki/spaces/DEV/pages/123](/wiki/spaces/DEV/pages/123)
+
+            [Dashboard \\*42\\*](https://example.com/dashboards/42)
+
+            \\[Card: source-1\\]
+
+            \\[Embed card\\]
+            """.strip());
+  }
+
+  @Test
+  void convert_escapes_text_after_hard_break_as_a_new_line_start() {
+    var adf = """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                { "type": "text", "text": "alpha" },
+                { "type": "hardBreak" },
+                { "type": "text", "text": "# beta" }
+              ]
+            }
+          ]
+        }
+        """;
+
+    var markdown = processor.toMarkdown(adf);
+
+    assertThat(markdown).isEqualToNormalizingNewlines("alpha  \n\\# beta");
+  }
 }
