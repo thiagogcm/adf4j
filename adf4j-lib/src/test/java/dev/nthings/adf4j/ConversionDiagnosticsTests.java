@@ -1,5 +1,9 @@
 package dev.nthings.adf4j;
 
+import java.util.List;
+import java.util.Optional;
+
+import dev.nthings.adf4j.extension.ExtensionRenderer;
 import dev.nthings.adf4j.options.MarkdownOptions;
 import dev.nthings.adf4j.options.UnknownNodePolicy;
 import dev.nthings.adf4j.result.ParseIssue;
@@ -18,6 +22,10 @@ class ConversionDiagnosticsTests {
       "{\"type\":\"doc\",\"version\":2,\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Hi\"}]}]}";
   private static final String UNKNOWN_MARK =
       "{\"type\":\"doc\",\"version\":1,\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"hi\",\"marks\":[{\"type\":\"futureMark\"}]}]}]}";
+
+  private static final String PAGETREE =
+      "{\"type\":\"doc\",\"version\":1,\"content\":[{\"type\":\"extension\",\"attrs\":"
+          + "{\"extensionType\":\"com.atlassian.confluence.macro.core\",\"extensionKey\":\"pagetree\"}}]}";
 
   @Test
   void a_clean_document_is_not_flagged_lossy() {
@@ -125,5 +133,113 @@ class ConversionDiagnosticsTests {
     assertThat(result.diagnostics())
         .singleElement()
         .satisfies(issue -> assertThat(issue.severity()).isEqualTo(ParseIssue.Severity.ERROR));
+  }
+
+  @Test
+  void an_unsupported_macro_is_flagged_lossy_with_a_warning() {
+    var result = AdfToMarkdown.create().convert(PAGETREE);
+
+    assertThat(result.wasLossy()).isTrue();
+    assertThat(result.diagnostics())
+        .singleElement()
+        .satisfies(
+            issue -> {
+              assertThat(issue.code()).isEqualTo("UNSUPPORTED_MACRO");
+              assertThat(issue.severity()).isEqualTo(ParseIssue.Severity.WARNING);
+              assertThat(issue.message()).contains("pagetree");
+            });
+  }
+
+  @Test
+  void a_macro_with_attribute_text_is_not_flagged_as_unsupported() {
+    var json =
+        "{\"type\":\"doc\",\"version\":1,\"content\":[{\"type\":\"extension\",\"attrs\":"
+            + "{\"extensionType\":\"com.atlassian.confluence.macro.core\",\"extensionKey\":\"detailssummary\","
+            + "\"text\":\"Static fallback\"}}]}";
+
+    var result = AdfToMarkdown.create().convert(json);
+
+    assertThat(result.body()).contains("Static fallback");
+    assertThat(result.diagnostics()).extracting(ParseIssue::code).doesNotContain("UNSUPPORTED_MACRO");
+    assertThat(result.wasLossy()).isFalse();
+  }
+
+  @Test
+  void a_handled_macro_does_not_warn() {
+    var json =
+        "{\"type\":\"doc\",\"version\":1,\"content\":[{\"type\":\"extension\",\"attrs\":"
+            + "{\"extensionType\":\"com.atlassian.confluence.macro.core\",\"extensionKey\":\"children\"}}]}";
+
+    var result = AdfToMarkdown.create().convert(json);
+
+    assertThat(result.diagnostics()).isEmpty();
+    assertThat(result.wasLossy()).isFalse();
+  }
+
+  @Test
+  void an_excerpt_bodied_extension_does_not_warn() {
+    var json =
+        "{\"type\":\"doc\",\"version\":1,\"content\":[{\"type\":\"bodiedExtension\",\"attrs\":"
+            + "{\"extensionType\":\"com.atlassian.confluence.macro.core\",\"extensionKey\":\"excerpt\"},"
+            + "\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"inside excerpt\"}]}]}]}";
+
+    var result = AdfToMarkdown.create().convert(json);
+
+    assertThat(result.body()).contains("inside excerpt");
+    assertThat(result.diagnostics()).extracting(ParseIssue::code).doesNotContain("UNSUPPORTED_MACRO");
+    assertThat(result.wasLossy()).isFalse();
+  }
+
+  @Test
+  void a_custom_renderer_suppresses_the_unsupported_macro_warning() {
+    ExtensionRenderer pagetree =
+        extension ->
+            "pagetree".equals(extension.extensionKey())
+                ? Optional.of("- child page")
+                : Optional.empty();
+    var options = MarkdownOptions.defaults().withExtensionRenderers(List.of(pagetree));
+
+    var handled = AdfToMarkdown.with(options).convert(PAGETREE);
+    assertThat(handled.diagnostics()).extracting(ParseIssue::code).doesNotContain("UNSUPPORTED_MACRO");
+    assertThat(handled.wasLossy()).isFalse();
+
+    var fallback = AdfToMarkdown.create().convert(PAGETREE);
+    assertThat(fallback.diagnostics()).extracting(ParseIssue::code).containsExactly("UNSUPPORTED_MACRO");
+  }
+
+  @Test
+  void repeated_unsupported_macros_aggregate_into_one_diagnostic() {
+    var json =
+        "{\"type\":\"doc\",\"version\":1,\"content\":["
+            + "{\"type\":\"extension\",\"attrs\":{\"extensionType\":\"com.atlassian.confluence.macro.core\",\"extensionKey\":\"pagetree\"}},"
+            + "{\"type\":\"extension\",\"attrs\":{\"extensionType\":\"com.atlassian.confluence.macro.core\",\"extensionKey\":\"pagetree\"}},"
+            + "{\"type\":\"extension\",\"attrs\":{\"extensionType\":\"com.atlassian.confluence.macro.core\",\"extensionKey\":\"detailssummary\"}}"
+            + "]}";
+
+    var result = AdfToMarkdown.create().convert(json);
+
+    assertThat(result.diagnostics())
+        .singleElement()
+        .satisfies(
+            issue -> {
+              assertThat(issue.code()).isEqualTo("UNSUPPORTED_MACRO");
+              assertThat(issue.message()).contains("2 unsupported macro(s)");
+              assertThat(issue.message()).contains("pagetree");
+              assertThat(issue.message()).contains("detailssummary");
+            });
+  }
+
+  @Test
+  void an_inline_unsupported_macro_is_flagged() {
+    var json =
+        "{\"type\":\"doc\",\"version\":1,\"content\":[{\"type\":\"paragraph\",\"content\":["
+            + "{\"type\":\"text\",\"text\":\"See \"},"
+            + "{\"type\":\"inlineExtension\",\"attrs\":{\"extensionType\":\"com.atlassian.confluence.macro.core\",\"extensionKey\":\"widget\"}}"
+            + "]}]}";
+
+    var result = AdfToMarkdown.create().convert(json);
+
+    assertThat(result.wasLossy()).isTrue();
+    assertThat(result.diagnostics()).extracting(ParseIssue::code).containsExactly("UNSUPPORTED_MACRO");
   }
 }

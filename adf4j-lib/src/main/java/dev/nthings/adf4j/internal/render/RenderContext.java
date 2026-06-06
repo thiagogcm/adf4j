@@ -15,8 +15,8 @@ import dev.nthings.adf4j.options.UnknownNodePolicy;
 import dev.nthings.adf4j.internal.analyze.HeadingOutline;
 
 /**
- * Immutable, per-render configuration derived once from {@link MarkdownOptions}. Stays constant for
- * the whole traversal; the moving cursor lives in {@link RendererState}.
+ * Per-render configuration derived once from {@link MarkdownOptions}; the moving cursor lives in
+ * {@link RendererState}. Mostly immutable, save the per-render {@link #macroDiagnostics()} sink.
  */
 record RenderContext(
     HeadingOutline headingOutline,
@@ -28,7 +28,8 @@ record RenderContext(
     boolean htmlVisualMarks,
     List<ExtensionRenderer> extensionRenderers,
     AttachmentResolver attachmentResolver,
-    PageLinkResolver pageLinkResolver) {
+    PageLinkResolver pageLinkResolver,
+    MacroDiagnostics macroDiagnostics) {
 
   static RenderContext from(MarkdownOptions options, HeadingOutline headingOutline) {
     var requiredOptions = Objects.requireNonNull(options, "options");
@@ -44,6 +45,7 @@ record RenderContext(
         requiredOptions.htmlVisualMarks(),
         requiredOptions.extensionRenderers(),
         requiredOptions.attachmentResolver(),
-        requiredOptions.pageLinkResolver());
+        requiredOptions.pageLinkResolver(),
+        new MacroDiagnostics());
   }
 }

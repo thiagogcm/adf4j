@@ -128,16 +128,17 @@ public final class AdfRenderer implements BlockRecursion {
         AlertsExtension.create());
   }
 
-  public String render(
+  public RenderOutput render(
       AdfDocument document, MarkdownOptions options, HeadingOutline headingOutline) {
     if (document == null) {
-      return "";
+      return new RenderOutput("", List.of());
     }
 
     var requiredOptions = Objects.requireNonNull(options, "options");
     var outline = headingOutline == null ? HeadingOutline.empty() : headingOutline;
     var context = RendererState.root(requiredOptions, outline);
-    return joinBlocks(renderBlocks(document.content(), context));
+    var body = joinBlocks(renderBlocks(document.content(), context));
+    return new RenderOutput(body, context.macroDiagnostics());
   }
 
   @Override

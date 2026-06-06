@@ -12,6 +12,7 @@ import dev.nthings.adf4j.options.MediaResolver;
 import dev.nthings.adf4j.options.PageLinkResolver;
 import dev.nthings.adf4j.options.TableFallback;
 import dev.nthings.adf4j.options.UnknownNodePolicy;
+import dev.nthings.adf4j.result.ParseIssue;
 import dev.nthings.adf4j.ast.Heading;
 import dev.nthings.adf4j.internal.analyze.HeadingOutline;
 
@@ -65,6 +66,14 @@ record RendererState(RenderContext context, int listDepth, TableCellKind tableCe
 
   PageLinkResolver pageLinkResolver() {
     return context.pageLinkResolver();
+  }
+
+  void recordUnsupportedExtension(String extensionType, String extensionKey) {
+    context.macroDiagnostics().recordUnsupported(extensionType, extensionKey);
+  }
+
+  List<ParseIssue> macroDiagnostics() {
+    return context.macroDiagnostics().build();
   }
 
   HeadingReference headingInfo(Heading heading) {

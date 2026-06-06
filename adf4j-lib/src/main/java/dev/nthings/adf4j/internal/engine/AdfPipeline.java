@@ -87,19 +87,21 @@ public final class AdfPipeline {
       return new MarkdownResult("", ContentMetadata.empty(), diagnostics);
     }
     var analysis = analyzer.analyze(document, options);
-    var body = renderer.render(document, options, analysis.outline());
-    return new MarkdownResult(body, analysis.metadata(), mergeDiagnostics(diagnostics, analysis.diagnostics()));
+    var rendered = renderer.render(document, options, analysis.outline());
+    // Diagnostics in pipeline order: parse, then analyze-phase lossiness, then render-phase macros.
+    var merged = mergeDiagnostics(
+        mergeDiagnostics(diagnostics, analysis.diagnostics()), rendered.diagnostics());
+    return new MarkdownResult(rendered.body(), analysis.metadata(), merged);
   }
 
-  // Parse-phase diagnostics first, then the analyze-phase lossiness diagnostics, preserving order.
   private static List<ParseIssue> mergeDiagnostics(
-      List<ParseIssue> parseDiagnostics, List<ParseIssue> analysisDiagnostics) {
-    if (analysisDiagnostics.isEmpty()) {
-      return parseDiagnostics;
+      List<ParseIssue> earlier, List<ParseIssue> later) {
+    if (later.isEmpty()) {
+      return earlier;
     }
-    var merged = new ArrayList<ParseIssue>(parseDiagnostics.size() + analysisDiagnostics.size());
-    merged.addAll(parseDiagnostics);
-    merged.addAll(analysisDiagnostics);
+    var merged = new ArrayList<ParseIssue>(earlier.size() + later.size());
+    merged.addAll(earlier);
+    merged.addAll(later);
     return merged;
   }
 }

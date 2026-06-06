@@ -48,7 +48,7 @@ final class MacroRenderer {
       return custom.get();
     }
     if (!ConfluenceSupport.isConfluenceMacroExtension(extensionType)) {
-      return extensionFallback(text, extensionType, extensionKey);
+      return extensionFallback(text, extensionType, extensionKey, context);
     }
 
     var rendered = switch (extensionKey != null ? extensionKey : "") {
@@ -60,7 +60,7 @@ final class MacroRenderer {
       case "chart:default" -> renderChartMacro(macroParams);
       default -> null;
     };
-    return rendered != null ? rendered : extensionFallback(text, extensionType, extensionKey);
+    return rendered != null ? rendered : extensionFallback(text, extensionType, extensionKey, context);
   }
 
   List<String> renderBodiedExtension(
@@ -94,7 +94,7 @@ final class MacroRenderer {
     var blocks = new ArrayList<String>();
     blocks.add(
         renderCustom(extensionType, extensionKey, text, macroParams, context)
-            .orElseGet(() -> extensionFallback(text, extensionType, extensionKey)));
+            .orElseGet(() -> extensionFallback(text, extensionType, extensionKey, context)));
     blocks.addAll(recursion.renderBlocks(content, context));
     return blocks;
   }
@@ -121,11 +121,13 @@ final class MacroRenderer {
     return Optional.empty();
   }
 
-  private String extensionFallback(String text, String extensionType, String extensionKey) {
+  private String extensionFallback(
+      String text, String extensionType, String extensionKey, RendererState context) {
     if (text != null && !text.isBlank()) {
       // Attribute-derived text; a block extension emits it at column 0, so neutralise leading markers.
       return MarkdownText.escapeInlineText(text, true);
     }
+    context.recordUnsupportedExtension(extensionType, extensionKey);
     return renderExtensionPlaceholder(extensionType, extensionKey);
   }
 
@@ -244,14 +246,14 @@ final class MacroRenderer {
 
   private String renderExtensionPlaceholder(String extensionType, String extensionKey) {
     if (extensionType != null && extensionKey != null) {
-      log.debug("Rendering placeholder for unsupported extension: {}/{}", extensionType, extensionKey);
+      log.warn("Rendering placeholder for unsupported extension: {}/{}", extensionType, extensionKey);
       return MarkdownText.labelToken("Extension: " + extensionType + "/" + extensionKey);
     }
     if (extensionKey != null) {
-      log.debug("Rendering placeholder for unsupported extension key: {}", extensionKey);
+      log.warn("Rendering placeholder for unsupported extension key: {}", extensionKey);
       return MarkdownText.labelToken("Extension: " + extensionKey);
     }
-    log.debug("Rendering placeholder for extension with no type/key");
+    log.warn("Rendering placeholder for extension with no type/key");
     return MarkdownText.labelToken("Extension");
   }
 }
