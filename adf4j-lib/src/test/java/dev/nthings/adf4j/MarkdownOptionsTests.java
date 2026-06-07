@@ -24,7 +24,8 @@ class MarkdownOptionsTests {
 
   @Test
   void constructor_and_copy_methods_normalize_null_policy_and_context() {
-    var options = new MarkdownOptions(null, null, false, null, null, false, null, null, null, false);
+    var options =
+        new MarkdownOptions(null, null, false, null, null, false, null, null, null, false, null);
 
     assertThat(options.unknownNodePolicy()).isEqualTo(UnknownNodePolicy.PLACEHOLDER);
     assertThat(options.context()).isEqualTo(ConfluenceRenderContext.empty());
@@ -34,6 +35,7 @@ class MarkdownOptionsTests {
     assertThat(options.attachmentResolver()).isNull();
     assertThat(options.pageLinkResolver()).isNull();
     assertThat(options.collapseHardBreaks()).isFalse();
+    assertThat(options.documentTitle()).isNull();
     assertThat(options.withUnknownNodePolicy(UnknownNodePolicy.SKIP).unknownNodePolicy())
         .isEqualTo(UnknownNodePolicy.SKIP);
     assertThat(options.withContext(null).context()).isEqualTo(ConfluenceRenderContext.empty());
@@ -124,6 +126,7 @@ class MarkdownOptionsTests {
         .attachmentResolver(attachment)
         .pageLinkResolver(pageLink)
         .collapseHardBreaks(true)
+        .documentTitle("My Page")
         .build();
 
     assertThat(options.unknownNodePolicy()).isEqualTo(UnknownNodePolicy.SKIP);
@@ -134,6 +137,7 @@ class MarkdownOptionsTests {
     assertThat(options.attachmentResolver()).isSameAs(attachment);
     assertThat(options.pageLinkResolver()).isSameAs(pageLink);
     assertThat(options.collapseHardBreaks()).isTrue();
+    assertThat(options.documentTitle()).isEqualTo("My Page");
   }
 
   @Test
@@ -156,6 +160,19 @@ class MarkdownOptionsTests {
     assertThat(enabled.collapseHardBreaks()).isTrue();
     assertThat(enabled.withUnknownNodePolicy(UnknownNodePolicy.SKIP).collapseHardBreaks()).isTrue();
     assertThat(enabled.withTableFallback(TableFallback.HTML).collapseHardBreaks()).isTrue();
+  }
+
+  @Test
+  void document_title_default_null_and_carry_through_other_withers() {
+    var options = MarkdownOptions.defaults();
+    assertThat(options.documentTitle()).isNull();
+
+    var titled = options.withDocumentTitle("My Page");
+    assertThat(titled.documentTitle()).isEqualTo("My Page");
+    assertThat(titled.withUnknownNodePolicy(UnknownNodePolicy.SKIP).documentTitle())
+        .isEqualTo("My Page");
+    assertThat(titled.withCollapseHardBreaks(true).documentTitle()).isEqualTo("My Page");
+    assertThat(titled.withDocumentTitle(null).documentTitle()).isNull();
   }
 
   @Test

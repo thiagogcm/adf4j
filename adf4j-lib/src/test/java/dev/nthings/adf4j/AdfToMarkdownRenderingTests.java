@@ -18,6 +18,20 @@ class AdfToMarkdownRenderingTests {
   private final AdfTestSupport testSupport = AdfTestSupport.create();
   private final AdfToMarkdown processor = testSupport.processor();
 
+  private static final String ONE_PARAGRAPH = """
+      {
+        "type": "doc",
+        "version": 1,
+        "content": [
+          { "type": "paragraph", "content": [{ "type": "text", "text": "body" }] }
+        ]
+      }
+      """;
+
+  private static final String EMPTY_DOC = """
+      { "type": "doc", "version": 1, "content": [] }
+      """;
+
   @Test
   void convert_returns_empty_metadata_for_blank_input() {
     var result = processor.convert("   ");
@@ -494,6 +508,91 @@ class AdfToMarkdownRenderingTests {
   void convert_leaves_an_unknown_subsup_subtype_unwrapped() {
     assertThat(processor.toMarkdown(subSupMark("foo"))).isEqualTo("x");
     assertThat(processor.toMarkdown(subSupMark("sub"))).contains("<sub>");
+  }
+
+  @Test
+  void document_title_is_prepended_as_an_h1_above_the_body() {
+    var titled = AdfToMarkdown.with(MarkdownOptions.defaults().withDocumentTitle("My Page"));
+    assertThat(titled.toMarkdown(ONE_PARAGRAPH)).isEqualToNormalizingNewlines("# My Page\n\nbody");
+  }
+
+  @Test
+  void document_title_defaults_off_and_leaves_the_body_unchanged() {
+    assertThat(processor.toMarkdown(ONE_PARAGRAPH)).isEqualToNormalizingNewlines("body");
+  }
+
+  @Test
+  void document_title_on_an_empty_document_renders_just_the_heading() {
+    var titled = AdfToMarkdown.with(MarkdownOptions.defaults().withDocumentTitle("My Page"));
+    assertThat(titled.toMarkdown(EMPTY_DOC)).isEqualToNormalizingNewlines("# My Page");
+  }
+
+  @Test
+  void document_title_is_omitted_when_the_document_fails_to_parse() {
+    var titled = AdfToMarkdown.with(MarkdownOptions.defaults().withDocumentTitle("My Page"));
+    // An invalid root and blank input short-circuit before the renderer, so no title is emitted.
+    assertThat(titled.toMarkdown("{\"type\":\"paragraph\",\"version\":1,\"content\":[]}")).isEmpty();
+    assertThat(titled.toMarkdown("   ")).isEmpty();
+  }
+
+  @Test
+  void document_title_collapses_newlines_to_a_single_line_heading() {
+    var titled =
+        AdfToMarkdown.with(MarkdownOptions.defaults().withDocumentTitle("Line one\nLine two"));
+    assertThat(titled.toMarkdown(ONE_PARAGRAPH))
+        .isEqualToNormalizingNewlines("# Line one Line two\n\nbody");
+  }
+
+  @Test
+  void blank_document_title_emits_no_heading() {
+    var blank = AdfToMarkdown.with(MarkdownOptions.defaults().withDocumentTitle("   "));
+    assertThat(blank.toMarkdown(ONE_PARAGRAPH)).isEqualToNormalizingNewlines("body");
+  }
+
+  @Test
+  void document_title_escapes_markdown_and_html_punctuation() {
+    var titled = AdfToMarkdown.with(MarkdownOptions.defaults().withDocumentTitle("<b> & *x*"));
+    assertThat(titled.toMarkdown(ONE_PARAGRAPH))
+        .isEqualToNormalizingNewlines("# \\<b> \\& \\*x\\*\n\nbody");
+  }
+
+  @Test
+  void document_title_of_dashes_stays_literal_text_not_a_thematic_break() {
+    var titled = AdfToMarkdown.with(MarkdownOptions.defaults().withDocumentTitle("---"));
+    assertThat(titled.toMarkdown(ONE_PARAGRAPH)).isEqualToNormalizingNewlines("# ---\n\nbody");
+  }
+
+  @Test
+  void document_title_ending_in_a_backslash_escapes_it_and_cannot_escape_the_line_end() {
+    var titled = AdfToMarkdown.with(MarkdownOptions.defaults().withDocumentTitle("Title\\"));
+    assertThat(titled.toMarkdown(ONE_PARAGRAPH))
+        .isEqualToNormalizingNewlines("# Title\\\\\n\nbody");
+  }
+
+  @Test
+  void document_title_is_unaffected_by_html_visual_marks() {
+    var titled = AdfToMarkdown.with(
+        MarkdownOptions.defaults().withDocumentTitle("My Page").withHtmlVisualMarks(true));
+    assertThat(titled.toMarkdown(ONE_PARAGRAPH)).isEqualToNormalizingNewlines("# My Page\n\nbody");
+  }
+
+  @Test
+  void document_title_is_not_deduplicated_against_an_existing_leading_heading() {
+    var adf = """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {
+              "type": "heading",
+              "attrs": { "level": 1 },
+              "content": [{ "type": "text", "text": "Body Heading" }]
+            }
+          ]
+        }
+        """;
+    var titled = AdfToMarkdown.with(MarkdownOptions.defaults().withDocumentTitle("My Page"));
+    assertThat(titled.toMarkdown(adf)).isEqualToNormalizingNewlines("# My Page\n\n# Body Heading");
   }
 
   // A paragraph holding text "x" with a single link mark; href is inserted as a raw JSON value.

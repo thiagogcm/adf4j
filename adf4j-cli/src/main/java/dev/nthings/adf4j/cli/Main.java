@@ -22,6 +22,7 @@ public final class Main {
         "",
         "Options:",
         "  -o, --output=FILE          Write output to FILE instead of stdout",
+        "  -t, --title=TITLE          Prepend TITLE as a level-1 (# ) heading above the output",
         "  -c, --collapse-hard-breaks Render hard breaks (Shift+Enter) as soft breaks (no trailing spaces)",
         "  -h, --help                 Show this help message",
     };
@@ -52,8 +53,9 @@ public final class Main {
             return 1;
         }
 
-        var markdownOptions =
-            MarkdownOptions.defaults().withCollapseHardBreaks(options.isSet("collapse-hard-breaks"));
+        var markdownOptions = MarkdownOptions.defaults()
+            .withCollapseHardBreaks(options.isSet("collapse-hard-breaks"))
+            .withDocumentTitle(options.isSet("title") ? options.get("title") : null);
         String result = AdfToMarkdown.with(markdownOptions).toMarkdown(input);
 
         if (options.isSet("output")) {

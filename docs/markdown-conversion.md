@@ -18,6 +18,7 @@ Construct via `MarkdownOptions.defaults()` plus the `withX(...)` withers, or via
 | `attachmentResolver` | `null` | Turns a resolved Confluence `attachment:` reference into a concrete URL/path. Returning `null`/blank keeps the `attachment:<fileId>` placeholder. |
 | `pageLinkResolver` | `null` | Rewrites inter-page links and page smart-cards to a caller-supplied destination, keyed by page node id. Returning `null`/blank keeps the original href. |
 | `collapseHardBreaks` | `false` | When `true`, renders a hard break (Shift+Enter) as a soft break (a plain newline) instead of the two-trailing-space GFM hard break. |
+| `documentTitle` | `null` | When set, prepends the value as a level-1 (`# `) heading above the output, separated by a blank line. Newlines collapse to spaces and CommonMark punctuation is escaped; `null`/blank emits nothing (current behaviour). It is render-only (not reflected in `ContentMetadata`) and is not de-duplicated against a title heading the body may already contain. |
 
 Caller-supplied callbacks (`mediaResolver`, `attachmentResolver`, `pageLinkResolver`, `extensionRenderers`) are isolated: a `RuntimeException` thrown from one is logged and the conversion falls back to the default behaviour rather than aborting.
 

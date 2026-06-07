@@ -139,7 +139,30 @@ public final class AdfRenderer implements BlockRecursion {
     var outline = headingOutline == null ? HeadingOutline.empty() : headingOutline;
     var context = RendererState.root(requiredOptions, outline);
     var body = joinBlocks(renderBlocks(document.content(), context));
-    return new RenderOutput(body, context.macroDiagnostics());
+    return new RenderOutput(
+        prependTitle(body, requiredOptions.documentTitle()), context.macroDiagnostics());
+  }
+
+  // Prepends the optional documentTitle as a level-1 heading, blank-line separated from the body.
+  private static String prependTitle(String body, String rawTitle) {
+    var heading = titleHeading(rawTitle);
+    if (heading == null) {
+      return body;
+    }
+    return body.isEmpty() ? heading : heading + "\n\n" + body;
+  }
+
+  // Formats the title like renderHeading's plain level-1 case: collapsed to one line, punctuation
+  // escaped (atLineStart=false, since the text follows "# "). Null/blank yields no heading.
+  private static String titleHeading(String rawTitle) {
+    if (rawTitle == null) {
+      return null;
+    }
+    var oneLine = MarkdownText.collapseLineBreaks(rawTitle).strip();
+    if (oneLine.isEmpty()) {
+      return null;
+    }
+    return "# " + MarkdownText.escapeInlineText(oneLine, false);
   }
 
   @Override
