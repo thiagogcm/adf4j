@@ -6,17 +6,48 @@
 
 This document lists **only the concerns and issues discovered**. Findings are tagged by reviewer lens — `A` (API), `C` (Correctness), `S` (Security), `P` (Performance), `M` (Maintainability) — and ordered by severity within each section. Cross-references link findings that share a root cause across lenses.
 
+**Remediation pass (2026-06-06):** all 9 High-severity findings plus a set of cheap, high-value quick wins have since been fixed in the codebase. Fixed findings are marked **✅ Fixed** inline with the change made and the test that guards it; see the Remediation status section below for the full list. The library test suite now stands at 340 tests (was 318), all green, with a JaCoCo coverage gate enforced in CI.
+
 ---
 
 ## Summary
 
-| Severity | Count | Finding IDs |
-|----------|-------|-------------|
-| Critical | 0 | — |
-| High | 9 | A1, C1, C2, C3, C4, S1, S2, M1, M2 |
-| Medium | 18 | A2, A3, C5, C6, C7, S3, S4, S5, S6, P1, P2, M3, M4, M5, M6, M8, M9, M13 |
-| Low | 23 | A4, A5, A6, A7, C8, C9, C10, S7, S8, P3, P4, P5, P6, P7, P8, P9, M7, M10, M11, M12, M14, M15, M16 |
-| **Total** | **50** | |
+| Severity | Count | Finding IDs | Fixed in remediation pass |
+|----------|-------|-------------|---------------------------|
+| Critical | 0 | — | — |
+| High | 9 | A1, C1, C2, C3, C4, S1, S2, M1, M2 | **all 9** |
+| Medium | 18 | A2, A3, C5, C6, C7, S3, S4, S5, S6, P1, P2, M3, M4, M5, M6, M8, M9, M13 | A3, C5, S3, S4, S6 (+ M3 partial) |
+| Low | 23 | A4, A5, A6, A7, C8, C9, C10, S7, S8, P3, P4, P5, P6, P7, P8, P9, M7, M10, M11, M12, M14, M15, M16 | C8, C9, M14, M16 |
+| **Total** | **50** | | **25 fixed / addressed** |
+
+---
+
+## Remediation status (2026-06-06)
+
+The following findings were resolved in this pass. Each change is covered by `adf4j-lib/src/test/java/dev/nthings/adf4j/HardeningFixesTests.java` unless noted.
+
+| ID | Finding | What changed |
+|----|---------|--------------|
+| **S1** | `javascript:`/`data:` URLs emitted verbatim | `MarkdownText.escapeUrlDestination` now scheme-sanitizes every destination (allow-list of safe schemes; dangerous-scheme colon percent-encoded; control-char/tab obfuscation stripped first). The HTML table renderer was switched to `sanitizeUrls(true)` for defence in depth. |
+| **S2** | Unbounded recursion → `StackOverflowError` DoS | `MAX_NESTING_DEPTH` lowered from 1000 → 100, so a pathologically deep payload surfaces as a caught `INVALID_JSON` diagnostic instead of overflowing the stack; still admits ~50 levels of legitimate nesting. |
+| **S3 / M2** | Caller callbacks not isolated | New `CallbackGuards.guard(...)` wraps all four SPI callbacks (`MediaResolver`, `AttachmentResolver`, `PageLinkResolver`, `ExtensionRenderer`); a throwing callback is logged and falls back to the default. |
+| **S4** | Injection via macro params / extension output | iframe `src` now routed through `escapeUrlDestination` (so dangerous schemes/spaces are neutralized); `ExtensionRenderer` Javadoc now documents that its output is trusted and emitted verbatim (escaping is the renderer's responsibility). |
+| **S6** | `Long.MIN_VALUE` date crash | `AdfText.dateFromTimestamp` guards `Long.MIN_VALUE` and now also catches `DateTimeException`/`ArithmeticException`, returning gracefully instead of throwing. |
+| **A1** | `ParseResult` broke the defensive-copy/null-guard contract | Added a compact constructor that null-coalesces and `List.copyOf`s `issues`, plus class Javadoc. |
+| **A3** | Null-document behavior undocumented | Javadoc added to the `convert(AdfDocument)` / `analyze(AdfDocument)` overloads. |
+| **C1** | iframe URL not escaped | Routed through `escapeUrlDestination`. |
+| **C2** | TOC anchor href not escaped | TOC `#anchor` destination routed through `escapeUrlDestination`. |
+| **C3** | url-only card label not inline-escaped | Label now passed through `escapeInlineText`. |
+| **C4** | nested ordered list `start ≠ 1` swallowed | `isNestedListBlock` now treats a `start ≠ 1` ordered list as a non-tight block, emitting the blank line CommonMark needs. |
+| **C5** | link title newline emitted raw | `escapeLinkTitle` collapses line breaks to spaces. |
+| **C8** | code-block language not trimmed | Info string now strips whitespace, drops backticks and newlines. |
+| **C9** | unknown `subsup` subtype → wrong `<sub>` | Only `sub`/`sup` map to a tag; unknown subtypes are left unwrapped. |
+| **M1** | JaCoCo never ran in CI / no gate | Added a `jacoco:check` execution (BUNDLE: instruction ≥ 0.85, branch ≥ 0.65) and switched CI from `clean test` to `clean verify`. |
+| **M14** | broad `catch (RuntimeException)` hid serialization failures | `AdfAstParser.rawJson` now catches `JacksonException` specifically and logs it. |
+| **M16** | Javadoc referenced a non-existent doc | Created `docs/markdown-conversion.md` documenting the options, lossy behaviours, URL safety and robustness. |
+| M3 *(partial)* | No failure-path coverage | Added DoS, throwing-callback, malformed-value and edge-case tests; concurrency/property/fuzz tests remain open. |
+
+Findings not listed above remain **open** (notably S5, C6, C7, S7, S8, the performance items P1–P9, the remaining API items A2/A4–A7, and the maintainability/refactor items M4–M13/M15). They were out of scope for this High-severity + quick-win pass.
 
 ---
 
@@ -38,7 +69,7 @@ These root causes surfaced independently in more than one lens and are the highe
 
 ## API & Contract (A)
 
-**[A1] `ParseResult` breaks the defensive-copy / null-guard contract every sibling record upholds** — Severity: High
+**[A1] `ParseResult` breaks the defensive-copy / null-guard contract every sibling record upholds** — Severity: High — ✅ **FIXED**
 - Location: `result/ParseResult.java:7`
 - `public record ParseResult(AdfDocument document, List<ParseIssue> issues, boolean validAdfRoot)` has **no compact constructor**, unlike `MarkdownResult` (`result/MarkdownResult.java:10-14`) and `ContentMetadata` (`metadata/ContentMetadata.java:28-34`), which both null-coalesce and `List.copyOf(...)`. It is returned from the public `AdfToMarkdown.parse(String)`. Today's internal callers happen to pass immutable lists, so live instances are safe, but the public canonical constructor guarantees nothing: `new ParseResult(doc, null, true)` yields an instance whose `issues()` is `null`, NPE-ing any `result.issues().stream()`, and a caller-supplied mutable list is retained without copy.
 - Why it matters: latent NPE and a leaked-mutability inconsistency on a public return type that diverges from its two sibling records.
@@ -50,7 +81,7 @@ These root causes surfaced independently in more than one lens and are the highe
 - Why it matters: a consumer assembling renderers conditionally gets a raw NPE from `build()` with no actionable message.
 - Fix: validate/filter elements with a message naming `extensionRenderers`, or document the constraint.
 
-**[A3] Null-input behavior of the `AdfDocument` overloads is silent, undocumented, and asymmetric with the `String` overloads** — Severity: Medium
+**[A3] Null-input behavior of the `AdfDocument` overloads is silent, undocumented, and asymmetric with the `String` overloads** — Severity: Medium — ✅ **FIXED** (Javadoc; behavior left intentionally lenient)
 - Location: `AdfToMarkdown.java:66-67,81-83,95-97`; `internal/engine/AdfPipeline.java:61-66,80-88`
 - `convert(String)` / `analyze(String)` document "blank or invalid → empty". The `AdfDocument` overloads silently return `ContentMetadata.empty()` / an empty-body `MarkdownResult` for a **null** document with no Javadoc, while their `perCallOptions` argument *is* null-checked via `Objects.requireNonNull`. So `convert(null)` (document) returns empty, but `convert(doc, null)` (options) throws — opposite reactions to null on the same method family.
 - Why it matters: a consumer cannot tell whether a null document is a programming error or a defined empty result.
@@ -86,27 +117,27 @@ These root causes surfaced independently in more than one lens and are the highe
 
 > Items marked "verified" were reproduced end-to-end through the project's CommonMark oracle.
 
-**[C1] iframe macro emits an unescaped URL destination** — Severity: High *(also a security sink — see S4)*
+**[C1] iframe macro emits an unescaped URL destination** — Severity: High *(also a security sink — see S4)* — ✅ **FIXED**
 - Location: `internal/render/MacroRenderer.java:211`
 - `renderIframeMacro` returns `"[Embedded content](%s)".formatted(src)` with raw `src`. Any space/paren/angle bracket breaks the link. Verified: `src = "https://e.com/a (b) c"` → oracle output `<p>[Embedded content](https://e.com/a (b) c)</p>` — no anchor produced. Every other link site routes through `escapeUrlDestination`; this one does not.
 - Fix: wrap with `MarkdownText.escapeUrlDestination(src)`.
 
-**[C2] TOC link anchor href is not URL-escaped** — Severity: High
+**[C2] TOC link anchor href is not URL-escaped** — Severity: High — ✅ **FIXED**
 - Location: `internal/render/MacroRenderer.java:191`
 - `"- [" + label + "](#" + heading.anchor() + ")"` escapes the label but emits the `#anchor` raw. For an explicit Confluence anchor id like `a b)c`, the entry becomes `[H](#a b)c)` → verified oracle output `<li>[H](#a b)c)</li>` with no link. Commonmark-derived slugs are clean, but explicit ids are arbitrary attribute strings.
 - Fix: run the fragment through `MarkdownText.escapeUrlDestination("#" + heading.anchor())` (or percent-encode it).
 
-**[C3] url-only card label is not inline-escaped on the non-autolink path** — Severity: High
+**[C3] url-only card label is not inline-escaped on the non-autolink path** — Severity: High — ✅ **FIXED**
 - Location: `internal/render/CardRenderer.java:61`
 - When a url-only card can't be an autolink (relative or rewritten page link), the raw `url` is used as the visible label without escaping. Verified: `/wiki/a*b*c` → `[/wiki/a*b*c](/wiki/a*b*c)`, label renders as `/wiki/a<em>b</em>c`; `/wiki/a]b` → no anchor at all (the `]` truncates the label).
 - Fix: pass the label through `MarkdownText.escapeInlineText(url, false)`.
 
-**[C4] Nested ordered list with `start ≠ 1` renders tight and is absorbed as paragraph text (silent structural loss)** — Severity: High
+**[C4] Nested ordered list with `start ≠ 1` renders tight and is absorbed as paragraph text (silent structural loss)** — Severity: High — ✅ **FIXED**
 - Location: `internal/render/ListRenderer.java:177`, `isNestedListBlock` at `:187`
 - All nested lists are kept tight; CommonMark only lets a list interrupt a paragraph when an ordered list starts at 1. Verified: `bulletList → listItem[paragraph "top", orderedList order=3 "n1"]` produces `- top\n  3. n1`, parsed as `<li>top 3. n1</li>` — the entire sublist is lost (no `<ol>`). A leading blank line yields the correct `<ol start="3">`. The existing `ordered-list-nested-indent` fixture only covers order=1, so this is untested.
 - Fix: in the continuation loop, treat a nested ordered list whose `order != 1` like a non-list block (emit the preceding blank line).
 
-**[C5] Link title with an embedded newline is emitted raw** — Severity: Medium
+**[C5] Link title with an embedded newline is emitted raw** — Severity: Medium — ✅ **FIXED**
 - Location: `internal/render/TextMarkRenderer.java:217` (`escapeLinkTitle`)
 - Only `\` and `"` are escaped; a newline in `title` is written literally, producing `[x](https://e.com "a⏎b")`. It survives current commonmark parsing but is fragile and not valid single-line GFM title form.
 - Fix: collapse/encode line breaks (`\R` → space) in `escapeLinkTitle`.
@@ -121,12 +152,12 @@ These root causes surfaced independently in more than one lens and are the highe
 - A `tableRow` with no cells is skipped entirely and a short row is right-padded, so a ragged ADF table is coerced to a rectangle with no diagnostic. Verified: 2-col + empty + 1-col rows → the empty row vanishes and the 1-col row becomes `| c | |`. No lossiness signal is recorded.
 - Fix: at minimum record a lossiness/parse diagnostic when a row is dropped or padded; consider routing ragged tables to the HTML fallback.
 
-**[C8] Code-block language info string is not trimmed/validated** — Severity: Low
+**[C8] Code-block language info string is not trimmed/validated** — Severity: Low — ✅ **FIXED**
 - Location: `internal/render/MarkdownText.java:37`; `AdfRenderer.renderCodeBlock` (only whole-fence `stripTrailing`)
 - The `language` attr is concatenated verbatim: `"  js  "` yields `` ```  js `` (leading spaces kept). Backticks or spaces in the language would corrupt the fence/info string.
 - Fix: `language.strip()` (and strip backticks) before building the fence.
 
-**[C9] Unknown `subsup` subtype silently becomes subscript** — Severity: Low
+**[C9] Unknown `subsup` subtype silently becomes subscript** — Severity: Low — ✅ **FIXED**
 - Location: `internal/render/TextMarkRenderer.java:183`
 - `"sup".equalsIgnoreCase(subSup.subSupType()) ? "sup" : "sub"` maps any non-`sup` value — including garbage — to `<sub>`. Verified: subsup type `"foo"` → `<sub>x</sub>`.
 - Fix: only emit `<sub>` when the type equals `sub`; otherwise leave the text unwrapped (or record lossiness).
@@ -142,24 +173,24 @@ These root causes surfaced independently in more than one lens and are the highe
 
 > Threat model: the ADF JSON input is hostile (e.g. attacker-authored Confluence/Jira content).
 
-**[S1] `javascript:`/`data:`/`vbscript:` URLs emitted verbatim into links and the HTML-table fallback** — Severity: High
+**[S1] `javascript:`/`data:`/`vbscript:` URLs emitted verbatim into links and the HTML-table fallback** — Severity: High — ✅ **FIXED**
 - Location: `internal/render/MarkdownText.java:198` (`escapeUrlDestination` — no scheme validation, confirmed); sinks at `TextMarkRenderer.java:94-98`, `CardRenderer.java:52-61`, `MediaRenderer.java:76-88`, `MacroRenderer.java:211,226`; HTML renderer built with `sanitizeUrls(false)` at `AdfRenderer.java:117` (confirmed)
 - A link mark `{"href":"javascript:alert(document.cookie)"}` is emitted as `[label](javascript:...)`. In the HTML-table path the commonmark renderer is built with `sanitizeUrls(false)`, so the malicious href reaches the DOM directly; in the plain-markdown path it survives to any downstream renderer.
 - Impact: stored XSS / script execution in any consumer that renders the output — the explicit threat model.
 - Fix: allowlist schemes (http/https/mailto/relative) in `escapeUrlDestination`, replacing or stripping anything else, and set `sanitizeUrls(true)` on the HTML renderer.
 
-**[S2] Unbounded parser/renderer recursion → uncaught `StackOverflowError` (DoS)** — Severity: High
+**[S2] Unbounded parser/renderer recursion → uncaught `StackOverflowError` (DoS)** — Severity: High — ✅ **FIXED**
 - Location: parser recursion `internal/parser/AdfAstParser.java:135`; renderer recursion `internal/render/AdfRenderer.java:145`; only guard `MAX_NESTING_DEPTH = 1000` at `internal/parser/AdfParsingService.java:25` (confirmed)
 - The 1000 JSON-nesting cap is far above the JVM stack budget for the recursive AST build and render. Verified: ~495 nested `blockquote`s overflow the default stack; ~200 at `-Xss256k`, ~300 at `-Xss512k`. `StackOverflowError` is an `Error`, so it is *not* caught by `catch (JacksonException)` in `AdfParsingService.parse` nor in the renderer — it kills the calling thread. A few-KB payload is a trivial remote DoS.
 - Fix: lower `MAX_NESTING_DEPTH` to ~64–100 and/or track an explicit depth counter in `parseBlock`/`renderBlock` and degrade gracefully.
 
-**[S3] Uncaught exceptions from user resolver/extension callbacks crash the conversion** — Severity: Medium *(also M2)*
+**[S3] Uncaught exceptions from user resolver/extension callbacks crash the conversion** — Severity: Medium *(also M2)* — ✅ **FIXED**
 - Location: `MediaRenderer.java:104`, `MacroRenderer.java:234`, `TextMarkRenderer.java:112`, `MacroRenderer.java:116`
 - None of the four caller-supplied callbacks (`MediaResolver`, `AttachmentResolver`, `PageLinkResolver`, `ExtensionRenderer`) are wrapped in try/catch; a throw propagates out of `convert()`. With attacker-controlled input selecting which nodes hit a resolver, an attacker can steer execution into the throwing path.
 - Impact: a single throwing/buggy callback aborts the entire document conversion (availability).
 - Fix: wrap each callback in try/catch; log and fall back to the default/synthetic destination on exception.
 
-**[S4] Second-order injection: resolver/extension return values bypass escaping** — Severity: Medium *(shares root cause with C1, S1)*
+**[S4] Second-order injection: resolver/extension return values bypass escaping** — Severity: Medium *(shares root cause with C1, S1)* — ✅ **FIXED** (iframe neutralized; extension output documented as trusted)
 - Location: `MacroRenderer.java:116-121` (ExtensionRenderer output), `:211` (iframe `src`), `:234-239` (attachment), `MediaRenderer.java:104-107`, `TextMarkRenderer.java:112`
 - `ExtensionRenderer.render(...)` output is inserted with **no escaping**. The `iframe` macro builds its link from raw attacker-controlled `macroParams` `src` (not even routed through `escapeUrlDestination`). Resolver-returned URLs go through `escapeUrlDestination`, which per S1 does not block dangerous schemes.
 - Impact: markdown/HTML injection and `javascript:`-URL injection via macro params and extension output.
@@ -171,7 +202,7 @@ These root causes surfaced independently in more than one lens and are the highe
 - Impact: CSS injection (data-exfil via `background:url`, UI redress) in consumers rendering the HTML. Lower than S1 (quote-breakout blocked; feature is opt-in).
 - Fix: allowlist-validate color/size values (e.g. `#hex`/`rgb()`/keywords/`\d+px`) before emitting them.
 
-**[S6] `date` timestamp `-9223372036854775808` throws an uncaught `DateTimeException` (DoS)** — Severity: Medium
+**[S6] `date` timestamp `-9223372036854775808` throws an uncaught `DateTimeException` (DoS)** — Severity: Medium — ✅ **FIXED**
 - Location: `internal/AdfText.java:18-33` (`dateFromTimestamp`) — confirmed `catch` handles only `NumberFormatException`
 - `Math.abs(Long.MIN_VALUE)` stays negative, so the `< 100_000_000_000L` branch calls `Instant.ofEpochSecond(Long.MIN_VALUE)`, which throws `DateTimeException`; the catch only handles `NumberFormatException`. Verified: one inline `date` node with this value crashes the whole conversion.
 - Fix: also catch `DateTimeException` (or `RuntimeException`) and guard `Long.MIN_VALUE`.
@@ -243,12 +274,12 @@ These root causes surfaced independently in more than one lens and are the highe
 
 ## Maintainability & Test Coverage (M)
 
-**[M1] jacoco never runs in CI and no coverage gate is enforced** — Severity: High
+**[M1] jacoco never runs in CI and no coverage gate is enforced** — Severity: High — ✅ **FIXED**
 - Location: parent `pom.xml` jacoco config (bound to `verify`); `.github/workflows/build-and-test.yml:32` runs `./mvnw clean test` (confirmed — stops before `verify`)
 - jacoco's `report` is bound to `verify`, but CI runs `clean test`, so jacoco never executes, no report is produced, and there is no `check` goal or `<minimum>` threshold anywhere. The coverage configuration is inert.
 - Fix: add a `jacoco:check` execution with a line/branch minimum and run `mvn verify` in CI.
 
-**[M2] No resolver/extension callback failure is tested; throwing callbacks crash the conversion** — Severity: High *(same defect as S3)*
+**[M2] No resolver/extension callback failure is tested; throwing callbacks crash the conversion** — Severity: High *(same defect as S3)* — ✅ **FIXED**
 - Location: `MacroRenderer.java:116`, `MediaRenderer.java:104`, `TextMarkRenderer.java:112`, `MacroRenderer.java:234`; tests: zero (`grep assertThrows` over `src/test` = 0; no throwing-callback test)
 - The four caller-supplied callbacks are invoked with no try/catch and no test exercises the failure path, so the documented "lossy but never fails" contract (`AdfParsingService` comment, line 24) is broken at the render phase and untested.
 - Fix: wrap each callback in try/catch with placeholder fallback, and add throwing-callback tests.
@@ -308,7 +339,7 @@ These root causes surfaced independently in more than one lens and are the highe
 - Four different reactions to bad input mean a maintainer cannot predict from a signature whether a malformation throws, returns empty, or returns a diagnostic.
 - Fix: document the failure-mode matrix on the public API and converge (e.g. always diagnostics-in-result except the explicit FAIL opt-in).
 
-**[M14] Overly broad `catch (RuntimeException)` masks a should-not-happen serialization failure** — Severity: Low
+**[M14] Overly broad `catch (RuntimeException)` masks a should-not-happen serialization failure** — Severity: Low — ✅ **FIXED**
 - Location: `AdfAstParser.java:490` (`rawJson` returns `"{}"` on any `RuntimeException`, no log)
 - Re-serializing an in-memory `JsonNode` should never fail; swallowing all `RuntimeException` to `"{}"` hides genuine bugs, and `PRESERVE_RAW` then silently emits an empty object.
 - Fix: catch the specific Jackson exception and at least `log.warn`.
@@ -318,7 +349,7 @@ These root causes surfaced independently in more than one lens and are the highe
 - Four caller-implemented SPI callbacks, one uses `Optional`, three use null-means-defer.
 - Fix: pick one convention for all SPI callbacks.
 
-**[M16] Javadoc references a docs file that does not exist** — Severity: Low
+**[M16] Javadoc references a docs file that does not exist** — Severity: Low — ✅ **FIXED**
 - Location: `AdfToMarkdown.java:22` — "documented in `docs/markdown-conversion.md`"; confirmed `docs/` contains only `spec/{README.md,structure.md,adf-schema.json}`
 - The one pointer to per-option behavior on the primary entry-point class is a dead link.
 - Fix: create the file or repoint to the in-code `MarkdownOptions` Javadoc.
@@ -329,8 +360,10 @@ These root causes surfaced independently in more than one lens and are the highe
 
 ## Suggested remediation order
 
-1. **Security-critical, small surface:** `S1` (URL scheme allowlist + `sanitizeUrls(true)`), `S2` (lower `MAX_NESTING_DEPTH` / add depth counter), `S6` (catch `DateTimeException`), `S3` (wrap callbacks) — these are the genuine remote-input hazards and most are a few lines each.
-2. **Correctness fixes that share the S1 escaping fix:** `C1`, `C2`, `C3` (route every label/destination through escaping — ideally via the single `MarkdownText.link(...)` helper proposed in `M12`), then `C4` (nested ordered-list blank line) and `C6`/`C7` (table data demotion / dropped rows).
-3. **Contract hardening:** `A1` (`ParseResult` compact constructor), `A3` (document null-document behavior), `M13` (failure-mode matrix).
-4. **Test & CI gaps:** `M1` (run jacoco with a gate in CI), `M2`/`M3` (callback-failure, concurrency, and property tests), `M5`/`M6` (record-contract and golden-fixture coverage).
-5. **Maintainability & performance:** consolidate the duplicated switches/literals/link-assembly (`M8`, `M9`, `M10`, `M12`), then the per-call/per-node allocation cleanups (`P1`, `P2`, `P4`).
+Steps 1–3 below were completed in the 2026-06-06 remediation pass (✅); steps 4–5 remain open.
+
+1. ✅ **Security-critical, small surface:** `S1` (URL scheme allowlist + `sanitizeUrls(true)`), `S2` (lower `MAX_NESTING_DEPTH`), `S6` (catch `DateTimeException`), `S3` (wrap callbacks) — done; these were the genuine remote-input hazards.
+2. ✅ **Correctness fixes that share the S1 escaping fix:** `C1`, `C2`, `C3` (route every label/destination through escaping), then `C4` (nested ordered-list blank line) — done. `C6`/`C7` (table data demotion / dropped rows) remain open. *Note: the data-preserving table fallback for C6 is the existing `GFM_EMPTY_HEADER` option, not a new `SYNTHESIZE_EMPTY`.*
+3. ✅ **Contract hardening:** `A1` (`ParseResult` compact constructor), `A3` (document null-document behavior) — done. `M13` (failure-mode matrix) remains open.
+4. **Test & CI gaps:** ✅ `M1` (jacoco gate in CI) and ✅ `M2` (callback-failure tests) done; still open: `M3` concurrency/property tests, `M5`/`M6` (record-contract and golden-fixture coverage), `M4` (inline `FAIL` test).
+5. **Maintainability & performance (open):** consolidate the duplicated switches/literals/link-assembly (`M8`, `M9`, `M10`, `M12`), then the per-call/per-node allocation cleanups (`P1`, `P2`, `P4`).

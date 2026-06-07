@@ -124,4 +124,52 @@ class TableFallbackOptionsTests {
 
     assertThat(markdown).startsWith("<table>").contains("colspan=\"2\"").endsWith("</table>");
   }
+
+  @Test
+  void html_fallback_preserves_relative_and_http_links_in_a_cell() {
+    // The fallback re-parses cell Markdown to HTML; its URL sanitiser must keep safe/relative hrefs.
+    var adf = """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {
+              "type": "table",
+              "content": [
+                {
+                  "type": "tableRow",
+                  "content": [
+                    {
+                      "type": "tableCell",
+                      "attrs": { "colspan": 2 },
+                      "content": [
+                        {
+                          "type": "paragraph",
+                          "content": [
+                            {
+                              "type": "text",
+                              "text": "rel",
+                              "marks": [{ "type": "link", "attrs": { "href": "/wiki/page" } }]
+                            },
+                            {
+                              "type": "text",
+                              "text": " abs",
+                              "marks": [{ "type": "link", "attrs": { "href": "https://example.com/p" } }]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """;
+
+    var markdown = AdfToMarkdown.create().toMarkdown(adf).strip();
+
+    assertThat(markdown).contains("href=\"/wiki/page\"").contains("href=\"https://example.com/p\"");
+  }
 }

@@ -62,7 +62,10 @@ public final class AdfToMarkdown {
     return pipeline.analyze(adfJson, Objects.requireNonNull(perCallOptions, "options"));
   }
 
-  /** Extracts {@link ContentMetadata} from an already-parsed {@link AdfDocument} using bound options. */
+  /**
+   * Extracts {@link ContentMetadata} from an already-parsed {@link AdfDocument} using bound options.
+   * A {@code null} document yields {@link ContentMetadata#empty()}.
+   */
   public ContentMetadata analyze(AdfDocument document) {
     return pipeline.analyze(document, options);
   }
@@ -77,7 +80,10 @@ public final class AdfToMarkdown {
     return pipeline.convert(adfJson, options);
   }
 
-  /** Converts an already-parsed {@link AdfDocument} to Markdown using the bound options. */
+  /**
+   * Converts an already-parsed {@link AdfDocument} to Markdown using the bound options. A {@code null}
+   * document yields an empty-body {@link MarkdownResult}.
+   */
   public MarkdownResult convert(AdfDocument document) {
     return pipeline.convert(document, options);
   }

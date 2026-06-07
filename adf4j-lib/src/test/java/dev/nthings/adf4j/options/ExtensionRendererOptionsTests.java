@@ -101,6 +101,17 @@ class ExtensionRendererOptionsTests {
   }
 
   @Test
+  void a_renderer_that_throws_is_contained_and_falls_through_to_the_default() {
+    ExtensionRenderer throwing = extension -> {
+      throw new RuntimeException("boom");
+    };
+    var options = MarkdownOptions.defaults().withExtensionRenderers(List.of(throwing));
+    var markdown = AdfToMarkdown.with(options).toMarkdown(BLOCK_EXTENSION).strip();
+
+    assertThat(markdown).contains("Extension");
+  }
+
+  @Test
   void renderers_are_consulted_in_order_and_the_first_match_wins() {
     var options =
         MarkdownOptions.defaults()

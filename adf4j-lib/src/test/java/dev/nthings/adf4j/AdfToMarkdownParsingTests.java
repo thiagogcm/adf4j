@@ -54,6 +54,11 @@ class AdfToMarkdownParsingTests {
   }
 
   @Test
+  void parse_result_normalises_a_null_issue_list_to_an_empty_one() {
+    assertThat(new ParseResult(null, null, true).issues()).isNotNull().isEmpty();
+  }
+
+  @Test
   void parse_reports_invalid_json_payloads() {
     var result = processor.parse("{");
 

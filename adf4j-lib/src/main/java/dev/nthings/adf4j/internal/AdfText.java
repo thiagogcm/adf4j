@@ -1,5 +1,6 @@
 package dev.nthings.adf4j.internal;
 
+import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.ZoneOffset;
 
@@ -22,12 +23,12 @@ public final class AdfText {
 
     try {
       var value = Long.parseLong(timestamp);
-      var instant = Math.abs(value) < 100_000_000_000L
+      // Guard Long.MIN_VALUE before the split: Math.abs would stay negative and steer it wrong.
+      var instant = value != Long.MIN_VALUE && Math.abs(value) < 100_000_000_000L
           ? Instant.ofEpochSecond(value)
           : Instant.ofEpochMilli(value);
-      var date = instant.atZone(ZoneOffset.UTC).toLocalDate();
-      return date.toString();
-    } catch (NumberFormatException _) {
+      return instant.atZone(ZoneOffset.UTC).toLocalDate().toString();
+    } catch (NumberFormatException | DateTimeException _) {
       return timestamp;
     }
   }

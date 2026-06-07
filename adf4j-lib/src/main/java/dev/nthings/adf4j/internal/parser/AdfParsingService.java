@@ -21,8 +21,10 @@ public final class AdfParsingService {
 
   private static final Logger log = LoggerFactory.getLogger(AdfParsingService.class);
 
-  // Cap nesting so an adversarially deep payload surfaces as a caught INVALID_JSON, not a thrown error.
-  private static final int MAX_NESTING_DEPTH = 1000;
+  // Cap JSON nesting so a deep payload surfaces as a caught INVALID_JSON instead of overflowing the
+  // stack (parse, AST build, analyze and render all recurse per level). ~2 JSON levels per ADF block,
+  // so 100 admits ~50 nested blocks — far beyond any real document, yet safe on small thread stacks.
+  private static final int MAX_NESTING_DEPTH = 100;
 
   private final JsonMapper mapper;
   private final AdfAstParser astParser;

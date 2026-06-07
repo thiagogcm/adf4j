@@ -80,10 +80,16 @@ import dev.nthings.adf4j.ast.UnknownBlock;
 import dev.nthings.adf4j.ast.UnknownInline;
 import dev.nthings.adf4j.ast.UnknownMark;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 public final class AdfAstParser {
+
+  private static final Logger log = LoggerFactory.getLogger(AdfAstParser.class);
 
   private final JsonMapper mapper;
 
@@ -487,7 +493,8 @@ public final class AdfAstParser {
   private String rawJson(JsonNode node) {
     try {
       return mapper.writeValueAsString(node);
-    } catch (RuntimeException exception) {
+    } catch (JacksonException exception) {
+      log.warn("Failed to re-serialise unsupported node to raw JSON: {}", exception.getMessage());
       return "{}";
     }
   }

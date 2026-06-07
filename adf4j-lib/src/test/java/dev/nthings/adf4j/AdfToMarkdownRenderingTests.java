@@ -323,4 +323,271 @@ class AdfToMarkdownRenderingTests {
     assertThat(markdown).isEqualToNormalizingNewlines("alpha\n\\# beta");
     assertThat(markdown).doesNotContain("  \n");
   }
+
+  @Test
+  void convert_defuses_a_javascript_link_scheme() {
+    var markdown = processor.toMarkdown(linkParagraph("javascript:alert(document.cookie)"));
+
+    assertThat(markdown).doesNotContain("](javascript:").contains("javascript%3A");
+  }
+
+  @Test
+  void convert_defuses_a_data_url_link_scheme() {
+    var markdown = processor.toMarkdown(linkParagraph("data:text/html,<script>alert(1)</script>"));
+
+    assertThat(markdown).doesNotContain("](data:").doesNotContain("<script");
+  }
+
+  @Test
+  void convert_defuses_a_tab_obfuscated_link_scheme() {
+    // Browsers strip intra-URL tabs before parsing the scheme, so "java\tscript:" must be caught.
+    var markdown = processor.toMarkdown(linkParagraph("java\\tscript:alert(1)"));
+
+    assertThat(markdown).doesNotContain("script:alert").contains("javascript%3A");
+  }
+
+  @Test
+  void convert_leaves_safe_link_schemes_and_relative_urls_unchanged() {
+    assertThat(processor.toMarkdown(linkParagraph("https://example.com/a")))
+        .isEqualTo("[x](https://example.com/a)");
+    assertThat(processor.toMarkdown(linkParagraph("mailto:a@example.com")))
+        .isEqualTo("[x](mailto:a@example.com)");
+    assertThat(processor.toMarkdown(linkParagraph("/wiki/page"))).isEqualTo("[x](/wiki/page)");
+  }
+
+  @Test
+  void convert_defuses_a_javascript_card_url() {
+    var markdown = processor.toMarkdown(inlineCardParagraph("javascript:alert(1)"));
+
+    assertThat(markdown).contains("javascript%3A").doesNotContain("](javascript:");
+  }
+
+  @Test
+  void convert_inline_escapes_a_url_only_card_label() {
+    var markdown = processor.toMarkdown(inlineCardParagraph("/wiki/a*b*c"));
+
+    assertThat(markdown).isEqualTo("[/wiki/a\\*b\\*c](/wiki/a*b*c)");
+  }
+
+  @Test
+  void convert_keeps_an_iframe_macro_src_with_spaces_as_a_link() {
+    var markdown = processor.toMarkdown(iframeMacro("https://e.com/a (b)"));
+
+    assertThat(markdown).isEqualTo("[Embedded content](<https://e.com/a (b)>)");
+  }
+
+  @Test
+  void convert_defuses_a_javascript_iframe_macro_src() {
+    assertThat(processor.toMarkdown(iframeMacro("javascript:alert(1)"))).doesNotContain("](javascript:");
+  }
+
+  @Test
+  void convert_escapes_a_toc_anchor_containing_spaces() {
+    var adf = """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {
+              "type": "extension",
+              "attrs": {
+                "extensionType": "com.atlassian.confluence.macro.core",
+                "extensionKey": "toc",
+                "parameters": { "macroParams": { "minLevel": { "value": "1" }, "maxLevel": { "value": "6" } } }
+              }
+            },
+            {
+              "type": "heading",
+              "attrs": { "level": 2 },
+              "content": [
+                { "type": "text", "text": "H" },
+                {
+                  "type": "inlineExtension",
+                  "attrs": {
+                    "extensionType": "com.atlassian.confluence.macro.core",
+                    "extensionKey": "anchor",
+                    "parameters": { "macroParams": { "": { "value": "a b" } } }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+        """;
+
+    assertThat(processor.toMarkdown(adf)).contains("(<#a b>)");
+  }
+
+  @Test
+  void convert_keeps_a_nested_ordered_list_that_starts_above_one() {
+    // A start != 1 sublist must get the blank line CommonMark needs, or it folds into the paragraph.
+    var adf = """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {
+              "type": "bulletList",
+              "content": [
+                {
+                  "type": "listItem",
+                  "content": [
+                    { "type": "paragraph", "content": [{ "type": "text", "text": "top" }] },
+                    {
+                      "type": "orderedList",
+                      "attrs": { "order": 3 },
+                      "content": [
+                        {
+                          "type": "listItem",
+                          "content": [
+                            { "type": "paragraph", "content": [{ "type": "text", "text": "n1" }] }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """;
+
+    assertThat(processor.toMarkdown(adf)).isEqualToNormalizingNewlines("- top\n\n  3. n1");
+  }
+
+  @Test
+  void convert_collapses_a_link_title_newline_to_a_space() {
+    var adf = """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "x",
+                  "marks": [{ "type": "link", "attrs": { "href": "https://e.com", "title": "a\\nb" } }]
+                }
+              ]
+            }
+          ]
+        }
+        """;
+
+    assertThat(processor.toMarkdown(adf)).isEqualTo("[x](https://e.com \"a b\")");
+  }
+
+  @Test
+  void convert_trims_whitespace_from_a_code_block_language() {
+    assertThat(processor.toMarkdown(codeBlock("  js  "))).startsWith("```js\n");
+  }
+
+  @Test
+  void convert_drops_backticks_from_a_code_block_language() {
+    assertThat(processor.toMarkdown(codeBlock("a`b`c"))).startsWith("```abc\n");
+  }
+
+  @Test
+  void convert_leaves_an_unknown_subsup_subtype_unwrapped() {
+    assertThat(processor.toMarkdown(subSupMark("foo"))).isEqualTo("x");
+    assertThat(processor.toMarkdown(subSupMark("sub"))).contains("<sub>");
+  }
+
+  // A paragraph holding text "x" with a single link mark; href is inserted as a raw JSON value.
+  private static String linkParagraph(String href) {
+    return """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "x",
+                  "marks": [{ "type": "link", "attrs": { "href": "%s" } }]
+                }
+              ]
+            }
+          ]
+        }
+        """.formatted(href);
+  }
+
+  private static String inlineCardParagraph(String url) {
+    return """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                { "type": "inlineCard", "attrs": { "url": "%s" } }
+              ]
+            }
+          ]
+        }
+        """.formatted(url);
+  }
+
+  private static String iframeMacro(String src) {
+    return """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {
+              "type": "extension",
+              "attrs": {
+                "extensionType": "com.atlassian.confluence.macro.core",
+                "extensionKey": "iframe",
+                "parameters": { "macroParams": { "src": { "value": "%s" } } }
+              }
+            }
+          ]
+        }
+        """.formatted(src);
+  }
+
+  private static String codeBlock(String language) {
+    return """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {
+              "type": "codeBlock",
+              "attrs": { "language": "%s" },
+              "content": [{ "type": "text", "text": "code" }]
+            }
+          ]
+        }
+        """.formatted(language);
+  }
+
+  private static String subSupMark(String type) {
+    return """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "x",
+                  "marks": [{ "type": "subsup", "attrs": { "type": "%s" } }]
+                }
+              ]
+            }
+          ]
+        }
+        """.formatted(type);
+  }
 }

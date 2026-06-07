@@ -125,4 +125,16 @@ class PageLinkResolverOptionsTests {
     assertThat(markdown)
         .isEqualTo("[See the spec](https://example.atlassian.net/wiki/spaces/OF/pages/12345)");
   }
+
+  @Test
+  void resolver_that_throws_is_contained_and_leaves_the_original_href() {
+    var options = resolving(pageNodeId -> {
+      throw new RuntimeException("boom");
+    });
+
+    var markdown = AdfToMarkdown.with(options).toMarkdown(PAGE_TEXT_LINK).strip();
+
+    assertThat(markdown)
+        .isEqualTo("[See the spec](https://example.atlassian.net/wiki/spaces/OF/pages/12345)");
+  }
 }

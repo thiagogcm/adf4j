@@ -109,7 +109,7 @@ final class TextMarkRenderer {
     if (pageNodeId == null) {
       return href;
     }
-    var resolved = resolver.resolve(pageNodeId);
+    var resolved = CallbackGuards.guard("PageLinkResolver", () -> resolver.resolve(pageNodeId), null);
     return (resolved == null || resolved.isBlank()) ? href : resolved;
   }
 
@@ -180,7 +180,9 @@ final class TextMarkRenderer {
       case Strong _ -> wrapDelimited(value, "**");
       case Em _ -> wrapDelimited(value, "*");
       case Strike _ -> wrapDelimited(value, "~~");
-      case SubSup subSup -> wrapTag(value, "sup".equalsIgnoreCase(subSup.subSupType()) ? "sup" : "sub");
+      case SubSup s when "sup".equalsIgnoreCase(s.subSupType()) -> wrapTag(value, "sup");
+      case SubSup s when "sub".equalsIgnoreCase(s.subSupType()) -> wrapTag(value, "sub");
+      case SubSup _ -> value; // unknown subtype: leave unwrapped rather than guess
       case Underline _ -> wrapTag(value, "u");
       case TextColor _,BackgroundColor _,Border _,FontSize _,Alignment _,Indentation _,Annotation _,Fragment _,DataConsumer _,Breakout _,Link _,Code _,UnknownMark _ ->
         value;
@@ -214,7 +216,8 @@ final class TextMarkRenderer {
   }
 
   private String escapeLinkTitle(String title) {
-    return title.replace("\\", "\\\\").replace("\"", "\\\"");
+    // Collapse newlines first: one inside (... "title") would split the line and break the parse.
+    return MarkdownText.collapseLineBreaks(title).replace("\\", "\\\\").replace("\"", "\\\"");
   }
 
   // Inline code span: the fence must exceed the longest backtick run in the content.

@@ -103,7 +103,7 @@ final class MediaRenderer {
 
     var resolver = context.mediaResolver();
     if (resolver != null) {
-      var resolved = resolver.resolve(attrs);
+      var resolved = CallbackGuards.guard("MediaResolver", () -> resolver.resolve(attrs), null);
       if (resolved != null && !resolved.isBlank()) {
         return resolved;
       }

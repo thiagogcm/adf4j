@@ -184,9 +184,11 @@ final class ListRenderer {
   }
 
   // List blocks nest as tight, marker-aligned sub-lists; other continuation blocks get a blank line.
+  // An ordered list starting != 1 is the exception: CommonMark only lets it interrupt a paragraph
+  // tightly when it starts at 1, so otherwise it needs the blank line or it (and its order) are lost.
   private static boolean isNestedListBlock(AdfBlock block) {
     return block instanceof BulletList
-        || block instanceof OrderedList
+        || (block instanceof OrderedList orderedList && orderedList.order() == 1)
         || block instanceof TaskList
         || block instanceof DecisionList;
   }

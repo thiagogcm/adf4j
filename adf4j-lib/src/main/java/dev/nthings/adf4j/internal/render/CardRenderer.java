@@ -58,7 +58,7 @@ final class CardRenderer {
       var rewritten = !resolvedUrl.equals(url);
       return !rewritten && destination.equals(url) && isAbsoluteUri(url)
           ? "<%s>".formatted(url)
-          : "[%s](%s)".formatted(url, destination);
+          : "[%s](%s)".formatted(MarkdownText.escapeInlineText(url, false), destination);
     }
 
     if (hasTitle) {

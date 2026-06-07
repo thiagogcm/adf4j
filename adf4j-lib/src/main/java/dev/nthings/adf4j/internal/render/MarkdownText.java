@@ -3,6 +3,7 @@ package dev.nthings.adf4j.internal.render;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 final class MarkdownText {
@@ -10,6 +11,11 @@ final class MarkdownText {
   private static final Pattern LINE_BREAK_PATTERN = Pattern.compile("\\R");
 
   private static final Pattern LEADING_ORDERED_MARKER = Pattern.compile("^(\\d+)\\.");
+
+  // Schemes safe to emit as a link destination; anything else is defused by escapeUrlDestination.
+  // "media"/"attachment" are the library's own inert placeholder schemes.
+  private static final Set<String> SAFE_URL_SCHEMES =
+      Set.of("http", "https", "mailto", "tel", "ftp", "ftps", "media", "attachment");
 
   private MarkdownText() {
   }
@@ -19,6 +25,11 @@ final class MarkdownText {
       return List.of();
     }
     return Arrays.asList(LINE_BREAK_PATTERN.split(value, -1));
+  }
+
+  /** Replaces every line break with a single space, reusing the shared precompiled pattern. */
+  public static String collapseLineBreaks(String value) {
+    return LINE_BREAK_PATTERN.matcher(value).replaceAll(" ");
   }
 
   /** A literal {@code [inner]} label token, fully inline-escaped so it can't parse as a link. */
@@ -34,7 +45,9 @@ final class MarkdownText {
   public static String fencedCodeBlock(String content, String language) {
     var body = Objects.requireNonNullElse(content, "");
     var ticks = "`".repeat(Math.max(3, longestBacktickRun(body) + 1));
-    var openingFence = (ticks + (language == null ? "" : language)).stripTrailing();
+    // Info string must be one clean token: backticks/newlines would break the fence.
+    var info = language == null ? "" : collapseLineBreaks(language.replace("`", "")).strip();
+    var openingFence = (ticks + info).stripTrailing();
     return "%s\n%s\n%s".formatted(openingFence, body, ticks).stripTrailing();
   }
 
@@ -190,7 +203,8 @@ final class MarkdownText {
   }
 
   /**
-   * Makes a URL safe inside a markdown {@code (...)} destination: returned unchanged when clean,
+   * Makes a URL safe inside a markdown {@code (...)} destination: a dangerous scheme
+   * (javascript:, data:, …) is first defused, then the result is returned unchanged when clean,
    * wrapped as {@code <url>} when it holds a space/control char or unbalanced parentheses, or with
    * space/parens percent-encoded when angle-wrapping is unavailable. Null/blank is returned
    * unchanged.
@@ -199,6 +213,8 @@ final class MarkdownText {
     if (url == null || url.isBlank()) {
       return url;
     }
+
+    url = sanitizeScheme(url);
 
     var hasAngleOrNewline = url.indexOf('<') >= 0 || url.indexOf('>') >= 0 || url.indexOf('\n') >= 0
         || url.indexOf('\r') >= 0;
@@ -214,6 +230,66 @@ final class MarkdownText {
     // characters that would otherwise break the bare CommonMark destination.
     return url.replace(" ", "%20").replace("(", "%28").replace(")", "%29")
         .replace("<", "%3C").replace(">", "%3E").replace("\n", "%0A").replace("\r", "%0D");
+  }
+
+  // Defuse a non-safe scheme (javascript:, data:, …) by percent-encoding its colon; safe and relative
+  // URLs pass through. Allocates only on the rare neutralise path.
+  private static String sanitizeScheme(String url) {
+    if (hasSafeOrNoScheme(url)) {
+      return url;
+    }
+    // Drop the C0 controls/DEL a browser would ignore (the tab/newline tricks that smuggle a scheme
+    // past a naive check), then defuse the colon.
+    var cleaned = new StringBuilder(url.length());
+    for (var i = 0; i < url.length(); i++) {
+      var c = url.charAt(i);
+      if (c >= ' ' && c != 0x7f) {
+        cleaned.append(c);
+      }
+    }
+    var colon = cleaned.indexOf(":");
+    if (colon >= 0) {
+      cleaned.replace(colon, colon + 1, "%3A");
+    }
+    return cleaned.toString();
+  }
+
+  // True when url is relative (no scheme) or its scheme is in SAFE_URL_SCHEMES. An intra-scheme
+  // tab/CR/LF — which a browser strips before re-reading the scheme — counts as unsafe.
+  private static boolean hasSafeOrNoScheme(String url) {
+    var i = 0;
+    while (i < url.length() && url.charAt(i) <= ' ') {
+      i++;
+    }
+    var start = i;
+    var dirty = false;
+    for (; i < url.length(); i++) {
+      var c = url.charAt(i);
+      if (c == ':') {
+        return !dirty && i > start && isSafeScheme(url, start, i);
+      }
+      if (c == '\t' || c == '\n' || c == '\r') {
+        dirty = true;
+      } else if (!isSchemeChar(c, i == start)) {
+        return true; // no scheme prefix before ':' → nothing to exploit
+      }
+    }
+    return true;
+  }
+
+  private static boolean isSafeScheme(String url, int start, int end) {
+    for (var scheme : SAFE_URL_SCHEMES) {
+      if (scheme.length() == end - start
+          && url.regionMatches(true, start, scheme, 0, scheme.length())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static boolean isSchemeChar(char c, boolean first) {
+    var letter = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+    return letter || (!first && ((c >= '0' && c <= '9') || c == '+' || c == '-' || c == '.'));
   }
 
   private static boolean hasUnbalancedParens(String url) {

@@ -126,7 +126,7 @@ class AdfMalformedInputTests {
 
   @Test
   void json_nested_past_the_parse_depth_cap_degrades_to_an_invalid_json_diagnostic() {
-    // 700 blockquote frames (~1400 JSON levels) exceed the 1000-level cap; the parser catches it and
+    // 700 blockquote frames (~1400 JSON levels) exceed the nesting cap; the parser catches it and
     // degrades to an empty body with an INVALID_JSON diagnostic instead of throwing.
     var depth = 700;
     var json = new StringBuilder("{\"type\":\"doc\",\"version\":1,\"content\":[");
@@ -145,6 +145,44 @@ class AdfMalformedInputTests {
     assertThat(result.body()).isBlank();
     assertThat(result.diagnostics()).singleElement()
         .satisfies(issue -> assertThat(issue.code()).isEqualTo("INVALID_JSON"));
+  }
+
+  @Test
+  void moderately_nested_document_stays_under_the_cap_and_still_converts() {
+    // The depth cap must not reject realistic nesting: 20 blockquote frames convert normally.
+    var depth = 20;
+    var json = new StringBuilder("{\"type\":\"doc\",\"version\":1,\"content\":[");
+    for (var i = 0; i < depth; i++) {
+      json.append("{\"type\":\"blockquote\",\"content\":[");
+    }
+    json.append("{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"deep\"}]}");
+    for (var i = 0; i < depth; i++) {
+      json.append("]}");
+    }
+    json.append("]}");
+    var adf = json.toString();
+
+    assertThatCode(() -> processor.toMarkdown(adf)).doesNotThrowAnyException();
+    assertThat(processor.toMarkdown(adf)).contains(">").contains("deep");
+  }
+
+  @Test
+  void date_with_an_out_of_range_timestamp_does_not_throw() {
+    // Long.MIN_VALUE drives Math.abs negative; the conversion must degrade, not throw a DateTimeException.
+    var adf = """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {"type": "paragraph", "content": [
+              {"type": "date", "attrs": {"timestamp": "-9223372036854775808"}}
+            ]}
+          ]
+        }
+        """;
+
+    assertThatCode(() -> processor.toMarkdown(adf)).doesNotThrowAnyException();
+    assertThat(processor.toMarkdown(adf)).isNotBlank();
   }
 
   @Test

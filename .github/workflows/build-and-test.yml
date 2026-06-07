@@ -29,7 +29,9 @@ jobs:
 
       - name: Build and Test with Maven
         shell: bash
-        run: ./mvnw clean test
+        # `verify` runs the tests, produces the JaCoCo report, and enforces the coverage gate
+        # (jacoco:check); `test` stops short of all three.
+        run: ./mvnw clean verify
 
       - name: Build Native CLI Executable
         shell: bash

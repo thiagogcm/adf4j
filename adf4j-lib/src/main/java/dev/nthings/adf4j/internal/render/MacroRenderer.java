@@ -113,7 +113,8 @@ final class MacroRenderer {
     var extension = new ExtensionContext(
         extensionType, extensionKey, text, macroParams == null ? null : macroParams.values());
     for (var renderer : renderers) {
-      var rendered = renderer.render(extension);
+      var rendered = CallbackGuards.guard(
+          "ExtensionRenderer", () -> renderer.render(extension), Optional.<String>empty());
       if (rendered != null && rendered.isPresent()) {
         return rendered;
       }
@@ -188,7 +189,8 @@ final class MacroRenderer {
       var indent = RenderBuffer.LIST_INDENT.repeat(Math.max(0, heading.level() - baseLevel));
       var label = MarkdownText.escapeInlineText(heading.text(), false);
       if (heading.anchor() != null && !heading.anchor().isBlank()) {
-        lines.add(indent + "- [" + label + "](#" + heading.anchor() + ")");
+        var destination = MarkdownText.escapeUrlDestination("#" + heading.anchor());
+        lines.add(indent + "- [" + label + "](" + destination + ")");
       } else {
         lines.add(indent + "- " + label);
       }
@@ -208,7 +210,7 @@ final class MacroRenderer {
     if (src == null || src.isBlank()) {
       return MarkdownText.labelToken("Embedded content");
     }
-    return "[Embedded content](%s)".formatted(src);
+    return "[Embedded content](%s)".formatted(MarkdownText.escapeUrlDestination(src));
   }
 
   private String renderViewPdfMacro(MacroParams macroParams, RendererState context) {
@@ -231,7 +233,7 @@ final class MacroRenderer {
   private String resolveAttachment(AttachmentReference reference, RendererState context) {
     var resolver = context.attachmentResolver();
     if (resolver != null) {
-      var resolved = resolver.resolve(reference);
+      var resolved = CallbackGuards.guard("AttachmentResolver", () -> resolver.resolve(reference), null);
       if (resolved != null && !resolved.isBlank()) {
         return resolved;
       }

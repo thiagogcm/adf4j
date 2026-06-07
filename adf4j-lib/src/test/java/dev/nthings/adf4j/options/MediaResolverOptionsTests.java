@@ -95,4 +95,14 @@ class MediaResolverOptionsTests {
 
     assertThat(markdown).isEqualTo("![diagram](media:contentId-42/abc-123)");
   }
+
+  @Test
+  void resolver_that_throws_is_contained_and_falls_back_to_the_placeholder() {
+    var options = MarkdownOptions.defaults().withMediaResolver(attrs -> {
+      throw new RuntimeException("boom");
+    });
+    var markdown = AdfToMarkdown.with(options).toMarkdown(FILE_MEDIA).strip();
+
+    assertThat(markdown).isEqualTo("![diagram](media:contentId-42/abc-123)");
+  }
 }

@@ -114,7 +114,8 @@ public final class AdfRenderer implements BlockRecursion {
   private static MarkdownRenderingSupport markdownRenderingSupport() {
     var extensions = commonmarkExtensions();
     var parser = Parser.builder().extensions(extensions).build();
-    var htmlRenderer = HtmlRenderer.builder().extensions(extensions).sanitizeUrls(false).build();
+    // Defence-in-depth for the HTML-table fallback (destinations are already scheme-sanitized upstream).
+    var htmlRenderer = HtmlRenderer.builder().extensions(extensions).sanitizeUrls(true).build();
     return new MarkdownRenderingSupport(parser, htmlRenderer);
   }
 
