@@ -12,7 +12,8 @@
             "type": "file",
             "id": "media-bordered",
             "collection": "contentId-1",
-            "alt": "Bordered"
+            "alt": "Bordered",
+            "__fileName": "bordered.png"
           },
           "marks": [ { "type": "border", "attrs": { "size": 2, "color": "#000000" } } ]
         }
@@ -28,7 +29,8 @@
             "type": "file",
             "id": "media-clamped",
             "collection": "contentId-1",
-            "alt": "Clamped"
+            "alt": "Clamped",
+            "__fileName": "clamped.png"
           },
           "marks": [ { "type": "border", "attrs": { "size": 3, "color": "#0000ff" } } ]
         }

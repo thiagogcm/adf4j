@@ -42,13 +42,16 @@ public final class AttachmentReferences {
     return stripped.toLowerCase(Locale.ROOT);
   }
 
-  /** Classifies media as image by MIME/type then filename extension; unknown defaults to image. */
-  public static boolean isImage(String mimeOrType, String fileName) {
+  /** Classifies media by MIME/type, falling back to each name/URL extension; unknown is non-image. */
+  public static boolean isImage(String mimeOrType, String... fileNames) {
     var classification = classify(mimeOrType);
-    if (classification == null) {
+    for (var fileName : fileNames) {
+      if (classification != null) {
+        break;
+      }
       classification = classify(inferMediaType(fileName));
     }
-    return classification == null || classification;
+    return classification != null && classification;
   }
 
   private static Boolean classify(String mimeOrType) {
@@ -92,29 +95,44 @@ public final class AttachmentReferences {
     return new AttachmentReference(fileId, name, inferMediaType(name));
   }
 
-  public static String inferMediaType(String fileName) {
-    if (fileName == null) {
+  public static String inferMediaType(String fileNameOrUrl) {
+    if (fileNameOrUrl == null) {
       return null;
     }
-    var normalizedName = fileName.strip();
-    if (normalizedName.isEmpty()) {
+    // A URL's query/fragment must not corrupt (or spuriously supply) the extension.
+    var name = lastPathSegment(fileNameOrUrl.strip());
+    if (name.isEmpty()) {
       return null;
     }
 
-    var guessed = URLConnection.guessContentTypeFromName(normalizedName);
+    var guessed = URLConnection.guessContentTypeFromName(name);
     if (guessed != null && !guessed.isBlank()) {
       return guessed;
     }
 
-    var dotIdx = normalizedName.lastIndexOf('.');
+    var dotIdx = name.lastIndexOf('.');
     if (dotIdx < 0) {
       return null;
     }
-    var extension = normalizedName.substring(dotIdx + 1);
+    var extension = name.substring(dotIdx + 1);
     if (extension.isBlank()) {
       return null;
     }
 
     return MEDIA_TYPES_BY_EXTENSION.get(extension.toLowerCase(Locale.ROOT));
+  }
+
+  private static String lastPathSegment(String value) {
+    var end = value.length();
+    var hash = value.indexOf('#');
+    if (hash >= 0) {
+      end = hash;
+    }
+    var query = value.indexOf('?');
+    if (query >= 0 && query < end) {
+      end = query;
+    }
+    var slash = value.lastIndexOf('/', end - 1);
+    return value.substring(slash + 1, end);
   }
 }

@@ -77,38 +77,20 @@ final class MediaRenderer {
 
     // Non-image attachments (PDF, video, archive, …) render as a link; an image embed would break.
     if (!isImage(attrs)) {
-      return "[%s](%s)".formatted(MarkdownText.escapeInlineText(linkLabel(attrs), false), source);
+      return "[%s](%s)".formatted(MarkdownText.escapeInlineText(attrs.fileLabel(), false), source);
     }
 
-    var alt = attrs.alt();
-    var safeAlt = alt == null || alt.isBlank() ? "media" : alt;
     // The {width= height=} suffix is non-GFM; emit only when opted in.
     var attributeSuffix =
         context.imageSizeAttributes()
             ? renderImageAttributeSuffix(positiveInteger(attrs.width()), positiveInteger(attrs.height()))
             : "";
-    return "![%s](%s)%s".formatted(MarkdownText.escapeAltText(safeAlt), source, attributeSuffix);
+    return "![%s](%s)%s".formatted(MarkdownText.escapeAltText(attrs.imageAlt()), source, attributeSuffix);
   }
 
   private boolean isImage(MediaAttrs attrs) {
-    var mimeOrType =
-        firstNonBlank(attrs.fileMimeType(), attrs.mediaType());
-    var fileName = firstNonBlank(attrs.fileName(), attrs.name(), attrs.alt());
-    return AttachmentReferences.isImage(mimeOrType, fileName);
-  }
-
-  private String linkLabel(MediaAttrs attrs) {
-    var label = firstNonBlank(attrs.name(), attrs.fileName(), attrs.alt());
-    return label == null ? "file" : label;
-  }
-
-  private static String firstNonBlank(String... values) {
-    for (var value : values) {
-      if (value != null && !value.isBlank()) {
-        return value;
-      }
-    }
-    return null;
+    return AttachmentReferences.isImage(
+        attrs.mimeOrType(), attrs.fileName(), attrs.name(), attrs.alt(), attrs.url());
   }
 
   private String resolveMediaSource(MediaAttrs attrs, RendererState context) {

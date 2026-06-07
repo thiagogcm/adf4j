@@ -6,7 +6,7 @@
       "type": "heading",
       "attrs": { "level": 1 },
       "content": [
-        { "type": "mediaInline", "attrs": { "type": "image", "id": "icon-1", "collection": "c1", "alt": "icon" } },
+        { "type": "mediaInline", "attrs": { "type": "image", "id": "icon-1", "collection": "c1", "alt": "icon", "__fileName": "icon.png" } },
         { "type": "text", "text": "Title" }
       ]
     }

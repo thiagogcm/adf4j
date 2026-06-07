@@ -19,7 +19,7 @@ class PerCallOptionsTests {
             "type": "mediaSingle",
             "attrs": { "layout": "center" },
             "content": [
-              { "type": "media", "attrs": { "type": "file", "id": "abc-123", "alt": "diagram" } }
+              { "type": "media", "attrs": { "type": "file", "id": "abc-123", "alt": "diagram", "__fileName": "diagram.png" } }
             ]
           }
         ]

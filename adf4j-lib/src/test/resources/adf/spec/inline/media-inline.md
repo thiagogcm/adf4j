@@ -1,1 +1,1 @@
-See badge ![media](media:c1/media-1)
+See badge ![badge.png](media:c1/media-1)

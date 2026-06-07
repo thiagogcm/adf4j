@@ -9,11 +9,9 @@
         {
           "type": "media",
           "attrs": {
-            "type": "file",
-            "id": "file-png",
-            "collection": "contentId-2",
-            "alt": "Screenshot",
-            "__fileName": "screenshot.png"
+            "type": "external",
+            "url": "https://example.com/diagram.png?width=200&v=2",
+            "alt": "Sized"
           }
         }
       ]

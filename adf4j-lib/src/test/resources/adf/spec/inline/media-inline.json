@@ -6,7 +6,7 @@
       "type": "paragraph",
       "content": [
         { "type": "text", "text": "See badge " },
-        { "type": "mediaInline", "attrs": { "type": "image", "id": "media-1", "collection": "c1" } }
+        { "type": "mediaInline", "attrs": { "type": "image", "id": "media-1", "collection": "c1", "__fileName": "badge.png" } }
       ]
     }
   ]

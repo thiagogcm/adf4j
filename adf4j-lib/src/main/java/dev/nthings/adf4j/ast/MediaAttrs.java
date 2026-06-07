@@ -18,6 +18,32 @@ public record MediaAttrs(
     return new Builder();
   }
 
+  /** The explicit MIME type if present, otherwise the coarser media type. */
+  public String mimeOrType() {
+    return firstNonBlank(fileMimeType, mediaType);
+  }
+
+  /** Alt text for an image embed: the description if given, else the file name, else {@code "media"}. */
+  public String imageAlt() {
+    var label = firstNonBlank(alt, fileName, name);
+    return label == null ? "media" : label;
+  }
+
+  /** Label for a file link: the name if given, else the file name, else the alt, else {@code "file"}. */
+  public String fileLabel() {
+    var label = firstNonBlank(name, fileName, alt);
+    return label == null ? "file" : label;
+  }
+
+  private static String firstNonBlank(String... values) {
+    for (var value : values) {
+      if (value != null && !value.isBlank()) {
+        return value;
+      }
+    }
+    return null;
+  }
+
   public static final class Builder {
     private String type;
     private String id;

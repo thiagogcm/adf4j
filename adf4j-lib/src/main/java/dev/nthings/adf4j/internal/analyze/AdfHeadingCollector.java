@@ -133,10 +133,7 @@ final class AdfHeadingCollector implements NodeVisitor {
           var title = card.attrs().title();
           appendPlainText(builder, title == null || title.isBlank() ? card.attrs().url() : title);
         }
-        case MediaInline media -> {
-          var alt = media.attrs().alt();
-          appendPlainText(builder, alt == null || alt.isBlank() ? "media" : alt);
-        }
+        case MediaInline media -> appendPlainText(builder, media.attrs().imageAlt());
         case Date date -> appendPlainText(builder, AdfText.dateFromTimestamp(date.timestamp()));
         case Placeholder placeholder -> appendPlainText(builder, placeholder.text());
         default -> {

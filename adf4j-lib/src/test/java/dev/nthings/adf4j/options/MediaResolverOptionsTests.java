@@ -25,7 +25,8 @@ class MediaResolverOptionsTests {
                   "type": "file",
                   "id": "abc-123",
                   "collection": "contentId-42",
-                  "alt": "diagram"
+                  "alt": "diagram",
+                  "__fileName": "diagram.png"
                 }
               }
             ]

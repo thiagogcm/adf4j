@@ -61,11 +61,33 @@ class SupportHelperTests {
                   """,
                   "legacy-anchor")));
 
+  private static final List<Arguments> media_type_inference =
+      List.of(
+          argumentSet("plain filename", new MediaTypeCase("diagram.png", "image/png")),
+          argumentSet("clean url", new MediaTypeCase("https://example.com/diagram.png", "image/png")),
+          argumentSet(
+              "url with query string",
+              new MediaTypeCase("https://example.com/diagram.png?width=200&v=2", "image/png")),
+          argumentSet(
+              "url with fragment",
+              new MediaTypeCase("https://example.com/diagram.png#fig1", "image/png")),
+          argumentSet(
+              "pdf url with query string",
+              new MediaTypeCase("https://example.com/report.pdf?download=true", "application/pdf")),
+          argumentSet(
+              "extension only in query string is ignored",
+              new MediaTypeCase("https://cdn.example.com/media/abc123?token=x.pdf", null)),
+          argumentSet(
+              "url without an extension",
+              new MediaTypeCase("https://cdn.example.com/v1.2/photo", null)));
+
   private final AdfTestSupport testSupport = AdfTestSupport.create();
 
   record PageIdCase(String url, String pageId) {}
 
   record AnchorCase(String macroParamsJson, String anchorId) {}
+
+  record MediaTypeCase(String fileNameOrUrl, String mediaType) {}
 
   @ParameterizedTest(name = "{argumentSetName}")
   @FieldSource("confluence_page_id_urls")
@@ -130,5 +152,12 @@ class SupportHelperTests {
   void confluence_support_resolves_supported_anchor_macro_shapes(AnchorCase input) throws Exception {
     assertThat(ConfluenceSupport.anchorId(testSupport.macroParams(input.macroParamsJson())))
         .isEqualTo(input.anchorId());
+  }
+
+  @ParameterizedTest(name = "{argumentSetName}")
+  @FieldSource("media_type_inference")
+  void infer_media_type_reads_the_extension_from_a_url_path_only(MediaTypeCase input) {
+    assertThat(AttachmentReferences.inferMediaType(input.fileNameOrUrl()))
+        .isEqualTo(input.mediaType());
   }
 }
