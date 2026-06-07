@@ -433,6 +433,27 @@ class AdfToMarkdownRenderingTests {
   }
 
   @Test
+  void convert_renders_a_pagetree_macro_as_a_placeholder() {
+    assertThat(processor.toMarkdown(pageTreeMacro(null))).isEqualTo("{{pagetree}}");
+  }
+
+  @Test
+  void convert_treats_a_self_rooted_pagetree_as_the_bare_placeholder() {
+    assertThat(processor.toMarkdown(pageTreeMacro("@self"))).isEqualTo("{{pagetree}}");
+  }
+
+  @Test
+  void convert_surfaces_a_named_pagetree_root() {
+    assertThat(processor.toMarkdown(pageTreeMacro("Getting Started"))).isEqualTo("{{pagetree:Getting Started}}");
+  }
+
+  @Test
+  void convert_keeps_a_named_pagetree_root_token_well_formed() {
+    // Newlines/braces in the title must not break out of the {{pagetree:…}} token.
+    assertThat(processor.toMarkdown(pageTreeMacro("a {b}\\nc"))).isEqualTo("{{pagetree:a b c}}");
+  }
+
+  @Test
   void convert_keeps_a_nested_ordered_list_that_starts_above_one() {
     // A start != 1 sublist must get the blank line CommonMark needs, or it folds into the paragraph.
     var adf = """
@@ -632,6 +653,43 @@ class AdfToMarkdownRenderingTests {
           ]
         }
         """.formatted(url);
+  }
+
+  // A pagetree extension; a null root omits the macroParams, otherwise it sets the "root" param.
+  private static String pageTreeMacro(String root) {
+    if (root == null) {
+      return """
+          {
+            "type": "doc",
+            "version": 1,
+            "content": [
+              {
+                "type": "extension",
+                "attrs": {
+                  "extensionType": "com.atlassian.confluence.macro.core",
+                  "extensionKey": "pagetree"
+                }
+              }
+            ]
+          }
+          """;
+    }
+    return """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {
+              "type": "extension",
+              "attrs": {
+                "extensionType": "com.atlassian.confluence.macro.core",
+                "extensionKey": "pagetree",
+                "parameters": { "macroParams": { "root": { "value": "%s" } } }
+              }
+            }
+          ]
+        }
+        """.formatted(root);
   }
 
   private static String iframeMacro(String src) {

@@ -9,7 +9,7 @@ import dev.nthings.adf4j.result.ParseIssue.Severity;
 
 /**
  * Collects the extensions a render emitted as bare {@code [Extension: …]} placeholders — unsupported
- * Confluence macros (e.g. {@code pagetree}) whose content is lost. Fresh per render and driven by a
+ * Confluence macros (e.g. {@code detailssummary}) whose content is lost. Fresh per render and driven by a
  * single-threaded traversal, so the {@link LinkedHashSet} needs no synchronization.
  */
 final class MacroDiagnostics {

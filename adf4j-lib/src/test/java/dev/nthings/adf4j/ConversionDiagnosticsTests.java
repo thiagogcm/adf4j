@@ -23,9 +23,9 @@ class ConversionDiagnosticsTests {
   private static final String UNKNOWN_MARK =
       "{\"type\":\"doc\",\"version\":1,\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"hi\",\"marks\":[{\"type\":\"futureMark\"}]}]}]}";
 
-  private static final String PAGETREE =
+  private static final String UNSUPPORTED_MACRO =
       "{\"type\":\"doc\",\"version\":1,\"content\":[{\"type\":\"extension\",\"attrs\":"
-          + "{\"extensionType\":\"com.atlassian.confluence.macro.core\",\"extensionKey\":\"pagetree\"}}]}";
+          + "{\"extensionType\":\"com.atlassian.confluence.macro.core\",\"extensionKey\":\"detailssummary\"}}]}";
 
   @Test
   void a_clean_document_is_not_flagged_lossy() {
@@ -137,7 +137,7 @@ class ConversionDiagnosticsTests {
 
   @Test
   void an_unsupported_macro_is_flagged_lossy_with_a_warning() {
-    var result = AdfToMarkdown.create().convert(PAGETREE);
+    var result = AdfToMarkdown.create().convert(UNSUPPORTED_MACRO);
 
     assertThat(result.wasLossy()).isTrue();
     assertThat(result.diagnostics())
@@ -146,7 +146,7 @@ class ConversionDiagnosticsTests {
             issue -> {
               assertThat(issue.code()).isEqualTo("UNSUPPORTED_MACRO");
               assertThat(issue.severity()).isEqualTo(ParseIssue.Severity.WARNING);
-              assertThat(issue.message()).contains("pagetree");
+              assertThat(issue.message()).contains("detailssummary");
             });
   }
 
@@ -177,6 +177,19 @@ class ConversionDiagnosticsTests {
   }
 
   @Test
+  void a_pagetree_macro_is_handled_and_does_not_warn() {
+    var json =
+        "{\"type\":\"doc\",\"version\":1,\"content\":[{\"type\":\"extension\",\"attrs\":"
+            + "{\"extensionType\":\"com.atlassian.confluence.macro.core\",\"extensionKey\":\"pagetree\"}}]}";
+
+    var result = AdfToMarkdown.create().convert(json);
+
+    assertThat(result.body()).isEqualTo("{{pagetree}}");
+    assertThat(result.diagnostics()).isEmpty();
+    assertThat(result.wasLossy()).isFalse();
+  }
+
+  @Test
   void an_excerpt_bodied_extension_does_not_warn() {
     var json =
         "{\"type\":\"doc\",\"version\":1,\"content\":[{\"type\":\"bodiedExtension\",\"attrs\":"
@@ -192,18 +205,18 @@ class ConversionDiagnosticsTests {
 
   @Test
   void a_custom_renderer_suppresses_the_unsupported_macro_warning() {
-    ExtensionRenderer pagetree =
+    ExtensionRenderer detailssummary =
         extension ->
-            "pagetree".equals(extension.extensionKey())
-                ? Optional.of("- child page")
+            "detailssummary".equals(extension.extensionKey())
+                ? Optional.of("- a row")
                 : Optional.empty();
-    var options = MarkdownOptions.defaults().withExtensionRenderers(List.of(pagetree));
+    var options = MarkdownOptions.defaults().withExtensionRenderers(List.of(detailssummary));
 
-    var handled = AdfToMarkdown.with(options).convert(PAGETREE);
+    var handled = AdfToMarkdown.with(options).convert(UNSUPPORTED_MACRO);
     assertThat(handled.diagnostics()).extracting(ParseIssue::code).doesNotContain("UNSUPPORTED_MACRO");
     assertThat(handled.wasLossy()).isFalse();
 
-    var fallback = AdfToMarkdown.create().convert(PAGETREE);
+    var fallback = AdfToMarkdown.create().convert(UNSUPPORTED_MACRO);
     assertThat(fallback.diagnostics()).extracting(ParseIssue::code).containsExactly("UNSUPPORTED_MACRO");
   }
 
@@ -211,8 +224,8 @@ class ConversionDiagnosticsTests {
   void repeated_unsupported_macros_aggregate_into_one_diagnostic() {
     var json =
         "{\"type\":\"doc\",\"version\":1,\"content\":["
-            + "{\"type\":\"extension\",\"attrs\":{\"extensionType\":\"com.atlassian.confluence.macro.core\",\"extensionKey\":\"pagetree\"}},"
-            + "{\"type\":\"extension\",\"attrs\":{\"extensionType\":\"com.atlassian.confluence.macro.core\",\"extensionKey\":\"pagetree\"}},"
+            + "{\"type\":\"extension\",\"attrs\":{\"extensionType\":\"com.atlassian.confluence.macro.core\",\"extensionKey\":\"widget\"}},"
+            + "{\"type\":\"extension\",\"attrs\":{\"extensionType\":\"com.atlassian.confluence.macro.core\",\"extensionKey\":\"widget\"}},"
             + "{\"type\":\"extension\",\"attrs\":{\"extensionType\":\"com.atlassian.confluence.macro.core\",\"extensionKey\":\"detailssummary\"}}"
             + "]}";
 
@@ -224,7 +237,7 @@ class ConversionDiagnosticsTests {
             issue -> {
               assertThat(issue.code()).isEqualTo("UNSUPPORTED_MACRO");
               assertThat(issue.message()).contains("2 unsupported macro(s)");
-              assertThat(issue.message()).contains("pagetree");
+              assertThat(issue.message()).contains("widget");
               assertThat(issue.message()).contains("detailssummary");
             });
   }

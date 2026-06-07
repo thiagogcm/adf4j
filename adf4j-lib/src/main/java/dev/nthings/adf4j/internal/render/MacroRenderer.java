@@ -53,6 +53,7 @@ final class MacroRenderer {
 
     var rendered = switch (extensionKey != null ? extensionKey : "") {
       case "children" -> renderChildrenPlaceholder(macroParams);
+      case "pagetree" -> renderPageTreePlaceholder(macroParams);
       case "toc" -> renderTocMacro(macroParams, context);
       case "anchor" -> HtmlFragments.anchor(ConfluenceSupport.anchorId(macroParams));
       case "iframe" -> renderIframeMacro(macroParams);
@@ -167,6 +168,29 @@ final class MacroRenderer {
       }
     }
     return "{{children}}";
+  }
+
+  // Like the sibling children macro, the page tree lists descendant pages Confluence renders
+  // dynamically, so it becomes a {{pagetree}} token; a concrete (non-@keyword) root is surfaced
+  // as {{pagetree:<root>}}.
+  private String renderPageTreePlaceholder(MacroParams macroParams) {
+    var root = pageTreeRoot(macroParams);
+    return root == null ? "{{pagetree}}" : "{{pagetree:" + root + "}}";
+  }
+
+  // The root when it names a concrete page; null for a blank or "@self"/"@home"/… keyword root.
+  // Whitespace is collapsed and braces dropped so the {{pagetree:…}} token stays well-formed.
+  private String pageTreeRoot(MacroParams macroParams) {
+    var root = macroParams.value("root");
+    if (root == null) {
+      return null;
+    }
+    var trimmed = root.strip();
+    if (trimmed.isEmpty() || trimmed.startsWith("@")) {
+      return null;
+    }
+    var flattened = trimmed.replaceAll("\\s+", " ").replace("{", "").replace("}", "").strip();
+    return flattened.isEmpty() ? null : flattened;
   }
 
   private String renderTocMacro(MacroParams macroParams, RendererState context) {
