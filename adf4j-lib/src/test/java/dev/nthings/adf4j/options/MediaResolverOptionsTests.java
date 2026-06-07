@@ -35,6 +35,42 @@ class MediaResolverOptionsTests {
       }
       """;
 
+  // A file media node with no intrinsic type (no fileName/mediaType), as Confluence file media arrive: its
+  // image-ness is known only from the path the resolver supplies.
+  private static final String UNTYPED_FILE_MEDIA =
+      """
+      {
+        "type": "doc",
+        "version": 1,
+        "content": [
+          {
+            "type": "mediaSingle",
+            "attrs": { "layout": "center" },
+            "content": [
+              { "type": "media", "attrs": { "type": "file", "id": "abc-123", "alt": "diagram" } }
+            ]
+          }
+        ]
+      }
+      """;
+
+  @Test
+  void untyped_media_embeds_as_an_image_when_the_resolved_path_has_an_image_extension() {
+    var options =
+        MarkdownOptions.defaults().withMediaResolver(attrs -> "attachments/" + attrs.alt() + ".png");
+    var markdown = AdfToMarkdown.with(options).toMarkdown(UNTYPED_FILE_MEDIA).strip();
+
+    assertThat(markdown).isEqualTo("![diagram](attachments/diagram.png)");
+  }
+
+  @Test
+  void untyped_media_renders_as_a_link_when_the_resolved_path_is_not_an_image() {
+    var options = MarkdownOptions.defaults().withMediaResolver(attrs -> "attachments/report.pdf");
+    var markdown = AdfToMarkdown.with(options).toMarkdown(UNTYPED_FILE_MEDIA).strip();
+
+    assertThat(markdown).isEqualTo("[diagram](attachments/report.pdf)");
+  }
+
   @Test
   void default_emits_the_synthetic_media_placeholder() {
     var markdown = AdfToMarkdown.create().toMarkdown(FILE_MEDIA).strip();

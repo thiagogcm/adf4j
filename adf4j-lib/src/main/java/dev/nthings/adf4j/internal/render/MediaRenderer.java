@@ -76,7 +76,7 @@ final class MediaRenderer {
     var source = MarkdownText.escapeUrlDestination(resolved == null ? "media" : resolved);
 
     // Non-image attachments (PDF, video, archive, …) render as a link; an image embed would break.
-    if (!isImage(attrs)) {
+    if (!isImage(attrs, resolved)) {
       return "[%s](%s)".formatted(MarkdownText.escapeInlineText(attrs.fileLabel(), false), source);
     }
 
@@ -88,9 +88,11 @@ final class MediaRenderer {
     return "![%s](%s)%s".formatted(MarkdownText.escapeAltText(attrs.imageAlt()), source, attributeSuffix);
   }
 
-  private boolean isImage(MediaAttrs attrs) {
+  // The resolved destination (a MediaResolver path or URL) carries the real filename, so its extension
+  // classifies a file node whose own attrs omit the type — as Confluence's do, supplying it via the resolver.
+  private boolean isImage(MediaAttrs attrs, String resolvedSource) {
     return AttachmentReferences.isImage(
-        attrs.mimeOrType(), attrs.fileName(), attrs.name(), attrs.alt(), attrs.url());
+        attrs.mimeOrType(), attrs.fileName(), attrs.name(), attrs.alt(), attrs.url(), resolvedSource);
   }
 
   private String resolveMediaSource(MediaAttrs attrs, RendererState context) {
