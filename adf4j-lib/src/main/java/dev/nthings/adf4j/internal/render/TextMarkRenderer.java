@@ -91,11 +91,11 @@ final class TextMarkRenderer {
     var label = (rendered == null || rendered.isBlank())
         ? MarkdownText.escapeInlineText(href, false)
         : rendered;
-    var destination = MarkdownText.escapeUrlDestination(resolvePageHref(href, link.attrs(), context));
+    var resolvedHref = resolvePageHref(href, link.attrs(), context);
     var title = link.title();
     return (title == null || title.isBlank())
-        ? "[%s](%s)".formatted(label, destination)
-        : "[%s](%s \"%s\")".formatted(label, destination, escapeLinkTitle(title));
+        ? MarkdownText.linkRendered(label, resolvedHref)
+        : MarkdownText.linkRendered(label, resolvedHref, title);
   }
 
   // The caller-resolved destination for an internal page href, or the original href when there is no
@@ -213,11 +213,6 @@ final class TextMarkRenderer {
 
     return value.substring(0, leadingWhitespaceLength) + open + content + close
         + value.substring(contentEnd);
-  }
-
-  private String escapeLinkTitle(String title) {
-    // Collapse newlines first: one inside (... "title") would split the line and break the parse.
-    return MarkdownText.collapseLineBreaks(title).replace("\\", "\\\\").replace("\"", "\\\"");
   }
 
   // Inline code span: the fence must exceed the longest backtick run in the content.

@@ -73,14 +73,15 @@ final class MediaRenderer {
 
   private String renderMediaBlock(MediaAttrs attrs, RendererState context) {
     var resolved = resolveMediaSource(attrs, context);
-    var source = MarkdownText.escapeUrlDestination(resolved == null ? "media" : resolved);
+    var rawSource = resolved == null ? "media" : resolved;
 
     // Non-image attachments (PDF, video, archive, …) render as a link; an image embed would break.
     if (!isImage(attrs, resolved)) {
-      return "[%s](%s)".formatted(MarkdownText.escapeInlineText(attrs.fileLabel(), false), source);
+      return MarkdownText.link(attrs.fileLabel(), rawSource);
     }
 
     // The {width= height=} suffix is non-GFM; emit only when opted in.
+    var source = MarkdownText.escapeUrlDestination(rawSource);
     var attributeSuffix =
         context.imageSizeAttributes()
             ? renderImageAttributeSuffix(positiveInteger(attrs.width()), positiveInteger(attrs.height()))

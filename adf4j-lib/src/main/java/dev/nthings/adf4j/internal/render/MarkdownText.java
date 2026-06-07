@@ -38,6 +38,30 @@ final class MarkdownText {
   }
 
   /**
+   * A Markdown inline link {@code [label](url)} from raw operands: the label is inline-escaped and
+   * the destination is scheme-sanitized and escaped.
+   */
+  public static String link(String label, String url) {
+    return "[" + escapeInlineText(label, false) + "](" + escapeUrlDestination(url) + ")";
+  }
+
+  /** Like {@link #link} but the label is already-rendered Markdown, emitted verbatim. */
+  public static String linkRendered(String label, String url) {
+    return "[" + label + "](" + escapeUrlDestination(url) + ")";
+  }
+
+  /** Like {@link #linkRendered} with a sanitized, one-line, quote-escaped link title. */
+  public static String linkRendered(String label, String url, String title) {
+    return "[" + label + "](" + escapeUrlDestination(url) + " \"" + escapeLinkTitle(title) + "\")";
+  }
+
+  // A newline inside (... "title") would split the line and break the parse, so collapse breaks first.
+  private static String escapeLinkTitle(String title) {
+    return collapseLineBreaks(Objects.requireNonNullElse(title, ""))
+        .replace("\\", "\\\\").replace("\"", "\\\"");
+  }
+
+  /**
    * A fenced code block whose fence is long enough to survive any backtick run in {@code content}
    * (minimum three), with {@code language} as the info string when non-blank. Null content is treated
    * as empty.

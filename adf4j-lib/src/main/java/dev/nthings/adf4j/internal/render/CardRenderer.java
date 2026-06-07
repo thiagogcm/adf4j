@@ -49,16 +49,16 @@ final class CardRenderer {
 
     if (hasUrl) {
       var resolvedUrl = TextMarkRenderer.resolvePageHref(url, attrs.attrs(), context);
-      var destination = MarkdownText.escapeUrlDestination(resolvedUrl);
       if (hasTitle) {
-        return "[%s](%s)".formatted(MarkdownText.escapeInlineText(title, false), destination);
+        return MarkdownText.link(title, resolvedUrl);
       }
-      // url-only: an autolink needs label == destination, so it survives only when nothing rewrote
-      // the url; once rewritten, fall back to a labelled link that keeps the original url visible.
+      // url-only: an autolink needs an untouched url (not rewritten, not escaped); otherwise fall
+      // back to a labelled link that keeps the original url visible.
       var rewritten = !resolvedUrl.equals(url);
+      var destination = MarkdownText.escapeUrlDestination(resolvedUrl);
       return !rewritten && destination.equals(url) && isAbsoluteUri(url)
           ? "<%s>".formatted(url)
-          : "[%s](%s)".formatted(MarkdownText.escapeInlineText(url, false), destination);
+          : MarkdownText.link(url, resolvedUrl);
     }
 
     if (hasTitle) {

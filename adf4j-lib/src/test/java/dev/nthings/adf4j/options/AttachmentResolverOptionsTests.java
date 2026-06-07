@@ -79,4 +79,37 @@ class AttachmentResolverOptionsTests {
 
     assertThat(markdown).isEqualTo("[PDF: guide.pdf](attachment:file-pdf-1)");
   }
+
+  @Test
+  void hostile_filename_in_the_label_is_inline_escaped() {
+    var hostileViewpdf =
+        """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {
+              "type": "extension",
+              "attrs": {
+                "extensionType": "com.atlassian.confluence.macro.core",
+                "extensionKey": "viewpdf",
+                "parameters": { "macroParams": { "name": { "value": "Report [final]*.pdf" } } }
+              }
+            }
+          ]
+        }
+        """;
+    var options =
+        MarkdownOptions.defaults()
+            .withContext(
+                ConfluenceRenderContext.empty()
+                    .withAttachmentReferences(
+                        List.of(
+                            new AttachmentReference(
+                                "file-pdf-1", "Report [final]*.pdf", "application/pdf"))));
+
+    var markdown = AdfToMarkdown.with(options).toMarkdown(hostileViewpdf).strip();
+
+    assertThat(markdown).isEqualTo("[PDF: Report \\[final\\]\\*.pdf](attachment:file-pdf-1)");
+  }
 }

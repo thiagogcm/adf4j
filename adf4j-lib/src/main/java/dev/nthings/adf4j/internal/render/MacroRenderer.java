@@ -187,12 +187,10 @@ final class MacroRenderer {
     var lines = new ArrayList<String>();
     for (var heading : filtered) {
       var indent = RenderBuffer.LIST_INDENT.repeat(Math.max(0, heading.level() - baseLevel));
-      var label = MarkdownText.escapeInlineText(heading.text(), false);
       if (heading.anchor() != null && !heading.anchor().isBlank()) {
-        var destination = MarkdownText.escapeUrlDestination("#" + heading.anchor());
-        lines.add(indent + "- [" + label + "](" + destination + ")");
+        lines.add(indent + "- " + MarkdownText.link(heading.text(), "#" + heading.anchor()));
       } else {
-        lines.add(indent + "- " + label);
+        lines.add(indent + "- " + MarkdownText.escapeInlineText(heading.text(), false));
       }
     }
     return String.join("\n", lines);
@@ -210,7 +208,7 @@ final class MacroRenderer {
     if (src == null || src.isBlank()) {
       return MarkdownText.labelToken("Embedded content");
     }
-    return "[Embedded content](%s)".formatted(MarkdownText.escapeUrlDestination(src));
+    return MarkdownText.link("Embedded content", src);
   }
 
   private String renderViewPdfMacro(MacroParams macroParams, RendererState context) {
@@ -225,7 +223,7 @@ final class MacroRenderer {
 
     var label = (name == null || name.isBlank()) ? "PDF" : "PDF: " + name;
     var destination = resolveAttachment(attachmentReference, context);
-    return "[%s](%s)".formatted(label, MarkdownText.escapeUrlDestination(destination));
+    return MarkdownText.link(label, destination);
   }
 
   // The caller-resolved link for an attachment, or the synthetic attachment:<fileId> placeholder when
