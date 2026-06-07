@@ -56,6 +56,10 @@ record RendererState(RenderContext context, int listDepth, TableCellKind tableCe
     return context.htmlVisualMarks();
   }
 
+  boolean collapseHardBreaks() {
+    return context.collapseHardBreaks();
+  }
+
   List<ExtensionRenderer> extensionRenderers() {
     return context.extensionRenderers();
   }

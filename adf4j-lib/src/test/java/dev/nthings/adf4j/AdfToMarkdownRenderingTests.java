@@ -296,4 +296,31 @@ class AdfToMarkdownRenderingTests {
 
     assertThat(markdown).isEqualToNormalizingNewlines("alpha  \n\\# beta");
   }
+
+  @Test
+  void collapse_hard_breaks_renders_a_soft_break_without_trailing_spaces() {
+    var adf = """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                { "type": "text", "text": "alpha" },
+                { "type": "hardBreak" },
+                { "type": "text", "text": "# beta" }
+              ]
+            }
+          ]
+        }
+        """;
+
+    var collapsing =
+        AdfToMarkdown.with(MarkdownOptions.defaults().withCollapseHardBreaks(true));
+    var markdown = collapsing.toMarkdown(adf);
+
+    assertThat(markdown).isEqualToNormalizingNewlines("alpha\n\\# beta");
+    assertThat(markdown).doesNotContain("  \n");
+  }
 }

@@ -24,7 +24,7 @@ class MarkdownOptionsTests {
 
   @Test
   void constructor_and_copy_methods_normalize_null_policy_and_context() {
-    var options = new MarkdownOptions(null, null, false, null, null, false, null, null, null);
+    var options = new MarkdownOptions(null, null, false, null, null, false, null, null, null, false);
 
     assertThat(options.unknownNodePolicy()).isEqualTo(UnknownNodePolicy.PLACEHOLDER);
     assertThat(options.context()).isEqualTo(ConfluenceRenderContext.empty());
@@ -33,6 +33,7 @@ class MarkdownOptionsTests {
     assertThat(options.extensionRenderers()).isEmpty();
     assertThat(options.attachmentResolver()).isNull();
     assertThat(options.pageLinkResolver()).isNull();
+    assertThat(options.collapseHardBreaks()).isFalse();
     assertThat(options.withUnknownNodePolicy(UnknownNodePolicy.SKIP).unknownNodePolicy())
         .isEqualTo(UnknownNodePolicy.SKIP);
     assertThat(options.withContext(null).context()).isEqualTo(ConfluenceRenderContext.empty());
@@ -122,6 +123,7 @@ class MarkdownOptionsTests {
         .htmlVisualMarks(true)
         .attachmentResolver(attachment)
         .pageLinkResolver(pageLink)
+        .collapseHardBreaks(true)
         .build();
 
     assertThat(options.unknownNodePolicy()).isEqualTo(UnknownNodePolicy.SKIP);
@@ -131,6 +133,7 @@ class MarkdownOptionsTests {
     assertThat(options.htmlVisualMarks()).isTrue();
     assertThat(options.attachmentResolver()).isSameAs(attachment);
     assertThat(options.pageLinkResolver()).isSameAs(pageLink);
+    assertThat(options.collapseHardBreaks()).isTrue();
   }
 
   @Test
@@ -142,6 +145,17 @@ class MarkdownOptionsTests {
     assertThat(enabled.htmlVisualMarks()).isTrue();
     assertThat(enabled.withUnknownNodePolicy(UnknownNodePolicy.SKIP).htmlVisualMarks()).isTrue();
     assertThat(enabled.withTableFallback(TableFallback.HTML).htmlVisualMarks()).isTrue();
+  }
+
+  @Test
+  void collapse_hard_breaks_default_off_and_carry_through_other_withers() {
+    var options = MarkdownOptions.defaults();
+    assertThat(options.collapseHardBreaks()).isFalse();
+
+    var enabled = options.withCollapseHardBreaks(true);
+    assertThat(enabled.collapseHardBreaks()).isTrue();
+    assertThat(enabled.withUnknownNodePolicy(UnknownNodePolicy.SKIP).collapseHardBreaks()).isTrue();
+    assertThat(enabled.withTableFallback(TableFallback.HTML).collapseHardBreaks()).isTrue();
   }
 
   @Test

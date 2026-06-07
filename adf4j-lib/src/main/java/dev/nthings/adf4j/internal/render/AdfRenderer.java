@@ -480,7 +480,11 @@ public final class AdfRenderer implements BlockRecursion {
       return " ";
     }
     // In any table cell a break is a single "\n" (one <br> after unwrap), not the two-space form.
-    return context.tableCell() != TableCellKind.NONE ? "\n" : "  \n";
+    if (context.tableCell() != TableCellKind.NONE) {
+      return "\n";
+    }
+    // collapseHardBreaks downgrades the two-space GFM hard break to a soft break (a plain newline).
+    return context.collapseHardBreaks() ? "\n" : "  \n";
   }
 
   private String renderEmoji(Emoji emoji) {

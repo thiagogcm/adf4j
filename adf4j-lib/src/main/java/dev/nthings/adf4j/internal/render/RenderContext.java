@@ -29,6 +29,7 @@ record RenderContext(
     List<ExtensionRenderer> extensionRenderers,
     AttachmentResolver attachmentResolver,
     PageLinkResolver pageLinkResolver,
+    boolean collapseHardBreaks,
     MacroDiagnostics macroDiagnostics) {
 
   static RenderContext from(MarkdownOptions options, HeadingOutline headingOutline) {
@@ -46,6 +47,7 @@ record RenderContext(
         requiredOptions.extensionRenderers(),
         requiredOptions.attachmentResolver(),
         requiredOptions.pageLinkResolver(),
+        requiredOptions.collapseHardBreaks(),
         new MacroDiagnostics());
   }
 }

@@ -6,7 +6,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import dev.nthings.adf4j.Adf;
+import dev.nthings.adf4j.AdfToMarkdown;
+import dev.nthings.adf4j.options.MarkdownOptions;
 
 import org.jline.builtins.Options;
 
@@ -20,8 +21,9 @@ public final class Main {
         "  If no input file is provided, reads from stdin.",
         "",
         "Options:",
-        "  -o, --output=FILE      Write output to FILE instead of stdout",
-        "  -h, --help             Show this help message",
+        "  -o, --output=FILE          Write output to FILE instead of stdout",
+        "  -c, --collapse-hard-breaks Render hard breaks (Shift+Enter) as soft breaks (no trailing spaces)",
+        "  -h, --help                 Show this help message",
     };
 
     public static void main(String[] args) throws Exception {
@@ -50,7 +52,9 @@ public final class Main {
             return 1;
         }
 
-        String result = Adf.toMarkdown(input);
+        var markdownOptions =
+            MarkdownOptions.defaults().withCollapseHardBreaks(options.isSet("collapse-hard-breaks"));
+        String result = AdfToMarkdown.with(markdownOptions).toMarkdown(input);
 
         if (options.isSet("output")) {
             Files.writeString(Path.of(options.get("output")), result, StandardCharsets.UTF_8);
