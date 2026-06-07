@@ -72,16 +72,16 @@ final class MediaRenderer {
   }
 
   private String renderMediaBlock(MediaAttrs attrs, RendererState context) {
-    var resolved = resolveMediaSource(attrs, context);
-    var rawSource = resolved == null ? "media" : resolved;
+    var resolvedSource = resolveMediaSource(attrs, context);
+    var destination = resolvedSource != null ? resolvedSource : placeholder(attrs);
 
     // Non-image attachments (PDF, video, archive, …) render as a link; an image embed would break.
-    if (!isImage(attrs, resolved)) {
-      return MarkdownText.link(attrs.fileLabel(), rawSource);
+    if (!isImage(attrs, resolvedSource)) {
+      return MarkdownText.link(attrs.fileLabel(AttachmentReferences.fileName(resolvedSource)), destination);
     }
 
     // The {width= height=} suffix is non-GFM; emit only when opted in.
-    var source = MarkdownText.escapeUrlDestination(rawSource);
+    var source = MarkdownText.escapeUrlDestination(destination);
     var attributeSuffix =
         context.imageSizeAttributes()
             ? renderImageAttributeSuffix(positiveInteger(attrs.width()), positiveInteger(attrs.height()))
@@ -96,6 +96,8 @@ final class MediaRenderer {
         attrs.mimeOrType(), attrs.fileName(), attrs.name(), attrs.alt(), attrs.url(), resolvedSource);
   }
 
+  // A url attr or media resolver, never the synthetic placeholder; null so the label and image-ness
+  // are decided only by genuine filenames.
   private String resolveMediaSource(MediaAttrs attrs, RendererState context) {
     var url = attrs.url();
     if (url != null && !url.isBlank()) {
@@ -110,9 +112,14 @@ final class MediaRenderer {
       }
     }
 
+    return null;
+  }
+
+  // The synthetic media:collection/id reference, or "media" when even the id is absent.
+  private String placeholder(MediaAttrs attrs) {
     var id = attrs.id();
     if (id == null || id.isBlank()) {
-      return null;
+      return "media";
     }
 
     var collection = attrs.collection();

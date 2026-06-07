@@ -95,6 +95,15 @@ public final class AttachmentReferences {
     return new AttachmentReference(fileId, name, inferMediaType(name));
   }
 
+  /** The file name a URL or path carries: its last path segment, or null when none is present. */
+  public static String fileName(String urlOrPath) {
+    if (urlOrPath == null) {
+      return null;
+    }
+    var name = lastPathSegment(urlOrPath.strip());
+    return name.isEmpty() ? null : name;
+  }
+
   public static String inferMediaType(String fileNameOrUrl) {
     if (fileNameOrUrl == null) {
       return null;

@@ -29,9 +29,9 @@ public record MediaAttrs(
     return label == null ? "media" : label;
   }
 
-  /** Label for a file link: the name if given, else the file name, else the alt, else {@code "file"}. */
-  public String fileLabel() {
-    var label = firstNonBlank(name, fileName, alt);
+  /** Label for a file link: the name, file name, alt, or destination's file name, else {@code "file"}. */
+  public String fileLabel(String destinationFileName) {
+    var label = firstNonBlank(name, fileName, alt, destinationFileName);
     return label == null ? "file" : label;
   }
 
