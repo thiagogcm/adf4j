@@ -18,7 +18,9 @@ import dev.nthings.adf4j.extension.ExtensionRenderer;
  * {@code attachmentResolver} turns a resolved Confluence {@code attachment:} reference into a concrete
  * link; {@code null} keeps the {@code attachment:<fileId>} placeholder. {@code pageLinkResolver}
  * rewrites inter-page links/cards to caller-supplied destinations by page node id; {@code null} keeps
- * the original href. {@code collapseHardBreaks} renders a hard break (Shift+Enter) as a soft break (a
+ * the original href. {@code pageTreeResolver} expands a {@code pagetree} macro into an indented list
+ * of its descendant pages; {@code null} (or a resolver that declines) keeps the {@code {{pagetree}}}
+ * placeholder token. {@code collapseHardBreaks} renders a hard break (Shift+Enter) as a soft break (a
  * plain newline) instead of the two-trailing-space GFM hard break, so the output has no trailing
  * whitespace and segments reflow into one paragraph (off by default). {@code documentTitle}, when set,
  * prepends the value as a level-1 ({@code # }) heading above the body ({@code null}/blank emits nothing);
@@ -39,6 +41,7 @@ public record MarkdownOptions(
     List<ExtensionRenderer> extensionRenderers,
     AttachmentResolver attachmentResolver,
     PageLinkResolver pageLinkResolver,
+    PageTreeResolver pageTreeResolver,
     boolean collapseHardBreaks,
     String documentTitle) {
 
@@ -47,8 +50,8 @@ public record MarkdownOptions(
     context = context == null ? ConfluenceRenderContext.empty() : context;
     tableFallback = tableFallback == null ? TableFallback.GFM_PROMOTE_FIRST_ROW : tableFallback;
     extensionRenderers = extensionRenderers == null ? List.of() : List.copyOf(extensionRenderers);
-    // mediaResolver/attachmentResolver/pageLinkResolver/documentTitle intentionally nullable: null
-    // means "use the built-in placeholder/href" (resolvers) or "no title" (documentTitle).
+    // mediaResolver/attachmentResolver/pageLinkResolver/pageTreeResolver/documentTitle intentionally
+    // nullable: null means "use the built-in placeholder/href/token" (resolvers) or "no title".
   }
 
   public static MarkdownOptions defaults() {
@@ -62,6 +65,7 @@ public record MarkdownOptions(
         List.of(),
         null,
         null,
+        null,
         false,
         null);
   }
@@ -69,73 +73,83 @@ public record MarkdownOptions(
   public MarkdownOptions withUnknownNodePolicy(UnknownNodePolicy policy) {
     return new MarkdownOptions(
         policy, context, imageSizeAttributes, tableFallback, mediaResolver, htmlVisualMarks,
-        extensionRenderers, attachmentResolver, pageLinkResolver, collapseHardBreaks, documentTitle);
+        extensionRenderers, attachmentResolver, pageLinkResolver, pageTreeResolver, collapseHardBreaks, documentTitle);
   }
 
   public MarkdownOptions withContext(ConfluenceRenderContext renderContext) {
     return new MarkdownOptions(
         unknownNodePolicy, renderContext, imageSizeAttributes, tableFallback, mediaResolver,
-        htmlVisualMarks, extensionRenderers, attachmentResolver, pageLinkResolver, collapseHardBreaks,
+        htmlVisualMarks, extensionRenderers, attachmentResolver, pageLinkResolver, pageTreeResolver, collapseHardBreaks,
         documentTitle);
   }
 
   public MarkdownOptions withImageSizeAttributes(boolean enabled) {
     return new MarkdownOptions(
         unknownNodePolicy, context, enabled, tableFallback, mediaResolver, htmlVisualMarks,
-        extensionRenderers, attachmentResolver, pageLinkResolver, collapseHardBreaks, documentTitle);
+        extensionRenderers, attachmentResolver, pageLinkResolver, pageTreeResolver, collapseHardBreaks, documentTitle);
   }
 
   public MarkdownOptions withTableFallback(TableFallback fallback) {
     return new MarkdownOptions(
         unknownNodePolicy, context, imageSizeAttributes, fallback, mediaResolver, htmlVisualMarks,
-        extensionRenderers, attachmentResolver, pageLinkResolver, collapseHardBreaks, documentTitle);
+        extensionRenderers, attachmentResolver, pageLinkResolver, pageTreeResolver, collapseHardBreaks, documentTitle);
   }
 
   /** Sets the media resolver; {@code null} clears it (the default {@code media:} placeholder path). */
   public MarkdownOptions withMediaResolver(MediaResolver resolver) {
     return new MarkdownOptions(
         unknownNodePolicy, context, imageSizeAttributes, tableFallback, resolver, htmlVisualMarks,
-        extensionRenderers, attachmentResolver, pageLinkResolver, collapseHardBreaks, documentTitle);
+        extensionRenderers, attachmentResolver, pageLinkResolver, pageTreeResolver, collapseHardBreaks, documentTitle);
   }
 
   public MarkdownOptions withHtmlVisualMarks(boolean enabled) {
     return new MarkdownOptions(
         unknownNodePolicy, context, imageSizeAttributes, tableFallback, mediaResolver, enabled,
-        extensionRenderers, attachmentResolver, pageLinkResolver, collapseHardBreaks, documentTitle);
+        extensionRenderers, attachmentResolver, pageLinkResolver, pageTreeResolver, collapseHardBreaks, documentTitle);
   }
 
   public MarkdownOptions withExtensionRenderers(List<ExtensionRenderer> renderers) {
     return new MarkdownOptions(
         unknownNodePolicy, context, imageSizeAttributes, tableFallback, mediaResolver, htmlVisualMarks,
-        renderers, attachmentResolver, pageLinkResolver, collapseHardBreaks, documentTitle);
+        renderers, attachmentResolver, pageLinkResolver, pageTreeResolver, collapseHardBreaks, documentTitle);
   }
 
   /** Sets the attachment resolver; {@code null} clears it (the default {@code attachment:} path). */
   public MarkdownOptions withAttachmentResolver(AttachmentResolver resolver) {
     return new MarkdownOptions(
         unknownNodePolicy, context, imageSizeAttributes, tableFallback, mediaResolver, htmlVisualMarks,
-        extensionRenderers, resolver, pageLinkResolver, collapseHardBreaks, documentTitle);
+        extensionRenderers, resolver, pageLinkResolver, pageTreeResolver, collapseHardBreaks, documentTitle);
   }
 
   /** Sets the page-link resolver; {@code null} clears it (links keep their original href). */
   public MarkdownOptions withPageLinkResolver(PageLinkResolver resolver) {
     return new MarkdownOptions(
         unknownNodePolicy, context, imageSizeAttributes, tableFallback, mediaResolver, htmlVisualMarks,
-        extensionRenderers, attachmentResolver, resolver, collapseHardBreaks, documentTitle);
+        extensionRenderers, attachmentResolver, resolver, pageTreeResolver, collapseHardBreaks,
+        documentTitle);
+  }
+
+  /** Sets the page-tree resolver; {@code null} clears it (pagetree macros keep the {@code {{pagetree}}} token). */
+  public MarkdownOptions withPageTreeResolver(PageTreeResolver resolver) {
+    return new MarkdownOptions(
+        unknownNodePolicy, context, imageSizeAttributes, tableFallback, mediaResolver, htmlVisualMarks,
+        extensionRenderers, attachmentResolver, pageLinkResolver, resolver, collapseHardBreaks,
+        documentTitle);
   }
 
   /** Renders hard breaks as soft breaks (a plain newline), dropping the two-space GFM hard break. */
   public MarkdownOptions withCollapseHardBreaks(boolean enabled) {
     return new MarkdownOptions(
         unknownNodePolicy, context, imageSizeAttributes, tableFallback, mediaResolver, htmlVisualMarks,
-        extensionRenderers, attachmentResolver, pageLinkResolver, enabled, documentTitle);
+        extensionRenderers, attachmentResolver, pageLinkResolver, pageTreeResolver, enabled,
+        documentTitle);
   }
 
   /** Sets a level-1 title heading prepended to the output; {@code null}/blank emits no title. */
   public MarkdownOptions withDocumentTitle(String title) {
     return new MarkdownOptions(
         unknownNodePolicy, context, imageSizeAttributes, tableFallback, mediaResolver, htmlVisualMarks,
-        extensionRenderers, attachmentResolver, pageLinkResolver, collapseHardBreaks, title);
+        extensionRenderers, attachmentResolver, pageLinkResolver, pageTreeResolver, collapseHardBreaks, title);
   }
 
   /** A new {@link Builder} whose unset fields take the same defaults as {@link #defaults()}. */
@@ -158,6 +172,7 @@ public record MarkdownOptions(
     private List<ExtensionRenderer> extensionRenderers;
     private AttachmentResolver attachmentResolver;
     private PageLinkResolver pageLinkResolver;
+    private PageTreeResolver pageTreeResolver;
     private boolean collapseHardBreaks;
     private String documentTitle;
 
@@ -209,6 +224,11 @@ public record MarkdownOptions(
       return this;
     }
 
+    public Builder pageTreeResolver(PageTreeResolver resolver) {
+      this.pageTreeResolver = resolver;
+      return this;
+    }
+
     public Builder collapseHardBreaks(boolean enabled) {
       this.collapseHardBreaks = enabled;
       return this;
@@ -224,7 +244,7 @@ public record MarkdownOptions(
       return new MarkdownOptions(
           unknownNodePolicy, context, imageSizeAttributes, tableFallback, mediaResolver,
           htmlVisualMarks, extensionRenderers, attachmentResolver, pageLinkResolver,
-          collapseHardBreaks, documentTitle);
+          pageTreeResolver, collapseHardBreaks, documentTitle);
     }
   }
 }

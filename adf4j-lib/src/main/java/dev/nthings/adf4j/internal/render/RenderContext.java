@@ -10,6 +10,7 @@ import dev.nthings.adf4j.options.AttachmentResolver;
 import dev.nthings.adf4j.options.MarkdownOptions;
 import dev.nthings.adf4j.options.MediaResolver;
 import dev.nthings.adf4j.options.PageLinkResolver;
+import dev.nthings.adf4j.options.PageTreeResolver;
 import dev.nthings.adf4j.options.TableFallback;
 import dev.nthings.adf4j.options.UnknownNodePolicy;
 import dev.nthings.adf4j.internal.analyze.HeadingOutline;
@@ -29,6 +30,7 @@ record RenderContext(
     List<ExtensionRenderer> extensionRenderers,
     AttachmentResolver attachmentResolver,
     PageLinkResolver pageLinkResolver,
+    PageTreeResolver pageTreeResolver,
     boolean collapseHardBreaks,
     MacroDiagnostics macroDiagnostics) {
 
@@ -47,6 +49,7 @@ record RenderContext(
         requiredOptions.extensionRenderers(),
         requiredOptions.attachmentResolver(),
         requiredOptions.pageLinkResolver(),
+        requiredOptions.pageTreeResolver(),
         requiredOptions.collapseHardBreaks(),
         new MacroDiagnostics());
   }

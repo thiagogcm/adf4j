@@ -10,6 +10,7 @@ import dev.nthings.adf4j.options.AttachmentResolver;
 import dev.nthings.adf4j.options.MarkdownOptions;
 import dev.nthings.adf4j.options.MediaResolver;
 import dev.nthings.adf4j.options.PageLinkResolver;
+import dev.nthings.adf4j.options.PageTreeResolver;
 import dev.nthings.adf4j.options.TableFallback;
 import dev.nthings.adf4j.options.UnknownNodePolicy;
 import dev.nthings.adf4j.result.ParseIssue;
@@ -70,6 +71,10 @@ record RendererState(RenderContext context, int listDepth, TableCellKind tableCe
 
   PageLinkResolver pageLinkResolver() {
     return context.pageLinkResolver();
+  }
+
+  PageTreeResolver pageTreeResolver() {
+    return context.pageTreeResolver();
   }
 
   void recordUnsupportedExtension(String extensionType, String extensionKey) {

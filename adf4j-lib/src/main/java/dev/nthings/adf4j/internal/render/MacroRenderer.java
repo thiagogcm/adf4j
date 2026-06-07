@@ -19,6 +19,9 @@ import dev.nthings.adf4j.ast.SyncBlock;
 import dev.nthings.adf4j.internal.AttachmentReferences;
 import dev.nthings.adf4j.internal.ConfluenceSupport;
 import dev.nthings.adf4j.internal.analyze.TocLevelRange;
+import dev.nthings.adf4j.options.PageTreeEntry;
+import dev.nthings.adf4j.options.PageTreeMacro;
+import dev.nthings.adf4j.options.PageTreeRequest;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,8 +55,8 @@ final class MacroRenderer {
     }
 
     var rendered = switch (extensionKey != null ? extensionKey : "") {
-      case "children" -> renderChildrenPlaceholder(macroParams);
-      case "pagetree" -> renderPageTreePlaceholder(macroParams);
+      case "children" -> renderChildren(macroParams, context);
+      case "pagetree" -> renderPageTree(macroParams, context);
       case "toc" -> renderTocMacro(macroParams, context);
       case "anchor" -> HtmlFragments.anchor(ConfluenceSupport.anchorId(macroParams));
       case "iframe" -> renderIframeMacro(macroParams);
@@ -150,7 +153,15 @@ final class MacroRenderer {
         resourceId == null || resourceId.isBlank() ? "Sync block" : "Sync block: " + resourceId);
   }
 
-  private String renderChildrenPlaceholder(MacroParams macroParams) {
+  // Expand the child pages via the resolver, else the {{children}} / {{children:<depth>}} token.
+  private String renderChildren(MacroParams macroParams, RendererState context) {
+    var request =
+        new PageTreeRequest(PageTreeMacro.CHILDREN, rootParam(macroParams, "page"), macroParams.values());
+    var expanded = expandPageTree(request, context);
+    return expanded != null ? expanded : childrenToken(macroParams);
+  }
+
+  private String childrenToken(MacroParams macroParams) {
     var all = allChildrenValue(macroParams);
     if (all != null && "true".equalsIgnoreCase(all)) {
       return "{{children}}";
@@ -170,26 +181,81 @@ final class MacroRenderer {
     return "{{children}}";
   }
 
-  // Like the sibling children macro, the page tree lists descendant pages Confluence renders
-  // dynamically, so it becomes a {{pagetree}} token; a concrete (non-@keyword) root is surfaced
-  // as {{pagetree:<root>}}.
-  private String renderPageTreePlaceholder(MacroParams macroParams) {
+  // Expand the page tree via the resolver, else the {{pagetree}} / {{pagetree:<root>}} token.
+  private String renderPageTree(MacroParams macroParams, RendererState context) {
+    var request =
+        new PageTreeRequest(PageTreeMacro.PAGETREE, rootParam(macroParams, "root"), macroParams.values());
+    var expanded = expandPageTree(request, context);
+    if (expanded != null) {
+      return expanded;
+    }
     var root = pageTreeRoot(macroParams);
     return root == null ? "{{pagetree}}" : "{{pagetree:" + root + "}}";
   }
 
-  // The root when it names a concrete page; null for a blank or "@self"/"@home"/… keyword root.
-  // Whitespace is collapsed and braces dropped so the {{pagetree:…}} token stays well-formed.
+  // The resolver's descendant pages as an indented bullet list, or null to fall back to the token (no
+  // resolver, it declines/throws, or nothing renderable).
+  private String expandPageTree(PageTreeRequest request, RendererState context) {
+    var resolver = context.pageTreeResolver();
+    if (resolver == null) {
+      return null;
+    }
+    var entries = CallbackGuards.guard("PageTreeResolver", () -> resolver.resolve(request), null);
+    if (entries == null || entries.isEmpty()) {
+      return null;
+    }
+
+    // Shift the shallowest entry to column 0 so a deeper-rooted list does not over-indent into code.
+    var baseDepth = entries.stream().mapToInt(PageTreeEntry::depth).min().orElse(0);
+    var lines = new ArrayList<String>();
+    for (var entry : entries) {
+      var label = pageTreeLabel(entry, context);
+      if (label != null) {
+        lines.add(RenderBuffer.LIST_INDENT.repeat(entry.depth() - baseDepth) + "- " + label);
+      }
+    }
+    return lines.isEmpty() ? null : String.join("\n", lines);
+  }
+
+  // A link when the page id resolves, else the escaped (single-line) title; null when nothing renders.
+  private String pageTreeLabel(PageTreeEntry entry, RendererState context) {
+    var title = entry.title();
+    var label = title == null ? "" : title.replaceAll("\\s+", " ").strip();
+    var href = resolvePage(entry.pageNodeId(), context);
+    if (href != null) {
+      return MarkdownText.link(label.isEmpty() ? href : label, href);
+    }
+    return label.isEmpty() ? null : MarkdownText.escapeInlineText(label, false);
+  }
+
+  // The page id routed through the caller's PageLinkResolver (the hook used for inline page links), or
+  // null when there is no id/resolver or it declines.
+  private String resolvePage(String pageNodeId, RendererState context) {
+    var resolver = context.pageLinkResolver();
+    if (pageNodeId == null || pageNodeId.isBlank() || resolver == null) {
+      return null;
+    }
+    var resolved = CallbackGuards.guard("PageLinkResolver", () -> resolver.resolve(pageNodeId), null);
+    return resolved == null || resolved.isBlank() ? null : resolved;
+  }
+
+  // A macro root parameter (trimmed), or null for a blank or "@keyword" root.
+  private String rootParam(MacroParams macroParams, String name) {
+    var value = macroParams.value(name);
+    if (value == null) {
+      return null;
+    }
+    var trimmed = value.strip();
+    return trimmed.isEmpty() || trimmed.startsWith("@") ? null : trimmed;
+  }
+
+  // The {{pagetree:<root>}} token root: the "root" param with whitespace collapsed and braces dropped.
   private String pageTreeRoot(MacroParams macroParams) {
-    var root = macroParams.value("root");
+    var root = rootParam(macroParams, "root");
     if (root == null) {
       return null;
     }
-    var trimmed = root.strip();
-    if (trimmed.isEmpty() || trimmed.startsWith("@")) {
-      return null;
-    }
-    var flattened = trimmed.replaceAll("\\s+", " ").replace("{", "").replace("}", "").strip();
+    var flattened = root.replaceAll("\\s+", " ").replace("{", "").replace("}", "").strip();
     return flattened.isEmpty() ? null : flattened;
   }
 

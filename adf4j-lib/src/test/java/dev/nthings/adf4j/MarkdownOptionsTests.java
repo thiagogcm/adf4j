@@ -25,7 +25,8 @@ class MarkdownOptionsTests {
   @Test
   void constructor_and_copy_methods_normalize_null_policy_and_context() {
     var options =
-        new MarkdownOptions(null, null, false, null, null, false, null, null, null, false, null);
+        new MarkdownOptions(
+            null, null, false, null, null, false, null, null, null, null, false, null);
 
     assertThat(options.unknownNodePolicy()).isEqualTo(UnknownNodePolicy.PLACEHOLDER);
     assertThat(options.context()).isEqualTo(ConfluenceRenderContext.empty());
@@ -34,6 +35,7 @@ class MarkdownOptionsTests {
     assertThat(options.extensionRenderers()).isEmpty();
     assertThat(options.attachmentResolver()).isNull();
     assertThat(options.pageLinkResolver()).isNull();
+    assertThat(options.pageTreeResolver()).isNull();
     assertThat(options.collapseHardBreaks()).isFalse();
     assertThat(options.documentTitle()).isNull();
     assertThat(options.withUnknownNodePolicy(UnknownNodePolicy.SKIP).unknownNodePolicy())
