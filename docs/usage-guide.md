@@ -348,6 +348,8 @@ MarkdownOptions options = MarkdownOptions.defaults()
     .withImageSizeAttributes(true)
     // Render Shift+Enter hard breaks as soft newlines (no trailing whitespace):
     .withCollapseHardBreaks(true)
+    // Backslash-escape literal ( and ) in text (off by default; the parentheses are inert):
+    .withEscapeParentheses(true)
     // Prepend a level-1 title heading above the body:
     .withDocumentTitle("Release Notes");
 ```
@@ -427,6 +429,7 @@ adf4j-cli [-o <file>] [<input-file>]
   -o, --output=FILE            Write output to FILE instead of stdout
   -t, --title=TITLE            Prepend TITLE as a level-1 (# ) heading
   -c, --collapse-hard-breaks   Render hard breaks as soft breaks (no trailing spaces)
+  -p, --escape-parentheses     Backslash-escape literal ( and ) in text (off by default)
   -h, --help                   Show help
 ```
 
@@ -468,7 +471,7 @@ A scannable map of how each ADF construct is rendered with default options. Anch
 
 | ADF construct | Rendered as |
 | --- | --- |
-| `text` | plain text, with Markdown punctuation escaped |
+| `text` | plain text, with Markdown punctuation escaped (literal `(`/`)` left unescaped unless `escapeParentheses` is enabled) |
 | `strong` / `em` / `strike` / `code` | `**bold**` / `*italic*` / `~~strike~~` / `` `code` `` |
 | `underline` / `subsup` | HTML `<u>…</u>` / `<sub>…</sub>`, `<sup>…</sup>` |
 | `link` | `[text](url)` with the URL scheme-sanitized |

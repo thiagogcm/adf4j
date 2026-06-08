@@ -140,12 +140,13 @@ public final class AdfRenderer implements BlockRecursion {
     var context = RendererState.root(requiredOptions, outline);
     var body = joinBlocks(renderBlocks(document.content(), context));
     return new RenderOutput(
-        prependTitle(body, requiredOptions.documentTitle()), context.macroDiagnostics());
+        prependTitle(body, requiredOptions.documentTitle(), requiredOptions.escapeParentheses()),
+        context.macroDiagnostics());
   }
 
   // Prepends the optional documentTitle as a level-1 heading, blank-line separated from the body.
-  private static String prependTitle(String body, String rawTitle) {
-    var heading = titleHeading(rawTitle);
+  private static String prependTitle(String body, String rawTitle, boolean escapeParentheses) {
+    var heading = titleHeading(rawTitle, escapeParentheses);
     if (heading == null) {
       return body;
     }
@@ -154,7 +155,7 @@ public final class AdfRenderer implements BlockRecursion {
 
   // Formats the title like renderHeading's plain level-1 case: collapsed to one line, punctuation
   // escaped (atLineStart=false, since the text follows "# "). Null/blank yields no heading.
-  private static String titleHeading(String rawTitle) {
+  private static String titleHeading(String rawTitle, boolean escapeParentheses) {
     if (rawTitle == null) {
       return null;
     }
@@ -162,7 +163,7 @@ public final class AdfRenderer implements BlockRecursion {
     if (oneLine.isEmpty()) {
       return null;
     }
-    return "# " + MarkdownText.escapeInlineText(oneLine, false);
+    return "# " + MarkdownText.escapeInlineText(oneLine, false, escapeParentheses);
   }
 
   @Override
@@ -201,7 +202,7 @@ public final class AdfRenderer implements BlockRecursion {
       case BodiedExtension bodied -> macroRenderer.renderBodiedExtension(bodied, context, this);
       case MultiBodiedExtension mbe -> macroRenderer.renderMultiBodiedExtension(mbe, context, this);
       case ExtensionFrame frame -> renderBlocks(frame.content(), context);
-      case SyncBlock sync -> List.of(macroRenderer.renderSyncBlock(sync));
+      case SyncBlock sync -> List.of(macroRenderer.renderSyncBlock(sync, context));
       case BodiedSyncBlock sync -> macroRenderer.renderBodiedSyncBlock(sync, context, this);
       case BlockCard blockCard -> List.of(cardRenderer.renderBlockCard(blockCard.attrs(), context.context()));
       case EmbedCard embedCard -> List.of(cardRenderer.renderEmbedCard(embedCard.attrs(), context.context()));
@@ -299,12 +300,15 @@ public final class AdfRenderer implements BlockRecursion {
       case MediaInline media -> mediaRenderer.renderMediaInline(media, context, this);
       // Attribute-derived text is escaped like literal text, honouring atLineStart.
       case Date date ->
-        MarkdownText.escapeInlineText(AdfText.dateFromTimestamp(date.timestamp()), atLineStart);
-      case Emoji emoji -> MarkdownText.escapeInlineText(renderEmoji(emoji), atLineStart);
-      case Mention mention -> MarkdownText.escapeInlineText(renderMention(mention), atLineStart);
+        MarkdownText.escapeInlineText(
+            AdfText.dateFromTimestamp(date.timestamp()), atLineStart, context.escapeParentheses());
+      case Emoji emoji ->
+        MarkdownText.escapeInlineText(renderEmoji(emoji), atLineStart, context.escapeParentheses());
+      case Mention mention ->
+        MarkdownText.escapeInlineText(renderMention(mention), atLineStart, context.escapeParentheses());
       case Placeholder placeholder ->
-        MarkdownText.escapeInlineText(placeholder.text(), atLineStart);
-      case Status status -> MarkdownText.labelToken(statusLabel(status));
+        MarkdownText.escapeInlineText(placeholder.text(), atLineStart, context.escapeParentheses());
+      case Status status -> MarkdownText.labelToken(statusLabel(status), context.escapeParentheses());
       case InlineExtension extension ->
         macroRenderer.renderInlineExtension(extension, context);
       case UnknownInline unknown -> renderUnknownInlineByPolicy(unknown, context);
@@ -494,7 +498,8 @@ public final class AdfRenderer implements BlockRecursion {
     // Suppress leading-block escaping only in a GFM pipe cell (inline context). An HTML-fragment cell
     // is re-parsed as a block document, so a leading marker there must still be neutralized.
     var atLineStartEscaping = atLineStart && context.tableCell() != TableCellKind.GFM;
-    var escaped = MarkdownText.escapeInlineText(text.text(), atLineStartEscaping);
+    var escaped =
+        MarkdownText.escapeInlineText(text.text(), atLineStartEscaping, context.escapeParentheses());
     return applyMarks(escaped, text.marks(), context.context());
   }
 
@@ -557,7 +562,7 @@ public final class AdfRenderer implements BlockRecursion {
         log.warn("Rendering placeholder for unsupported ADF block node type: {}", label);
         yield nodeType == null || nodeType.isBlank()
             ? List.of()
-            : List.of(MarkdownText.labelToken("Unsupported: " + nodeType));
+            : List.of(MarkdownText.labelToken("Unsupported: " + nodeType, context.escapeParentheses()));
       }
     };
   }
@@ -580,7 +585,7 @@ public final class AdfRenderer implements BlockRecursion {
         log.warn("Rendering placeholder for unsupported ADF inline node type: {}", label);
         yield nodeType == null || nodeType.isBlank()
             ? ""
-            : MarkdownText.labelToken("Unsupported inline: " + nodeType);
+            : MarkdownText.labelToken("Unsupported inline: " + nodeType, context.escapeParentheses());
       }
     };
   }

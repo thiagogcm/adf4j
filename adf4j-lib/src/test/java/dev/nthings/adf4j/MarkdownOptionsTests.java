@@ -26,7 +26,7 @@ class MarkdownOptionsTests {
   void constructor_and_copy_methods_normalize_null_policy_and_context() {
     var options =
         new MarkdownOptions(
-            null, null, false, null, null, false, null, null, null, null, false, null);
+            null, null, false, null, null, false, null, null, null, null, false, null, false);
 
     assertThat(options.unknownNodePolicy()).isEqualTo(UnknownNodePolicy.PLACEHOLDER);
     assertThat(options.context()).isEqualTo(ConfluenceRenderContext.empty());
@@ -38,6 +38,7 @@ class MarkdownOptionsTests {
     assertThat(options.pageTreeResolver()).isNull();
     assertThat(options.collapseHardBreaks()).isFalse();
     assertThat(options.documentTitle()).isNull();
+    assertThat(options.escapeParentheses()).isFalse();
     assertThat(options.withUnknownNodePolicy(UnknownNodePolicy.SKIP).unknownNodePolicy())
         .isEqualTo(UnknownNodePolicy.SKIP);
     assertThat(options.withContext(null).context()).isEqualTo(ConfluenceRenderContext.empty());
@@ -129,6 +130,7 @@ class MarkdownOptionsTests {
         .pageLinkResolver(pageLink)
         .collapseHardBreaks(true)
         .documentTitle("My Page")
+        .escapeParentheses(true)
         .build();
 
     assertThat(options.unknownNodePolicy()).isEqualTo(UnknownNodePolicy.SKIP);
@@ -140,6 +142,19 @@ class MarkdownOptionsTests {
     assertThat(options.pageLinkResolver()).isSameAs(pageLink);
     assertThat(options.collapseHardBreaks()).isTrue();
     assertThat(options.documentTitle()).isEqualTo("My Page");
+    assertThat(options.escapeParentheses()).isTrue();
+  }
+
+  @Test
+  void escape_parentheses_default_off_and_carry_through_other_withers() {
+    var options = MarkdownOptions.defaults();
+    assertThat(options.escapeParentheses()).isFalse();
+
+    var enabled = options.withEscapeParentheses(true);
+    assertThat(enabled.escapeParentheses()).isTrue();
+    assertThat(enabled.withUnknownNodePolicy(UnknownNodePolicy.SKIP).escapeParentheses()).isTrue();
+    assertThat(enabled.withDocumentTitle("My Page").escapeParentheses()).isTrue();
+    assertThat(enabled.withEscapeParentheses(false).escapeParentheses()).isFalse();
   }
 
   @Test

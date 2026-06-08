@@ -61,6 +61,10 @@ record RendererState(RenderContext context, int listDepth, TableCellKind tableCe
     return context.collapseHardBreaks();
   }
 
+  boolean escapeParentheses() {
+    return context.escapeParentheses();
+  }
+
   List<ExtensionRenderer> extensionRenderers() {
     return context.extensionRenderers();
   }

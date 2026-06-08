@@ -25,7 +25,9 @@ import dev.nthings.adf4j.extension.ExtensionRenderer;
  * whitespace and segments reflow into one paragraph (off by default). {@code documentTitle}, when set,
  * prepends the value as a level-1 ({@code # }) heading above the body ({@code null}/blank emits nothing);
  * it is render-only (not reflected in {@code ContentMetadata}) and not de-duplicated against an existing
- * leading heading.
+ * leading heading. {@code escapeParentheses} backslash-escapes literal {@code (} and {@code )} in
+ * rendered text and image alt text; off by default, since the escapes are inert noise outside a link
+ * destination.
  *
  * <p>Construct via {@link #defaults()} plus the {@code withX(...)} withers, or via {@link #builder()};
  * both are forward-compatible. Avoid {@code new MarkdownOptions(...)}: the canonical constructor is not
@@ -43,7 +45,8 @@ public record MarkdownOptions(
     PageLinkResolver pageLinkResolver,
     PageTreeResolver pageTreeResolver,
     boolean collapseHardBreaks,
-    String documentTitle) {
+    String documentTitle,
+    boolean escapeParentheses) {
 
   public MarkdownOptions {
     unknownNodePolicy = unknownNodePolicy == null ? UnknownNodePolicy.PLACEHOLDER : unknownNodePolicy;
@@ -67,58 +70,66 @@ public record MarkdownOptions(
         null,
         null,
         false,
-        null);
+        null,
+        false);
   }
 
   public MarkdownOptions withUnknownNodePolicy(UnknownNodePolicy policy) {
     return new MarkdownOptions(
         policy, context, imageSizeAttributes, tableFallback, mediaResolver, htmlVisualMarks,
-        extensionRenderers, attachmentResolver, pageLinkResolver, pageTreeResolver, collapseHardBreaks, documentTitle);
+        extensionRenderers, attachmentResolver, pageLinkResolver, pageTreeResolver, collapseHardBreaks,
+        documentTitle, escapeParentheses);
   }
 
   public MarkdownOptions withContext(ConfluenceRenderContext renderContext) {
     return new MarkdownOptions(
         unknownNodePolicy, renderContext, imageSizeAttributes, tableFallback, mediaResolver,
-        htmlVisualMarks, extensionRenderers, attachmentResolver, pageLinkResolver, pageTreeResolver, collapseHardBreaks,
-        documentTitle);
+        htmlVisualMarks, extensionRenderers, attachmentResolver, pageLinkResolver, pageTreeResolver,
+        collapseHardBreaks, documentTitle, escapeParentheses);
   }
 
   public MarkdownOptions withImageSizeAttributes(boolean enabled) {
     return new MarkdownOptions(
         unknownNodePolicy, context, enabled, tableFallback, mediaResolver, htmlVisualMarks,
-        extensionRenderers, attachmentResolver, pageLinkResolver, pageTreeResolver, collapseHardBreaks, documentTitle);
+        extensionRenderers, attachmentResolver, pageLinkResolver, pageTreeResolver, collapseHardBreaks,
+        documentTitle, escapeParentheses);
   }
 
   public MarkdownOptions withTableFallback(TableFallback fallback) {
     return new MarkdownOptions(
         unknownNodePolicy, context, imageSizeAttributes, fallback, mediaResolver, htmlVisualMarks,
-        extensionRenderers, attachmentResolver, pageLinkResolver, pageTreeResolver, collapseHardBreaks, documentTitle);
+        extensionRenderers, attachmentResolver, pageLinkResolver, pageTreeResolver, collapseHardBreaks,
+        documentTitle, escapeParentheses);
   }
 
   /** Sets the media resolver; {@code null} clears it (the default {@code media:} placeholder path). */
   public MarkdownOptions withMediaResolver(MediaResolver resolver) {
     return new MarkdownOptions(
         unknownNodePolicy, context, imageSizeAttributes, tableFallback, resolver, htmlVisualMarks,
-        extensionRenderers, attachmentResolver, pageLinkResolver, pageTreeResolver, collapseHardBreaks, documentTitle);
+        extensionRenderers, attachmentResolver, pageLinkResolver, pageTreeResolver, collapseHardBreaks,
+        documentTitle, escapeParentheses);
   }
 
   public MarkdownOptions withHtmlVisualMarks(boolean enabled) {
     return new MarkdownOptions(
         unknownNodePolicy, context, imageSizeAttributes, tableFallback, mediaResolver, enabled,
-        extensionRenderers, attachmentResolver, pageLinkResolver, pageTreeResolver, collapseHardBreaks, documentTitle);
+        extensionRenderers, attachmentResolver, pageLinkResolver, pageTreeResolver, collapseHardBreaks,
+        documentTitle, escapeParentheses);
   }
 
   public MarkdownOptions withExtensionRenderers(List<ExtensionRenderer> renderers) {
     return new MarkdownOptions(
         unknownNodePolicy, context, imageSizeAttributes, tableFallback, mediaResolver, htmlVisualMarks,
-        renderers, attachmentResolver, pageLinkResolver, pageTreeResolver, collapseHardBreaks, documentTitle);
+        renderers, attachmentResolver, pageLinkResolver, pageTreeResolver, collapseHardBreaks,
+        documentTitle, escapeParentheses);
   }
 
   /** Sets the attachment resolver; {@code null} clears it (the default {@code attachment:} path). */
   public MarkdownOptions withAttachmentResolver(AttachmentResolver resolver) {
     return new MarkdownOptions(
         unknownNodePolicy, context, imageSizeAttributes, tableFallback, mediaResolver, htmlVisualMarks,
-        extensionRenderers, resolver, pageLinkResolver, pageTreeResolver, collapseHardBreaks, documentTitle);
+        extensionRenderers, resolver, pageLinkResolver, pageTreeResolver, collapseHardBreaks,
+        documentTitle, escapeParentheses);
   }
 
   /** Sets the page-link resolver; {@code null} clears it (links keep their original href). */
@@ -126,7 +137,7 @@ public record MarkdownOptions(
     return new MarkdownOptions(
         unknownNodePolicy, context, imageSizeAttributes, tableFallback, mediaResolver, htmlVisualMarks,
         extensionRenderers, attachmentResolver, resolver, pageTreeResolver, collapseHardBreaks,
-        documentTitle);
+        documentTitle, escapeParentheses);
   }
 
   /** Sets the page-tree resolver; {@code null} clears it (pagetree macros keep the {@code {{pagetree}}} token). */
@@ -134,7 +145,7 @@ public record MarkdownOptions(
     return new MarkdownOptions(
         unknownNodePolicy, context, imageSizeAttributes, tableFallback, mediaResolver, htmlVisualMarks,
         extensionRenderers, attachmentResolver, pageLinkResolver, resolver, collapseHardBreaks,
-        documentTitle);
+        documentTitle, escapeParentheses);
   }
 
   /** Renders hard breaks as soft breaks (a plain newline), dropping the two-space GFM hard break. */
@@ -142,14 +153,23 @@ public record MarkdownOptions(
     return new MarkdownOptions(
         unknownNodePolicy, context, imageSizeAttributes, tableFallback, mediaResolver, htmlVisualMarks,
         extensionRenderers, attachmentResolver, pageLinkResolver, pageTreeResolver, enabled,
-        documentTitle);
+        documentTitle, escapeParentheses);
   }
 
   /** Sets a level-1 title heading prepended to the output; {@code null}/blank emits no title. */
   public MarkdownOptions withDocumentTitle(String title) {
     return new MarkdownOptions(
         unknownNodePolicy, context, imageSizeAttributes, tableFallback, mediaResolver, htmlVisualMarks,
-        extensionRenderers, attachmentResolver, pageLinkResolver, pageTreeResolver, collapseHardBreaks, title);
+        extensionRenderers, attachmentResolver, pageLinkResolver, pageTreeResolver, collapseHardBreaks,
+        title, escapeParentheses);
+  }
+
+  /** Backslash-escapes literal {@code (} and {@code )} in rendered text and image alt text. */
+  public MarkdownOptions withEscapeParentheses(boolean enabled) {
+    return new MarkdownOptions(
+        unknownNodePolicy, context, imageSizeAttributes, tableFallback, mediaResolver, htmlVisualMarks,
+        extensionRenderers, attachmentResolver, pageLinkResolver, pageTreeResolver, collapseHardBreaks,
+        documentTitle, enabled);
   }
 
   /** A new {@link Builder} whose unset fields take the same defaults as {@link #defaults()}. */
@@ -175,6 +195,7 @@ public record MarkdownOptions(
     private PageTreeResolver pageTreeResolver;
     private boolean collapseHardBreaks;
     private String documentTitle;
+    private boolean escapeParentheses;
 
     private Builder() {
     }
@@ -240,11 +261,17 @@ public record MarkdownOptions(
       return this;
     }
 
+    /** Backslash-escapes literal {@code (} and {@code )} in rendered text and image alt text. */
+    public Builder escapeParentheses(boolean enabled) {
+      this.escapeParentheses = enabled;
+      return this;
+    }
+
     public MarkdownOptions build() {
       return new MarkdownOptions(
           unknownNodePolicy, context, imageSizeAttributes, tableFallback, mediaResolver,
           htmlVisualMarks, extensionRenderers, attachmentResolver, pageLinkResolver,
-          pageTreeResolver, collapseHardBreaks, documentTitle);
+          pageTreeResolver, collapseHardBreaks, documentTitle, escapeParentheses);
     }
   }
 }

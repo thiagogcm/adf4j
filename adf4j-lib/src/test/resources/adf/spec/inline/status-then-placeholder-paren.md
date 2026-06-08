@@ -1,1 +1,1 @@
-\[Done\]\(see ref\)
+\[Done\](see ref)

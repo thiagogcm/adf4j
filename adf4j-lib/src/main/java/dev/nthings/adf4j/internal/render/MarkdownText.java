@@ -10,7 +10,9 @@ final class MarkdownText {
 
   private static final Pattern LINE_BREAK_PATTERN = Pattern.compile("\\R");
 
-  private static final Pattern LEADING_ORDERED_MARKER = Pattern.compile("^(\\d+)\\.");
+  // Both CommonMark ordered-list delimiters, "1." and "1)" — the latter reaches here only when
+  // parentheses are left unescaped (otherwise inline escaping already defused it).
+  private static final Pattern LEADING_ORDERED_MARKER = Pattern.compile("^(\\d+)([.)])");
 
   // Schemes safe to emit as a link destination; anything else is defused by escapeUrlDestination.
   // "media"/"attachment" are the library's own inert placeholder schemes.
@@ -33,16 +35,16 @@ final class MarkdownText {
   }
 
   /** A literal {@code [inner]} label token, fully inline-escaped so it can't parse as a link. */
-  public static String labelToken(String inner) {
-    return escapeInlineText("[" + Objects.requireNonNullElse(inner, "") + "]", false);
+  public static String labelToken(String inner, boolean escapeParentheses) {
+    return escapeInlineText("[" + Objects.requireNonNullElse(inner, "") + "]", false, escapeParentheses);
   }
 
   /**
    * A Markdown inline link {@code [label](url)} from raw operands: the label is inline-escaped and
    * the destination is scheme-sanitized and escaped.
    */
-  public static String link(String label, String url) {
-    return "[" + escapeInlineText(label, false) + "](" + escapeUrlDestination(url) + ")";
+  public static String link(String label, String url, boolean escapeParentheses) {
+    return "[" + escapeInlineText(label, false, escapeParentheses) + "](" + escapeUrlDestination(url) + ")";
   }
 
   /** Like {@link #link} but the label is already-rendered Markdown, emitted verbatim. */
@@ -108,18 +110,20 @@ final class MarkdownText {
 
   /**
    * Backslash-escapes CommonMark inline punctuation ({@code \ ` * _ [ ] ( ) ~ < &}) in literal text,
-   * and neutralises a leading block marker (#, &gt;, -, +, ordered "1.", indented-code run) on each
-   * line — the first line only when {@code atLineStart}, every later line unconditionally. An
+   * and neutralises a leading block marker (#, &gt;, -, +, ordered "1." or "1)", indented-code run) on
+   * each line — the first line only when {@code atLineStart}, every later line unconditionally. An
    * intra-word {@code _} (one flanked by word characters on both sides) is left literal, since
-   * CommonMark never treats it as emphasis there. Null is treated as empty.
+   * CommonMark never treats it as emphasis there. {@code (} and {@code )} are escaped only when
+   * {@code escapeParentheses} is true (a leading "1)" marker is neutralised regardless). Null is
+   * treated as empty.
    */
-  public static String escapeInlineText(String text, boolean atLineStart) {
+  public static String escapeInlineText(String text, boolean atLineStart, boolean escapeParentheses) {
     var value = Objects.requireNonNullElse(text, "");
     if (value.isEmpty()) {
       return value;
     }
 
-    var escaped = escapeInlinePunctuation(value);
+    var escaped = escapeInlinePunctuation(value, escapeParentheses);
     if (escaped.indexOf('\n') < 0 && escaped.indexOf('\r') < 0) {
       return atLineStart ? neutralizeLeadingBlock(escaped) : escaped;
     }
@@ -140,11 +144,13 @@ final class MarkdownText {
   // Backslash-escapes CommonMark inline punctuation in one pass, allocating only when an escapable
   // character is present (the common no-special-char case returns value unchanged). An intra-word
   // '_' is left literal — CommonMark never reads it as emphasis there.
-  private static String escapeInlinePunctuation(String value) {
+  private static String escapeInlinePunctuation(String value, boolean escapeParentheses) {
     StringBuilder escaped = null;
     for (var i = 0; i < value.length(); i++) {
       var c = value.charAt(i);
-      var escape = c == '_' ? !isIntraWordUnderscore(value, i) : isInlinePunctuation(c);
+      var escape = c == '_'
+          ? !isIntraWordUnderscore(value, i)
+          : isInlinePunctuation(c, escapeParentheses);
       if (escape) {
         if (escaped == null) {
           escaped = new StringBuilder(value.length() + 8).append(value, 0, i);
@@ -168,9 +174,11 @@ final class MarkdownText {
     return Character.isLetterOrDigit(c);
   }
 
-  private static boolean isInlinePunctuation(char c) {
+  private static boolean isInlinePunctuation(char c, boolean escapeParentheses) {
     return switch (c) {
-      case '\\', '`', '*', '[', ']', '(', ')', '~', '<', '&', '!' -> true;
+      case '\\', '`', '*', '[', ']', '~', '<', '&', '!' -> true;
+      // Parentheses only parse specially inside a link destination, so escaping them is opt-in.
+      case '(', ')' -> escapeParentheses;
       default -> false;
     };
   }
@@ -202,11 +210,12 @@ final class MarkdownText {
     if (first == '#' || first == '>' || first == '-' || first == '+') {
       return prefix + "\\" + rest;
     }
-    // Ordered marker: escape the dot ("1)" is already safe since ')' is inline-escaped).
+    // Ordered marker: escape whichever delimiter matched ("." or ")") so the digits can't open a list.
     var ordered = LEADING_ORDERED_MARKER.matcher(rest);
     if (ordered.find()) {
       var digits = ordered.group(1);
-      return prefix + digits + "\\." + rest.substring(ordered.end());
+      var delimiter = ordered.group(2);
+      return prefix + digits + "\\" + delimiter + rest.substring(ordered.end());
     }
 
     return s;
@@ -220,10 +229,13 @@ final class MarkdownText {
     return count;
   }
 
-  /** Backslash-escapes {@code [ ] ( )} in image alt text. Null is treated as empty. */
-  public static String escapeAltText(String alt) {
-    return Objects.requireNonNullElse(alt, "")
-        .replace("[", "\\[").replace("]", "\\]").replace("(", "\\(").replace(")", "\\)");
+  /**
+   * Backslash-escapes {@code [ ]} in image alt text, and {@code ( )} too when
+   * {@code escapeParentheses} is set. Null is treated as empty.
+   */
+  public static String escapeAltText(String alt, boolean escapeParentheses) {
+    var escaped = Objects.requireNonNullElse(alt, "").replace("[", "\\[").replace("]", "\\]");
+    return escapeParentheses ? escaped.replace("(", "\\(").replace(")", "\\)") : escaped;
   }
 
   /**

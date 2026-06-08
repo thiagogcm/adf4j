@@ -1,1 +1,1 @@
-Reaction: \[x\]\(y\)
+Reaction: \[x\](y)

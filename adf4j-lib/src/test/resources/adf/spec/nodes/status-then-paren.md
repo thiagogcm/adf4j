@@ -1,1 +1,1 @@
-\[Done\]\(not a link\) follows
+\[Done\](not a link) follows

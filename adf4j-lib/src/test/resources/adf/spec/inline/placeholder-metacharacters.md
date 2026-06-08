@@ -1,1 +1,1 @@
-Owner: \[label\]\(http://evil\) \*x\* \<b>
+Owner: \[label\](http://evil) \*x\* \<b>

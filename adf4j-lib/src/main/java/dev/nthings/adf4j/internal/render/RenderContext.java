@@ -32,6 +32,7 @@ record RenderContext(
     PageLinkResolver pageLinkResolver,
     PageTreeResolver pageTreeResolver,
     boolean collapseHardBreaks,
+    boolean escapeParentheses,
     MacroDiagnostics macroDiagnostics) {
 
   static RenderContext from(MarkdownOptions options, HeadingOutline headingOutline) {
@@ -51,6 +52,7 @@ record RenderContext(
         requiredOptions.pageLinkResolver(),
         requiredOptions.pageTreeResolver(),
         requiredOptions.collapseHardBreaks(),
+        requiredOptions.escapeParentheses(),
         new MacroDiagnostics());
   }
 }

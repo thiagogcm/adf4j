@@ -237,7 +237,8 @@ final class ListRenderer {
   String renderDecisionItem(DecisionItem node, RendererState context, BlockRecursion recursion) {
     var state = node.state();
     var label = MarkdownText.labelToken(
-        state == null || state.isBlank() ? "decision" : "decision:" + state);
+        state == null || state.isBlank() ? "decision" : "decision:" + state,
+        context.escapeParentheses());
     var content = recursion.renderInlineNodes(node.content(), context, false);
     var prefix = RenderBuffer.LIST_INDENT.repeat(Math.max(0, context.listDepth())) + "- ";
     if (content.isBlank()) {

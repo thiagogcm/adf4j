@@ -89,7 +89,7 @@ final class TextMarkRenderer {
       return rendered;
     }
     var label = (rendered == null || rendered.isBlank())
-        ? MarkdownText.escapeInlineText(href, false)
+        ? MarkdownText.escapeInlineText(href, false, context.escapeParentheses())
         : rendered;
     var resolvedHref = resolvePageHref(href, link.attrs(), context);
     var title = link.title();

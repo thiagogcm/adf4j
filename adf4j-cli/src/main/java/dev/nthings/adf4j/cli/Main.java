@@ -24,6 +24,7 @@ public final class Main {
         "  -o, --output=FILE          Write output to FILE instead of stdout",
         "  -t, --title=TITLE          Prepend TITLE as a level-1 (# ) heading above the output",
         "  -c, --collapse-hard-breaks Render hard breaks (Shift+Enter) as soft breaks (no trailing spaces)",
+        "  -p, --escape-parentheses   Backslash-escape literal ( and ) in text (off by default)",
         "  -h, --help                 Show this help message",
     };
 
@@ -55,6 +56,7 @@ public final class Main {
 
         var markdownOptions = MarkdownOptions.defaults()
             .withCollapseHardBreaks(options.isSet("collapse-hard-breaks"))
+            .withEscapeParentheses(options.isSet("escape-parentheses"))
             .withDocumentTitle(options.isSet("title") ? options.get("title") : null);
         String result = AdfToMarkdown.with(markdownOptions).toMarkdown(input);
 

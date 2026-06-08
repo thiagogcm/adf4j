@@ -77,7 +77,9 @@ final class MediaRenderer {
 
     // Non-image attachments (PDF, video, archive, …) render as a link; an image embed would break.
     if (!isImage(attrs, resolvedSource)) {
-      return MarkdownText.link(attrs.fileLabel(AttachmentReferences.fileName(resolvedSource)), destination);
+      return MarkdownText.link(
+          attrs.fileLabel(AttachmentReferences.fileName(resolvedSource)), destination,
+          context.escapeParentheses());
     }
 
     // The {width= height=} suffix is non-GFM; emit only when opted in.
@@ -86,7 +88,9 @@ final class MediaRenderer {
         context.imageSizeAttributes()
             ? renderImageAttributeSuffix(positiveInteger(attrs.width()), positiveInteger(attrs.height()))
             : "";
-    return "![%s](%s)%s".formatted(MarkdownText.escapeAltText(attrs.imageAlt()), source, attributeSuffix);
+    return "![%s](%s)%s".formatted(
+        MarkdownText.escapeAltText(attrs.imageAlt(), context.escapeParentheses()), source,
+        attributeSuffix);
   }
 
   // The resolved destination (a MediaResolver path or URL) carries the real filename, so its extension

@@ -59,9 +59,9 @@ final class MacroRenderer {
       case "pagetree" -> renderPageTree(macroParams, context);
       case "toc" -> renderTocMacro(macroParams, context);
       case "anchor" -> HtmlFragments.anchor(ConfluenceSupport.anchorId(macroParams));
-      case "iframe" -> renderIframeMacro(macroParams);
+      case "iframe" -> renderIframeMacro(macroParams, context);
       case "viewpdf" -> renderViewPdfMacro(macroParams, context);
-      case "chart:default" -> renderChartMacro(macroParams);
+      case "chart:default" -> renderChartMacro(macroParams, context);
       default -> null;
     };
     return rendered != null ? rendered : extensionFallback(text, extensionType, extensionKey, context);
@@ -130,27 +130,28 @@ final class MacroRenderer {
       String text, String extensionType, String extensionKey, RendererState context) {
     if (text != null && !text.isBlank()) {
       // Attribute-derived text; a block extension emits it at column 0, so neutralise leading markers.
-      return MarkdownText.escapeInlineText(text, true);
+      return MarkdownText.escapeInlineText(text, true, context.escapeParentheses());
     }
     context.recordUnsupportedExtension(extensionType, extensionKey);
-    return renderExtensionPlaceholder(extensionType, extensionKey);
+    return renderExtensionPlaceholder(extensionType, extensionKey, context);
   }
 
-  String renderSyncBlock(SyncBlock node) {
-    return syncBlockLabel(node.resourceId());
+  String renderSyncBlock(SyncBlock node, RendererState context) {
+    return syncBlockLabel(node.resourceId(), context);
   }
 
   List<String> renderBodiedSyncBlock(
       BodiedSyncBlock node, RendererState context, BlockRecursion recursion) {
     var blocks = new ArrayList<String>();
-    blocks.add(syncBlockLabel(node.resourceId()));
+    blocks.add(syncBlockLabel(node.resourceId(), context));
     blocks.addAll(recursion.renderBlocks(node.content(), context));
     return blocks;
   }
 
-  private String syncBlockLabel(String resourceId) {
+  private String syncBlockLabel(String resourceId, RendererState context) {
     return MarkdownText.labelToken(
-        resourceId == null || resourceId.isBlank() ? "Sync block" : "Sync block: " + resourceId);
+        resourceId == null || resourceId.isBlank() ? "Sync block" : "Sync block: " + resourceId,
+        context.escapeParentheses());
   }
 
   // Expand the child pages via the resolver, else the {{children}} / {{children:<depth>}} token.
@@ -223,9 +224,9 @@ final class MacroRenderer {
     var label = title == null ? "" : title.replaceAll("\\s+", " ").strip();
     var href = resolvePage(entry.pageNodeId(), context);
     if (href != null) {
-      return MarkdownText.link(label.isEmpty() ? href : label, href);
+      return MarkdownText.link(label.isEmpty() ? href : label, href, context.escapeParentheses());
     }
-    return label.isEmpty() ? null : MarkdownText.escapeInlineText(label, false);
+    return label.isEmpty() ? null : MarkdownText.escapeInlineText(label, false, context.escapeParentheses());
   }
 
   // The page id routed through the caller's PageLinkResolver (the hook used for inline page links), or
@@ -278,9 +279,11 @@ final class MacroRenderer {
     for (var heading : filtered) {
       var indent = RenderBuffer.LIST_INDENT.repeat(Math.max(0, heading.level() - baseLevel));
       if (heading.anchor() != null && !heading.anchor().isBlank()) {
-        lines.add(indent + "- " + MarkdownText.link(heading.text(), "#" + heading.anchor()));
+        lines.add(indent + "- "
+            + MarkdownText.link(heading.text(), "#" + heading.anchor(), context.escapeParentheses()));
       } else {
-        lines.add(indent + "- " + MarkdownText.escapeInlineText(heading.text(), false));
+        lines.add(indent + "- "
+            + MarkdownText.escapeInlineText(heading.text(), false, context.escapeParentheses()));
       }
     }
     return String.join("\n", lines);
@@ -293,12 +296,12 @@ final class MacroRenderer {
         .orElse(null);
   }
 
-  private String renderIframeMacro(MacroParams macroParams) {
+  private String renderIframeMacro(MacroParams macroParams, RendererState context) {
     var src = macroParams.value("src");
     if (src == null || src.isBlank()) {
-      return MarkdownText.labelToken("Embedded content");
+      return MarkdownText.labelToken("Embedded content", context.escapeParentheses());
     }
-    return MarkdownText.link("Embedded content", src);
+    return MarkdownText.link("Embedded content", src, context.escapeParentheses());
   }
 
   private String renderViewPdfMacro(MacroParams macroParams, RendererState context) {
@@ -308,12 +311,13 @@ final class MacroRenderer {
     if (attachmentReference == null
         || attachmentReference.fileId() == null
         || attachmentReference.fileId().isBlank()) {
-      return MarkdownText.labelToken(name == null || name.isBlank() ? "PDF" : "PDF: " + name);
+      return MarkdownText.labelToken(
+          name == null || name.isBlank() ? "PDF" : "PDF: " + name, context.escapeParentheses());
     }
 
     var label = (name == null || name.isBlank()) ? "PDF" : "PDF: " + name;
     var destination = resolveAttachment(attachmentReference, context);
-    return MarkdownText.link(label, destination);
+    return MarkdownText.link(label, destination, context.escapeParentheses());
   }
 
   // The caller-resolved link for an attachment, or the synthetic attachment:<fileId> placeholder when
@@ -329,21 +333,24 @@ final class MacroRenderer {
     return "attachment:" + reference.fileId();
   }
 
-  private String renderChartMacro(MacroParams macroParams) {
+  private String renderChartMacro(MacroParams macroParams, RendererState context) {
     var title = macroParams.value("title");
-    return MarkdownText.labelToken(title == null || title.isBlank() ? "Chart" : "Chart: " + title);
+    return MarkdownText.labelToken(
+        title == null || title.isBlank() ? "Chart" : "Chart: " + title, context.escapeParentheses());
   }
 
-  private String renderExtensionPlaceholder(String extensionType, String extensionKey) {
+  private String renderExtensionPlaceholder(
+      String extensionType, String extensionKey, RendererState context) {
     if (extensionType != null && extensionKey != null) {
       log.warn("Rendering placeholder for unsupported extension: {}/{}", extensionType, extensionKey);
-      return MarkdownText.labelToken("Extension: " + extensionType + "/" + extensionKey);
+      return MarkdownText.labelToken(
+          "Extension: " + extensionType + "/" + extensionKey, context.escapeParentheses());
     }
     if (extensionKey != null) {
       log.warn("Rendering placeholder for unsupported extension key: {}", extensionKey);
-      return MarkdownText.labelToken("Extension: " + extensionKey);
+      return MarkdownText.labelToken("Extension: " + extensionKey, context.escapeParentheses());
     }
     log.warn("Rendering placeholder for extension with no type/key");
-    return MarkdownText.labelToken("Extension");
+    return MarkdownText.labelToken("Extension", context.escapeParentheses());
   }
 }
