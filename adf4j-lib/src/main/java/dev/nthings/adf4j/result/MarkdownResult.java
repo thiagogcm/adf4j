@@ -4,17 +4,27 @@ import java.util.List;
 
 import dev.nthings.adf4j.metadata.ContentMetadata;
 
-/** The output of an ADF-to-Markdown conversion: the body plus extracted metadata and diagnostics. */
-public record MarkdownResult(String body, ContentMetadata metadata, List<ParseIssue> diagnostics) {
+/**
+ * The output of an ADF-to-Markdown conversion: the body plus extracted metadata and diagnostics.
+ * {@code unresolved} reports the lookups this render's resolvers declined (see
+ * {@link UnresolvedReferences}); it is conversion-specific state, unlike the document-static
+ * {@code metadata}.
+ */
+public record MarkdownResult(
+    String body,
+    ContentMetadata metadata,
+    List<ParseIssue> diagnostics,
+    UnresolvedReferences unresolved) {
 
   public MarkdownResult {
     body = body == null ? "" : body;
     metadata = metadata == null ? ContentMetadata.empty() : metadata;
     diagnostics = diagnostics == null ? List.of() : List.copyOf(diagnostics);
+    unresolved = unresolved == null ? UnresolvedReferences.empty() : unresolved;
   }
 
   public static MarkdownResult empty() {
-    return new MarkdownResult("", ContentMetadata.empty(), List.of());
+    return new MarkdownResult("", ContentMetadata.empty(), List.of(), UnresolvedReferences.empty());
   }
 
   /**

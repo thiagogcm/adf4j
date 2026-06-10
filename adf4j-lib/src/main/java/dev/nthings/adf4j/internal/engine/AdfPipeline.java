@@ -67,31 +67,36 @@ public final class AdfPipeline {
 
   public MarkdownResult convert(String adfJson, MarkdownOptions options) {
     if (adfJson == null || adfJson.isBlank()) {
-      return MarkdownResult.empty();
+      return render(null, options, List.of());
     }
     var parsed = parsingService.parse(adfJson);
     if (parsed.document() == null || !parsed.validAdfRoot()) {
       log.warn("Input is not a valid ADF document – returning empty result with diagnostics");
-      return new MarkdownResult("", ContentMetadata.empty(), parsed.issues());
+      return render(null, options, parsed.issues());
     }
     return render(parsed.document(), options, parsed.issues());
+  }
+
+  public MarkdownResult convert(ParseResult parsed, MarkdownOptions options) {
+    if (parsed == null) {
+      return render(null, options, List.of());
+    }
+    return render(parsed.validAdfRoot() ? parsed.document() : null, options, parsed.issues());
   }
 
   public MarkdownResult convert(AdfDocument document, MarkdownOptions options) {
     return render(document, options, List.of());
   }
 
+  // A null document yields an empty (possibly titled) body.
   private MarkdownResult render(
       AdfDocument document, MarkdownOptions options, List<ParseIssue> diagnostics) {
-    if (document == null) {
-      return new MarkdownResult("", ContentMetadata.empty(), diagnostics);
-    }
     var analysis = analyzer.analyze(document, options);
     var rendered = renderer.render(document, options, analysis.outline());
     // Diagnostics in pipeline order: parse, then analyze-phase lossiness, then render-phase macros.
     var merged = mergeDiagnostics(
         mergeDiagnostics(diagnostics, analysis.diagnostics()), rendered.diagnostics());
-    return new MarkdownResult(rendered.body(), analysis.metadata(), merged);
+    return new MarkdownResult(rendered.body(), analysis.metadata(), merged, rendered.unresolved());
   }
 
   private static List<ParseIssue> mergeDiagnostics(

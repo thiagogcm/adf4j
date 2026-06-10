@@ -9,7 +9,6 @@ import dev.nthings.adf4j.metadata.HeadingReference;
 import dev.nthings.adf4j.options.AttachmentResolver;
 import dev.nthings.adf4j.options.MarkdownOptions;
 import dev.nthings.adf4j.options.MediaResolver;
-import dev.nthings.adf4j.options.PageLinkResolver;
 import dev.nthings.adf4j.options.PageTreeResolver;
 import dev.nthings.adf4j.options.TableFallback;
 import dev.nthings.adf4j.options.UnknownNodePolicy;
@@ -73,16 +72,16 @@ record RendererState(RenderContext context, int listDepth, TableCellKind tableCe
     return context.attachmentResolver();
   }
 
-  PageLinkResolver pageLinkResolver() {
-    return context.pageLinkResolver();
-  }
-
   PageTreeResolver pageTreeResolver() {
     return context.pageTreeResolver();
   }
 
   void recordUnsupportedExtension(String extensionType, String extensionKey) {
     context.macroDiagnostics().recordUnsupported(extensionType, extensionKey);
+  }
+
+  UnresolvedTracker unresolvedTracker() {
+    return context.unresolvedTracker();
   }
 
   List<ParseIssue> macroDiagnostics() {

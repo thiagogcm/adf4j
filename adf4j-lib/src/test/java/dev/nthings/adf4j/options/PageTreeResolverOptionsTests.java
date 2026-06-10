@@ -1,6 +1,7 @@
 package dev.nthings.adf4j.options;
 
 import java.util.List;
+import java.util.Map;
 
 import dev.nthings.adf4j.AdfToMarkdown;
 
@@ -239,12 +240,41 @@ class PageTreeResolverOptionsTests {
   }
 
   @Test
-  void resolver_that_declines_falls_back_to_the_token() {
-    var declines = MarkdownOptions.defaults().withPageTreeResolver(request -> List.of());
-    assertThat(AdfToMarkdown.with(declines).toMarkdown(PAGETREE)).isEqualTo("{{pagetree}}");
-
+  void resolver_returning_null_falls_back_to_the_token() {
     var nulls = MarkdownOptions.defaults().withPageTreeResolver(request -> null);
     assertThat(AdfToMarkdown.with(nulls).toMarkdown(PAGETREE)).isEqualTo("{{pagetree}}");
+  }
+
+  @Test
+  void resolver_returning_an_empty_list_renders_nothing() {
+    // An empty list is an authoritative "no descendants", not a decline — no placeholder leaks.
+    var empty = MarkdownOptions.defaults().withPageTreeResolver(request -> List.of());
+    assertThat(AdfToMarkdown.with(empty).toMarkdown(PAGETREE)).isEmpty();
+  }
+
+  @Test
+  void an_empty_resolution_leaves_the_surrounding_blocks_clean() {
+    var adf = """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            { "type": "paragraph", "content": [{ "type": "text", "text": "before" }] },
+            {
+              "type": "extension",
+              "attrs": {
+                "extensionType": "com.atlassian.confluence.macro.core",
+                "extensionKey": "pagetree"
+              }
+            },
+            { "type": "paragraph", "content": [{ "type": "text", "text": "after" }] }
+          ]
+        }
+        """;
+    var options = MarkdownOptions.defaults().withPageTreeResolver(request -> List.of());
+
+    assertThat(AdfToMarkdown.with(options).toMarkdown(adf))
+        .isEqualToNormalizingNewlines("before\n\nafter");
   }
 
   @Test
@@ -300,8 +330,49 @@ class PageTreeResolverOptionsTests {
   @Test
   void a_declining_resolver_keeps_the_children_depth_token() {
     // Falling back preserves the existing {{children:<depth>}} token for a bounded depth.
-    var options = MarkdownOptions.defaults().withPageTreeResolver(request -> List.of());
+    var options = MarkdownOptions.defaults().withPageTreeResolver(request -> null);
 
     assertThat(AdfToMarkdown.with(options).toMarkdown(ROOTED_CHILDREN)).isEqualTo("{{children:2}}");
+  }
+
+  // --- typed request parameters -------------------------------------------------------------------
+
+  @Test
+  void the_request_parses_the_standard_depth_and_all_parameters() {
+    var captured = new PageTreeRequest[1];
+    var options = MarkdownOptions.defaults().withPageTreeResolver(request -> {
+      captured[0] = request;
+      return List.of();
+    });
+
+    AdfToMarkdown.with(options).toMarkdown(ROOTED_CHILDREN);
+
+    assertThat(captured[0].depth()).hasValue(2);
+    assertThat(captured[0].all()).isFalse();
+  }
+
+  @Test
+  void request_depth_is_empty_for_absent_blank_invalid_or_non_positive_values() {
+    assertThat(request(Map.of()).depth()).isEmpty();
+    assertThat(request(Map.of("depth", "  ")).depth()).isEmpty();
+    assertThat(request(Map.of("depth", "deep")).depth()).isEmpty();
+    assertThat(request(Map.of("depth", "0")).depth()).isEmpty();
+    assertThat(request(Map.of("depth", "-3")).depth()).isEmpty();
+    assertThat(request(Map.of("depth", " 4 ")).depth()).hasValue(4);
+  }
+
+  @Test
+  void request_all_accepts_true_case_insensitively_with_the_legacy_spelling_as_fallback() {
+    assertThat(request(Map.of()).all()).isFalse();
+    assertThat(request(Map.of("all", "TRUE")).all()).isTrue();
+    assertThat(request(Map.of("all", "yes")).all()).isFalse();
+    assertThat(request(Map.of("allChildren", "true")).all()).isTrue();
+    // A non-blank "all" wins over the legacy spelling.
+    assertThat(request(Map.of("all", "false", "allChildren", "true")).all()).isFalse();
+    assertThat(request(Map.of("all", " ", "allChildren", "true")).all()).isTrue();
+  }
+
+  private static PageTreeRequest request(Map<String, String> parameters) {
+    return new PageTreeRequest(PageTreeMacro.CHILDREN, null, parameters);
   }
 }

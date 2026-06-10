@@ -3,11 +3,11 @@ package dev.nthings.adf4j.internal.render;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 import dev.nthings.adf4j.extension.ExtensionContext;
 import dev.nthings.adf4j.metadata.AttachmentReference;
 import dev.nthings.adf4j.metadata.HeadingReference;
+import dev.nthings.adf4j.metadata.PageTreeReference;
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.BodiedExtension;
 import dev.nthings.adf4j.ast.BodiedSyncBlock;
@@ -20,7 +20,6 @@ import dev.nthings.adf4j.internal.AttachmentReferences;
 import dev.nthings.adf4j.internal.ConfluenceSupport;
 import dev.nthings.adf4j.internal.analyze.TocLevelRange;
 import dev.nthings.adf4j.options.PageTreeEntry;
-import dev.nthings.adf4j.options.PageTreeMacro;
 import dev.nthings.adf4j.options.PageTreeRequest;
 
 import org.slf4j.Logger;
@@ -55,8 +54,8 @@ final class MacroRenderer {
     }
 
     var rendered = switch (extensionKey != null ? extensionKey : "") {
-      case "children" -> renderChildren(macroParams, context);
-      case "pagetree" -> renderPageTree(macroParams, context);
+      case "children", "pagetree" ->
+          renderPageTreeMacro(ConfluenceSupport.pageTreeRequest(extensionKey, macroParams), context);
       case "toc" -> renderTocMacro(macroParams, context);
       case "anchor" -> HtmlFragments.anchor(ConfluenceSupport.anchorId(macroParams));
       case "iframe" -> renderIframeMacro(macroParams, context);
@@ -154,55 +153,36 @@ final class MacroRenderer {
         context.escapeParentheses());
   }
 
-  // Expand the child pages via the resolver, else the {{children}} / {{children:<depth>}} token.
-  private String renderChildren(MacroParams macroParams, RendererState context) {
-    var request =
-        new PageTreeRequest(PageTreeMacro.CHILDREN, rootParam(macroParams, "page"), macroParams.values());
-    var expanded = expandPageTree(request, context);
-    return expanded != null ? expanded : childrenToken(macroParams);
-  }
-
-  private String childrenToken(MacroParams macroParams) {
-    var all = allChildrenValue(macroParams);
-    if (all != null && "true".equalsIgnoreCase(all)) {
-      return "{{children}}";
-    }
-
-    var depth = macroParams.value("depth");
-    if (depth != null) {
-      try {
-        var parsed = Integer.parseInt(depth);
-        if (parsed > 0) {
-          return "{{children:" + parsed + "}}";
-        }
-      } catch (NumberFormatException _) {
-        // fall through to default
-      }
-    }
-    return "{{children}}";
-  }
-
-  // Expand the page tree via the resolver, else the {{pagetree}} / {{pagetree:<root>}} token.
-  private String renderPageTree(MacroParams macroParams, RendererState context) {
-    var request =
-        new PageTreeRequest(PageTreeMacro.PAGETREE, rootParam(macroParams, "root"), macroParams.values());
+  // Expand via the resolver, else the macro's placeholder token (recorded as unresolved).
+  private String renderPageTreeMacro(PageTreeRequest request, RendererState context) {
     var expanded = expandPageTree(request, context);
     if (expanded != null) {
       return expanded;
     }
-    var root = pageTreeRoot(macroParams);
-    return root == null ? "{{pagetree}}" : "{{pagetree:" + root + "}}";
+    return switch (request.macro()) {
+      case CHILDREN -> {
+        var depth = request.depth();
+        yield request.all() || depth.isEmpty()
+            ? "{{children}}"
+            : "{{children:" + depth.getAsInt() + "}}";
+      }
+      case PAGETREE -> {
+        var root = pageTreeRoot(request.root());
+        yield root == null ? "{{pagetree}}" : "{{pagetree:" + root + "}}";
+      }
+    };
   }
 
-  // The resolver's descendant pages as an indented bullet list, or null to fall back to the token (no
-  // resolver, it declines/throws, or nothing renderable).
+  // The resolver's entries as an indented bullet list ("" for an authoritative empty answer), or null
+  // to fall back to the token (no resolver, a null return, or a throw — recorded as unresolved).
   private String expandPageTree(PageTreeRequest request, RendererState context) {
     var resolver = context.pageTreeResolver();
-    if (resolver == null) {
-      return null;
-    }
-    var entries = CallbackGuards.guard("PageTreeResolver", () -> resolver.resolve(request), null);
-    if (entries == null || entries.isEmpty()) {
+    var entries = resolver == null
+        ? null
+        : CallbackGuards.guard("PageTreeResolver", () -> resolver.resolve(request), null);
+    if (entries == null) {
+      context.unresolvedTracker()
+          .recordPageTree(new PageTreeReference(request.macro(), request.root()));
       return null;
     }
 
@@ -215,44 +195,22 @@ final class MacroRenderer {
         lines.add(RenderBuffer.LIST_INDENT.repeat(entry.depth() - baseDepth) + "- " + label);
       }
     }
-    return lines.isEmpty() ? null : String.join("\n", lines);
+    return String.join("\n", lines);
   }
 
   // A link when the page id resolves, else the escaped (single-line) title; null when nothing renders.
   private String pageTreeLabel(PageTreeEntry entry, RendererState context) {
     var title = entry.title();
     var label = title == null ? "" : title.replaceAll("\\s+", " ").strip();
-    var href = resolvePage(entry.pageNodeId(), context);
+    var href = TextMarkRenderer.resolvePageId(entry.pageNodeId(), context.context());
     if (href != null) {
       return MarkdownText.link(label.isEmpty() ? href : label, href, context.escapeParentheses());
     }
     return label.isEmpty() ? null : MarkdownText.escapeInlineText(label, false, context.escapeParentheses());
   }
 
-  // The page id routed through the caller's PageLinkResolver (the hook used for inline page links), or
-  // null when there is no id/resolver or it declines.
-  private String resolvePage(String pageNodeId, RendererState context) {
-    var resolver = context.pageLinkResolver();
-    if (pageNodeId == null || pageNodeId.isBlank() || resolver == null) {
-      return null;
-    }
-    var resolved = CallbackGuards.guard("PageLinkResolver", () -> resolver.resolve(pageNodeId), null);
-    return resolved == null || resolved.isBlank() ? null : resolved;
-  }
-
-  // A macro root parameter (trimmed), or null for a blank or "@keyword" root.
-  private String rootParam(MacroParams macroParams, String name) {
-    var value = macroParams.value(name);
-    if (value == null) {
-      return null;
-    }
-    var trimmed = value.strip();
-    return trimmed.isEmpty() || trimmed.startsWith("@") ? null : trimmed;
-  }
-
-  // The {{pagetree:<root>}} token root: the "root" param with whitespace collapsed and braces dropped.
-  private String pageTreeRoot(MacroParams macroParams) {
-    var root = rootParam(macroParams, "root");
+  // The {{pagetree:<root>}} token root: the request root with whitespace collapsed and braces dropped.
+  private String pageTreeRoot(String root) {
     if (root == null) {
       return null;
     }
@@ -287,13 +245,6 @@ final class MacroRenderer {
       }
     }
     return String.join("\n", lines);
-  }
-
-  private String allChildrenValue(MacroParams macroParams) {
-    return Stream.of(macroParams.value("all"), macroParams.value("allChildren"))
-        .filter(s -> s != null && !s.isBlank())
-        .findFirst()
-        .orElse(null);
   }
 
   private String renderIframeMacro(MacroParams macroParams, RendererState context) {

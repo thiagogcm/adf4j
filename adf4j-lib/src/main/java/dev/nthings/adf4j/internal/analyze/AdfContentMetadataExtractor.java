@@ -14,6 +14,7 @@ import dev.nthings.adf4j.metadata.ExternalReference;
 import dev.nthings.adf4j.metadata.HeadingReference;
 import dev.nthings.adf4j.metadata.MentionReference;
 import dev.nthings.adf4j.metadata.PageReference;
+import dev.nthings.adf4j.metadata.PageTreeReference;
 import dev.nthings.adf4j.internal.AttachmentReferences;
 import dev.nthings.adf4j.internal.ConfluenceSupport;
 import dev.nthings.adf4j.ast.AdfBlock;
@@ -48,6 +49,8 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
   private final LinkedHashSet<String> externalRefs = new LinkedHashSet<>();
   private final LinkedHashSet<MentionReference> mentionRefs = new LinkedHashSet<>();
   private final LinkedHashMap<String, AttachmentRefBuilder> attachmentRefs = new LinkedHashMap<>();
+  // Occurrences, not a set: the count of tree macros is itself a signal.
+  private final ArrayList<PageTreeReference> pageTreeRefs = new ArrayList<>();
   private final Map<String, AttachmentReference> attachmentReferencesByTitle;
 
   AdfContentMetadataExtractor(Map<String, AttachmentReference> attachmentReferencesByTitle) {
@@ -104,6 +107,7 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
         externalRefs.stream().map(ExternalReference::new).toList(),
         List.copyOf(mentionRefs),
         attachments,
+        List.copyOf(pageTreeRefs),
         outline == null ? List.of() : List.copyOf(outline));
   }
 
@@ -177,8 +181,17 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
   }
 
   private void collectExtension(String extensionType, String extensionKey, MacroParams macroParams) {
-    if (!"com.atlassian.confluence.macro.core".equals(extensionType)
-        || !"viewpdf".equals(extensionKey)) {
+    if (!ConfluenceSupport.isConfluenceMacroExtension(extensionType)) {
+      return;
+    }
+
+    var pageTreeRequest = ConfluenceSupport.pageTreeRequest(extensionKey, macroParams);
+    if (pageTreeRequest != null) {
+      pageTreeRefs.add(new PageTreeReference(pageTreeRequest.macro(), pageTreeRequest.root()));
+      return;
+    }
+
+    if (!"viewpdf".equals(extensionKey)) {
       return;
     }
 

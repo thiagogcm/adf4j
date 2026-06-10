@@ -55,4 +55,42 @@ class PerCallOptionsTests {
     assertThat(converter.toMarkdown(FILE_MEDIA).strip())
         .isEqualTo("![diagram](bound/abc-123)");
   }
+
+  @Test
+  void a_document_parsed_once_renders_repeatedly_under_different_per_call_options() {
+    var converter = AdfToMarkdown.create();
+    var parsed = converter.parse(FILE_MEDIA);
+
+    var was = converter.convert(
+        parsed, MarkdownOptions.defaults().withMediaResolver(attrs -> "v1/" + attrs.id()));
+    var is = converter.convert(
+        parsed, MarkdownOptions.defaults().withMediaResolver(attrs -> "v2/" + attrs.id()));
+
+    assertThat(was.body().strip()).isEqualTo("![diagram](v1/abc-123)");
+    assertThat(is.body().strip()).isEqualTo("![diagram](v2/abc-123)");
+  }
+
+  @Test
+  void converting_a_parse_result_carries_its_parse_issues_into_each_render() {
+    var converter = AdfToMarkdown.create();
+    // Version 2 parses best-effort with an UNSUPPORTED_VERSION warning.
+    var parsed = converter.parse(
+        "{\"type\":\"doc\",\"version\":2,\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Hi\"}]}]}");
+
+    var result = converter.convert(parsed);
+
+    assertThat(result.body()).isEqualTo("Hi");
+    assertThat(result.diagnostics()).isEqualTo(parsed.issues());
+  }
+
+  @Test
+  void converting_an_invalid_parse_result_yields_an_empty_body_with_the_issues_preserved() {
+    var converter = AdfToMarkdown.create();
+    var parsed = converter.parse("{\"type\":\"paragraph\",\"version\":1,\"content\":[]}");
+
+    var result = converter.convert(parsed);
+
+    assertThat(result.body()).isEmpty();
+    assertThat(result.diagnostics()).isEqualTo(parsed.issues()).isNotEmpty();
+  }
 }

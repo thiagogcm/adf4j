@@ -99,18 +99,29 @@ final class TextMarkRenderer {
   }
 
   // The caller-resolved destination for an internal page href, or the original href when there is no
-  // PageLinkResolver, the href is not a page reference, or the resolver declines (null/blank).
+  // PageLinkResolver, the href is not a page reference, or the resolver declines.
   static String resolvePageHref(String href, Attributes attrs, RenderContext context) {
-    var resolver = context.pageLinkResolver();
-    if (resolver == null) {
+    if (context.pageLinkResolver() == null) {
       return href;
     }
-    var pageNodeId = ConfluenceSupport.pageNodeId(href, ConfluenceMetadata.from(attrs));
-    if (pageNodeId == null) {
-      return href;
+    var resolved =
+        resolvePageId(ConfluenceSupport.pageNodeId(href, ConfluenceMetadata.from(attrs)), context);
+    return resolved == null ? href : resolved;
+  }
+
+  // The resolver's destination for a page node id, or null when there is no id/resolver or it
+  // declines (null/blank/throw); a decline is recorded as an unresolved page ref.
+  static String resolvePageId(String pageNodeId, RenderContext context) {
+    var resolver = context.pageLinkResolver();
+    if (resolver == null || pageNodeId == null || pageNodeId.isBlank()) {
+      return null;
     }
     var resolved = CallbackGuards.guard("PageLinkResolver", () -> resolver.resolve(pageNodeId), null);
-    return (resolved == null || resolved.isBlank()) ? href : resolved;
+    if (resolved == null || resolved.isBlank()) {
+      context.unresolvedTracker().recordPageId(pageNodeId);
+      return null;
+    }
+    return resolved;
   }
 
   private static int canonicalRank(AdfMark mark) {

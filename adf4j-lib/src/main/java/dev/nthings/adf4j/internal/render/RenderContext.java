@@ -17,7 +17,8 @@ import dev.nthings.adf4j.internal.analyze.HeadingOutline;
 
 /**
  * Per-render configuration derived once from {@link MarkdownOptions}; the moving cursor lives in
- * {@link RendererState}. Mostly immutable, save the per-render {@link #macroDiagnostics()} sink.
+ * {@link RendererState}. Mostly immutable, save the per-render {@link #macroDiagnostics()} and
+ * {@link #unresolvedTracker()} sinks.
  */
 record RenderContext(
     HeadingOutline headingOutline,
@@ -33,7 +34,8 @@ record RenderContext(
     PageTreeResolver pageTreeResolver,
     boolean collapseHardBreaks,
     boolean escapeParentheses,
-    MacroDiagnostics macroDiagnostics) {
+    MacroDiagnostics macroDiagnostics,
+    UnresolvedTracker unresolvedTracker) {
 
   static RenderContext from(MarkdownOptions options, HeadingOutline headingOutline) {
     var requiredOptions = Objects.requireNonNull(options, "options");
@@ -53,6 +55,7 @@ record RenderContext(
         requiredOptions.pageTreeResolver(),
         requiredOptions.collapseHardBreaks(),
         requiredOptions.escapeParentheses(),
-        new MacroDiagnostics());
+        new MacroDiagnostics(),
+        new UnresolvedTracker());
   }
 }

@@ -19,13 +19,14 @@ import dev.nthings.adf4j.extension.ExtensionRenderer;
  * link; {@code null} keeps the {@code attachment:<fileId>} placeholder. {@code pageLinkResolver}
  * rewrites inter-page links/cards to caller-supplied destinations by page node id; {@code null} keeps
  * the original href. {@code pageTreeResolver} expands a {@code pagetree} macro into an indented list
- * of its descendant pages; {@code null} (or a resolver that declines) keeps the {@code {{pagetree}}}
- * placeholder token. {@code collapseHardBreaks} renders a hard break (Shift+Enter) as a soft break (a
+ * of its descendant pages; an empty (non-null) list renders as nothing, while {@code null} (or no
+ * resolver) keeps the {@code {{pagetree}}} placeholder token. {@code collapseHardBreaks} renders a hard break (Shift+Enter) as a soft break (a
  * plain newline) instead of the two-trailing-space GFM hard break, so the output has no trailing
  * whitespace and segments reflow into one paragraph (off by default). {@code documentTitle}, when set,
- * prepends the value as a level-1 ({@code # }) heading above the body ({@code null}/blank emits nothing);
- * it is render-only (not reflected in {@code ContentMetadata}) and not de-duplicated against an existing
- * leading heading. {@code escapeParentheses} backslash-escapes literal {@code (} and {@code )} in
+ * prepends the value as a level-1 ({@code # }) heading above the body ({@code null}/blank emits
+ * nothing); it is emitted even when the body is empty, blank, or fails to parse — a titled-but-empty
+ * document needs no synthetic ADF input — and is render-only (not reflected in
+ * {@code ContentMetadata}), not de-duplicated against an existing leading heading. {@code escapeParentheses} backslash-escapes literal {@code (} and {@code )} in
  * rendered text and image alt text; off by default, since the escapes are inert noise outside a link
  * destination.
  *

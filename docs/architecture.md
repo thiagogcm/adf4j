@@ -135,7 +135,7 @@ The three phases have distinct responsibilities and distinct outputs:
 
 A key structural decision is that **analysis precedes rendering and feeds it.** The renderer needs the document’s full heading outline before it emits the first line — a Table-of-Contents macro near the top of a document refers to headings further down, and heading anchors must be globally unique. Running a complete analysis pass first means the renderer is a pure forward walk with no need to look ahead or backpatch.
 
-`AdfToMarkdown` exposes the pipeline phases selectively. `parse()` runs phase 1 only; `analyze()` runs phases 1–2 (no rendering); `convert()`/`toMarkdown()` run all three. `analyze()` and `convert()` accept either a JSON string or a pre-parsed `AdfDocument` (so a document can be analyzed and rendered without re-parsing), while `parse()` and `toMarkdown()` take the JSON string. The `convert`, `analyze`, and `toMarkdown` forms each accept per-call `MarkdownOptions` to override the converter’s bound options without rebuilding anything.
+`AdfToMarkdown` exposes the pipeline phases selectively. `parse()` runs phase 1 only; `analyze()` runs phases 1–2 (no rendering); `convert()`/`toMarkdown()` run all three. `analyze()` and `convert()` accept either a JSON string or a pre-parsed input (so a document can be analyzed and rendered repeatedly without re-parsing): `convert()` takes the `ParseResult` itself — carrying its parse issues into each render — or a bare `AdfDocument`, and `analyze()` takes an `AdfDocument`; `parse()` and `toMarkdown()` take the JSON string. The `convert`, `analyze`, and `toMarkdown` forms each accept per-call `MarkdownOptions` to override the converter’s bound options without rebuilding anything.
 
 The three phases’ diagnostics are concatenated in pipeline order — parse issues first, then analyze-phase lossiness, then render-phase macro warnings — into the single `MarkdownResult.diagnostics()` list.
 
@@ -240,14 +240,14 @@ flowchart TB
 The walker is an exhaustive `switch` over the sealed block/inline types (no `default` clause — the compiler guarantees every type is visited), descending pre-order into children and invoking each visitor before recursion. Visitors are pure accumulators: they observe nodes in document order and never re-walk the tree. The three default collectors are:
 
 - **`AdfHeadingCollector`** builds the `HeadingOutline`. It clamps heading levels to 1–6, extracts plain text from each heading’s inline content, and assigns an anchor — an explicit Confluence anchor macro if present, otherwise a generated slug made unique across the document (`section`, `section-1`, …). It also records which heading levels are referenced by any `toc` macro (`TocLevelRange`), so the renderer can later build the table of contents over exactly the requested levels. The outline indexes headings by AST node identity (`IdentityHashMap`) so the renderer can look up a heading’s computed anchor in O(1) during its forward pass.
-- **`AdfContentMetadataExtractor`** harvests outbound references — internal page links and page cards (`PageReference`), external links (`ExternalReference`), mentions (`MentionReference`), and attachments/media (`AttachmentReference`) — deduplicating each in first-seen order. It uses the `ConfluenceRenderContext` (carried on the options) to resolve attachment macros such as `viewpdf` against the caller-supplied attachment table.
+- **`AdfContentMetadataExtractor`** harvests outbound references — internal page links and page cards (`PageReference`), external links (`ExternalReference`), mentions (`MentionReference`), attachments/media (`AttachmentReference`), and `pagetree`/`children` macro occurrences (`PageTreeReference`) — deduplicating each in first-seen order (tree macros keep every occurrence, since their count is itself a signal). It uses the `ConfluenceRenderContext` (carried on the options) to resolve attachment macros such as `viewpdf` against the caller-supplied attachment table.
 - **`AdfLossinessCollector`** counts unknown nodes and unknown marks and turns them into diagnostics according to the active `UnknownNodePolicy`.
 
 The three outputs are bundled into a `DocumentAnalysis` record. Crucially, `ContentMetadata` is a *first-class deliverable*, not an internal artifact: callers can run `analyze()` on its own to plan work — most importantly, `ContentMetadata.referencedFileIds()` returns the set of attachment file IDs a document depends on, so an integrator can pre-fetch exactly those binaries before (or instead of) rendering.
 
 ### The metadata model
 
-`ContentMetadata` aggregates five immutable lists:
+`ContentMetadata` aggregates six immutable lists:
 
 ```mermaid
 classDiagram
@@ -256,6 +256,7 @@ classDiagram
         +List~ExternalReference~ externalRefs
         +List~MentionReference~ mentionRefs
         +List~AttachmentReference~ attachmentRefs
+        +List~PageTreeReference~ pageTreeRefs
         +List~HeadingReference~ outline
         +Set~String~ referencedFileIds()
     }
@@ -274,6 +275,10 @@ classDiagram
         +String title
         +String mediaType
     }
+    class PageTreeReference {
+        +PageTreeMacro macro
+        +String root
+    }
     class HeadingReference {
         +int level
         +String text
@@ -283,6 +288,7 @@ classDiagram
     ContentMetadata o-- ExternalReference
     ContentMetadata o-- MentionReference
     ContentMetadata o-- AttachmentReference
+    ContentMetadata o-- PageTreeReference
     ContentMetadata o-- HeadingReference
 ```
 
@@ -302,7 +308,7 @@ The renderer transforms the AST plus the precomputed heading outline into a Mark
 
 State is threaded through the recursion as two records:
 
-- **`RenderContext`** — the per-conversion configuration (resolvers, flags, the heading outline) plus the one mutable sink, `MacroDiagnostics`, that collects unsupported-macro warnings. Built once from `MarkdownOptions`.
+- **`RenderContext`** — the per-conversion configuration (resolvers, flags, the heading outline) plus two mutable sinks: `MacroDiagnostics`, which collects unsupported-macro warnings, and `UnresolvedTracker`, which records the lookups the caller's resolvers declined (surfaced as `MarkdownResult.unresolved()`). Built once from `MarkdownOptions`.
 - **`RendererState`** — an *immutable cursor* carrying the `RenderContext` plus the current `listDepth`, `tableCell` kind, and an `inHeading` flag. Descending into a list, a cell, or a heading produces a *new* `RendererState` (`withListDepth`, `withTableCell`, `withHeading`) rather than mutating shared state. This keeps the renderer re-entrant and makes context-sensitive escaping (a hard break means different things in a heading, a table cell, and body text) a matter of reading the current state.
 
 The work is delegated to focused per-construct renderers — `TableRenderer`/`HtmlTableRenderer`, `ListRenderer`, `CardRenderer`, `MacroRenderer`, `MediaRenderer`, and `TextMarkRenderer` — coordinated through the `BlockRecursion` interface so any of them can recurse back into arbitrary block/inline content.
@@ -357,7 +363,7 @@ sequenceDiagram
     alt hook returns a value
         H-->>R: resolved URL / page tree / Markdown
         R->>R: use resolved value
-    else returns null/empty, or throws
+    else returns null (or empty, for the string-valued hooks), or throws
         H-->>R: (declined / RuntimeException logged)
         R->>R: fall back to placeholder / original / built-in
     end
@@ -370,7 +376,7 @@ sequenceDiagram
 | `MediaResolver` | `String resolve(MediaAttrs)` | File media nodes (which carry ids, not URLs) | `null`/blank → `media:<collection>/<id>` placeholder |
 | `AttachmentResolver` | `String resolve(AttachmentReference)` | Resolved Confluence `attachment:` references | `null`/blank → `attachment:<fileId>` placeholder |
 | `PageLinkResolver` | `String resolve(String pageNodeId)` | Inter-page links, page cards, and page-tree entries | `null`/blank → original href / plain text |
-| `PageTreeResolver` | `List<PageTreeEntry> resolve(PageTreeRequest)` | `pagetree` / `children` macros | `null`/empty/throws → `{{pagetree}}` / `{{children}}` token |
+| `PageTreeResolver` | `List<PageTreeEntry> resolve(PageTreeRequest)` | `pagetree` / `children` macros | `null`/throws → `{{pagetree}}` / `{{children}}` token; an empty list is authoritative and renders nothing |
 | `ExtensionRenderer` | `Optional<String> render(ExtensionContext)` | Any extension/macro, consulted in order before built-ins | `Optional.empty()`/throws → next renderer, then built-in handling |
 
 Two design choices make this model robust:
@@ -383,7 +389,7 @@ Two design choices make this model robust:
 `adf4j` reports problems as data, not (mostly) as exceptions. Three result types carry the information:
 
 - **`ParseResult`** (`parse()`) — the parsed `AdfDocument` (null on blank/invalid input), the list of `ParseIssue`s, and a `validAdfRoot` flag.
-- **`MarkdownResult`** (`convert()`) — the Markdown `body`, the `ContentMetadata`, and the merged `diagnostics` list.
+- **`MarkdownResult`** (`convert()`) — the Markdown `body`, the `ContentMetadata`, the merged `diagnostics` list, and the `unresolved` references (lookups this render's resolvers declined: page ids a `PageLinkResolver` returned nothing for, and tree macros that fell back to their placeholder token).
 - **`ParseIssue`** — a `code`, human `message`, optional `cause`, and a `Severity` of `INFO`, `WARNING`, or `ERROR`.
 
 The severity ladder is the contract for “did this convert cleanly?”:

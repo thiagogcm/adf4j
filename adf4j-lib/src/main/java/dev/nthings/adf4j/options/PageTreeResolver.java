@@ -9,8 +9,9 @@ import java.util.List;
  * macros apart.
  *
  * <p>Return the pages as a flat, depth-tagged {@link PageTreeEntry} list (rendered as an indented
- * Markdown bullet list), or {@code null}/empty to decline — declining, or throwing, falls back to the
- * {@code {{pagetree}}} / {@code {{children}}} placeholder token.
+ * Markdown bullet list). A non-null result is authoritative: an empty list means "this page has no
+ * descendants" and renders as nothing. Return {@code null} (or throw) to decline — only that falls
+ * back to the {@code {{pagetree}}} / {@code {{children}}} placeholder token.
  */
 @FunctionalInterface
 public interface PageTreeResolver {

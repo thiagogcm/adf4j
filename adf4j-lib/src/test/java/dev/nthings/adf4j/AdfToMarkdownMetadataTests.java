@@ -8,7 +8,9 @@ import dev.nthings.adf4j.metadata.ExternalReference;
 import dev.nthings.adf4j.metadata.HeadingReference;
 import dev.nthings.adf4j.metadata.MentionReference;
 import dev.nthings.adf4j.metadata.PageReference;
+import dev.nthings.adf4j.metadata.PageTreeReference;
 import dev.nthings.adf4j.options.MarkdownOptions;
+import dev.nthings.adf4j.options.PageTreeMacro;
 
 import org.junit.jupiter.api.Test;
 
@@ -107,6 +109,49 @@ class AdfToMarkdownMetadataTests {
 
     // The external media contributes no file id; only the two embedded attachments are referenced.
     assertThat(metadata.referencedFileIds()).containsExactly("asset-1", "asset-2");
+  }
+
+  @Test
+  void extract_lists_each_page_tree_macro_occurrence_with_its_normalized_root() throws Exception {
+    var metadata = testSupport.processor()
+        .convert(
+            testSupport.parseDocument(
+                """
+                {
+                  "type": "doc",
+                  "version": 1,
+                  "content": [
+                    {
+                      "type": "extension",
+                      "attrs": {
+                        "extensionType": "com.atlassian.confluence.macro.core",
+                        "extensionKey": "pagetree",
+                        "parameters": { "macroParams": { "root": { "value": "Docs Home" } } }
+                      }
+                    },
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "type": "inlineExtension",
+                          "attrs": {
+                            "extensionType": "com.atlassian.confluence.macro.core",
+                            "extensionKey": "children",
+                            "parameters": { "macroParams": { "page": { "value": "@self" } } }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+                """))
+        .metadata();
+
+    // The keyword root normalizes to null, the same way PageTreeRequest.root() reports it.
+    assertThat(metadata.pageTreeRefs())
+        .containsExactly(
+            new PageTreeReference(PageTreeMacro.PAGETREE, "Docs Home"),
+            new PageTreeReference(PageTreeMacro.CHILDREN, null));
   }
 
   @Test

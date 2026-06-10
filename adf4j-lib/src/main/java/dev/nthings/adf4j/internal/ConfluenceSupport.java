@@ -5,6 +5,8 @@ import java.util.stream.Stream;
 
 import dev.nthings.adf4j.ast.MacroParams;
 import dev.nthings.adf4j.confluence.ConfluenceMetadata;
+import dev.nthings.adf4j.options.PageTreeMacro;
+import dev.nthings.adf4j.options.PageTreeRequest;
 
 public final class ConfluenceSupport {
 
@@ -62,6 +64,32 @@ public final class ConfluenceSupport {
       return null;
     }
     return inferredNodeId != null ? inferredNodeId : metadataNodeId;
+  }
+
+  /**
+   * The {@link PageTreeRequest} for a {@code pagetree}/{@code children} macro, or {@code null} for any
+   * other extension key. The single place the macro's root parameter ({@code root} for pagetree,
+   * {@code page} for children) is normalized, shared by rendering and metadata extraction.
+   */
+  public static PageTreeRequest pageTreeRequest(String extensionKey, MacroParams macroParams) {
+    var params = macroParams == null ? MacroParams.empty() : macroParams;
+    return switch (extensionKey != null ? extensionKey : "") {
+      case "pagetree" ->
+          new PageTreeRequest(PageTreeMacro.PAGETREE, rootParam(params, "root"), params.values());
+      case "children" ->
+          new PageTreeRequest(PageTreeMacro.CHILDREN, rootParam(params, "page"), params.values());
+      default -> null;
+    };
+  }
+
+  // A macro root parameter (trimmed), or null for a blank or "@keyword" root.
+  private static String rootParam(MacroParams macroParams, String name) {
+    var value = macroParams.value(name);
+    if (value == null) {
+      return null;
+    }
+    var trimmed = value.strip();
+    return trimmed.isEmpty() || trimmed.startsWith("@") ? null : trimmed;
   }
 
   public static String anchorId(MacroParams macroParams) {

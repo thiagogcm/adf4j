@@ -16,6 +16,14 @@ import dev.nthings.adf4j.result.ParseResult;
  * converter and pass them to the per-call {@link #convert(String, MarkdownOptions)} overload instead
  * of building a new converter each time. For the zero-config one-liner, see {@link Adf}.
  *
+ * <p>To render the same document repeatedly (e.g. under different resolvers), parse once and reuse the
+ * immutable result instead of paying the JSON parse per render:
+ * {@snippet :
+ * var parsed = converter.parse(adfJson);
+ * var was = converter.convert(parsed, optionsAtT1);
+ * var is = converter.convert(parsed, optionsAtT2);
+ * }
+ *
  * <p>The target is GitHub-Flavored Markdown. Some ADF constructs are lossy or by-design (dropped
  * visual marks, the table HTML fallback, synthetic {@code media:} placeholders, and the fact that
  * URL schemes are emitted verbatim and are <em>not</em> sanitized). These behaviors and the
@@ -81,8 +89,24 @@ public final class AdfToMarkdown {
   }
 
   /**
+   * Converts a previously {@link #parse(String) parsed} document to Markdown using the bound options,
+   * carrying the parse issues into the result's diagnostics — render one {@link ParseResult} any
+   * number of times without re-parsing. A {@code null}/invalid result yields an empty body (plus the
+   * configured {@code documentTitle}, if any) with the parse issues preserved.
+   */
+  public MarkdownResult convert(ParseResult parsed) {
+    return pipeline.convert(parsed, options);
+  }
+
+  /** Converts a previously parsed {@link ParseResult} with options supplied for this call. */
+  public MarkdownResult convert(ParseResult parsed, MarkdownOptions perCallOptions) {
+    return pipeline.convert(parsed, Objects.requireNonNull(perCallOptions, "options"));
+  }
+
+  /**
    * Converts an already-parsed {@link AdfDocument} to Markdown using the bound options. A {@code null}
-   * document yields an empty-body {@link MarkdownResult}.
+   * document yields an empty-body {@link MarkdownResult}. Prefer {@link #convert(ParseResult)} when
+   * the document came from {@link #parse(String)}, so its parse issues reach the result.
    */
   public MarkdownResult convert(AdfDocument document) {
     return pipeline.convert(document, options);

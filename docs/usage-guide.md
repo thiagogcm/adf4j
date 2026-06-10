@@ -129,7 +129,7 @@ String markdown = converter.toMarkdown(adfJson);
 | `analyze(json)` | parse → analyze | `ContentMetadata` | You want references/outline **without** rendering |
 | `parse(json)` | parse | `ParseResult` | You want the typed AST and structural diagnostics |
 
-`convert` and `analyze` also accept an already-parsed `AdfDocument` (to skip re-parsing); `toMarkdown` is a String-only convenience — use `convert(doc).body()` for a parsed document. All of `convert`, `analyze`, and `toMarkdown` accept a per-call `MarkdownOptions`.
+`convert` also accepts the `ParseResult` itself — parse once, render many times, with the parse issues carried into each result (see [Working with the parsed AST](#working-with-the-parsed-ast)). `convert` and `analyze` also accept an already-parsed `AdfDocument`; `toMarkdown` is a String-only convenience — use `convert(doc).body()` for a parsed document. All of `convert`, `analyze`, and `toMarkdown` accept a per-call `MarkdownOptions`.
 
 ## Configuring a conversion
 
@@ -163,7 +163,7 @@ The rest of this guide shows each feature in isolation. For the canonical refere
 
 ## Inspecting the result
 
-`convert(...)` returns a `MarkdownResult` carrying the body, the extracted `ContentMetadata`, and a list of diagnostics. Use `wasLossy()` to decide whether the conversion lost anything that matters:
+`convert(...)` returns a `MarkdownResult` carrying the body, the extracted `ContentMetadata`, a list of diagnostics, and the `unresolved()` lookups this render's resolvers declined. Use `wasLossy()` to decide whether the conversion lost anything that matters:
 
 ```java
 import dev.nthings.adf4j.result.MarkdownResult;
@@ -183,6 +183,8 @@ if (result.wasLossy()) {
 ```
 
 `wasLossy()` is true only when a diagnostic is `WARNING` or `ERROR` — content that was dropped or altered, or a structural parse failure. It deliberately ignores *by-design, options-driven* outcomes (placeholders when you set no resolver, dropped visual marks, the table HTML fallback) — see the [lossy and by-design behaviours](./markdown-conversion.md#lossy-and-by-design-behaviours) for the full catalogue. Gate on `wasLossy()` (or on each issue’s `severity()`), not on “any diagnostic present”.
+
+`result.unresolved()` reports, per conversion, what the active resolvers were asked for and declined — no decorator-wrapping of your resolvers needed: `pageIds()` are the page node ids a configured `pageLinkResolver` returned nothing for, and `pageTreeRefs()` are the `pagetree`/`children` macros that fell back to their placeholder token. An empty `unresolved()` means this render left no declined-lookup artifacts in the output.
 
 ## Planning attachment fetches before rendering
 
@@ -207,7 +209,7 @@ String markdown = converter.toMarkdown(adfJson, options);
 
 > **Attachment macros need a context to be counted.** Media-node file ids are always collected, but a Confluence attachment macro (e.g. *view file* / `viewpdf`) contributes its file id to `referencedFileIds()` **only when its title resolves against a `ConfluenceRenderContext`**. If your documents use attachment macros, analyze with the context supplied — `converter.analyze(adfJson, optionsWithContext)` — or those ids will be silently absent from the fetch plan. See [Resolving media and attachments](#resolving-media-and-attachments-to-real-urls) for building the context.
 
-`ContentMetadata` also exposes the document’s outbound page links (`pageRefs()`), external links (`externalRefs()`), mentions (`mentionRefs()`), and a heading outline (`outline()` — each `HeadingReference` carries `level`, `text`, and a unique `anchor`). This is handy for building a link graph, a search index, or a navigation sidebar without rendering anything.
+`ContentMetadata` also exposes the document’s outbound page links (`pageRefs()`), its `pagetree`/`children` macro occurrences (`pageTreeRefs()` — each with the macro kind and its normalized root), external links (`externalRefs()`), mentions (`mentionRefs()`), and a heading outline (`outline()` — each `HeadingReference` carries `level`, `text`, and a unique `anchor`). This is handy for building a link graph, a search index, or a navigation sidebar without rendering anything — and `pageRefs()` plus `pageTreeRefs()` classify a document up front: both empty means it is self-contained, needing no page hierarchy or link resolution to render fully.
 
 ## Resolving media and attachments to real URLs
 
@@ -274,15 +276,16 @@ MarkdownOptions options = MarkdownOptions.defaults()
     .withPageLinkResolver(pageUrls::get)   // entry pageNodeIds route through this for their links
     .withPageTreeResolver(request -> {
         // request.macro() is PAGETREE or CHILDREN; request.root() is the starting page id
-        // (null when absent/@self); request.parameters() holds depth, all, startDepth, ...
-        boolean wholeTree = request.macro() == PageTreeMacro.PAGETREE;
-        return myHierarchy.descendants(request.root(), wholeTree).stream()
+        // (null when absent/@self); request.depth() and request.all() are the standard macro
+        // parameters pre-parsed; request.parameters() holds the raw map (startDepth, ...).
+        boolean wholeTree = request.macro() == PageTreeMacro.PAGETREE || request.all();
+        return myHierarchy.descendants(request.root(), wholeTree, request.depth().orElse(1)).stream()
             .map(p -> new PageTreeEntry(p.depth(), p.title(), p.id()))
             .toList();
     });
 ```
 
-Each entry’s `depth` (0-based) drives indentation, `title` becomes the visible label (Markdown-escaped for you), and `pageNodeId` is routed through your `pageLinkResolver` to produce the link — an entry whose id does not resolve renders as plain text. Returning an empty list, `null`, or throwing leaves the placeholder token in place (the base `{{pagetree}}` / `{{children}}`, or a parameterized `{{pagetree:<root>}}` / `{{children:<depth>}}` form).
+Each entry’s `depth` (0-based) drives indentation, `title` becomes the visible label (Markdown-escaped for you), and `pageNodeId` is routed through your `pageLinkResolver` to produce the link — an entry whose id does not resolve renders as plain text. A non-null return is authoritative: an **empty list means "this page has no descendants"** and renders as nothing, keeping the output clean. Returning `null`, or throwing, declines and leaves the placeholder token in place (the base `{{pagetree}}` / `{{children}}`, or a parameterized `{{pagetree:<root>}}` / `{{children:<depth>}}` form); each macro that fell back this way is listed in `MarkdownResult.unresolved().pageTreeRefs()`.
 
 ## Rendering custom macros and extensions
 
@@ -366,17 +369,27 @@ Tables that pipe syntax genuinely cannot express — colspan/rowspan, a number c
 <table><tr><th colspan="2">Wide header</th></tr><tr><td rowspan="2">group</td><td>left</td></tr><tr><td>right</td></tr></table>
 ```
 
-The `documentTitle` is render-only (it is not reflected in `ContentMetadata`) and is not de-duplicated against a heading the body may already contain.
+The `documentTitle` is render-only (it is not reflected in `ContentMetadata`) and is not de-duplicated against a heading the body may already contain. It is emitted even when the body is empty, blank, or fails to parse, so producing a titled-but-empty document requires no synthetic empty ADF input.
 
 ## Working with the parsed AST
 
-To inspect structure or convert the same document more than once without re-parsing, parse to an `AdfDocument` and pass it to `analyze`/`convert`:
+To inspect structure or convert the same document more than once without re-parsing, parse once and reuse the immutable `ParseResult`. `convert(ParseResult, ...)` carries the parse issues into each result's diagnostics and handles blank/invalid input the same way `convert(json)` does — the natural fit for rendering one document N times under different options or resolver states:
 
 ```java
-import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.result.ParseResult;
 
 ParseResult parsed = converter.parse(adfJson);
+
+// Render the same parsed tree under different resolver states, paying the JSON parse once.
+MarkdownResult asOfJanuary = converter.convert(parsed, januaryOptions);
+MarkdownResult asOfToday = converter.convert(parsed, todayOptions);
+```
+
+For direct AST work, the parsed `AdfDocument` itself is also accepted by `analyze`/`convert` (note these overloads carry no parse diagnostics — prefer the `ParseResult` overload when you want them):
+
+```java
+import dev.nthings.adf4j.ast.AdfDocument;
+
 if (parsed.validAdfRoot()) {
     AdfDocument doc = parsed.document();
 
@@ -505,7 +518,7 @@ A scannable map of how each ADF construct is rendered with default options. Anch
 | A table rendered as raw HTML `<table>` | The table uses colspan/rowspan, a number column, block-level cell content, or a non-canonical header — none expressible in GFM pipe syntax, so it falls back to HTML by design. See [Tables](#tables-visual-marks-and-other-formatting-toggles). |
 | Coloured/highlighted text lost its styling | Visual-only marks have no GFM equivalent and are dropped by default. Enable [`htmlVisualMarks`](#tables-visual-marks-and-other-formatting-toggles) to preserve them as inline HTML. |
 | An `[Extension: type/key]` placeholder appears | A macro has no built-in or custom renderer. Register an [`ExtensionRenderer`](#rendering-custom-macros-and-extensions) for it. |
-| A `{{pagetree}}` / `{{children}}` token appears | These macros are resolved server-side by Confluence; the ADF carries no page list. Supply a [`pageTreeResolver`](#expanding-page-tree-and-children-macros). |
+| A `{{pagetree}}` / `{{children}}` token appears | These macros are resolved server-side by Confluence; the ADF carries no page list. Supply a [`pageTreeResolver`](#expanding-page-tree-and-children-macros) — and return an empty list (not `null`) for a page that genuinely has no descendants, which renders as nothing. Fallbacks are listed in `result.unresolved().pageTreeRefs()`. |
 | `referencedFileIds()` is missing an attachment | Attachment-*macro* ids only appear when their title resolves against a `ConfluenceRenderContext` passed to `analyze`. See [Planning attachment fetches](#planning-attachment-fetches-before-rendering). |
 | Internal page links still point at Confluence | Supply a [`pageLinkResolver`](#rewriting-inter-page-links) to rewrite them to your destinations. |
 | `wasLossy()` is `true` but the output looks fine | A `WARNING`/`ERROR` diagnostic was raised (e.g. an unsupported macro or a dropped unknown mark). Inspect `diagnostics()` for the `code`/`message`. By-design placeholders and dropped visual marks do **not** set this flag. |
@@ -513,7 +526,7 @@ A scannable map of how each ADF construct is rendered with default options. Anch
 
 ## Edge cases and robustness
 
-- **Blank or invalid input** never throws: `convert` returns a `MarkdownResult` with an empty body, `analyze` returns `ContentMetadata.empty()`, and `parse` returns a `ParseResult` whose `validAdfRoot()` is `false`. A `null` `AdfDocument` is treated the same way. (The one hard-failure mode is unrelated: `UnknownNodePolicy.FAIL` throws `IllegalStateException` from `convert`/`toMarkdown` when an *unknown node is rendered* — invalid input short-circuits in the parser before rendering, so it never reaches that path; `parse`/`analyze` never throw under `FAIL` either.)
+- **Blank or invalid input** never throws: `convert` returns a `MarkdownResult` with an empty body (plus the configured `documentTitle` heading, if any), `analyze` returns `ContentMetadata.empty()`, and `parse` returns a `ParseResult` whose `validAdfRoot()` is `false`. A `null` `AdfDocument` is treated the same way. (The one hard-failure mode is unrelated: `UnknownNodePolicy.FAIL` throws `IllegalStateException` from `convert`/`toMarkdown` when an *unknown node is rendered* — invalid input short-circuits in the parser before rendering, so it never reaches that path; `parse`/`analyze` never throw under `FAIL` either.)
 - **Adversarial input** is bounded: deeply-nested JSON surfaces as an `INVALID_JSON` diagnostic (empty body) rather than overflowing the stack.
 - **URL safety**: link, card, media, and macro destinations are scheme-sanitized — `javascript:`, `data:`, and similar non-allow-listed schemes are defused. The one exception is `ExtensionRenderer` output, which is emitted verbatim. See [URL handling and safety](./markdown-conversion.md#url-handling-and-safety).
 - **Caller callbacks are sandboxed**: a `RuntimeException` from any resolver or extension renderer is logged and the conversion falls back to default behaviour rather than failing.

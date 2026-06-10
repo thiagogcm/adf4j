@@ -7,6 +7,7 @@ import java.util.Objects;
 import java.util.stream.Stream;
 
 import dev.nthings.adf4j.options.MarkdownOptions;
+import dev.nthings.adf4j.result.UnresolvedReferences;
 import dev.nthings.adf4j.internal.AdfText;
 import dev.nthings.adf4j.internal.analyze.HeadingContent;
 import dev.nthings.adf4j.internal.analyze.HeadingOutline;
@@ -131,17 +132,21 @@ public final class AdfRenderer implements BlockRecursion {
 
   public RenderOutput render(
       AdfDocument document, MarkdownOptions options, HeadingOutline headingOutline) {
+    var requiredOptions = Objects.requireNonNull(options, "options");
     if (document == null) {
-      return new RenderOutput("", List.of());
+      return new RenderOutput(
+          prependTitle("", requiredOptions.documentTitle(), requiredOptions.escapeParentheses()),
+          List.of(),
+          UnresolvedReferences.empty());
     }
 
-    var requiredOptions = Objects.requireNonNull(options, "options");
     var outline = headingOutline == null ? HeadingOutline.empty() : headingOutline;
     var context = RendererState.root(requiredOptions, outline);
     var body = joinBlocks(renderBlocks(document.content(), context));
     return new RenderOutput(
         prependTitle(body, requiredOptions.documentTitle(), requiredOptions.escapeParentheses()),
-        context.macroDiagnostics());
+        context.macroDiagnostics(),
+        context.unresolvedTracker().build());
   }
 
   // Prepends the optional documentTitle as a level-1 heading, blank-line separated from the body.

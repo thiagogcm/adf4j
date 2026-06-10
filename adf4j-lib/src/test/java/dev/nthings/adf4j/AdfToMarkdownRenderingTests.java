@@ -549,11 +549,17 @@ class AdfToMarkdownRenderingTests {
   }
 
   @Test
-  void document_title_is_omitted_when_the_document_fails_to_parse() {
+  void document_title_is_emitted_even_when_the_input_is_blank_or_fails_to_parse() {
     var titled = AdfToMarkdown.with(MarkdownOptions.defaults().withDocumentTitle("My Page"));
-    // An invalid root and blank input short-circuit before the renderer, so no title is emitted.
-    assertThat(titled.toMarkdown("{\"type\":\"paragraph\",\"version\":1,\"content\":[]}")).isEmpty();
-    assertThat(titled.toMarkdown("   ")).isEmpty();
+    // A titled-but-empty document needs no synthetic empty ADF doc as input.
+    assertThat(titled.toMarkdown("{\"type\":\"paragraph\",\"version\":1,\"content\":[]}"))
+        .isEqualTo("# My Page");
+    assertThat(titled.toMarkdown("   ")).isEqualTo("# My Page");
+
+    // The invalid root still surfaces as a diagnostic alongside the titled body.
+    var invalid = titled.convert("{\"type\":\"paragraph\",\"version\":1,\"content\":[]}");
+    assertThat(invalid.body()).isEqualTo("# My Page");
+    assertThat(invalid.diagnostics()).isNotEmpty();
   }
 
   @Test

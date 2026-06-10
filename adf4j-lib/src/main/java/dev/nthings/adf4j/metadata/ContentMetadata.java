@@ -14,22 +14,30 @@ import java.util.Set;
  * the references supplied via {@code ConfluenceRenderContext.withAttachmentReferences(...)}. Seed that
  * context before pruning downloads, or a macro-only attachment is silently absent even though the body
  * links it.
+ *
+ * <p>{@code pageRefs} and {@code pageTreeRefs} together classify a document's page dependencies:
+ * {@code pageRefs} are the distinct page node ids the body links to, and {@code pageTreeRefs} lists
+ * every {@code pagetree}/{@code children} macro occurrence (empty means the document needs no page
+ * hierarchy to render fully). Both are static document facts; which lookups a render's resolvers
+ * actually declined is reported per conversion on {@code MarkdownResult.unresolved()}.
  */
 public record ContentMetadata(
     List<PageReference> pageRefs,
     List<ExternalReference> externalRefs,
     List<MentionReference> mentionRefs,
     List<AttachmentReference> attachmentRefs,
+    List<PageTreeReference> pageTreeRefs,
     List<HeadingReference> outline) {
 
   private static final ContentMetadata EMPTY =
-      new ContentMetadata(List.of(), List.of(), List.of(), List.of(), List.of());
+      new ContentMetadata(List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
 
   public ContentMetadata {
     pageRefs = pageRefs == null ? List.of() : List.copyOf(pageRefs);
     externalRefs = externalRefs == null ? List.of() : List.copyOf(externalRefs);
     mentionRefs = mentionRefs == null ? List.of() : List.copyOf(mentionRefs);
     attachmentRefs = attachmentRefs == null ? List.of() : List.copyOf(attachmentRefs);
+    pageTreeRefs = pageTreeRefs == null ? List.of() : List.copyOf(pageTreeRefs);
     outline = outline == null ? List.of() : List.copyOf(outline);
   }
 
