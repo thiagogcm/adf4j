@@ -14,7 +14,6 @@ module dev.nthings.adf4j {
 
   exports dev.nthings.adf4j;
   exports dev.nthings.adf4j.ast;
-  exports dev.nthings.adf4j.extension;
   exports dev.nthings.adf4j.options;
   exports dev.nthings.adf4j.result;
   exports dev.nthings.adf4j.metadata;

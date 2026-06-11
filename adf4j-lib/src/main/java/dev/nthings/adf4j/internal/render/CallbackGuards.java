@@ -24,4 +24,13 @@ final class CallbackGuards {
       return fallback;
     }
   }
+
+  /**
+   * Runs a string-valued resolver under {@link #guard} and applies the shared decline rule: a null
+   * or blank return (or a throw) means "declined" and comes back as {@code null}.
+   */
+  static String guardNonBlank(String callbackName, Supplier<String> call) {
+    var resolved = guard(callbackName, call, null);
+    return resolved == null || resolved.isBlank() ? null : resolved;
+  }
 }

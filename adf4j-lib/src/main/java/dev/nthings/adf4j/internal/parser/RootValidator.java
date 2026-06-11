@@ -4,47 +4,47 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-import dev.nthings.adf4j.result.ParseIssue;
-import dev.nthings.adf4j.result.ParseIssue.Severity;
+import dev.nthings.adf4j.result.Diagnostic;
+import dev.nthings.adf4j.result.Diagnostic.Severity;
 
 import tools.jackson.databind.JsonNode;
 
-/** Validates the ADF root node, reporting structural problems as {@link ParseIssue}s. */
+/** Validates the ADF root node, reporting structural problems as {@link Diagnostic}s. */
 final class RootValidator {
 
   private RootValidator() {
   }
 
-  static List<ParseIssue> validate(JsonNode document) {
+  static List<Diagnostic> validate(JsonNode document) {
     if (document == null) {
-      return List.of(new ParseIssue("MISSING_DOCUMENT", "ADF document is null.", null));
+      return List.of(new Diagnostic("MISSING_DOCUMENT", "ADF document is null.", null));
     }
 
-    var issues = new ArrayList<ParseIssue>();
+    var issues = new ArrayList<Diagnostic>();
     if (!document.isObject()) {
-      issues.add(new ParseIssue("INVALID_ROOT_TYPE", "ADF root must be an object.", null));
+      issues.add(new Diagnostic("INVALID_ROOT_TYPE", "ADF root must be an object.", null));
       return List.copyOf(issues);
     }
 
     var type = document.path("type").asString(null);
     if (!Objects.equals("doc", type)) {
-      issues.add(new ParseIssue("INVALID_ROOT_NODE", "ADF root node must have type 'doc'.", null));
+      issues.add(new Diagnostic("INVALID_ROOT_NODE", "ADF root node must have type 'doc'.", null));
     }
 
     var versionNode = document.get("version");
     var version = versionNode == null ? null : versionOf(versionNode);
     if (version == null) {
-      issues.add(new ParseIssue("INVALID_VERSION", "ADF root must contain integer version.", null));
+      issues.add(new Diagnostic("INVALID_VERSION", "ADF root must contain integer version.", null));
     } else if (version != 1) {
       // Non-fatal: the document still parses and renders best-effort, so flag it as a warning.
       issues.add(
-          new ParseIssue("UNSUPPORTED_VERSION", "ADF version must be 1.", null, Severity.WARNING));
+          new Diagnostic("UNSUPPORTED_VERSION", "ADF version must be 1.", null, Severity.WARNING));
     }
 
     var contentNode = document.get("content");
     if (contentNode == null || !contentNode.isArray()) {
       issues.add(
-          new ParseIssue("INVALID_CONTENT", "ADF root must contain array field 'content'.", null));
+          new Diagnostic("INVALID_CONTENT", "ADF root must contain array field 'content'.", null));
     }
 
     return List.copyOf(issues);

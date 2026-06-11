@@ -67,7 +67,7 @@ class AdfToMarkdownRenderingTests {
   void convert_resolves_viewpdf_macros_with_attachment_context() throws Exception {
     var rawPayload = testSupport.caseInput("viewpdf-macros");
     var options = MarkdownOptions.defaults()
-        .withContext(
+        .withConfluenceContext(
             ConfluenceRenderContext.empty()
                 .withAttachmentReferences(
                     List.of(new AttachmentReference("file-pdf-1", "guide.pdf", "application/pdf"))));
@@ -120,7 +120,7 @@ class AdfToMarkdownRenderingTests {
   @Test
   void convert_resolves_db_derived_viewpdf_cases_with_attachment_context() throws Exception {
     var options = MarkdownOptions.defaults()
-        .withContext(
+        .withConfluenceContext(
             ConfluenceRenderContext.empty()
                 .withAttachmentReferences(
                     List.of(

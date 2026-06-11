@@ -13,7 +13,7 @@ import dev.nthings.adf4j.metadata.ContentMetadata;
 public record MarkdownResult(
     String body,
     ContentMetadata metadata,
-    List<ParseIssue> diagnostics,
+    List<Diagnostic> diagnostics,
     UnresolvedReferences unresolved) {
 
   public MarkdownResult {
@@ -28,15 +28,15 @@ public record MarkdownResult(
   }
 
   /**
-   * {@code true} when any diagnostic is a {@link ParseIssue.Severity#WARNING} or
-   * {@link ParseIssue.Severity#ERROR} — i.e. the document did not convert cleanly: structural parse
+   * {@code true} when any diagnostic is a {@link Diagnostic.Severity#WARNING} or
+   * {@link Diagnostic.Severity#ERROR} — i.e. the document did not convert cleanly: structural parse
    * problems, content dropped/placeholdered under the active {@code UnknownNodePolicy}, or unsupported
-   * marks dropped. Gate "real loss" on this (or {@link ParseIssue#severity()}), not "any diagnostic
+   * marks dropped. Gate "real loss" on this (or {@link Diagnostic#severity()}), not "any diagnostic
    * present" — some diagnostics are informational. Under
    * {@link dev.nthings.adf4j.options.UnknownNodePolicy#PRESERVE_RAW}:
    * <ul>
-   *   <li>an unknown <em>node</em> is preserved as raw JSON ({@link ParseIssue.Severity#INFO}) — not lossy;
-   *   <li>an unknown <em>mark</em> has no standalone form and is dropped ({@link ParseIssue.Severity#WARNING}) — lossy.
+   *   <li>an unknown <em>node</em> is preserved as raw JSON ({@link Diagnostic.Severity#INFO}) — not lossy;
+   *   <li>an unknown <em>mark</em> has no standalone form and is dropped ({@link Diagnostic.Severity#WARNING}) — lossy.
    * </ul>
    *
    * <p>It does <em>not</em> flag by-design, options-driven lossiness — {@code media:}/{@code attachment:}
@@ -45,8 +45,8 @@ public record MarkdownResult(
    */
   public boolean wasLossy() {
     return diagnostics.stream()
-        .map(ParseIssue::severity)
-        .anyMatch(severity -> severity == ParseIssue.Severity.WARNING
-            || severity == ParseIssue.Severity.ERROR);
+        .map(Diagnostic::severity)
+        .anyMatch(severity -> severity == Diagnostic.Severity.WARNING
+            || severity == Diagnostic.Severity.ERROR);
   }
 }

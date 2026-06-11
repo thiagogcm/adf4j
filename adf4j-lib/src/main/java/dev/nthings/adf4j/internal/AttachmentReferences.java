@@ -5,6 +5,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
 import dev.nthings.adf4j.metadata.AttachmentReference;
 import dev.nthings.adf4j.ast.MacroParams;
 
@@ -31,17 +32,6 @@ public final class AttachmentReferences {
   private AttachmentReferences() {
   }
 
-  public static String normalizeTitle(String title) {
-    if (title == null) {
-      return null;
-    }
-    var stripped = title.strip();
-    if (stripped.isEmpty()) {
-      return null;
-    }
-    return stripped.toLowerCase(Locale.ROOT);
-  }
-
   /** Classifies media by MIME/type, falling back to each name/URL extension; unknown is non-image. */
   public static boolean isImage(String mimeOrType, String... fileNames) {
     var classification = classify(mimeOrType);
@@ -66,16 +56,14 @@ public final class AttachmentReferences {
   }
 
   public static AttachmentReference resolve(
-      MacroParams macroParams,
-      Map<String, AttachmentReference> attachmentReferencesByTitle) {
+      MacroParams macroParams, ConfluenceRenderContext confluenceContext) {
     if (macroParams == null) {
       return null;
     }
 
     var name = macroParams.value("name");
-    var normalizedTitle = normalizeTitle(name);
-    if (normalizedTitle != null && attachmentReferencesByTitle != null) {
-      var resolved = attachmentReferencesByTitle.get(normalizedTitle);
+    if (confluenceContext != null) {
+      var resolved = confluenceContext.attachment(name);
       if (resolved != null) {
         return resolved;
       }

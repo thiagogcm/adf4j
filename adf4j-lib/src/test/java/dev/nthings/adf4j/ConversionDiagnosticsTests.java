@@ -1,12 +1,11 @@
 package dev.nthings.adf4j;
 
 import java.util.List;
-import java.util.Optional;
 
-import dev.nthings.adf4j.extension.ExtensionRenderer;
+import dev.nthings.adf4j.options.ExtensionRenderer;
 import dev.nthings.adf4j.options.MarkdownOptions;
 import dev.nthings.adf4j.options.UnknownNodePolicy;
-import dev.nthings.adf4j.result.ParseIssue;
+import dev.nthings.adf4j.result.Diagnostic;
 
 import org.junit.jupiter.api.Test;
 
@@ -45,7 +44,7 @@ class ConversionDiagnosticsTests {
         .satisfies(
             issue -> {
               assertThat(issue.code()).isEqualTo("UNKNOWN_NODE_PLACEHOLDER");
-              assertThat(issue.severity()).isEqualTo(ParseIssue.Severity.WARNING);
+              assertThat(issue.severity()).isEqualTo(Diagnostic.Severity.WARNING);
             });
   }
 
@@ -57,7 +56,7 @@ class ConversionDiagnosticsTests {
 
     assertThat(result.wasLossy()).isTrue();
     assertThat(result.diagnostics())
-        .extracting(ParseIssue::code)
+        .extracting(Diagnostic::code)
         .containsExactly("UNKNOWN_NODE_SKIPPED");
   }
 
@@ -73,7 +72,7 @@ class ConversionDiagnosticsTests {
         .satisfies(
             issue -> {
               assertThat(issue.code()).isEqualTo("UNKNOWN_NODE_PRESERVED");
-              assertThat(issue.severity()).isEqualTo(ParseIssue.Severity.INFO);
+              assertThat(issue.severity()).isEqualTo(Diagnostic.Severity.INFO);
             });
   }
 
@@ -87,7 +86,7 @@ class ConversionDiagnosticsTests {
         .satisfies(
             issue -> {
               assertThat(issue.code()).isEqualTo("UNSUPPORTED_VERSION");
-              assertThat(issue.severity()).isEqualTo(ParseIssue.Severity.WARNING);
+              assertThat(issue.severity()).isEqualTo(Diagnostic.Severity.WARNING);
             });
   }
 
@@ -103,7 +102,7 @@ class ConversionDiagnosticsTests {
         .satisfies(
             issue -> {
               assertThat(issue.code()).isEqualTo("UNKNOWN_MARK_DROPPED");
-              assertThat(issue.severity()).isEqualTo(ParseIssue.Severity.WARNING);
+              assertThat(issue.severity()).isEqualTo(Diagnostic.Severity.WARNING);
             });
   }
 
@@ -120,7 +119,7 @@ class ConversionDiagnosticsTests {
 
     // The node is preserved (INFO) but the mark is still dropped (WARNING), so the doc is lossy.
     assertThat(result.diagnostics())
-        .extracting(ParseIssue::code)
+        .extracting(Diagnostic::code)
         .containsExactly("UNKNOWN_NODE_PRESERVED", "UNKNOWN_MARK_DROPPED");
     assertThat(result.wasLossy()).isTrue();
   }
@@ -132,7 +131,7 @@ class ConversionDiagnosticsTests {
     assertThat(result.wasLossy()).isTrue();
     assertThat(result.diagnostics())
         .singleElement()
-        .satisfies(issue -> assertThat(issue.severity()).isEqualTo(ParseIssue.Severity.ERROR));
+        .satisfies(issue -> assertThat(issue.severity()).isEqualTo(Diagnostic.Severity.ERROR));
   }
 
   @Test
@@ -145,7 +144,7 @@ class ConversionDiagnosticsTests {
         .satisfies(
             issue -> {
               assertThat(issue.code()).isEqualTo("UNSUPPORTED_MACRO");
-              assertThat(issue.severity()).isEqualTo(ParseIssue.Severity.WARNING);
+              assertThat(issue.severity()).isEqualTo(Diagnostic.Severity.WARNING);
               assertThat(issue.message()).contains("detailssummary");
             });
   }
@@ -160,7 +159,7 @@ class ConversionDiagnosticsTests {
     var result = AdfToMarkdown.create().convert(json);
 
     assertThat(result.body()).contains("Static fallback");
-    assertThat(result.diagnostics()).extracting(ParseIssue::code).doesNotContain("UNSUPPORTED_MACRO");
+    assertThat(result.diagnostics()).extracting(Diagnostic::code).doesNotContain("UNSUPPORTED_MACRO");
     assertThat(result.wasLossy()).isFalse();
   }
 
@@ -199,7 +198,7 @@ class ConversionDiagnosticsTests {
     var result = AdfToMarkdown.create().convert(json);
 
     assertThat(result.body()).contains("inside excerpt");
-    assertThat(result.diagnostics()).extracting(ParseIssue::code).doesNotContain("UNSUPPORTED_MACRO");
+    assertThat(result.diagnostics()).extracting(Diagnostic::code).doesNotContain("UNSUPPORTED_MACRO");
     assertThat(result.wasLossy()).isFalse();
   }
 
@@ -208,16 +207,16 @@ class ConversionDiagnosticsTests {
     ExtensionRenderer detailssummary =
         extension ->
             "detailssummary".equals(extension.extensionKey())
-                ? Optional.of("- a row")
-                : Optional.empty();
+                ? "- a row"
+                : null;
     var options = MarkdownOptions.defaults().withExtensionRenderers(List.of(detailssummary));
 
     var handled = AdfToMarkdown.with(options).convert(UNSUPPORTED_MACRO);
-    assertThat(handled.diagnostics()).extracting(ParseIssue::code).doesNotContain("UNSUPPORTED_MACRO");
+    assertThat(handled.diagnostics()).extracting(Diagnostic::code).doesNotContain("UNSUPPORTED_MACRO");
     assertThat(handled.wasLossy()).isFalse();
 
     var fallback = AdfToMarkdown.create().convert(UNSUPPORTED_MACRO);
-    assertThat(fallback.diagnostics()).extracting(ParseIssue::code).containsExactly("UNSUPPORTED_MACRO");
+    assertThat(fallback.diagnostics()).extracting(Diagnostic::code).containsExactly("UNSUPPORTED_MACRO");
   }
 
   @Test
@@ -253,6 +252,6 @@ class ConversionDiagnosticsTests {
     var result = AdfToMarkdown.create().convert(json);
 
     assertThat(result.wasLossy()).isTrue();
-    assertThat(result.diagnostics()).extracting(ParseIssue::code).containsExactly("UNSUPPORTED_MACRO");
+    assertThat(result.diagnostics()).extracting(Diagnostic::code).containsExactly("UNSUPPORTED_MACRO");
   }
 }

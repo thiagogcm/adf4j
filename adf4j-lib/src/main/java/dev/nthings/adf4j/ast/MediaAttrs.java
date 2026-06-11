@@ -1,5 +1,14 @@
 package dev.nthings.adf4j.ast;
 
+/**
+ * The attributes of a media node. {@code type} distinguishes {@code file}/{@code link} media
+ * (identified by {@code id}/{@code localId} + {@code collection}, resolvable via a
+ * {@code MediaResolver}) from {@code external} media (a direct {@code url}). {@code width}/
+ * {@code height} are pixel dimensions when present; {@code mediaType} is the coarse kind
+ * ({@code image}, {@code file}, …) while {@code fileMimeType} is the exact MIME type; {@code alt},
+ * {@code fileName} and {@code name} are display labels (see {@link #imageAlt()} and
+ * {@link #fileLabel(String)} for the fallback order).
+ */
 public record MediaAttrs(
     String type,
     String id,

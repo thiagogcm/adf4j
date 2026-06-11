@@ -25,8 +25,7 @@ public final class AdfDocumentAnalyzer {
     }
 
     var headingCollector = new AdfHeadingCollector();
-    var metadataExtractor =
-        new AdfContentMetadataExtractor(options.context().attachmentReferencesByTitle());
+    var metadataExtractor = new AdfContentMetadataExtractor(options.confluenceContext());
     var lossinessCollector = new AdfLossinessCollector();
     AdfNodeWalker.walk(
         document, List.of(headingCollector, metadataExtractor, lossinessCollector));

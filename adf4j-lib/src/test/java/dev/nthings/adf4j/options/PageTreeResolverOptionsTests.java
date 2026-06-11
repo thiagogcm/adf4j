@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Map;
 
 import dev.nthings.adf4j.AdfToMarkdown;
+import dev.nthings.adf4j.metadata.PageTreeMacro;
+import dev.nthings.adf4j.metadata.PageTreeReference;
 
 import org.junit.jupiter.api.Test;
 
@@ -210,7 +212,7 @@ class PageTreeResolverOptionsTests {
 
   @Test
   void the_request_carries_the_named_root_and_the_full_parameter_map() {
-    var captured = new PageTreeRequest[1];
+    var captured = new PageTreeReference[1];
     var options = MarkdownOptions.defaults().withPageTreeResolver(request -> {
       captured[0] = request;
       return List.of(new PageTreeEntry(0, "x", "x"));
@@ -227,7 +229,7 @@ class PageTreeResolverOptionsTests {
 
   @Test
   void the_request_root_is_null_for_a_keyword_root_but_the_keyword_stays_in_the_parameters() {
-    var captured = new PageTreeRequest[1];
+    var captured = new PageTreeReference[1];
     var options = MarkdownOptions.defaults().withPageTreeResolver(request -> {
       captured[0] = request;
       return List.of();
@@ -312,7 +314,7 @@ class PageTreeResolverOptionsTests {
 
   @Test
   void the_children_request_reports_the_macro_its_page_root_and_params() {
-    var captured = new PageTreeRequest[1];
+    var captured = new PageTreeReference[1];
     var options = MarkdownOptions.defaults().withPageTreeResolver(request -> {
       captured[0] = request;
       return List.of(new PageTreeEntry(0, "x", "x"));
@@ -339,7 +341,7 @@ class PageTreeResolverOptionsTests {
 
   @Test
   void the_request_parses_the_standard_depth_and_all_parameters() {
-    var captured = new PageTreeRequest[1];
+    var captured = new PageTreeReference[1];
     var options = MarkdownOptions.defaults().withPageTreeResolver(request -> {
       captured[0] = request;
       return List.of();
@@ -372,7 +374,7 @@ class PageTreeResolverOptionsTests {
     assertThat(request(Map.of("all", " ", "allChildren", "true")).all()).isTrue();
   }
 
-  private static PageTreeRequest request(Map<String, String> parameters) {
-    return new PageTreeRequest(PageTreeMacro.CHILDREN, null, parameters);
+  private static PageTreeReference request(Map<String, String> parameters) {
+    return new PageTreeReference(PageTreeMacro.CHILDREN, null, parameters);
   }
 }

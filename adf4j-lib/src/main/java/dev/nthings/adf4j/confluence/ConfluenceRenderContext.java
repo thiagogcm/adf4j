@@ -2,53 +2,80 @@ package dev.nthings.adf4j.confluence;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 
 import dev.nthings.adf4j.metadata.AttachmentReference;
-import dev.nthings.adf4j.internal.AttachmentReferences;
 
+/**
+ * Caller-supplied Confluence knowledge for one conversion — today, the page's attachment table, so
+ * attachment macros that reference a file by name ({@code viewpdf}, "view file") can be resolved to a
+ * durable {@link AttachmentReference}. Look up with {@link #attachment(String)}; titles are matched
+ * case-insensitively and ignoring surrounding whitespace. Entries without a usable title or
+ * {@code fileId} are dropped on construction, and the first entry wins a title collision.
+ */
 public record ConfluenceRenderContext(
     Map<String, AttachmentReference> attachmentReferencesByTitle) {
 
   private static final ConfluenceRenderContext EMPTY = new ConfluenceRenderContext(Map.of());
 
   public ConfluenceRenderContext {
-    attachmentReferencesByTitle = immutableAttachmentReferencesByTitle(attachmentReferencesByTitle);
+    attachmentReferencesByTitle = normalized(attachmentReferencesByTitle);
   }
 
   public static ConfluenceRenderContext empty() {
     return EMPTY;
   }
 
+  /** This context plus the given attachment references, keyed by their own titles. */
   public ConfluenceRenderContext withAttachmentReferences(
       Iterable<AttachmentReference> attachmentReferences) {
-    var safe = new LinkedHashMap<String, AttachmentReference>();
+    var merged = new LinkedHashMap<>(attachmentReferencesByTitle);
     if (attachmentReferences != null) {
       for (var attachmentReference : attachmentReferences) {
-        if (attachmentReference == null) {
-          continue;
-        }
-
-        var normalizedTitle = AttachmentReferences.normalizeTitle(attachmentReference.title());
-        if (normalizedTitle == null
-            || attachmentReference.fileId() == null
-            || attachmentReference.fileId().isBlank()) {
-          continue;
-        }
-
-        safe.putIfAbsent(normalizedTitle, attachmentReference);
+        putValid(merged, attachmentReference);
       }
     }
-
-    return new ConfluenceRenderContext(safe);
+    return new ConfluenceRenderContext(merged);
   }
 
-  private static Map<String, AttachmentReference> immutableAttachmentReferencesByTitle(
-      Map<String, AttachmentReference> attachmentReferencesByTitle) {
-    if (attachmentReferencesByTitle == null || attachmentReferencesByTitle.isEmpty()) {
+  /** The attachment whose title matches {@code title} (normalized), or {@code null}. */
+  public AttachmentReference attachment(String title) {
+    var normalizedTitle = normalizeTitle(title);
+    return normalizedTitle == null ? null : attachmentReferencesByTitle.get(normalizedTitle);
+  }
+
+  // Re-keys by normalized title, so every constructed instance upholds the lookup invariant
+  // regardless of how the caller keyed the map.
+  private static Map<String, AttachmentReference> normalized(
+      Map<String, AttachmentReference> entries) {
+    if (entries == null || entries.isEmpty()) {
       return Map.of();
     }
+    var safe = new LinkedHashMap<String, AttachmentReference>();
+    for (var reference : entries.values()) {
+      putValid(safe, reference);
+    }
+    return Collections.unmodifiableMap(safe);
+  }
 
-    return Collections.unmodifiableMap(new LinkedHashMap<>(attachmentReferencesByTitle));
+  // First valid entry per normalized title wins; entries without a usable title or fileId are dropped.
+  private static void putValid(
+      Map<String, AttachmentReference> target, AttachmentReference reference) {
+    if (reference == null || reference.fileId() == null || reference.fileId().isBlank()) {
+      return;
+    }
+    var title = normalizeTitle(reference.title());
+    if (title != null) {
+      target.putIfAbsent(title, reference);
+    }
+  }
+
+  private static String normalizeTitle(String title) {
+    if (title == null) {
+      return null;
+    }
+    var stripped = title.strip();
+    return stripped.isEmpty() ? null : stripped.toLowerCase(Locale.ROOT);
   }
 }

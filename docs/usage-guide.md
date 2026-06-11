@@ -44,19 +44,17 @@ If you consume it as a module, require it in your `module-info.java`:
 requires dev.nthings.adf4j;
 ```
 
-The public API lives in seven packages: `dev.nthings.adf4j` (entry points), `…options`, `…result`, `…metadata`, `…extension`, `…confluence`, and `…ast`. Everything under `…internal` is encapsulated and not part of the contract.
+The public API lives in six packages: `dev.nthings.adf4j` (the entry point), `…options` (configuration and the caller-implemented hooks), `…result`, `…metadata`, `…confluence`, and `…ast`. Everything under `…internal` is encapsulated and not part of the contract.
 
 ## Quick start
 
-The shortest path is the zero-configuration facade:
-
 ```java
-import dev.nthings.adf4j.Adf;
+import dev.nthings.adf4j.AdfToMarkdown;
 
-String markdown = Adf.toMarkdown(adfJson);
+String markdown = AdfToMarkdown.create().toMarkdown(adfJson);
 ```
 
-`Adf.toMarkdown` uses default options and a shared, thread-safe converter — ideal for one-off conversions where you do not need configuration or diagnostics.
+`create()` uses default options. The converter is immutable and thread-safe — for anything beyond a one-off conversion, build it once and reuse it.
 
 ## A worked example
 
@@ -109,7 +107,7 @@ Note the GFM-idiomatic choices: the Confluence *warning* panel becomes a GFM ale
 
 ## Choosing an entry point
 
-Reach past the facade when you need options, diagnostics, or metadata. Build an `AdfToMarkdown` once and reuse it — it is immutable and thread-safe.
+`AdfToMarkdown` is the single entry point; its methods select how far the pipeline runs and what you get back.
 
 ```java
 import dev.nthings.adf4j.AdfToMarkdown;
@@ -157,7 +155,7 @@ MarkdownOptions options = MarkdownOptions.defaults()
     .withCollapseHardBreaks(true);
 ```
 
-> Avoid the raw `new MarkdownOptions(...)` constructor: its parameter list grows whenever an option is added, so it is not a stable API. The builder and withers are.
+> `MarkdownOptions` has no public constructor — the builder and the withers are the API, and both stay source-compatible as options are added. An existing instance can be varied with `toBuilder()`.
 
 The rest of this guide shows each feature in isolation. For the canonical reference of every option, its default, and its exact effect, see the [options table](./markdown-conversion.md#options-markdownoptions).
 
@@ -166,23 +164,23 @@ The rest of this guide shows each feature in isolation. For the canonical refere
 `convert(...)` returns a `MarkdownResult` carrying the body, the extracted `ContentMetadata`, a list of diagnostics, and the `unresolved()` lookups this render's resolvers declined. Use `wasLossy()` to decide whether the conversion lost anything that matters:
 
 ```java
+import dev.nthings.adf4j.result.Diagnostic;
 import dev.nthings.adf4j.result.MarkdownResult;
-import dev.nthings.adf4j.result.ParseIssue;
 
 MarkdownResult result = converter.convert(adfJson);
 
 String body = result.body();
 
 if (result.wasLossy()) {
-    for (ParseIssue issue : result.diagnostics()) {
-        if (issue.severity() != ParseIssue.Severity.INFO) {
-            log.warn("Conversion issue [{}]: {}", issue.code(), issue.message());
+    for (Diagnostic diagnostic : result.diagnostics()) {
+        if (diagnostic.severity() != Diagnostic.Severity.INFO) {
+            log.warn("Conversion issue [{}]: {}", diagnostic.code(), diagnostic.message());
         }
     }
 }
 ```
 
-`wasLossy()` is true only when a diagnostic is `WARNING` or `ERROR` — content that was dropped or altered, or a structural parse failure. It deliberately ignores *by-design, options-driven* outcomes (placeholders when you set no resolver, dropped visual marks, the table HTML fallback) — see the [lossy and by-design behaviours](./markdown-conversion.md#lossy-and-by-design-behaviours) for the full catalogue. Gate on `wasLossy()` (or on each issue’s `severity()`), not on “any diagnostic present”.
+`wasLossy()` is true only when a diagnostic is `WARNING` or `ERROR` — content that was dropped or altered, or a structural parse failure. It deliberately ignores *by-design, options-driven* outcomes (placeholders when you set no resolver, dropped visual marks, the table HTML fallback) — see the [lossy and by-design behaviours](./markdown-conversion.md#lossy-and-by-design-behaviours) for the full catalogue. Gate on `wasLossy()` (or on each diagnostic’s `severity()`), not on “any diagnostic present”.
 
 `result.unresolved()` reports, per conversion, what the active resolvers were asked for and declined — no decorator-wrapping of your resolvers needed: `pageIds()` are the page node ids a configured `pageLinkResolver` returned nothing for, and `pageTreeRefs()` are the `pagetree`/`children` macros that fell back to their placeholder token. An empty `unresolved()` means this render left no declined-lookup artifacts in the output.
 
@@ -240,11 +238,11 @@ ConfluenceRenderContext context = ConfluenceRenderContext.empty()
         new AttachmentReference("file-123", "Q3 Report.pdf", "application/pdf")));
 
 MarkdownOptions options = MarkdownOptions.defaults()
-    .withContext(context)
+    .withConfluenceContext(context)
     .withAttachmentResolver(ref -> "https://cdn.example.com/files/" + ref.fileId());
 ```
 
-The `context` supplies the attachment table the analyze phase uses to recognize attachment macros by name (and to populate `ContentMetadata`); the `attachmentResolver` turns each resolved reference into a URL at render time.
+The Confluence context supplies the attachment table the analyze phase uses to recognize attachment macros by name (and to populate `ContentMetadata`); the `attachmentResolver` turns each resolved reference into a URL at render time.
 
 ## Rewriting inter-page links
 
@@ -268,18 +266,18 @@ The resolver is consulted for inline page links, page smart-cards, **and** page-
 The Confluence `pagetree` and `children` macros list pages that Confluence assembles *server-side* from the space hierarchy — the ADF carries only the macro reference, not the page list. Without a resolver they render to a `{{pagetree}}` / `{{children}}` placeholder token. Supply a `PageTreeResolver` to expand them, returning the descendants as depth-tagged entries:
 
 ```java
+import dev.nthings.adf4j.metadata.PageTreeMacro;
 import dev.nthings.adf4j.options.PageTreeEntry;
-import dev.nthings.adf4j.options.PageTreeMacro;
 import java.util.List;
 
 MarkdownOptions options = MarkdownOptions.defaults()
     .withPageLinkResolver(pageUrls::get)   // entry pageNodeIds route through this for their links
-    .withPageTreeResolver(request -> {
-        // request.macro() is PAGETREE or CHILDREN; request.root() is the starting page id
-        // (null when absent/@self); request.depth() and request.all() are the standard macro
-        // parameters pre-parsed; request.parameters() holds the raw map (startDepth, ...).
-        boolean wholeTree = request.macro() == PageTreeMacro.PAGETREE || request.all();
-        return myHierarchy.descendants(request.root(), wholeTree, request.depth().orElse(1)).stream()
+    .withPageTreeResolver(reference -> {
+        // reference.macro() is PAGETREE or CHILDREN; reference.root() is the starting page id
+        // (null when absent/@self); reference.depth() and reference.all() are the standard macro
+        // parameters pre-parsed; reference.parameters() holds the raw map (startDepth, ...).
+        boolean wholeTree = reference.macro() == PageTreeMacro.PAGETREE || reference.all();
+        return myHierarchy.descendants(reference.root(), wholeTree, reference.depth().orElse(1)).stream()
             .map(p -> new PageTreeEntry(p.depth(), p.title(), p.id()))
             .toList();
     });
@@ -289,21 +287,20 @@ Each entry’s `depth` (0-based) drives indentation, `title` becomes the visible
 
 ## Rendering custom macros and extensions
 
-Macros without a built-in renderer become a labelled placeholder and a lossy diagnostic. To render your own (or override a built-in), register one or more `ExtensionRenderer`s. They are consulted in order, before the built-in Confluence macros, and the first to return a non-empty `Optional` wins:
+Macros without a built-in renderer become a labelled placeholder and a lossy diagnostic. To render your own (or override a built-in), register one or more `ExtensionRenderer`s. They are consulted in order, before the built-in Confluence macros, and the first to return non-null wins (an empty string is a valid answer that suppresses the macro's output):
 
 ```java
-import dev.nthings.adf4j.extension.ExtensionRenderer;
+import dev.nthings.adf4j.options.ExtensionRenderer;
 import java.util.List;
-import java.util.Optional;
 
 ExtensionRenderer infoPanel = ctx -> {
     // Match on type AND key — keys are only unique within an extension namespace.
     if (!"com.atlassian.confluence.macro.core".equals(ctx.extensionType())
             || !"info".equals(ctx.extensionKey())) {
-        return Optional.empty();          // defer to the next renderer / built-in
+        return null;                      // defer to the next renderer / built-in
     }
     String body = ctx.parameter("body");  // read named macro parameters
-    return Optional.of("> ℹ️ " + body);
+    return "> ℹ️ " + body;
 };
 
 MarkdownOptions options = MarkdownOptions.defaults()
@@ -398,7 +395,7 @@ if (parsed.validAdfRoot()) {
 }
 ```
 
-The AST is a closed hierarchy of immutable records under `dev.nthings.adf4j.ast`: `AdfDocument` holds blocks (`AdfBlock`), blocks hold inlines (`AdfInline`), and text/media carry marks (`AdfMark`). Because these are sealed interfaces, you can pattern-match exhaustively over them:
+The AST is a sealed hierarchy of immutable records under `dev.nthings.adf4j.ast`: `AdfDocument` holds blocks (`AdfBlock`), blocks hold inlines (`AdfInline`), and text/media carry marks (`AdfMark`). You can pattern-match over them — but keep a `default` arm (or handle the `Unknown*` variants), because the permitted type lists grow as ADF evolves:
 
 ```java
 import dev.nthings.adf4j.ast.*;
@@ -422,7 +419,7 @@ AdfToMarkdown converter = AdfToMarkdown.create();   // build once
 
 for (Page page : pages) {
     MarkdownOptions perPage = MarkdownOptions.defaults()
-        .withContext(ConfluenceRenderContext.empty()
+        .withConfluenceContext(ConfluenceRenderContext.empty()
             .withAttachmentReferences(page.attachments()))
         .withMediaResolver(attrs -> page.mediaUrl(attrs.id()));
 

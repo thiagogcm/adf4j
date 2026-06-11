@@ -109,14 +109,9 @@ final class MediaRenderer {
     }
 
     var resolver = context.mediaResolver();
-    if (resolver != null) {
-      var resolved = CallbackGuards.guard("MediaResolver", () -> resolver.resolve(attrs), null);
-      if (resolved != null && !resolved.isBlank()) {
-        return resolved;
-      }
-    }
-
-    return null;
+    return resolver == null
+        ? null
+        : CallbackGuards.guardNonBlank("MediaResolver", () -> resolver.resolve(attrs));
   }
 
   // The synthetic media:collection/id reference, or "media" when even the id is absent.

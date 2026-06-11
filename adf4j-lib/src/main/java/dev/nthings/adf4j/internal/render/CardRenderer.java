@@ -18,19 +18,19 @@ final class CardRenderer {
         .findFirst()
         .orElse(null);
     if (identifier == null) {
-      return MarkdownText.labelToken("Card", context.escapeParentheses());
+      return MarkdownText.labelToken("Card", context.options().escapeParentheses());
     }
-    return MarkdownText.labelToken("Card: " + identifier, context.escapeParentheses());
+    return MarkdownText.labelToken("Card: " + identifier, context.options().escapeParentheses());
   }
 
   String renderInlineCard(CardAttrs attrs, RenderContext context) {
     var link = renderCardLink(attrs, context);
-    return link != null ? link : MarkdownText.labelToken("Inline card", context.escapeParentheses());
+    return link != null ? link : MarkdownText.labelToken("Inline card", context.options().escapeParentheses());
   }
 
   String renderEmbedCard(CardAttrs attrs, RenderContext context) {
     var link = renderCardLink(attrs, context);
-    return link != null ? link : MarkdownText.labelToken("Embed card", context.escapeParentheses());
+    return link != null ? link : MarkdownText.labelToken("Embed card", context.options().escapeParentheses());
   }
 
   /**
@@ -50,7 +50,7 @@ final class CardRenderer {
     if (hasUrl) {
       var resolvedUrl = TextMarkRenderer.resolvePageHref(url, attrs.attrs(), context);
       if (hasTitle) {
-        return MarkdownText.link(title, resolvedUrl, context.escapeParentheses());
+        return MarkdownText.link(title, resolvedUrl, context.options().escapeParentheses());
       }
       // url-only: an autolink needs an untouched url (not rewritten, not escaped); otherwise fall
       // back to a labelled link that keeps the original url visible.
@@ -58,11 +58,11 @@ final class CardRenderer {
       var destination = MarkdownText.escapeUrlDestination(resolvedUrl);
       return !rewritten && destination.equals(url) && isAbsoluteUri(url)
           ? "<%s>".formatted(url)
-          : MarkdownText.link(url, resolvedUrl, context.escapeParentheses());
+          : MarkdownText.link(url, resolvedUrl, context.options().escapeParentheses());
     }
 
     if (hasTitle) {
-      return MarkdownText.escapeInlineText(title, false, context.escapeParentheses());
+      return MarkdownText.escapeInlineText(title, false, context.options().escapeParentheses());
     }
 
     return null;

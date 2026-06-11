@@ -1,10 +1,8 @@
 package dev.nthings.adf4j.options;
 
 import java.util.List;
-import java.util.Optional;
 
 import dev.nthings.adf4j.AdfToMarkdown;
-import dev.nthings.adf4j.extension.ExtensionRenderer;
 
 import org.junit.jupiter.api.Test;
 
@@ -60,9 +58,9 @@ class ExtensionRendererOptionsTests {
     return extension -> {
       if ("com.acme.macros".equals(extension.extensionType())
           && "jira-issue".equals(extension.extensionKey())) {
-        return Optional.of(body.formatted(extension.parameter("key")));
+        return body.formatted(extension.parameter("key"));
       }
-      return Optional.empty();
+      return null;
     };
   }
 
@@ -93,7 +91,7 @@ class ExtensionRendererOptionsTests {
 
   @Test
   void a_renderer_that_defers_falls_through_to_the_default() {
-    ExtensionRenderer deferring = extension -> Optional.empty();
+    ExtensionRenderer deferring = extension -> null;
     var options = MarkdownOptions.defaults().withExtensionRenderers(List.of(deferring));
     var markdown = AdfToMarkdown.with(options).toMarkdown(BLOCK_EXTENSION).strip();
 

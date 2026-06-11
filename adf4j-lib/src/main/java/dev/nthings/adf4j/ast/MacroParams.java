@@ -2,6 +2,10 @@ package dev.nthings.adf4j.ast;
 
 import java.util.Map;
 
+/**
+ * A macro's flattened parameter map (each ADF {@code macroParams} entry's {@code value}), keeping the
+ * AST independent of the raw parameter envelope.
+ */
 public record MacroParams(Map<String, String> values) {
 
   private static final MacroParams EMPTY = new MacroParams(Map.of());

@@ -1,6 +1,7 @@
 package dev.nthings.adf4j;
 
 import java.util.List;
+import java.util.Map;
 
 import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
 import dev.nthings.adf4j.metadata.AttachmentReference;
@@ -10,7 +11,7 @@ import dev.nthings.adf4j.metadata.MentionReference;
 import dev.nthings.adf4j.metadata.PageReference;
 import dev.nthings.adf4j.metadata.PageTreeReference;
 import dev.nthings.adf4j.options.MarkdownOptions;
-import dev.nthings.adf4j.options.PageTreeMacro;
+import dev.nthings.adf4j.metadata.PageTreeMacro;
 
 import org.junit.jupiter.api.Test;
 
@@ -24,7 +25,7 @@ class AdfToMarkdownMetadataTests {
   void extract_collects_external_refs_and_durable_attachment_refs_from_db_derived_viewpdf_case()
       throws Exception {
     var options = MarkdownOptions.defaults()
-        .withContext(
+        .withConfluenceContext(
             ConfluenceRenderContext.empty()
                 .withAttachmentReferences(
                     List.of(
@@ -58,7 +59,7 @@ class AdfToMarkdownMetadataTests {
       throws Exception {
     var adf = testSupport.caseDocument("deduplicate-references");
     var options = MarkdownOptions.defaults()
-        .withContext(
+        .withConfluenceContext(
             ConfluenceRenderContext.empty()
                 .withAttachmentReferences(
                     List.of(new AttachmentReference("file-pdf-1", "guide.pdf", "application/pdf"))));
@@ -147,11 +148,11 @@ class AdfToMarkdownMetadataTests {
                 """))
         .metadata();
 
-    // The keyword root normalizes to null, the same way PageTreeRequest.root() reports it.
+    // The keyword root normalizes to null, the same way PageTreeReference.root() reports it.
     assertThat(metadata.pageTreeRefs())
         .containsExactly(
-            new PageTreeReference(PageTreeMacro.PAGETREE, "Docs Home"),
-            new PageTreeReference(PageTreeMacro.CHILDREN, null));
+            new PageTreeReference(PageTreeMacro.PAGETREE, "Docs Home", Map.of("root", "Docs Home")),
+            new PageTreeReference(PageTreeMacro.CHILDREN, null, Map.of("page", "@self")));
   }
 
   @Test

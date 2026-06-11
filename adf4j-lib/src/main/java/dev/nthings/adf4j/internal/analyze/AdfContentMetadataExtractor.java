@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
 
@@ -24,6 +23,7 @@ import dev.nthings.adf4j.ast.BlockCard;
 import dev.nthings.adf4j.ast.Attributes;
 import dev.nthings.adf4j.ast.CardAttrs;
 import dev.nthings.adf4j.confluence.ConfluenceMetadata;
+import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
 import dev.nthings.adf4j.ast.EmbedCard;
 import dev.nthings.adf4j.ast.Extension;
 import dev.nthings.adf4j.ast.BodiedExtension;
@@ -51,11 +51,11 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
   private final LinkedHashMap<String, AttachmentRefBuilder> attachmentRefs = new LinkedHashMap<>();
   // Occurrences, not a set: the count of tree macros is itself a signal.
   private final ArrayList<PageTreeReference> pageTreeRefs = new ArrayList<>();
-  private final Map<String, AttachmentReference> attachmentReferencesByTitle;
+  private final ConfluenceRenderContext confluenceContext;
 
-  AdfContentMetadataExtractor(Map<String, AttachmentReference> attachmentReferencesByTitle) {
-    this.attachmentReferencesByTitle =
-        attachmentReferencesByTitle == null ? Map.of() : attachmentReferencesByTitle;
+  AdfContentMetadataExtractor(ConfluenceRenderContext confluenceContext) {
+    this.confluenceContext =
+        confluenceContext == null ? ConfluenceRenderContext.empty() : confluenceContext;
   }
 
   @Override
@@ -185,9 +185,9 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
       return;
     }
 
-    var pageTreeRequest = ConfluenceSupport.pageTreeRequest(extensionKey, macroParams);
-    if (pageTreeRequest != null) {
-      pageTreeRefs.add(new PageTreeReference(pageTreeRequest.macro(), pageTreeRequest.root()));
+    var pageTreeReference = ConfluenceSupport.pageTreeReference(extensionKey, macroParams);
+    if (pageTreeReference != null) {
+      pageTreeRefs.add(pageTreeReference);
       return;
     }
 
@@ -195,7 +195,7 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
       return;
     }
 
-    var attachmentReference = AttachmentReferences.resolve(macroParams, attachmentReferencesByTitle);
+    var attachmentReference = AttachmentReferences.resolve(macroParams, confluenceContext);
     if (attachmentReference == null
         || attachmentReference.fileId() == null
         || attachmentReference.fileId().isBlank()) {

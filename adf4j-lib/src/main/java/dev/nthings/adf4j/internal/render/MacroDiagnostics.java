@@ -4,8 +4,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-import dev.nthings.adf4j.result.ParseIssue;
-import dev.nthings.adf4j.result.ParseIssue.Severity;
+import dev.nthings.adf4j.result.Diagnostic;
+import dev.nthings.adf4j.result.Diagnostic.Severity;
 
 /**
  * Collects the extensions a render emitted as bare {@code [Extension: …]} placeholders — unsupported
@@ -30,11 +30,11 @@ final class MacroDiagnostics {
     return "Extension";
   }
 
-  List<ParseIssue> build() {
+  List<Diagnostic> build() {
     if (unsupportedMacros.isEmpty()) {
       return List.of();
     }
-    return List.of(new ParseIssue(
+    return List.of(new Diagnostic(
         "UNSUPPORTED_MACRO",
         unsupportedMacros.size()
             + " unsupported macro(s) rendered as placeholders; original content not represented: "

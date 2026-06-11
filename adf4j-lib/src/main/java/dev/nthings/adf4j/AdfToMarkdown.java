@@ -10,11 +10,11 @@ import dev.nthings.adf4j.result.MarkdownResult;
 import dev.nthings.adf4j.result.ParseResult;
 
 /**
- * Converts Atlassian Document Format (ADF) JSON to Markdown. Immutable and thread-safe: the pipeline
- * is built once per instance and reused, so configure once with {@link #with(MarkdownOptions)} (or
- * {@link #create()} for defaults) and reuse the instance. When options vary per document, reuse one
- * converter and pass them to the per-call {@link #convert(String, MarkdownOptions)} overload instead
- * of building a new converter each time. For the zero-config one-liner, see {@link Adf}.
+ * Converts Atlassian Document Format (ADF) JSON to Markdown — the library's single entry point.
+ * Immutable and thread-safe: the pipeline is built once per instance and reused, so configure once
+ * with {@link #with(MarkdownOptions)} (or {@link #create()} for defaults) and reuse the instance.
+ * When options vary per document, reuse one converter and pass them to the per-call
+ * {@link #convert(String, MarkdownOptions)} overload instead of building a new converter each time.
  *
  * <p>To render the same document repeatedly (e.g. under different resolvers), parse once and reuse the
  * immutable result instead of paying the JSON parse per render:
@@ -25,9 +25,9 @@ import dev.nthings.adf4j.result.ParseResult;
  * }
  *
  * <p>The target is GitHub-Flavored Markdown. Some ADF constructs are lossy or by-design (dropped
- * visual marks, the table HTML fallback, synthetic {@code media:} placeholders, and the fact that
- * URL schemes are emitted verbatim and are <em>not</em> sanitized). These behaviors and the
- * available {@link MarkdownOptions} are documented in {@code docs/markdown-conversion.md}.
+ * visual marks, the table HTML fallback, synthetic {@code media:} placeholders). These behaviors,
+ * URL scheme sanitization, and the available {@link MarkdownOptions} are documented in
+ * {@code docs/markdown-conversion.md}.
  */
 public final class AdfToMarkdown {
 
@@ -58,7 +58,7 @@ public final class AdfToMarkdown {
    * Extracts {@link ContentMetadata} (references, attachments, outline) using the bound options,
    * running parse + analyze without rendering — e.g. to plan fetches from
    * {@link ContentMetadata#referencedFileIds()} before producing Markdown. Attachment-macro references
-   * resolve against {@code options.context()}, so supply the attachment context here too. Returns
+   * resolve against {@code options.confluenceContext()}, so supply the attachment context here too. Returns
    * {@link ContentMetadata#empty()} for blank or invalid input.
    */
   public ContentMetadata analyze(String adfJson) {

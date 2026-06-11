@@ -116,8 +116,7 @@ class SupportHelperTests {
             }
             """);
 
-    var resolved =
-        AttachmentReferences.resolve(macroParams, context.attachmentReferencesByTitle());
+    var resolved = AttachmentReferences.resolve(macroParams, context);
 
     assertThat(resolved.fileId()).isEqualTo("resolved-id");
     assertThat(resolved.title()).isEqualTo("Guide.PDF");

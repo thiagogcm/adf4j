@@ -2,7 +2,7 @@ package dev.nthings.adf4j.internal.render;
 
 import java.util.List;
 
-import dev.nthings.adf4j.result.ParseIssue;
+import dev.nthings.adf4j.result.Diagnostic;
 import dev.nthings.adf4j.result.UnresolvedReferences;
 
 /**
@@ -10,7 +10,7 @@ import dev.nthings.adf4j.result.UnresolvedReferences;
  * while rendering. Mirrors the analyze phase's
  * {@link dev.nthings.adf4j.internal.analyze.DocumentAnalysis}.
  */
-public record RenderOutput(String body, List<ParseIssue> diagnostics, UnresolvedReferences unresolved) {
+public record RenderOutput(String body, List<Diagnostic> diagnostics, UnresolvedReferences unresolved) {
 
   public RenderOutput {
     diagnostics = diagnostics == null ? List.of() : List.copyOf(diagnostics);

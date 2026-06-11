@@ -1,11 +1,12 @@
 package dev.nthings.adf4j;
 
 import java.util.List;
+import java.util.Map;
 
 import dev.nthings.adf4j.metadata.PageTreeReference;
 import dev.nthings.adf4j.options.MarkdownOptions;
 import dev.nthings.adf4j.options.PageTreeEntry;
-import dev.nthings.adf4j.options.PageTreeMacro;
+import dev.nthings.adf4j.metadata.PageTreeMacro;
 
 import org.junit.jupiter.api.Test;
 
@@ -86,7 +87,7 @@ class UnresolvedReferencesTests {
     var result = AdfToMarkdown.create().convert(ROOTED_PAGETREE);
 
     assertThat(result.unresolved().pageTreeRefs())
-        .containsExactly(new PageTreeReference(PageTreeMacro.PAGETREE, "Docs Home"));
+        .containsExactly(new PageTreeReference(PageTreeMacro.PAGETREE, "Docs Home", Map.of("root", "Docs Home")));
 
     // A resolver that declines with null reports the same.
     var declined = AdfToMarkdown.with(
@@ -94,7 +95,7 @@ class UnresolvedReferencesTests {
         .convert(ROOTED_PAGETREE);
 
     assertThat(declined.unresolved().pageTreeRefs())
-        .containsExactly(new PageTreeReference(PageTreeMacro.PAGETREE, "Docs Home"));
+        .containsExactly(new PageTreeReference(PageTreeMacro.PAGETREE, "Docs Home", Map.of("root", "Docs Home")));
   }
 
   @Test
@@ -116,7 +117,7 @@ class UnresolvedReferencesTests {
     var result = AdfToMarkdown.with(options).convert(ROOTED_PAGETREE);
 
     assertThat(result.unresolved().pageTreeRefs())
-        .containsExactly(new PageTreeReference(PageTreeMacro.PAGETREE, "Docs Home"));
+        .containsExactly(new PageTreeReference(PageTreeMacro.PAGETREE, "Docs Home", Map.of("root", "Docs Home")));
   }
 
   @Test

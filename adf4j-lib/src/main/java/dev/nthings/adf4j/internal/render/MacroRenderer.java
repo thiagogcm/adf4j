@@ -2,9 +2,7 @@ package dev.nthings.adf4j.internal.render;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
-import dev.nthings.adf4j.extension.ExtensionContext;
 import dev.nthings.adf4j.metadata.AttachmentReference;
 import dev.nthings.adf4j.metadata.HeadingReference;
 import dev.nthings.adf4j.metadata.PageTreeReference;
@@ -19,8 +17,8 @@ import dev.nthings.adf4j.ast.SyncBlock;
 import dev.nthings.adf4j.internal.AttachmentReferences;
 import dev.nthings.adf4j.internal.ConfluenceSupport;
 import dev.nthings.adf4j.internal.analyze.TocLevelRange;
+import dev.nthings.adf4j.options.ExtensionContext;
 import dev.nthings.adf4j.options.PageTreeEntry;
-import dev.nthings.adf4j.options.PageTreeRequest;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,8 +44,8 @@ final class MacroRenderer {
       MacroParams macroParams,
       RendererState context) {
     var custom = renderCustom(extensionType, extensionKey, text, macroParams, context);
-    if (custom.isPresent()) {
-      return custom.get();
+    if (custom != null) {
+      return custom;
     }
     if (!ConfluenceSupport.isConfluenceMacroExtension(extensionType)) {
       return extensionFallback(text, extensionType, extensionKey, context);
@@ -55,7 +53,7 @@ final class MacroRenderer {
 
     var rendered = switch (extensionKey != null ? extensionKey : "") {
       case "children", "pagetree" ->
-          renderPageTreeMacro(ConfluenceSupport.pageTreeRequest(extensionKey, macroParams), context);
+          renderPageTreeMacro(ConfluenceSupport.pageTreeReference(extensionKey, macroParams), context);
       case "toc" -> renderTocMacro(macroParams, context);
       case "anchor" -> HtmlFragments.anchor(ConfluenceSupport.anchorId(macroParams));
       case "iframe" -> renderIframeMacro(macroParams, context);
@@ -95,15 +93,14 @@ final class MacroRenderer {
       RendererState context,
       BlockRecursion recursion) {
     var blocks = new ArrayList<String>();
-    blocks.add(
-        renderCustom(extensionType, extensionKey, text, macroParams, context)
-            .orElseGet(() -> extensionFallback(text, extensionType, extensionKey, context)));
+    var custom = renderCustom(extensionType, extensionKey, text, macroParams, context);
+    blocks.add(custom != null ? custom : extensionFallback(text, extensionType, extensionKey, context));
     blocks.addAll(recursion.renderBlocks(content, context));
     return blocks;
   }
 
-  // Custom renderers, consulted in order (first non-empty wins); empty defers to the next, then default.
-  private Optional<String> renderCustom(
+  // Custom renderers, consulted in order (first non-null wins); null defers to the next, then default.
+  private String renderCustom(
       String extensionType,
       String extensionKey,
       String text,
@@ -111,18 +108,17 @@ final class MacroRenderer {
       RendererState context) {
     var renderers = context.extensionRenderers();
     if (renderers.isEmpty()) {
-      return Optional.empty();
+      return null;
     }
     var extension = new ExtensionContext(
         extensionType, extensionKey, text, macroParams == null ? null : macroParams.values());
     for (var renderer : renderers) {
-      var rendered = CallbackGuards.guard(
-          "ExtensionRenderer", () -> renderer.render(extension), Optional.<String>empty());
-      if (rendered != null && rendered.isPresent()) {
+      var rendered = CallbackGuards.guard("ExtensionRenderer", () -> renderer.render(extension), null);
+      if (rendered != null) {
         return rendered;
       }
     }
-    return Optional.empty();
+    return null;
   }
 
   private String extensionFallback(
@@ -154,20 +150,20 @@ final class MacroRenderer {
   }
 
   // Expand via the resolver, else the macro's placeholder token (recorded as unresolved).
-  private String renderPageTreeMacro(PageTreeRequest request, RendererState context) {
-    var expanded = expandPageTree(request, context);
+  private String renderPageTreeMacro(PageTreeReference reference, RendererState context) {
+    var expanded = expandPageTree(reference, context);
     if (expanded != null) {
       return expanded;
     }
-    return switch (request.macro()) {
+    return switch (reference.macro()) {
       case CHILDREN -> {
-        var depth = request.depth();
-        yield request.all() || depth.isEmpty()
+        var depth = reference.depth();
+        yield reference.all() || depth.isEmpty()
             ? "{{children}}"
             : "{{children:" + depth.getAsInt() + "}}";
       }
       case PAGETREE -> {
-        var root = pageTreeRoot(request.root());
+        var root = pageTreeRoot(reference.root());
         yield root == null ? "{{pagetree}}" : "{{pagetree:" + root + "}}";
       }
     };
@@ -175,14 +171,13 @@ final class MacroRenderer {
 
   // The resolver's entries as an indented bullet list ("" for an authoritative empty answer), or null
   // to fall back to the token (no resolver, a null return, or a throw — recorded as unresolved).
-  private String expandPageTree(PageTreeRequest request, RendererState context) {
+  private String expandPageTree(PageTreeReference reference, RendererState context) {
     var resolver = context.pageTreeResolver();
     var entries = resolver == null
         ? null
-        : CallbackGuards.guard("PageTreeResolver", () -> resolver.resolve(request), null);
+        : CallbackGuards.guard("PageTreeResolver", () -> resolver.resolve(reference), null);
     if (entries == null) {
-      context.unresolvedTracker()
-          .recordPageTree(new PageTreeReference(request.macro(), request.root()));
+      context.unresolvedTracker().recordPageTree(reference);
       return null;
     }
 
@@ -257,8 +252,7 @@ final class MacroRenderer {
 
   private String renderViewPdfMacro(MacroParams macroParams, RendererState context) {
     var name = macroParams.value("name");
-    var attachmentReference =
-        AttachmentReferences.resolve(macroParams, context.attachmentReferencesByTitle());
+    var attachmentReference = AttachmentReferences.resolve(macroParams, context.confluenceContext());
     if (attachmentReference == null
         || attachmentReference.fileId() == null
         || attachmentReference.fileId().isBlank()) {
@@ -272,16 +266,13 @@ final class MacroRenderer {
   }
 
   // The caller-resolved link for an attachment, or the synthetic attachment:<fileId> placeholder when
-  // there is no AttachmentResolver or it declines (null/blank).
+  // there is no AttachmentResolver or it declines.
   private String resolveAttachment(AttachmentReference reference, RendererState context) {
     var resolver = context.attachmentResolver();
-    if (resolver != null) {
-      var resolved = CallbackGuards.guard("AttachmentResolver", () -> resolver.resolve(reference), null);
-      if (resolved != null && !resolved.isBlank()) {
-        return resolved;
-      }
-    }
-    return "attachment:" + reference.fileId();
+    var resolved = resolver == null
+        ? null
+        : CallbackGuards.guardNonBlank("AttachmentResolver", () -> resolver.resolve(reference));
+    return resolved != null ? resolved : "attachment:" + reference.fileId();
   }
 
   private String renderChartMacro(MacroParams macroParams, RendererState context) {

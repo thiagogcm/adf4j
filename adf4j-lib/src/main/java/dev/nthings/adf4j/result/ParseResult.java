@@ -10,7 +10,7 @@ import dev.nthings.adf4j.ast.AdfDocument;
  * root parsed as a usable ADF document, including the best-effort case where the only issue is an
  * {@code UNSUPPORTED_VERSION} warning.
  */
-public record ParseResult(AdfDocument document, List<ParseIssue> issues, boolean validAdfRoot) {
+public record ParseResult(AdfDocument document, List<Diagnostic> issues, boolean validAdfRoot) {
 
   public ParseResult {
     issues = issues == null ? List.of() : List.copyOf(issues);

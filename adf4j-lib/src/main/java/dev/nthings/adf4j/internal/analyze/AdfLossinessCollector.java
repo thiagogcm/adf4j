@@ -16,8 +16,8 @@ import dev.nthings.adf4j.ast.UnknownBlock;
 import dev.nthings.adf4j.ast.UnknownInline;
 import dev.nthings.adf4j.ast.UnknownMark;
 import dev.nthings.adf4j.options.UnknownNodePolicy;
-import dev.nthings.adf4j.result.ParseIssue;
-import dev.nthings.adf4j.result.ParseIssue.Severity;
+import dev.nthings.adf4j.result.Diagnostic;
+import dev.nthings.adf4j.result.Diagnostic.Severity;
 
 /**
  * Counts the unmodelled constructs the {@link AdfNodeWalker} visits so the conversion can report
@@ -69,8 +69,8 @@ final class AdfLossinessCollector implements NodeVisitor {
    * is an upper bound: it counts every parsed unknown node, including any the renderer would also have
    * dropped because it sits in a subtree dropped by design.
    */
-  List<ParseIssue> build(UnknownNodePolicy policy) {
-    var issues = new ArrayList<ParseIssue>(2);
+  List<Diagnostic> build(UnknownNodePolicy policy) {
+    var issues = new ArrayList<Diagnostic>(2);
     if (unknownNodes > 0) {
       var nodeIssue = unknownNodeIssue(policy);
       if (nodeIssue != null) {
@@ -78,7 +78,7 @@ final class AdfLossinessCollector implements NodeVisitor {
       }
     }
     if (unknownMarks > 0) {
-      issues.add(new ParseIssue(
+      issues.add(new Diagnostic(
           "UNKNOWN_MARK_DROPPED",
           unknownMarks + " unsupported mark(s) dropped from the output.",
           null,
@@ -87,19 +87,19 @@ final class AdfLossinessCollector implements NodeVisitor {
     return List.copyOf(issues);
   }
 
-  private ParseIssue unknownNodeIssue(UnknownNodePolicy policy) {
+  private Diagnostic unknownNodeIssue(UnknownNodePolicy policy) {
     return switch (policy) {
-      case PLACEHOLDER -> new ParseIssue(
+      case PLACEHOLDER -> new Diagnostic(
           "UNKNOWN_NODE_PLACEHOLDER",
           unknownNodes + " unsupported node(s) rendered as placeholders; original content not represented.",
           null,
           Severity.WARNING);
-      case SKIP -> new ParseIssue(
+      case SKIP -> new Diagnostic(
           "UNKNOWN_NODE_SKIPPED",
           unknownNodes + " unsupported node(s) dropped from the output.",
           null,
           Severity.WARNING);
-      case PRESERVE_RAW -> new ParseIssue(
+      case PRESERVE_RAW -> new Diagnostic(
           "UNKNOWN_NODE_PRESERVED",
           unknownNodes + " unsupported node(s) preserved as raw JSON.",
           null,

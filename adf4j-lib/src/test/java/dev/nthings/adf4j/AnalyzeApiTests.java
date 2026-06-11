@@ -49,7 +49,7 @@ class AnalyzeApiTests {
   @Test
   void analyze_resolves_macro_attachments_through_the_supplied_context() {
     var options = MarkdownOptions.defaults()
-        .withContext(
+        .withConfluenceContext(
             ConfluenceRenderContext.empty()
                 .withAttachmentReferences(
                     List.of(new AttachmentReference("file-pdf-1", "guide.pdf", "application/pdf"))));

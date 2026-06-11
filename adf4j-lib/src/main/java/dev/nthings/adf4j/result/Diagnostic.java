@@ -6,21 +6,21 @@ package dev.nthings.adf4j.result;
  * conversion or yields an empty body, {@link Severity#WARNING} marks content that converted but was
  * dropped or altered, and {@link Severity#INFO} is a non-lossy note.
  */
-public record ParseIssue(String code, String message, Throwable cause, Severity severity) {
+public record Diagnostic(String code, String message, Throwable cause, Severity severity) {
 
-  /** How serious a {@link ParseIssue} is, from a non-lossy note up to a fatal error. */
+  /** How serious a {@link Diagnostic} is, from a non-lossy note up to a fatal error. */
   public enum Severity {
     INFO,
     WARNING,
     ERROR
   }
 
-  public ParseIssue {
+  public Diagnostic {
     severity = severity == null ? Severity.ERROR : severity;
   }
 
   /** A diagnostic that defaults to {@link Severity#ERROR}. */
-  public ParseIssue(String code, String message, Throwable cause) {
+  public Diagnostic(String code, String message, Throwable cause) {
     this(code, message, cause, Severity.ERROR);
   }
 }

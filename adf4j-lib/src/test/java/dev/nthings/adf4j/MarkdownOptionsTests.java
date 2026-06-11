@@ -19,17 +19,25 @@ class MarkdownOptionsTests {
     var options = MarkdownOptions.defaults();
 
     assertThat(options.unknownNodePolicy()).isEqualTo(UnknownNodePolicy.PLACEHOLDER);
-    assertThat(options.context()).isEqualTo(ConfluenceRenderContext.empty());
+    assertThat(options.confluenceContext()).isEqualTo(ConfluenceRenderContext.empty());
   }
 
   @Test
-  void constructor_and_copy_methods_normalize_null_policy_and_context() {
-    var options =
-        new MarkdownOptions(
-            null, null, false, null, null, false, null, null, null, null, false, null, false);
+  void null_builder_values_normalize_to_the_defaults() {
+    var options = MarkdownOptions.builder()
+        .unknownNodePolicy(null)
+        .confluenceContext(null)
+        .tableFallback(null)
+        .mediaResolver(null)
+        .extensionRenderers(null)
+        .attachmentResolver(null)
+        .pageLinkResolver(null)
+        .pageTreeResolver(null)
+        .documentTitle(null)
+        .build();
 
     assertThat(options.unknownNodePolicy()).isEqualTo(UnknownNodePolicy.PLACEHOLDER);
-    assertThat(options.context()).isEqualTo(ConfluenceRenderContext.empty());
+    assertThat(options.confluenceContext()).isEqualTo(ConfluenceRenderContext.empty());
     assertThat(options.tableFallback()).isEqualTo(TableFallback.GFM_PROMOTE_FIRST_ROW);
     assertThat(options.mediaResolver()).isNull();
     assertThat(options.extensionRenderers()).isEmpty();
@@ -41,7 +49,7 @@ class MarkdownOptionsTests {
     assertThat(options.escapeParentheses()).isFalse();
     assertThat(options.withUnknownNodePolicy(UnknownNodePolicy.SKIP).unknownNodePolicy())
         .isEqualTo(UnknownNodePolicy.SKIP);
-    assertThat(options.withContext(null).context()).isEqualTo(ConfluenceRenderContext.empty());
+    assertThat(options.withConfluenceContext(null).confluenceContext()).isEqualTo(ConfluenceRenderContext.empty());
   }
 
   @Test
@@ -73,7 +81,7 @@ class MarkdownOptionsTests {
     var enabled = options.withImageSizeAttributes(true);
     assertThat(enabled.imageSizeAttributes()).isTrue();
     assertThat(enabled.withUnknownNodePolicy(UnknownNodePolicy.SKIP).imageSizeAttributes()).isTrue();
-    assertThat(enabled.withContext(ConfluenceRenderContext.empty()).imageSizeAttributes()).isTrue();
+    assertThat(enabled.withConfluenceContext(ConfluenceRenderContext.empty()).imageSizeAttributes()).isTrue();
   }
 
   @Test
@@ -110,8 +118,34 @@ class MarkdownOptionsTests {
   }
 
   @Test
-  void builder_with_no_setters_equals_defaults() {
-    assertThat(MarkdownOptions.builder().build()).isEqualTo(MarkdownOptions.defaults());
+  void builder_with_no_setters_matches_defaults_field_by_field() {
+    var built = MarkdownOptions.builder().build();
+    var defaults = MarkdownOptions.defaults();
+
+    assertThat(built.unknownNodePolicy()).isEqualTo(defaults.unknownNodePolicy());
+    assertThat(built.confluenceContext()).isEqualTo(defaults.confluenceContext());
+    assertThat(built.imageSizeAttributes()).isEqualTo(defaults.imageSizeAttributes());
+    assertThat(built.tableFallback()).isEqualTo(defaults.tableFallback());
+    assertThat(built.mediaResolver()).isNull();
+    assertThat(built.htmlVisualMarks()).isEqualTo(defaults.htmlVisualMarks());
+    assertThat(built.extensionRenderers()).isEmpty();
+    assertThat(built.attachmentResolver()).isNull();
+    assertThat(built.pageLinkResolver()).isNull();
+    assertThat(built.pageTreeResolver()).isNull();
+    assertThat(built.collapseHardBreaks()).isEqualTo(defaults.collapseHardBreaks());
+    assertThat(built.documentTitle()).isNull();
+    assertThat(built.escapeParentheses()).isEqualTo(defaults.escapeParentheses());
+  }
+
+  @Test
+  void a_null_extension_renderer_element_is_rejected_with_a_named_message() {
+    var renderers = java.util.Arrays.<dev.nthings.adf4j.options.ExtensionRenderer>asList(
+        extension -> null, null);
+
+    org.assertj.core.api.Assertions.assertThatThrownBy(
+            () -> MarkdownOptions.builder().extensionRenderers(renderers).build())
+        .isInstanceOf(NullPointerException.class)
+        .hasMessageContaining("extensionRenderers");
   }
 
   @Test

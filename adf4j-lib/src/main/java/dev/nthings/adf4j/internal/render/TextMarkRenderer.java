@@ -43,7 +43,7 @@ final class TextMarkRenderer {
   // visual <span>, then the link outermost. A code mark makes the text literal, superseding the
   // format/visual layers. identity().andThen(...) nests so the first decorator added wraps innermost.
   private Function<String, String> markDecorator(List<AdfMark> marks, RenderContext context) {
-    var htmlVisualMarks = context.htmlVisualMarks();
+    var htmlVisualMarks = context.options().htmlVisualMarks();
     Link link = null;
     var hasCode = false;
     var formatMarks = new ArrayList<AdfMark>();
@@ -89,7 +89,7 @@ final class TextMarkRenderer {
       return rendered;
     }
     var label = (rendered == null || rendered.isBlank())
-        ? MarkdownText.escapeInlineText(href, false, context.escapeParentheses())
+        ? MarkdownText.escapeInlineText(href, false, context.options().escapeParentheses())
         : rendered;
     var resolvedHref = resolvePageHref(href, link.attrs(), context);
     var title = link.title();
@@ -101,7 +101,7 @@ final class TextMarkRenderer {
   // The caller-resolved destination for an internal page href, or the original href when there is no
   // PageLinkResolver, the href is not a page reference, or the resolver declines.
   static String resolvePageHref(String href, Attributes attrs, RenderContext context) {
-    if (context.pageLinkResolver() == null) {
+    if (context.options().pageLinkResolver() == null) {
       return href;
     }
     var resolved =
@@ -110,16 +110,15 @@ final class TextMarkRenderer {
   }
 
   // The resolver's destination for a page node id, or null when there is no id/resolver or it
-  // declines (null/blank/throw); a decline is recorded as an unresolved page ref.
+  // declines; a decline is recorded as an unresolved page ref.
   static String resolvePageId(String pageNodeId, RenderContext context) {
-    var resolver = context.pageLinkResolver();
+    var resolver = context.options().pageLinkResolver();
     if (resolver == null || pageNodeId == null || pageNodeId.isBlank()) {
       return null;
     }
-    var resolved = CallbackGuards.guard("PageLinkResolver", () -> resolver.resolve(pageNodeId), null);
-    if (resolved == null || resolved.isBlank()) {
+    var resolved = CallbackGuards.guardNonBlank("PageLinkResolver", () -> resolver.resolve(pageNodeId));
+    if (resolved == null) {
       context.unresolvedTracker().recordPageId(pageNodeId);
-      return null;
     }
     return resolved;
   }

@@ -2,7 +2,7 @@ package dev.nthings.adf4j.internal.parser;
 
 import java.util.List;
 
-import dev.nthings.adf4j.result.ParseIssue;
+import dev.nthings.adf4j.result.Diagnostic;
 import dev.nthings.adf4j.result.ParseResult;
 
 import org.slf4j.Logger;
@@ -65,7 +65,7 @@ public final class AdfParsingService {
       return new ParseResult(
           null,
           List.of(
-              new ParseIssue("INVALID_JSON", "Failed to parse ADF JSON payload.", exception)),
+              new Diagnostic("INVALID_JSON", "Failed to parse ADF JSON payload.", exception)),
           false);
     }
   }

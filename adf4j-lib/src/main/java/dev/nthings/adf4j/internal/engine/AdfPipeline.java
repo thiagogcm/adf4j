@@ -6,7 +6,7 @@ import java.util.List;
 import dev.nthings.adf4j.metadata.ContentMetadata;
 import dev.nthings.adf4j.options.MarkdownOptions;
 import dev.nthings.adf4j.result.MarkdownResult;
-import dev.nthings.adf4j.result.ParseIssue;
+import dev.nthings.adf4j.result.Diagnostic;
 import dev.nthings.adf4j.result.ParseResult;
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.internal.analyze.AdfDocumentAnalyzer;
@@ -90,7 +90,7 @@ public final class AdfPipeline {
 
   // A null document yields an empty (possibly titled) body.
   private MarkdownResult render(
-      AdfDocument document, MarkdownOptions options, List<ParseIssue> diagnostics) {
+      AdfDocument document, MarkdownOptions options, List<Diagnostic> diagnostics) {
     var analysis = analyzer.analyze(document, options);
     var rendered = renderer.render(document, options, analysis.outline());
     // Diagnostics in pipeline order: parse, then analyze-phase lossiness, then render-phase macros.
@@ -99,12 +99,12 @@ public final class AdfPipeline {
     return new MarkdownResult(rendered.body(), analysis.metadata(), merged, rendered.unresolved());
   }
 
-  private static List<ParseIssue> mergeDiagnostics(
-      List<ParseIssue> earlier, List<ParseIssue> later) {
+  private static List<Diagnostic> mergeDiagnostics(
+      List<Diagnostic> earlier, List<Diagnostic> later) {
     if (later.isEmpty()) {
       return earlier;
     }
-    var merged = new ArrayList<ParseIssue>(earlier.size() + later.size());
+    var merged = new ArrayList<Diagnostic>(earlier.size() + later.size());
     merged.addAll(earlier);
     merged.addAll(later);
     return merged;

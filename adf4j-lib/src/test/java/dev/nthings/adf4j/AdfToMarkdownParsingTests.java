@@ -3,7 +3,7 @@ package dev.nthings.adf4j;
 import java.io.IOException;
 import java.util.List;
 
-import dev.nthings.adf4j.result.ParseIssue;
+import dev.nthings.adf4j.result.Diagnostic;
 import dev.nthings.adf4j.result.ParseResult;
 
 import org.junit.jupiter.api.Test;
@@ -81,7 +81,7 @@ class AdfToMarkdownParsingTests {
 
     assertThat(result.document()).isNull();
     assertThat(result.validAdfRoot()).isFalse();
-    assertThat(result.issues()).extracting(ParseIssue::code).containsExactlyElementsOf(input.issueCodes());
+    assertThat(result.issues()).extracting(Diagnostic::code).containsExactlyElementsOf(input.issueCodes());
   }
 
   @Test
@@ -102,7 +102,7 @@ class AdfToMarkdownParsingTests {
 
     assertThat(result.document()).isNotNull();
     assertThat(result.validAdfRoot()).isTrue();
-    assertThat(result.issues()).extracting(ParseIssue::code).doesNotContain("INVALID_VERSION");
+    assertThat(result.issues()).extracting(Diagnostic::code).doesNotContain("INVALID_VERSION");
   }
 
   @Test
@@ -114,7 +114,7 @@ class AdfToMarkdownParsingTests {
     assertThat(result.validAdfRoot()).isTrue();
     assertThat(result.document()).isNotNull();
     assertThat(result.document().version()).isEqualTo(2);
-    assertThat(result.issues()).extracting(ParseIssue::code).containsExactly("UNSUPPORTED_VERSION");
+    assertThat(result.issues()).extracting(Diagnostic::code).containsExactly("UNSUPPORTED_VERSION");
     assertThat(processor.toMarkdown(json)).isEqualTo("Hi");
   }
 }

@@ -1,4 +1,4 @@
-package dev.nthings.adf4j.extension;
+package dev.nthings.adf4j.options;
 
 import java.util.Map;
 

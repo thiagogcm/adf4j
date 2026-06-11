@@ -38,7 +38,7 @@ flowchart LR
     src["ADF JSON<br/>(Confluence / Jira export)"] --> lib
 
     subgraph lib["adf4j"]
-        api["Public API<br/>Adf · AdfToMarkdown"]
+        api["Public API<br/>AdfToMarkdown"]
         engine["Conversion engine"]
         api --> engine
     end
@@ -64,19 +64,18 @@ The project is a Maven multi-module build with two artifacts under the `dev.nthi
 | `dev.nthings:adf4j` | `adf4j-lib` | The library (a JPMS module, `dev.nthings.adf4j`). |
 | `dev.nthings:adf4j-cli` | `adf4j-cli` | A thin command-line wrapper over the library. |
 
-The library’s public API is defined by its `module-info.java`: seven exported packages, everything else encapsulated.
+The library’s public API is defined by its `module-info.java`: six exported packages, everything else encapsulated.
 
 ```mermaid
 flowchart TB
     subgraph public["Public API (exported packages)"]
         direction TB
-        p1["dev.nthings.adf4j<br/><i>Adf, AdfToMarkdown</i>"]
+        p1["dev.nthings.adf4j<br/><i>AdfToMarkdown</i>"]
         p2["…ast<br/><i>AST records</i>"]
-        p3["…options<br/><i>MarkdownOptions, resolvers, enums</i>"]
-        p4["…result<br/><i>MarkdownResult, ParseResult, ParseIssue</i>"]
+        p3["…options<br/><i>MarkdownOptions, resolver + extension hooks, enums</i>"]
+        p4["…result<br/><i>MarkdownResult, ParseResult, Diagnostic</i>"]
         p5["…metadata<br/><i>ContentMetadata + references</i>"]
-        p6["…extension<br/><i>ExtensionRenderer, ExtensionContext</i>"]
-        p7["…confluence<br/><i>ConfluenceRenderContext, ConfluenceMetadata</i>"]
+        p6["…confluence<br/><i>ConfluenceRenderContext, ConfluenceMetadata</i>"]
     end
 
     subgraph internal["Internal (NOT exported)"]
@@ -91,9 +90,11 @@ flowchart TB
     public --> internal
 ```
 
-The significance of this split is contractual: **only the exported packages are API.** The `internal.*` packages — the parser, the analyzer, the renderer, and the pipeline that wires them — can change freely between releases. Integrators interact with the engine exclusively through `AdfToMarkdown`/`Adf` and the option, result, and metadata types.
+The significance of this split is contractual: **only the exported packages are API.** The `internal.*` packages — the parser, the analyzer, the renderer, and the pipeline that wires them — can change freely between releases. Integrators interact with the engine exclusively through `AdfToMarkdown` and the option, result, and metadata types.
 
-Within the public surface, `MarkdownOptions` is the canonical record but is constructed through `defaults()` + `withX(...)` withers or a `builder()` — never the raw constructor, whose parameter list grows as options are added. This keeps the public configuration API forward-compatible.
+The public packages are themselves layered, with dependencies pointing strictly downward: `ast` and `metadata` are leaves, `result` and `confluence` build on them, `options` (which carries every caller-implemented hook) sits above those, and the root package's `AdfToMarkdown` is the only public class that touches `internal.*` — as the composition root, never in a signature.
+
+Within the public surface, `MarkdownOptions` has no public constructor: it is built through `defaults()` + `withX(...)` withers, a `builder()`, or `toBuilder()` on an existing instance, all of which stay source-compatible as options are added.
 
 ## The conversion pipeline
 
@@ -296,7 +297,7 @@ classDiagram
 
 ADF is product-agnostic, but Confluence overloads it with conventions the core AST does not name: page links carry a `__confluenceMetadata` object, page identity hides in URL patterns, and macros live under the `com.atlassian.confluence.macro.core` extension namespace. This knowledge is isolated in two places:
 
-- `confluence.ConfluenceRenderContext` (public) carries the caller-supplied attachment table, keyed by normalized (trimmed, lower-cased) title, so attachment macros referenced by name can be resolved to file IDs.
+- `confluence.ConfluenceRenderContext` (public) carries the caller-supplied attachment table and owns its lookup invariant: entries are re-keyed by normalized (trimmed, lower-cased) title on construction, and `attachment(title)` resolves a macro's by-name reference to a file ID regardless of how the caller keyed the input.
 - `confluence.ConfluenceMetadata` (public) is the typed view of the `__confluenceMetadata` object that Confluence attaches to a link’s `Attributes` — `linkType`, `pageId`, `contentId`, `id`.
 - `internal.ConfluenceSupport` (encapsulated) is the single source of truth for Confluence heuristics: extracting a page node id from a URL (a tolerant regex over `/pages/<id>` forms) and/or a `ConfluenceMetadata`, detecting macro extensions (the `com.atlassian.confluence.macro.core` namespace), and reading anchor ids.
 
@@ -376,8 +377,8 @@ sequenceDiagram
 | `MediaResolver` | `String resolve(MediaAttrs)` | File media nodes (which carry ids, not URLs) | `null`/blank → `media:<collection>/<id>` placeholder |
 | `AttachmentResolver` | `String resolve(AttachmentReference)` | Resolved Confluence `attachment:` references | `null`/blank → `attachment:<fileId>` placeholder |
 | `PageLinkResolver` | `String resolve(String pageNodeId)` | Inter-page links, page cards, and page-tree entries | `null`/blank → original href / plain text |
-| `PageTreeResolver` | `List<PageTreeEntry> resolve(PageTreeRequest)` | `pagetree` / `children` macros | `null`/throws → `{{pagetree}}` / `{{children}}` token; an empty list is authoritative and renders nothing |
-| `ExtensionRenderer` | `Optional<String> render(ExtensionContext)` | Any extension/macro, consulted in order before built-ins | `Optional.empty()`/throws → next renderer, then built-in handling |
+| `PageTreeResolver` | `List<PageTreeEntry> resolve(PageTreeReference)` | `pagetree` / `children` macros | `null`/throws → `{{pagetree}}` / `{{children}}` token; an empty list is authoritative and renders nothing |
+| `ExtensionRenderer` | `String render(ExtensionContext)` | Any extension/macro, consulted in order before built-ins | `null`/throws → next renderer, then built-in handling |
 
 Two design choices make this model robust:
 
@@ -388,9 +389,9 @@ Two design choices make this model robust:
 
 `adf4j` reports problems as data, not (mostly) as exceptions. Three result types carry the information:
 
-- **`ParseResult`** (`parse()`) — the parsed `AdfDocument` (null on blank/invalid input), the list of `ParseIssue`s, and a `validAdfRoot` flag.
+- **`ParseResult`** (`parse()`) — the parsed `AdfDocument` (null on blank/invalid input), the list of parse `Diagnostic`s, and a `validAdfRoot` flag.
 - **`MarkdownResult`** (`convert()`) — the Markdown `body`, the `ContentMetadata`, the merged `diagnostics` list, and the `unresolved` references (lookups this render's resolvers declined: page ids a `PageLinkResolver` returned nothing for, and tree macros that fell back to their placeholder token).
-- **`ParseIssue`** — a `code`, human `message`, optional `cause`, and a `Severity` of `INFO`, `WARNING`, or `ERROR`.
+- **`Diagnostic`** — a `code`, human `message`, optional `cause`, and a `Severity` of `INFO`, `WARNING`, or `ERROR`; raised by all three phases (parse, analyze, render).
 
 The severity ladder is the contract for “did this convert cleanly?”:
 
@@ -412,7 +413,6 @@ The single hard-failure mode is `UnknownNodePolicy.FAIL`, which throws `IllegalS
 2. Reuse it across all documents and threads.
 3. When options must vary per document (per-page media base URLs, attachment tables, page-link maps), keep the single converter and pass the varying `MarkdownOptions` to the per-call `convert(json, options)` / `analyze(json, options)` overloads — never rebuild the engine per document.
 
-The `Adf` facade is a zero-configuration convenience: a single shared `AdfToMarkdown` behind a static `Adf.toMarkdown(String)` for callers who want defaults and one line.
 
 ## Dependencies and packaging
 

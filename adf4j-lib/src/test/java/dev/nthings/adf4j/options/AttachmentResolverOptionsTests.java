@@ -33,7 +33,7 @@ class AttachmentResolverOptionsTests {
 
   private static MarkdownOptions withAttachmentContext(AttachmentResolver resolver) {
     return MarkdownOptions.defaults()
-        .withContext(
+        .withConfluenceContext(
             ConfluenceRenderContext.empty()
                 .withAttachmentReferences(
                     List.of(new AttachmentReference("file-pdf-1", "guide.pdf", "application/pdf"))))
@@ -101,7 +101,7 @@ class AttachmentResolverOptionsTests {
         """;
     var options =
         MarkdownOptions.defaults()
-            .withContext(
+            .withConfluenceContext(
                 ConfluenceRenderContext.empty()
                     .withAttachmentReferences(
                         List.of(

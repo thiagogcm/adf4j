@@ -1,18 +1,17 @@
 package dev.nthings.adf4j.internal.render;
 
 import java.util.List;
-import java.util.Map;
 
-import dev.nthings.adf4j.extension.ExtensionRenderer;
-import dev.nthings.adf4j.metadata.AttachmentReference;
+import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
 import dev.nthings.adf4j.metadata.HeadingReference;
 import dev.nthings.adf4j.options.AttachmentResolver;
+import dev.nthings.adf4j.options.ExtensionRenderer;
 import dev.nthings.adf4j.options.MarkdownOptions;
 import dev.nthings.adf4j.options.MediaResolver;
 import dev.nthings.adf4j.options.PageTreeResolver;
 import dev.nthings.adf4j.options.TableFallback;
 import dev.nthings.adf4j.options.UnknownNodePolicy;
-import dev.nthings.adf4j.result.ParseIssue;
+import dev.nthings.adf4j.result.Diagnostic;
 import dev.nthings.adf4j.ast.Heading;
 import dev.nthings.adf4j.internal.analyze.HeadingOutline;
 
@@ -27,53 +26,52 @@ record RendererState(RenderContext context, int listDepth, TableCellKind tableCe
     return new RendererState(RenderContext.from(options, headingOutline), 0, TableCellKind.NONE, false);
   }
 
-  // Delegating accessors onto the shared context so renderer call sites stay stable.
   List<HeadingReference> headings() {
     return context.headingOutline().headings();
   }
 
-  Map<String, AttachmentReference> attachmentReferencesByTitle() {
-    return context.attachmentReferencesByTitle();
+  ConfluenceRenderContext confluenceContext() {
+    return context.options().confluenceContext();
   }
 
   UnknownNodePolicy unknownNodePolicy() {
-    return context.unknownNodePolicy();
+    return context.options().unknownNodePolicy();
   }
 
   boolean imageSizeAttributes() {
-    return context.imageSizeAttributes();
+    return context.options().imageSizeAttributes();
   }
 
   TableFallback tableFallback() {
-    return context.tableFallback();
+    return context.options().tableFallback();
   }
 
   MediaResolver mediaResolver() {
-    return context.mediaResolver();
+    return context.options().mediaResolver();
   }
 
   boolean htmlVisualMarks() {
-    return context.htmlVisualMarks();
+    return context.options().htmlVisualMarks();
   }
 
   boolean collapseHardBreaks() {
-    return context.collapseHardBreaks();
+    return context.options().collapseHardBreaks();
   }
 
   boolean escapeParentheses() {
-    return context.escapeParentheses();
+    return context.options().escapeParentheses();
   }
 
   List<ExtensionRenderer> extensionRenderers() {
-    return context.extensionRenderers();
+    return context.options().extensionRenderers();
   }
 
   AttachmentResolver attachmentResolver() {
-    return context.attachmentResolver();
+    return context.options().attachmentResolver();
   }
 
   PageTreeResolver pageTreeResolver() {
-    return context.pageTreeResolver();
+    return context.options().pageTreeResolver();
   }
 
   void recordUnsupportedExtension(String extensionType, String extensionKey) {
@@ -84,7 +82,7 @@ record RendererState(RenderContext context, int listDepth, TableCellKind tableCe
     return context.unresolvedTracker();
   }
 
-  List<ParseIssue> macroDiagnostics() {
+  List<Diagnostic> macroDiagnostics() {
     return context.macroDiagnostics().build();
   }
 
