@@ -7,11 +7,13 @@ public record BodiedExtension(
     String extensionKey,
     String text,
     MacroParams macroParams,
+    Attributes parameters,
     List<AdfBlock> content)
     implements AdfBlock {
 
   public BodiedExtension {
     macroParams = macroParams == null ? MacroParams.empty() : macroParams;
+    parameters = parameters == null ? Attributes.empty() : parameters;
     content = content == null ? List.of() : List.copyOf(content);
   }
 }

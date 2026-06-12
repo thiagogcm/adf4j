@@ -71,7 +71,7 @@ final class MediaRenderer {
     return recursion.applyMarks(rendered, node.marks(), context.context());
   }
 
-  private String renderMediaBlock(MediaAttrs attrs, RendererState context) {
+  String renderMediaBlock(MediaAttrs attrs, RendererState context) {
     var resolvedSource = resolveMediaSource(attrs, context);
     var destination = resolvedSource != null ? resolvedSource : placeholder(attrs);
 

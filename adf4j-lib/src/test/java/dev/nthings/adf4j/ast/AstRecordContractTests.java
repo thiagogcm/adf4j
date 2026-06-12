@@ -12,10 +12,11 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 class AstRecordContractTests {
 
   @Test
-  void bodied_extension_defaults_null_macro_params_and_content() {
-    var node = new BodiedExtension("com.example", "macro", null, null, null);
+  void bodied_extension_defaults_null_macro_params_parameters_and_content() {
+    var node = new BodiedExtension("com.example", "macro", null, null, null, null);
 
     assertThat(node.macroParams()).isEqualTo(MacroParams.empty());
+    assertThat(node.parameters()).isEqualTo(Attributes.empty());
     assertThat(node.content()).isEmpty();
   }
 
@@ -25,7 +26,8 @@ class AstRecordContractTests {
     content.add(new Paragraph(List.of(new Text("kept", List.of())), List.of()));
 
     var node = new BodiedExtension(
-        "com.example", "macro", "Body", new MacroParams(Map.of("k", "v")), content);
+        "com.example", "macro", "Body", new MacroParams(Map.of("k", "v")),
+        new Attributes(Map.of("extensionTitle", "Body")), content);
     content.clear();
 
     assertThat(node.content()).hasSize(1);

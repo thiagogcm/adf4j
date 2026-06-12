@@ -23,7 +23,10 @@ import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
  * to caller-supplied destinations by page node id; {@code null} keeps the original href.
  * {@code pageTreeResolver} expands a {@code pagetree} macro into an indented list of its descendant
  * pages; an empty (non-null) list renders as nothing, while {@code null} (or no resolver) keeps the
- * {@code {{pagetree}}} placeholder token. {@code collapseHardBreaks} renders a hard break
+ * {@code {{pagetree}}} placeholder token. {@code excerptResolver} expands an {@code excerpt-include}
+ * macro into caller-supplied Markdown; {@code null} (or a declined lookup) keeps the macro's
+ * placeholder and records the reference on {@code MarkdownResult.unresolved()}.
+ * {@code collapseHardBreaks} renders a hard break
  * (Shift+Enter) as a soft break (a plain newline) instead of the two-trailing-space GFM hard break,
  * so the output has no trailing whitespace and segments reflow into one paragraph (off by default).
  * {@code documentTitle}, when set, prepends the value as a level-1 ({@code # }) heading above the
@@ -45,6 +48,7 @@ public final class MarkdownOptions {
   private final AttachmentResolver attachmentResolver;
   private final PageLinkResolver pageLinkResolver;
   private final PageTreeResolver pageTreeResolver;
+  private final ExcerptResolver excerptResolver;
   private final boolean collapseHardBreaks;
   private final String documentTitle;
   private final boolean escapeParentheses;
@@ -63,6 +67,7 @@ public final class MarkdownOptions {
     this.attachmentResolver = builder.attachmentResolver;
     this.pageLinkResolver = builder.pageLinkResolver;
     this.pageTreeResolver = builder.pageTreeResolver;
+    this.excerptResolver = builder.excerptResolver;
     this.collapseHardBreaks = builder.collapseHardBreaks;
     this.documentTitle = builder.documentTitle;
     this.escapeParentheses = builder.escapeParentheses;
@@ -102,6 +107,7 @@ public final class MarkdownOptions {
     builder.attachmentResolver = attachmentResolver;
     builder.pageLinkResolver = pageLinkResolver;
     builder.pageTreeResolver = pageTreeResolver;
+    builder.excerptResolver = excerptResolver;
     builder.collapseHardBreaks = collapseHardBreaks;
     builder.documentTitle = documentTitle;
     builder.escapeParentheses = escapeParentheses;
@@ -146,6 +152,10 @@ public final class MarkdownOptions {
 
   public PageTreeResolver pageTreeResolver() {
     return pageTreeResolver;
+  }
+
+  public ExcerptResolver excerptResolver() {
+    return excerptResolver;
   }
 
   public boolean collapseHardBreaks() {
@@ -205,6 +215,11 @@ public final class MarkdownOptions {
     return toBuilder().pageTreeResolver(resolver).build();
   }
 
+  /** Sets the excerpt resolver; {@code null} clears it (excerpt-include macros keep their placeholder). */
+  public MarkdownOptions withExcerptResolver(ExcerptResolver resolver) {
+    return toBuilder().excerptResolver(resolver).build();
+  }
+
   /** Renders hard breaks as soft breaks (a plain newline), dropping the two-space GFM hard break. */
   public MarkdownOptions withCollapseHardBreaks(boolean enabled) {
     return toBuilder().collapseHardBreaks(enabled).build();
@@ -236,6 +251,7 @@ public final class MarkdownOptions {
     private AttachmentResolver attachmentResolver;
     private PageLinkResolver pageLinkResolver;
     private PageTreeResolver pageTreeResolver;
+    private ExcerptResolver excerptResolver;
     private boolean collapseHardBreaks;
     private String documentTitle;
     private boolean escapeParentheses;
@@ -290,6 +306,11 @@ public final class MarkdownOptions {
 
     public Builder pageTreeResolver(PageTreeResolver resolver) {
       this.pageTreeResolver = resolver;
+      return this;
+    }
+
+    public Builder excerptResolver(ExcerptResolver resolver) {
+      this.excerptResolver = resolver;
       return this;
     }
 

@@ -258,26 +258,31 @@ public final class AdfAstParser {
     if (macroParams == null || !macroParams.isObject()) {
       return MacroParams.empty();
     }
+    return flattenMacroParams(toAttributes(macroParams));
+  }
+
+  // Each entry's scalar (or its envelope object's "value" scalar) as text; non-scalars are dropped.
+  private static MacroParams flattenMacroParams(Attributes macroParams) {
     var values = new LinkedHashMap<String, String>();
-    for (var entry : macroParams.properties()) {
-      var value = entry.getValue();
-      if (value == null || value.isNull() || value.isMissingNode()) {
-        continue;
-      }
-      String resolved = null;
-      if (value.isObject()) {
-        var inner = value.get("value");
-        if (inner != null && !inner.isNull() && inner.isValueNode()) {
-          resolved = inner.asString();
-        }
-      } else if (value.isValueNode()) {
-        resolved = value.asString();
-      }
+    for (var entry : macroParams.values().entrySet()) {
+      var resolved = switch (entry.getValue()) {
+        case Map<?, ?> envelope -> scalarText(envelope.get("value"));
+        case Object scalar -> scalarText(scalar);
+      };
       if (resolved != null) {
         values.put(entry.getKey(), resolved);
       }
     }
     return new MacroParams(values);
+  }
+
+  private static String scalarText(Object value) {
+    return switch (value) {
+      case String text -> text;
+      case Number number -> number.toString();
+      case Boolean bool -> bool.toString();
+      case null, default -> null;
+    };
   }
 
   private Heading parseHeading(JsonNode node) {
@@ -362,39 +367,46 @@ public final class AdfAstParser {
             : null);
   }
 
-  private record ExtensionFields(String type, String key, String text, MacroParams macroParams) {
+  private record ExtensionFields(
+      String type, String key, String text, MacroParams macroParams, Attributes parameters) {
   }
 
+  // One walk of the raw parameters envelope (some extensions carry data outside macroParams);
+  // macroParams is the flattened convenience view derived from it.
   private ExtensionFields extensionFields(JsonNode attrs) {
+    var parameters = toAttributes(attrs.get("parameters"));
     return new ExtensionFields(
         JsonFields.text(attrs, "extensionType"),
         JsonFields.text(attrs, "extensionKey"),
         JsonFields.text(attrs, "text"),
-        parseMacroParams(attrs.path("parameters").path("macroParams")));
+        flattenMacroParams(parameters.object("macroParams")),
+        parameters);
   }
 
   private Extension parseExtension(JsonNode node) {
     var fields = extensionFields(node.path("attrs"));
-    return new Extension(fields.type(), fields.key(), fields.text(), fields.macroParams());
+    return new Extension(
+        fields.type(), fields.key(), fields.text(), fields.macroParams(), fields.parameters());
   }
 
   private BodiedExtension parseBodiedExtension(JsonNode node) {
     var fields = extensionFields(node.path("attrs"));
     return new BodiedExtension(
-        fields.type(), fields.key(), fields.text(), fields.macroParams(),
+        fields.type(), fields.key(), fields.text(), fields.macroParams(), fields.parameters(),
         parseBlocks(node.get("content")));
   }
 
   private MultiBodiedExtension parseMultiBodiedExtension(JsonNode node) {
     var fields = extensionFields(node.path("attrs"));
     return new MultiBodiedExtension(
-        fields.type(), fields.key(), fields.text(), fields.macroParams(),
+        fields.type(), fields.key(), fields.text(), fields.macroParams(), fields.parameters(),
         parseBlocks(node.get("content")));
   }
 
   private InlineExtension parseInlineExtension(JsonNode node) {
     var fields = extensionFields(node.path("attrs"));
-    return new InlineExtension(fields.type(), fields.key(), fields.text(), fields.macroParams());
+    return new InlineExtension(
+        fields.type(), fields.key(), fields.text(), fields.macroParams(), fields.parameters());
   }
 
   private CardAttrs parseCardAttrs(JsonNode attrs) {

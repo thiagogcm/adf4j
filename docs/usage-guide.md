@@ -16,6 +16,8 @@ It complements two reference documents. For the complete option-by-option table 
 - [Resolving media and attachments to real URLs](#resolving-media-and-attachments-to-real-urls)
 - [Rewriting inter-page links](#rewriting-inter-page-links)
 - [Expanding page-tree and children macros](#expanding-page-tree-and-children-macros)
+- [Expanding excerpt-include macros](#expanding-excerpt-include-macros)
+- [Expanding the attachments macro](#expanding-the-attachments-macro)
 - [Rendering custom macros and extensions](#rendering-custom-macros-and-extensions)
 - [Controlling unknown nodes](#controlling-unknown-nodes)
 - [Tables, visual marks, and other formatting toggles](#tables-visual-marks-and-other-formatting-toggles)
@@ -182,7 +184,7 @@ if (result.wasLossy()) {
 
 `wasLossy()` is true only when a diagnostic is `WARNING` or `ERROR` — content that was dropped or altered, or a structural parse failure. It deliberately ignores *by-design, options-driven* outcomes (placeholders when you set no resolver, dropped visual marks, the table HTML fallback) — see the [lossy and by-design behaviours](./markdown-conversion.md#lossy-and-by-design-behaviours) for the full catalogue. Gate on `wasLossy()` (or on each diagnostic’s `severity()`), not on “any diagnostic present”.
 
-`result.unresolved()` reports, per conversion, what the active resolvers were asked for and declined — no decorator-wrapping of your resolvers needed: `pageIds()` are the page node ids a configured `pageLinkResolver` returned nothing for, and `pageTreeRefs()` are the `pagetree`/`children` macros that fell back to their placeholder token. An empty `unresolved()` means this render left no declined-lookup artifacts in the output.
+`result.unresolved()` reports, per conversion, what the active resolvers were asked for and declined — no decorator-wrapping of your resolvers needed: `pageIds()` are the page node ids a configured `pageLinkResolver` returned nothing for, `pageTreeRefs()` are the `pagetree`/`children` macros that fell back to their placeholder token, and `excerptRefs()` are the `excerpt-include` macros that fell back to theirs. An empty `unresolved()` means this render left no declined-lookup artifacts in the output.
 
 ## Planning attachment fetches before rendering
 
@@ -207,7 +209,7 @@ String markdown = converter.toMarkdown(adfJson, options);
 
 > **Attachment macros need a context to be counted.** Media-node file ids are always collected, but a Confluence attachment macro (e.g. *view file* / `viewpdf`) contributes its file id to `referencedFileIds()` **only when its title resolves against a `ConfluenceRenderContext`**. If your documents use attachment macros, analyze with the context supplied — `converter.analyze(adfJson, optionsWithContext)` — or those ids will be silently absent from the fetch plan. See [Resolving media and attachments](#resolving-media-and-attachments-to-real-urls) for building the context.
 
-`ContentMetadata` also exposes the document’s outbound page links (`pageRefs()`), its `pagetree`/`children` macro occurrences (`pageTreeRefs()` — each with the macro kind and its normalized root), external links (`externalRefs()`), mentions (`mentionRefs()`), and a heading outline (`outline()` — each `HeadingReference` carries `level`, `text`, and a unique `anchor`). This is handy for building a link graph, a search index, or a navigation sidebar without rendering anything — and `pageRefs()` plus `pageTreeRefs()` classify a document up front: both empty means it is self-contained, needing no page hierarchy or link resolution to render fully.
+`ContentMetadata` also exposes the document’s outbound page links (`pageRefs()`), its `pagetree`/`children` macro occurrences (`pageTreeRefs()` — each with the macro kind and its normalized root), its `excerpt-include` occurrences (`excerptRefs()` — by source-page *title*, since the macro stores no page id), the `excerpt` regions the document itself defines (`excerpts()` — see [Expanding excerpt-include macros](#expanding-excerpt-include-macros)), external links (`externalRefs()`), mentions (`mentionRefs()`), and a heading outline (`outline()` — each `HeadingReference` carries `level`, `text`, and a unique `anchor`). This is handy for building a link graph, a search index, or a navigation sidebar without rendering anything — and `pageRefs()`, `pageTreeRefs()`, and `excerptRefs()` classify a document up front: all empty means it is self-contained, needing no page hierarchy, foreign excerpts, or link resolution to render fully.
 
 ## Resolving media and attachments to real URLs
 
@@ -285,6 +287,44 @@ MarkdownOptions options = MarkdownOptions.defaults()
 
 Each entry’s `depth` (0-based) drives indentation, `title` becomes the visible label (Markdown-escaped for you), and `pageNodeId` is routed through your `pageLinkResolver` to produce the link — an entry whose id does not resolve renders as plain text. A non-null return is authoritative: an **empty list means "this page has no descendants"** and renders as nothing, keeping the output clean. Returning `null`, or throwing, declines and leaves the placeholder token in place (the base `{{pagetree}}` / `{{children}}`, or a parameterized `{{pagetree:<root>}}` / `{{children:<depth>}}` form); each macro that fell back this way is listed in `MarkdownResult.unresolved().pageTreeRefs()`.
 
+## Expanding excerpt-include macros
+
+The Confluence `excerpt` macro marks a region of a page; `excerpt-include` embeds that region into *other* pages, composed server-side — the ADF carries only a reference to the source page by **title** (plus an optional named-excerpt `name`). On the source page the `excerpt` body renders transparently; an `excerpt-include` without a resolver emits an `[Excerpt include: <page>]` placeholder.
+
+The two sides are designed to meet: a source page's conversion exposes its marked regions as `ContentMetadata.excerpts()` (the name and the region's ADF blocks), and an `ExcerptResolver` answers an include with Markdown:
+
+```java
+import dev.nthings.adf4j.ast.AdfDocument;
+import dev.nthings.adf4j.metadata.ExcerptDefinition;
+
+// 1. While converting each source page, index its excerpts (rendered with the same options).
+Map<String, String> excerptIndex = new HashMap<>();   // "title / name" -> markdown
+for (ExcerptDefinition excerpt : converter.analyze(sourceAdf).excerpts()) {
+    String markdown = converter.convert(new AdfDocument(1, excerpt.content())).body();
+    excerptIndex.put(sourceTitle + " / " + excerpt.name(), markdown);
+}
+
+// 2. When converting pages that include them, answer from the index.
+MarkdownOptions options = MarkdownOptions.defaults()
+    .withExcerptResolver(ref ->
+        excerptIndex.get(ref.page() + " / " + ref.excerptName()));  // null → placeholder
+```
+
+The `ExcerptIncludeReference` carries `page()` (the source page title exactly as the macro stores it, optionally `SPACEKEY:`-prefixed for a cross-space include), `excerptName()` (`null` for the unnamed excerpt), and the raw `parameters()` map. The returned Markdown is emitted verbatim in the macro's place; an empty string is a valid answer that suppresses the macro. Returning `null`, or throwing, declines: the placeholder stays and the reference is listed in `MarkdownResult.unresolved().excerptRefs()`. Every occurrence — resolved or not — is also surfaced statically in `ContentMetadata.excerptRefs()`, so a sync tool can track the cross-page dependency (and re-render including pages when the source excerpt changes) without rendering anything.
+
+## Expanding the attachments macro
+
+The Confluence `attachments` macro renders the page's attachment table — server-side data the ADF does not carry, but exactly what `ConfluenceRenderContext.withAttachmentReferences(...)` already supplies for attachment-macro resolution. With the inventory supplied, the macro expands to a bullet list of links, each destination routed through your `attachmentResolver` (or the `attachment:<fileId>` placeholder without one):
+
+```java
+MarkdownOptions options = MarkdownOptions.defaults()
+    .withConfluenceContext(ConfluenceRenderContext.empty()
+        .withAttachmentReferences(pageAttachments))   // an empty list is authoritative
+    .withAttachmentResolver(ref -> "files/" + ref.title());
+```
+
+Supplying the inventory is authoritative even when it is empty: `withAttachmentReferences(List.of())` means "this page has no attachments" and the macro renders as nothing. Only a context that never supplied an inventory keeps the `[Extension: …/attachments]` placeholder (with its lossy diagnostic). Macro display parameters (`patterns`, `labels`, sort order, the upload form) are not interpreted — the expansion always lists the full supplied inventory.
+
 ## Rendering custom macros and extensions
 
 Macros without a built-in renderer become a labelled placeholder and a lossy diagnostic. To render your own (or override a built-in), register one or more `ExtensionRenderer`s. They are consulted in order, before the built-in Confluence macros, and the first to return non-null wins (an empty string is a valid answer that suppresses the macro's output):
@@ -307,7 +347,7 @@ MarkdownOptions options = MarkdownOptions.defaults()
     .withExtensionRenderers(List.of(infoPanel));
 ```
 
-The `ExtensionContext` exposes `extensionType()`, `extensionKey()`, `text()`, and the macro `parameters()` (with a `parameter(name)` convenience). Two cautions:
+The `ExtensionContext` exposes `extensionType()`, `extensionKey()`, `text()`, the macro `parameters()` (with a `parameter(name)` convenience), and `rawParameters()` — the node's full parameter envelope as generic `Attributes`, for extensions that keep their data outside the conventional `macroParams` (the modern chart app and migration macros do). Two cautions:
 
 - **Output is emitted verbatim — it is not sanitized.** If you interpolate untrusted macro parameters, escape them yourself.
 - **A thrown `RuntimeException` is caught and logged**, and the engine falls back to its built-in handling rather than aborting the conversion. The same isolation applies to every resolver above.
@@ -500,9 +540,15 @@ A scannable map of how each ADF construct is rendered with default options. Anch
 | `toc` | a nested bullet list of heading links, with anchors injected on the referenced headings |
 | `anchor` | an `<a id="…"></a>` fragment |
 | `pagetree` / `children` | an indented page list via `pageTreeResolver`, else a `{{pagetree}}` / `{{children}}` token |
+| `excerpt` | its body, rendered transparently (the region is also exposed as `ContentMetadata.excerpts()`) |
+| `excerpt-include` | the `excerptResolver`'s Markdown, else an `\[Excerpt include: page\]` label token |
+| `attachments` | a bullet list of links to the supplied attachment inventory (destinations via `attachmentResolver`), else the `\[Extension: …\]` placeholder when no inventory was supplied |
 | `viewpdf` / *view file* | `[PDF: name](attachment:…)` once the title resolves against a `ConfluenceRenderContext` (destination via `attachmentResolver`), else the `\[PDF: name\]` label token |
 | `iframe` | a labelled link `[Embedded content](url)` |
-| `chart` | a `\[Chart: title\]` label token |
+| `chart` (bodied) | an italic `*Chart: title*` caption followed by the body's data table |
+| `chart` (modern, `com.atlassian.chart`) | an italic `*Chart: title*` caption — its data table is a separate document node that renders at its own position |
+| `chart` (legacy, bodyless) | a `\[Chart: title\]` label token (the document holds no recoverable data) |
+| `inline-media-image` (migration) | the standard media rendering for the referenced file: `![alt](url)` via `mediaResolver`, else the `media:` placeholder |
 | custom extension | your `ExtensionRenderer` output, else an `\[Extension: type/key\]` placeholder + a `WARNING` diagnostic |
 | unrecognized node | governed by [`UnknownNodePolicy`](#controlling-unknown-nodes) |
 
@@ -516,6 +562,8 @@ A scannable map of how each ADF construct is rendered with default options. Anch
 | Coloured/highlighted text lost its styling | Visual-only marks have no GFM equivalent and are dropped by default. Enable [`htmlVisualMarks`](#tables-visual-marks-and-other-formatting-toggles) to preserve them as inline HTML. |
 | An `[Extension: type/key]` placeholder appears | A macro has no built-in or custom renderer. Register an [`ExtensionRenderer`](#rendering-custom-macros-and-extensions) for it. |
 | A `{{pagetree}}` / `{{children}}` token appears | These macros are resolved server-side by Confluence; the ADF carries no page list. Supply a [`pageTreeResolver`](#expanding-page-tree-and-children-macros) — and return an empty list (not `null`) for a page that genuinely has no descendants, which renders as nothing. Fallbacks are listed in `result.unresolved().pageTreeRefs()`. |
+| An `[Excerpt include: page]` placeholder appears | The excerpt lives on another page; supply an [`excerptResolver`](#expanding-excerpt-include-macros) answering from the source page's `ContentMetadata.excerpts()`. Fallbacks are listed in `result.unresolved().excerptRefs()`. |
+| An `[Extension: …/attachments]` placeholder appears | The macro expands from the attachment inventory; supply it via [`ConfluenceRenderContext.withAttachmentReferences(...)`](#expanding-the-attachments-macro) — an empty list is an authoritative "no attachments" and renders as nothing. |
 | `referencedFileIds()` is missing an attachment | Attachment-*macro* ids only appear when their title resolves against a `ConfluenceRenderContext` passed to `analyze`. See [Planning attachment fetches](#planning-attachment-fetches-before-rendering). |
 | Internal page links still point at Confluence | Supply a [`pageLinkResolver`](#rewriting-inter-page-links) to rewrite them to your destinations. |
 | `wasLossy()` is `true` but the output looks fine | A `WARNING`/`ERROR` diagnostic was raised (e.g. an unsupported macro or a dropped unknown mark). Inspect `diagnostics()` for the `code`/`message`. By-design placeholders and dropped visual marks do **not** set this flag. |

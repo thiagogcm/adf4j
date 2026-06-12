@@ -5,6 +5,7 @@ import java.util.List;
 import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
 import dev.nthings.adf4j.metadata.HeadingReference;
 import dev.nthings.adf4j.options.AttachmentResolver;
+import dev.nthings.adf4j.options.ExcerptResolver;
 import dev.nthings.adf4j.options.ExtensionRenderer;
 import dev.nthings.adf4j.options.MarkdownOptions;
 import dev.nthings.adf4j.options.MediaResolver;
@@ -72,6 +73,10 @@ record RendererState(RenderContext context, int listDepth, TableCellKind tableCe
 
   PageTreeResolver pageTreeResolver() {
     return context.options().pageTreeResolver();
+  }
+
+  ExcerptResolver excerptResolver() {
+    return context.options().excerptResolver();
   }
 
   void recordUnsupportedExtension(String extensionType, String extensionKey) {

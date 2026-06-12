@@ -10,14 +10,21 @@ import dev.nthings.adf4j.metadata.AttachmentReference;
 /**
  * Caller-supplied Confluence knowledge for one conversion — today, the page's attachment table, so
  * attachment macros that reference a file by name ({@code viewpdf}, "view file") can be resolved to a
- * durable {@link AttachmentReference}. Look up with {@link #attachment(String)}; titles are matched
- * case-insensitively and ignoring surrounding whitespace. Entries without a usable title or
- * {@code fileId} are dropped on construction, and the first entry wins a title collision.
+ * durable {@link AttachmentReference}, and the {@code attachments} macro can expand to the page's
+ * attachment list. Look up with {@link #attachment(String)}; titles are matched case-insensitively
+ * and ignoring surrounding whitespace. Entries without a usable title or {@code fileId} are dropped
+ * on construction, and the first entry wins a title collision.
+ *
+ * <p>{@code attachmentsSupplied} records whether the caller asserted the attachment inventory at all:
+ * {@link #withAttachmentReferences} sets it even for an empty iterable, making "this page has no
+ * attachments" an authoritative answer (the {@code attachments} macro then renders as nothing) that
+ * stays distinct from {@link #empty()} (unknown inventory — the macro keeps its placeholder).
  */
 public record ConfluenceRenderContext(
-    Map<String, AttachmentReference> attachmentReferencesByTitle) {
+    Map<String, AttachmentReference> attachmentReferencesByTitle, boolean attachmentsSupplied) {
 
-  private static final ConfluenceRenderContext EMPTY = new ConfluenceRenderContext(Map.of());
+  private static final ConfluenceRenderContext EMPTY =
+      new ConfluenceRenderContext(Map.of(), false);
 
   public ConfluenceRenderContext {
     attachmentReferencesByTitle = normalized(attachmentReferencesByTitle);
@@ -27,7 +34,10 @@ public record ConfluenceRenderContext(
     return EMPTY;
   }
 
-  /** This context plus the given attachment references, keyed by their own titles. */
+  /**
+   * This context plus the given attachment references, keyed by their own titles. A non-null
+   * iterable — even an empty one — marks the inventory as supplied (see the class note).
+   */
   public ConfluenceRenderContext withAttachmentReferences(
       Iterable<AttachmentReference> attachmentReferences) {
     var merged = new LinkedHashMap<>(attachmentReferencesByTitle);
@@ -36,7 +46,8 @@ public record ConfluenceRenderContext(
         putValid(merged, attachmentReference);
       }
     }
-    return new ConfluenceRenderContext(merged);
+    return new ConfluenceRenderContext(
+        merged, attachmentsSupplied || attachmentReferences != null);
   }
 
   /** The attachment whose title matches {@code title} (normalized), or {@code null}. */

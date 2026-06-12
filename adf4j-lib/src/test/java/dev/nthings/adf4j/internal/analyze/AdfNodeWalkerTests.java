@@ -55,6 +55,7 @@ class AdfNodeWalkerTests {
                 "tabs-group",
                 null,
                 MacroParams.empty(),
+                null,
                 List.of(new ExtensionFrame(List.of(paragraph("extension body"))))),
             new BodiedSyncBlock("resource-1", List.of(paragraph("synced body"))),
             new BlockCard(null)));

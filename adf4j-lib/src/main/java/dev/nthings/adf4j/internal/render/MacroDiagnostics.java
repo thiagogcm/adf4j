@@ -20,7 +20,7 @@ final class MacroDiagnostics {
     unsupportedMacros.add(label(extensionType, extensionKey));
   }
 
-  private static String label(String extensionType, String extensionKey) {
+  static String label(String extensionType, String extensionKey) {
     if (extensionType != null && extensionKey != null) {
       return extensionType + "/" + extensionKey;
     }

@@ -2,11 +2,16 @@ package dev.nthings.adf4j.internal.render;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import dev.nthings.adf4j.metadata.AttachmentReference;
+import dev.nthings.adf4j.metadata.ExcerptIncludeReference;
 import dev.nthings.adf4j.metadata.HeadingReference;
 import dev.nthings.adf4j.metadata.PageTreeReference;
 import dev.nthings.adf4j.ast.AdfBlock;
+import dev.nthings.adf4j.ast.Attributes;
 import dev.nthings.adf4j.ast.BodiedExtension;
 import dev.nthings.adf4j.ast.BodiedSyncBlock;
 import dev.nthings.adf4j.ast.Extension;
@@ -27,14 +32,25 @@ final class MacroRenderer {
 
   private static final Logger log = LoggerFactory.getLogger(MacroRenderer.class);
 
+  private final MediaRenderer mediaRenderer;
+  // One WARN per extension type/key per converter; repeats log at DEBUG (diagnostics carry the
+  // per-document detail).
+  private final Set<String> placeholderWarned = ConcurrentHashMap.newKeySet();
+
+  MacroRenderer(MediaRenderer mediaRenderer) {
+    this.mediaRenderer = Objects.requireNonNull(mediaRenderer, "mediaRenderer");
+  }
+
   String renderExtension(Extension node, RendererState context) {
     return renderExtensionCore(
-        node.extensionType(), node.extensionKey(), node.text(), node.macroParams(), context);
+        node.extensionType(), node.extensionKey(), node.text(), node.macroParams(),
+        node.parameters(), context);
   }
 
   String renderInlineExtension(InlineExtension node, RendererState context) {
     return renderExtensionCore(
-        node.extensionType(), node.extensionKey(), node.text(), node.macroParams(), context);
+        node.extensionType(), node.extensionKey(), node.text(), node.macroParams(),
+        node.parameters(), context);
   }
 
   private String renderExtensionCore(
@@ -42,10 +58,23 @@ final class MacroRenderer {
       String extensionKey,
       String text,
       MacroParams macroParams,
+      Attributes parameters,
       RendererState context) {
-    var custom = renderCustom(extensionType, extensionKey, text, macroParams, context);
+    var custom = renderCustom(extensionType, extensionKey, text, macroParams, parameters, context);
     if (custom != null) {
       return custom;
+    }
+    if (ConfluenceSupport.isInlineMediaImage(extensionType, extensionKey)) {
+      // A media node in disguise: the media path's resolver and placeholder semantics apply as-is.
+      var mediaAttrs = ConfluenceSupport.inlineMediaImageAttrs(parameters);
+      if (mediaAttrs != null) {
+        return mediaRenderer.renderMediaBlock(mediaAttrs, context);
+      }
+    }
+    if (ConfluenceSupport.isModernChartExtension(extensionType)) {
+      // Its data table lives elsewhere in the same document, so a caption loses nothing —
+      // Confluence's own export renders a sourceless chart as nothing at all.
+      return chartCaption(macroParams, parameters, context);
     }
     if (!ConfluenceSupport.isConfluenceMacroExtension(extensionType)) {
       return extensionFallback(text, extensionType, extensionKey, context);
@@ -59,6 +88,10 @@ final class MacroRenderer {
       case "iframe" -> renderIframeMacro(macroParams, context);
       case "viewpdf" -> renderViewPdfMacro(macroParams, context);
       case "chart:default" -> renderChartMacro(macroParams, context);
+      case "excerpt-include" ->
+          renderExcerptInclude(
+              ConfluenceSupport.excerptIncludeReference(extensionKey, macroParams), context);
+      case "attachments" -> renderAttachmentsMacro(context);
       default -> null;
     };
     return rendered != null ? rendered : extensionFallback(text, extensionType, extensionKey, context);
@@ -70,9 +103,13 @@ final class MacroRenderer {
         && "excerpt".equals(node.extensionKey())) {
       return recursion.renderBlocks(node.content(), context);
     }
+    if (ConfluenceSupport.isChartExtension(node.extensionType(), node.extensionKey())) {
+      // The body holds the data table; keep the numbers under a caption, not a placeholder.
+      return captionThenBodies(node, context, recursion);
+    }
     return headerThenBodies(
         node.text(), node.extensionType(), node.extensionKey(), node.macroParams(),
-        node.content(), context, recursion);
+        node.parameters(), node.content(), context, recursion);
   }
 
   List<String> renderMultiBodiedExtension(
@@ -80,7 +117,7 @@ final class MacroRenderer {
     // The schema predates this node; salvage the frame bodies.
     return headerThenBodies(
         node.text(), node.extensionType(), node.extensionKey(), node.macroParams(),
-        node.content(), context, recursion);
+        node.parameters(), node.content(), context, recursion);
   }
 
   // Header (custom renderer, else macro text or "[Extension: …]" placeholder) then the body blocks.
@@ -89,13 +126,26 @@ final class MacroRenderer {
       String extensionType,
       String extensionKey,
       MacroParams macroParams,
+      Attributes parameters,
       List<AdfBlock> content,
       RendererState context,
       BlockRecursion recursion) {
     var blocks = new ArrayList<String>();
-    var custom = renderCustom(extensionType, extensionKey, text, macroParams, context);
+    var custom = renderCustom(extensionType, extensionKey, text, macroParams, parameters, context);
     blocks.add(custom != null ? custom : extensionFallback(text, extensionType, extensionKey, context));
     blocks.addAll(recursion.renderBlocks(content, context));
+    return blocks;
+  }
+
+  // Chart caption (custom renderer first) then the body blocks — no placeholder.
+  private List<String> captionThenBodies(
+      BodiedExtension node, RendererState context, BlockRecursion recursion) {
+    var blocks = new ArrayList<String>();
+    var custom = renderCustom(
+        node.extensionType(), node.extensionKey(), node.text(), node.macroParams(),
+        node.parameters(), context);
+    blocks.add(custom != null ? custom : chartCaption(node.macroParams(), node.parameters(), context));
+    blocks.addAll(recursion.renderBlocks(node.content(), context));
     return blocks;
   }
 
@@ -105,13 +155,15 @@ final class MacroRenderer {
       String extensionKey,
       String text,
       MacroParams macroParams,
+      Attributes parameters,
       RendererState context) {
     var renderers = context.extensionRenderers();
     if (renderers.isEmpty()) {
       return null;
     }
     var extension = new ExtensionContext(
-        extensionType, extensionKey, text, macroParams == null ? null : macroParams.values());
+        extensionType, extensionKey, text,
+        macroParams == null ? null : macroParams.values(), parameters);
     for (var renderer : renderers) {
       var rendered = CallbackGuards.guard("ExtensionRenderer", () -> renderer.render(extension), null);
       if (rendered != null) {
@@ -213,6 +265,41 @@ final class MacroRenderer {
     return flattened.isEmpty() ? null : flattened;
   }
 
+  // Expand via the resolver, else the labelled placeholder (recorded as unresolved); a null
+  // reference (no source page) defers to the generic extension fallback.
+  private String renderExcerptInclude(ExcerptIncludeReference reference, RendererState context) {
+    if (reference == null) {
+      return null;
+    }
+    var resolver = context.excerptResolver();
+    var resolved = resolver == null
+        ? null
+        : CallbackGuards.guard("ExcerptResolver", () -> resolver.resolve(reference), null);
+    if (resolved != null) {
+      return resolved;
+    }
+    context.unresolvedTracker().recordExcerpt(reference);
+    var label = reference.excerptName() == null
+        ? "Excerpt include: " + reference.page()
+        : "Excerpt include: " + reference.page() + " / " + reference.excerptName();
+    return MarkdownText.labelToken(label, context.escapeParentheses());
+  }
+
+  // The supplied attachment inventory as a bullet list of links ("" for an authoritative empty
+  // inventory), or null when no inventory was supplied — only that keeps the placeholder.
+  private String renderAttachmentsMacro(RendererState context) {
+    var confluenceContext = context.confluenceContext();
+    if (confluenceContext == null || !confluenceContext.attachmentsSupplied()) {
+      return null;
+    }
+    var lines = new ArrayList<String>();
+    for (var reference : confluenceContext.attachmentReferencesByTitle().values()) {
+      lines.add("- " + MarkdownText.link(
+          reference.title(), resolveAttachment(reference, context), context.escapeParentheses()));
+    }
+    return String.join("\n", lines);
+  }
+
   private String renderTocMacro(MacroParams macroParams, RendererState context) {
     var headings = context.headings();
     if (headings.isEmpty()) {
@@ -275,24 +362,33 @@ final class MacroRenderer {
     return resolved != null ? resolved : "attachment:" + reference.fileId();
   }
 
+  // The bodyless legacy chart macro: nothing recoverable in the document, so a labelled placeholder.
   private String renderChartMacro(MacroParams macroParams, RendererState context) {
     var title = macroParams.value("title");
     return MarkdownText.labelToken(
         title == null || title.isBlank() ? "Chart" : "Chart: " + title, context.escapeParentheses());
   }
 
+  // The italic "Chart: <title>" caption; one line so the emphasis wrapping survives any title.
+  private String chartCaption(MacroParams macroParams, Attributes parameters, RendererState context) {
+    var title = ConfluenceSupport.chartTitle(macroParams, parameters);
+    var label = title == null ? "Chart" : "Chart: " + MarkdownText.collapseLineBreaks(title).strip();
+    return "*" + MarkdownText.escapeInlineText(label, false, context.escapeParentheses()) + "*";
+  }
+
   private String renderExtensionPlaceholder(
       String extensionType, String extensionKey, RendererState context) {
-    if (extensionType != null && extensionKey != null) {
-      log.warn("Rendering placeholder for unsupported extension: {}/{}", extensionType, extensionKey);
-      return MarkdownText.labelToken(
-          "Extension: " + extensionType + "/" + extensionKey, context.escapeParentheses());
+    var label = MacroDiagnostics.label(extensionType, extensionKey);
+    if (placeholderWarned.add(label)) {
+      log.warn(
+          "Rendering placeholder for unsupported extension: {} (logged once per converter; "
+              + "further occurrences log at DEBUG, per-document detail is on diagnostics)",
+          label);
+    } else {
+      log.debug("Rendering placeholder for unsupported extension: {}", label);
     }
-    if (extensionKey != null) {
-      log.warn("Rendering placeholder for unsupported extension key: {}", extensionKey);
-      return MarkdownText.labelToken("Extension: " + extensionKey, context.escapeParentheses());
-    }
-    log.warn("Rendering placeholder for extension with no type/key");
-    return MarkdownText.labelToken("Extension", context.escapeParentheses());
+    return MarkdownText.labelToken(
+        "Extension".equals(label) ? "Extension" : "Extension: " + label,
+        context.escapeParentheses());
   }
 }

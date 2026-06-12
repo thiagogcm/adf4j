@@ -5,6 +5,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+import dev.nthings.adf4j.metadata.ExcerptIncludeReference;
 import dev.nthings.adf4j.metadata.PageTreeReference;
 
 /**
@@ -13,18 +14,25 @@ import dev.nthings.adf4j.metadata.PageTreeReference;
  * threw) — absent a resolver, no lookup happens and nothing is recorded. {@code pageTreeRefs} are the
  * {@code pagetree}/{@code children} macros that fell back to the {@code {{pagetree}}} /
  * {@code {{children}}} placeholder (no {@code PageTreeResolver}, a null return, or a throw); a
- * resolver answering with an empty list counts as resolved and is not listed. Both empty means the
- * output contains no declined-lookup artifacts.
+ * resolver answering with an empty list counts as resolved and is not listed. {@code excerptRefs}
+ * are likewise the {@code excerpt-include} macros that fell back to their placeholder (no
+ * {@code ExcerptResolver}, a null return, or a throw); an empty-string answer counts as resolved.
+ * All empty means the output contains no declined-lookup artifacts.
  */
-public record UnresolvedReferences(Set<String> pageIds, List<PageTreeReference> pageTreeRefs) {
+public record UnresolvedReferences(
+    Set<String> pageIds,
+    List<PageTreeReference> pageTreeRefs,
+    List<ExcerptIncludeReference> excerptRefs) {
 
-  private static final UnresolvedReferences EMPTY = new UnresolvedReferences(Set.of(), List.of());
+  private static final UnresolvedReferences EMPTY =
+      new UnresolvedReferences(Set.of(), List.of(), List.of());
 
   public UnresolvedReferences {
     pageIds = pageIds == null
         ? Set.of()
         : Collections.unmodifiableSet(new LinkedHashSet<>(pageIds));
     pageTreeRefs = pageTreeRefs == null ? List.of() : List.copyOf(pageTreeRefs);
+    excerptRefs = excerptRefs == null ? List.of() : List.copyOf(excerptRefs);
   }
 
   public static UnresolvedReferences empty() {
@@ -32,6 +40,6 @@ public record UnresolvedReferences(Set<String> pageIds, List<PageTreeReference> 
   }
 
   public boolean isEmpty() {
-    return pageIds.isEmpty() && pageTreeRefs.isEmpty();
+    return pageIds.isEmpty() && pageTreeRefs.isEmpty() && excerptRefs.isEmpty();
   }
 }

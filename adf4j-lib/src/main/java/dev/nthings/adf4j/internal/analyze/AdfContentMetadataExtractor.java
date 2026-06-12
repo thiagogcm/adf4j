@@ -9,6 +9,8 @@ import java.util.stream.Stream;
 
 import dev.nthings.adf4j.metadata.AttachmentReference;
 import dev.nthings.adf4j.metadata.ContentMetadata;
+import dev.nthings.adf4j.metadata.ExcerptDefinition;
+import dev.nthings.adf4j.metadata.ExcerptIncludeReference;
 import dev.nthings.adf4j.metadata.ExternalReference;
 import dev.nthings.adf4j.metadata.HeadingReference;
 import dev.nthings.adf4j.metadata.MentionReference;
@@ -49,8 +51,10 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
   private final LinkedHashSet<String> externalRefs = new LinkedHashSet<>();
   private final LinkedHashSet<MentionReference> mentionRefs = new LinkedHashSet<>();
   private final LinkedHashMap<String, AttachmentRefBuilder> attachmentRefs = new LinkedHashMap<>();
-  // Occurrences, not a set: the count of tree macros is itself a signal.
+  // Occurrences, not sets: the counts of tree/excerpt macros are themselves a signal.
   private final ArrayList<PageTreeReference> pageTreeRefs = new ArrayList<>();
+  private final ArrayList<ExcerptIncludeReference> excerptRefs = new ArrayList<>();
+  private final ArrayList<ExcerptDefinition> excerpts = new ArrayList<>();
   private final ConfluenceRenderContext confluenceContext;
 
   AdfContentMetadataExtractor(ConfluenceRenderContext confluenceContext) {
@@ -66,11 +70,17 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
         collectMediaAttrs(media.attrs());
       }
       case Extension extension ->
-          collectExtension(extension.extensionType(), extension.extensionKey(), extension.macroParams());
-      case BodiedExtension bodied ->
-          collectExtension(bodied.extensionType(), bodied.extensionKey(), bodied.macroParams());
+          collectExtension(
+              extension.extensionType(), extension.extensionKey(), extension.macroParams(),
+              extension.parameters());
+      case BodiedExtension bodied -> {
+        collectExtension(
+            bodied.extensionType(), bodied.extensionKey(), bodied.macroParams(),
+            bodied.parameters());
+        collectExcerptDefinition(bodied);
+      }
       case MultiBodiedExtension mbe ->
-          collectExtension(mbe.extensionType(), mbe.extensionKey(), mbe.macroParams());
+          collectExtension(mbe.extensionType(), mbe.extensionKey(), mbe.macroParams(), mbe.parameters());
       case BlockCard blockCard -> collectCardLink(blockCard.attrs());
       case EmbedCard embedCard -> collectCardLink(embedCard.attrs());
       default -> {
@@ -89,7 +99,9 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
         collectMediaAttrs(media.attrs());
       }
       case InlineExtension extension ->
-          collectExtension(extension.extensionType(), extension.extensionKey(), extension.macroParams());
+          collectExtension(
+              extension.extensionType(), extension.extensionKey(), extension.macroParams(),
+              extension.parameters());
       case Mention mention -> collectMention(mention);
       default -> {
         // Plain inline content carries no references.
@@ -108,6 +120,8 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
         List.copyOf(mentionRefs),
         attachments,
         List.copyOf(pageTreeRefs),
+        List.copyOf(excerptRefs),
+        List.copyOf(excerpts),
         outline == null ? List.of() : List.copyOf(outline));
   }
 
@@ -132,7 +146,7 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
   }
 
   private void collectLink(String rawUrl, Attributes attrs) {
-    var normalized = trimToNull(rawUrl);
+    var normalized = ConfluenceSupport.trimToNull(rawUrl);
     if (normalized == null || "#".equals(normalized)) {
       return;
     }
@@ -154,8 +168,8 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
       upsertAttachmentRef(fileId, attrs);
     }
 
-    if ("external".equalsIgnoreCase(trimToNull(attrs.type()))) {
-      var url = trimToNull(attrs.url());
+    if ("external".equalsIgnoreCase(ConfluenceSupport.trimToNull(attrs.type()))) {
+      var url = ConfluenceSupport.trimToNull(attrs.url());
       if (url != null) {
         externalRefs.add(url);
       }
@@ -180,7 +194,16 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
     }
   }
 
-  private void collectExtension(String extensionType, String extensionKey, MacroParams macroParams) {
+  private void collectExtension(
+      String extensionType, String extensionKey, MacroParams macroParams, Attributes parameters) {
+    if (ConfluenceSupport.isInlineMediaImage(extensionType, extensionKey)) {
+      // A media node in disguise: its file id is referenced like any media id.
+      var mediaAttrs = ConfluenceSupport.inlineMediaImageAttrs(parameters);
+      if (mediaAttrs != null) {
+        upsertAttachmentRef(mediaAttrs.id(), mediaAttrs);
+      }
+      return;
+    }
     if (!ConfluenceSupport.isConfluenceMacroExtension(extensionType)) {
       return;
     }
@@ -188,6 +211,22 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
     var pageTreeReference = ConfluenceSupport.pageTreeReference(extensionKey, macroParams);
     if (pageTreeReference != null) {
       pageTreeRefs.add(pageTreeReference);
+      return;
+    }
+
+    var excerptIncludeReference =
+        ConfluenceSupport.excerptIncludeReference(extensionKey, macroParams);
+    if (excerptIncludeReference != null) {
+      excerptRefs.add(excerptIncludeReference);
+      return;
+    }
+
+    if ("attachments".equals(extensionKey)) {
+      // The macro expands to the supplied inventory, so each entry is referenced; without a context
+      // the expansion is unknown and contributes nothing (the same seed-the-context caveat as viewpdf).
+      for (var reference : confluenceContext.attachmentReferencesByTitle().values()) {
+        upsertAttachmentRef(reference);
+      }
       return;
     }
 
@@ -202,6 +241,16 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
       return;
     }
     upsertAttachmentRef(attachmentReference);
+  }
+
+  // The marked region an `excerpt` macro defines, exposed so resolvers can index source pages.
+  private void collectExcerptDefinition(BodiedExtension bodied) {
+    if (!ConfluenceSupport.isConfluenceMacroExtension(bodied.extensionType())
+        || !"excerpt".equals(bodied.extensionKey())) {
+      return;
+    }
+    excerpts.add(new ExcerptDefinition(
+        ConfluenceSupport.excerptName(bodied.macroParams()), bodied.content()));
   }
 
   private void upsertAttachmentRef(AttachmentReference attachmentReference) {
@@ -219,18 +268,10 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
   // First non-blank candidate, stripped, or null when all are blank.
   private static String firstNonBlank(String... candidates) {
     return Stream.of(candidates)
-        .map(AdfContentMetadataExtractor::trimToNull)
+        .map(ConfluenceSupport::trimToNull)
         .filter(Objects::nonNull)
         .findFirst()
         .orElse(null);
-  }
-
-  private static String trimToNull(String value) {
-    if (value == null) {
-      return null;
-    }
-    var stripped = value.strip();
-    return stripped.isEmpty() ? null : stripped;
   }
 
   private static final class AttachmentRefBuilder {

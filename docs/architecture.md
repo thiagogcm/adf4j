@@ -241,7 +241,7 @@ flowchart TB
 The walker is an exhaustive `switch` over the sealed block/inline types (no `default` clause — the compiler guarantees every type is visited), descending pre-order into children and invoking each visitor before recursion. Visitors are pure accumulators: they observe nodes in document order and never re-walk the tree. The three default collectors are:
 
 - **`AdfHeadingCollector`** builds the `HeadingOutline`. It clamps heading levels to 1–6, extracts plain text from each heading’s inline content, and assigns an anchor — an explicit Confluence anchor macro if present, otherwise a generated slug made unique across the document (`section`, `section-1`, …). It also records which heading levels are referenced by any `toc` macro (`TocLevelRange`), so the renderer can later build the table of contents over exactly the requested levels. The outline indexes headings by AST node identity (`IdentityHashMap`) so the renderer can look up a heading’s computed anchor in O(1) during its forward pass.
-- **`AdfContentMetadataExtractor`** harvests outbound references — internal page links and page cards (`PageReference`), external links (`ExternalReference`), mentions (`MentionReference`), attachments/media (`AttachmentReference`), and `pagetree`/`children` macro occurrences (`PageTreeReference`) — deduplicating each in first-seen order (tree macros keep every occurrence, since their count is itself a signal). It uses the `ConfluenceRenderContext` (carried on the options) to resolve attachment macros such as `viewpdf` against the caller-supplied attachment table.
+- **`AdfContentMetadataExtractor`** harvests outbound references — internal page links and page cards (`PageReference`), external links (`ExternalReference`), mentions (`MentionReference`), attachments/media (`AttachmentReference`), `pagetree`/`children` macro occurrences (`PageTreeReference`), `excerpt-include` occurrences (`ExcerptIncludeReference`), and the page's own `excerpt` regions (`ExcerptDefinition`) — deduplicating each in first-seen order (tree and excerpt macros keep every occurrence, since their count is itself a signal). It uses the `ConfluenceRenderContext` (carried on the options) to resolve attachment macros such as `viewpdf` against the caller-supplied attachment table, and to credit the `attachments` macro's expansion of that inventory.
 - **`AdfLossinessCollector`** counts unknown nodes and unknown marks and turns them into diagnostics according to the active `UnknownNodePolicy`.
 
 The three outputs are bundled into a `DocumentAnalysis` record. Crucially, `ContentMetadata` is a *first-class deliverable*, not an internal artifact: callers can run `analyze()` on its own to plan work — most importantly, `ContentMetadata.referencedFileIds()` returns the set of attachment file IDs a document depends on, so an integrator can pre-fetch exactly those binaries before (or instead of) rendering.
@@ -378,6 +378,7 @@ sequenceDiagram
 | `AttachmentResolver` | `String resolve(AttachmentReference)` | Resolved Confluence `attachment:` references | `null`/blank → `attachment:<fileId>` placeholder |
 | `PageLinkResolver` | `String resolve(String pageNodeId)` | Inter-page links, page cards, and page-tree entries | `null`/blank → original href / plain text |
 | `PageTreeResolver` | `List<PageTreeEntry> resolve(PageTreeReference)` | `pagetree` / `children` macros | `null`/throws → `{{pagetree}}` / `{{children}}` token; an empty list is authoritative and renders nothing |
+| `ExcerptResolver` | `String resolve(ExcerptIncludeReference)` | `excerpt-include` macros | `null`/throws → `[Excerpt include: page]` token; an empty string is authoritative and renders nothing |
 | `ExtensionRenderer` | `String render(ExtensionContext)` | Any extension/macro, consulted in order before built-ins | `null`/throws → next renderer, then built-in handling |
 
 Two design choices make this model robust:
@@ -390,7 +391,7 @@ Two design choices make this model robust:
 `adf4j` reports problems as data, not (mostly) as exceptions. Three result types carry the information:
 
 - **`ParseResult`** (`parse()`) — the parsed `AdfDocument` (null on blank/invalid input), the list of parse `Diagnostic`s, and a `validAdfRoot` flag.
-- **`MarkdownResult`** (`convert()`) — the Markdown `body`, the `ContentMetadata`, the merged `diagnostics` list, and the `unresolved` references (lookups this render's resolvers declined: page ids a `PageLinkResolver` returned nothing for, and tree macros that fell back to their placeholder token).
+- **`MarkdownResult`** (`convert()`) — the Markdown `body`, the `ContentMetadata`, the merged `diagnostics` list, and the `unresolved` references (lookups this render's resolvers declined: page ids a `PageLinkResolver` returned nothing for, and tree/excerpt macros that fell back to their placeholder token).
 - **`Diagnostic`** — a `code`, human `message`, optional `cause`, and a `Severity` of `INFO`, `WARNING`, or `ERROR`; raised by all three phases (parse, analyze, render).
 
 The severity ladder is the contract for “did this convert cleanly?”:

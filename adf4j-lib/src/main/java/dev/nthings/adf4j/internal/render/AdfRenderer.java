@@ -103,12 +103,13 @@ public final class AdfRenderer implements BlockRecursion {
 
   /** Assembles a renderer with its default delegates, keeping the CommonMark dependency a render detail. */
   public static AdfRenderer createDefault() {
+    var mediaRenderer = new MediaRenderer();
     return new AdfRenderer(
         new TextMarkRenderer(),
         new ListRenderer(),
         new TableRenderer(markdownRenderingSupport()),
-        new MediaRenderer(),
-        new MacroRenderer(),
+        mediaRenderer,
+        new MacroRenderer(mediaRenderer),
         new CardRenderer());
   }
 

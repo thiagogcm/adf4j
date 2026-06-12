@@ -34,6 +34,27 @@ class ConfluenceRenderContextTests {
   }
 
   @Test
+  void an_empty_context_has_no_supplied_inventory() {
+    assertThat(ConfluenceRenderContext.empty().attachmentsSupplied()).isFalse();
+  }
+
+  @Test
+  void with_attachment_references_marks_the_inventory_supplied_even_when_empty() {
+    var context = ConfluenceRenderContext.empty().withAttachmentReferences(List.of());
+
+    assertThat(context.attachmentsSupplied()).isTrue();
+    assertThat(context.attachmentReferencesByTitle()).isEmpty();
+  }
+
+  @Test
+  void with_a_null_iterable_the_supplied_flag_is_unchanged() {
+    assertThat(ConfluenceRenderContext.empty().withAttachmentReferences(null)
+        .attachmentsSupplied()).isFalse();
+    assertThat(ConfluenceRenderContext.empty().withAttachmentReferences(List.of())
+        .withAttachmentReferences(null).attachmentsSupplied()).isTrue();
+  }
+
+  @Test
   void confluence_metadata_reads_private_attrs_from_product_neutral_attributes() {
     var metadata = ConfluenceMetadata.from(new Attributes(
         Map.<String, Object>of(
