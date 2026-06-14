@@ -229,6 +229,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write # OIDC token for attestation signing
+      attestations: write
     steps:
       - name: Checkout release commit
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -259,6 +261,17 @@ jobs:
 
       - name: List release assets
         run: ls -la dist
+
+      # SLSA build-provenance for the published jars and CLI/WASM archives; verify with
+      # `gh attestation verify`.
+      - name: Attest build provenance
+        if: ${{ !inputs.dryRun }}
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-path: |
+            target/staging-deploy/dev/nthings/adf4j/**/adf4j-*.jar
+            dist/adf4j-cli-*
+            dist/adf4j-wasm-*.zip
 
       - name: Run JReleaser (full release)
         uses: jreleaser/release-action@90ac653bb9c79d11179e65d81499f3f34527dcd5 # 2.5.0

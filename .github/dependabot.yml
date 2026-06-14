@@ -1,0 +1,35 @@
+version: 2
+
+updates:
+  # Maven dependencies and plugins across the reactor.
+  - package-ecosystem: maven
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      # Keep the multi-artifact families in one PR each so they bump in lockstep.
+      jackson:
+        patterns: ["tools.jackson*", "com.fasterxml.jackson*"]
+      commonmark:
+        patterns: ["org.commonmark:*"]
+      junit:
+        patterns: ["org.junit*"]
+      maven-plugins:
+        patterns: ["org.apache.maven.plugins:*", "org.codehaus.mojo:*"]
+    commit-message:
+      prefix: "build"
+      include: scope
+
+  # Keep the SHA-pinned GitHub Actions current (the pins rot silently without this).
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "ci"
+      include: scope
