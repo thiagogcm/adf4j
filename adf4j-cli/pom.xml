@@ -19,9 +19,11 @@
             <groupId>dev.nthings</groupId>
             <artifactId>adf4j</artifactId>
         </dependency>
+        <!-- Tree-mode JSON only (ObjectNode/ArrayNode + readTree); already a transitive, native-image-proven
+             dependency of adf4j. Declared explicitly because the CLI imports it directly. -->
         <dependency>
-            <groupId>org.jline</groupId>
-            <artifactId>jline</artifactId>
+            <groupId>tools.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>

@@ -471,29 +471,127 @@ This avoids the anti-pattern of constructing a new `AdfToMarkdown` for every doc
 
 ## Using the CLI
 
-The `adf4j-cli` module wraps the library for shell use. It reads ADF JSON from a file argument or stdin and writes Markdown to stdout or a file:
+The `adf4j-cli` module exposes the full processing surface for shell use through three subcommands, each mapping onto one library method:
+
+| Command | Library method | Output |
+| --- | --- | --- |
+| `convert` | `convert(...)` | Markdown body on stdout |
+| `analyze` | `analyze(...)` | references, attachments, and outline as JSON |
+| `validate` | `parse(...)` | parse diagnostics; exit code reflects validity |
+
+A subcommand is required (`adf4j` with no command, or `-h`, prints help). The input comes from `<input-file>` or, when no path is given, stdin. Global flags (`-v`, `-q`, …) and `-o` follow the subcommand: `adf4j convert -t "My Page" doc.json`.
+
+Stdout carries only the deliverable (the Markdown body, or JSON); diagnostics and warnings go to stderr, so `adf4j convert doc.json > out.md` stays clean. A file written with `-o` is written atomically (temp file + rename).
 
 ```
-adf4j-cli [-o <file>] [<input-file>]
+adf4j <command> [options] [<input-file>]
 
-  -o, --output=FILE            Write output to FILE instead of stdout
-  -t, --title=TITLE            Prepend TITLE as a level-1 (# ) heading
-  -c, --collapse-hard-breaks   Render hard breaks as soft breaks (no trailing spaces)
-  -p, --escape-parentheses     Backslash-escape literal ( and ) in text (off by default)
-  -h, --help                   Show help
+Global (after the command):
+  -h, --help        Show help (per subcommand too)
+  -V, --version     Show the version
+  -v, --verbose     Show stack traces on error
+  -q, --quiet       Suppress the stderr diagnostics summary and warnings
 ```
+
+### convert
 
 ```sh
-# From a file to stdout
-adf4j-cli document.adf.json
-
-# From stdin to a file, with a title
-cat document.adf.json | adf4j-cli -t "My Page" -o out.md
+adf4j convert -t "My Page" doc.adf.json > out.md     # body only (default)
+adf4j convert -f json --fail-on-lossy doc.adf.json   # full result as JSON; gate on loss
 ```
 
-The examples use the `adf4j-cli` executable produced by the GraalVM `native` build profile (a WebAssembly build is available via the `wasm` profile). The module’s jar is **not** a standalone fat jar, so to run it on the JVM you must put its dependencies (the `adf4j` library, Jackson, CommonMark, jsoup, SLF4J, JLine) on the classpath/module-path yourself.
+| Option | Effect |
+| --- | --- |
+| `-o, --output FILE` | Write to FILE (atomically) instead of stdout |
+| `-f, --format md\|json` | `md` (default) prints the body; `json` prints `{body, wasLossy, diagnostics, metadata, unresolved}` |
+| `--compact` | Single-line JSON instead of pretty |
+| `--fail-on-lossy` | Exit 4 when the result is lossy (any WARNING/ERROR diagnostic) |
+| `-t, --title TITLE` | Prepend TITLE as a level-1 (`#`) heading (`documentTitle`) |
+| `-c, --collapse-hard-breaks` | Render hard breaks as soft breaks (`collapseHardBreaks`) |
+| `-p, --escape-parentheses` | Backslash-escape literal `(` and `)` (`escapeParentheses`) |
+| `--image-size` | Emit non-GFM image `{width= height=}` attributes (`imageSizeAttributes`) |
+| `--html-visual-marks` | Keep visual-only marks as inline `<span style>` (`htmlVisualMarks`) |
+| `--unknown-nodes V` | `placeholder` (default) \| `skip` \| `fail` \| `preserve-raw` (`unknownNodePolicy`) |
+| `--table-fallback V` | `gfm-promote-first-row` (default) \| `gfm-empty-header` \| `html` (`tableFallback`) |
 
-It exits `0` on success and `1` on a usage error or a missing input file. Note that malformed ADF does **not** cause a non-zero exit: the conversion never throws on bad input, so the CLI prints an empty document and still exits `0`.
+### analyze
+
+```sh
+adf4j analyze doc.adf.json                                   # all sections, JSON
+adf4j analyze --select referencedFileIds,outline doc.adf.json
+adf4j analyze -f text --select outline doc.adf.json          # human-readable
+```
+
+`--select` takes a comma-separated subset of: `pageRefs`, `externalRefs`, `mentionRefs`, `attachmentRefs`, `referencedFileIds`, `pageTreeRefs`, `excerptRefs`, `excerpts`, `outline` (default: all). `excerpts` are rendered to Markdown (feedable into `--excerpt-map`). `-f json` (default) or `text`; `--compact` for single-line JSON. Supply `--attachments-map` so macro-based attachment file ids appear in `referencedFileIds` — without it they are silently absent (see [`ContentMetadata`](../adf4j-lib/src/main/java/dev/nthings/adf4j/metadata/ContentMetadata.java)).
+
+### validate
+
+```sh
+adf4j validate doc.adf.json                  # text report; exit 3 if invalid
+adf4j validate -f json doc.adf.json
+```
+
+`-f text` (default) or `json` (`{validAdfRoot, issues}`). `--fail-on-warning` exits 4 when a WARNING is present (else 0 on a valid root).
+
+### Resolvers and Confluence context
+
+The library's resolver hooks are exposed data-driven: URL **templates** (with placeholders substituted, percent-encoded, then scheme-sanitized by the library) and JSON **lookup tables**. Where both a `*-url` template and a `*-map` are given, the map wins on a hit and the template is the fallback. These options are accepted by `convert` and `analyze`.
+
+| Option | Maps to | Schema |
+| --- | --- | --- |
+| `--media-url TPL` | `MediaResolver` | template; placeholders `{id}` `{collection}` `{localId}` |
+| `--media-map FILE` | `MediaResolver` | `{ "<fileId>": "https://…" }` |
+| `--attachment-url TPL` | `AttachmentResolver` | template; placeholders `{fileId}` `{title}` |
+| `--attachment-map FILE` | `AttachmentResolver` | `{ "<fileId>": "https://…" }` |
+| `--page-url TPL` | `PageLinkResolver` | template; placeholder `{pageId}` |
+| `--page-map FILE` | `PageLinkResolver` | `{ "<pageNodeId>": "https://…" }` |
+| `--page-tree-map FILE` | `PageTreeResolver` | see below |
+| `--excerpt-map FILE` | `ExcerptResolver` | see below |
+| `--attachments-map FILE` | `ConfluenceRenderContext` | `[ { "fileId": "…", "title": "…", "mediaType": "…" } ]` |
+| `--extension-map FILE` | `ExtensionRenderer` | see below |
+
+An unknown `{placeholder}` for a flag is a usage error (exit 1) at startup. Only the substituted value is percent-encoded, so a `/`, `?`, `#`, or `&` in an untrusted id cannot create a new path segment or inject a query/fragment. Two caveats: a literal `.` is left unencoded (it is RFC 3986 unreserved), so placing `{id}` as a standalone path segment in a template lets an `id` of exactly `..` collapse that one segment — keep templates host- and scheme-fixed; and `*-map` values are passed through with scheme sanitization only (a scheme-relative `//host/…` or relative value is emitted as-is), so map files should contain absolute, trusted URLs. Resolver-supplied destinations are always routed through the library, which scheme-sanitizes them (a `javascript:`/`data:`/`file:` value renders inert).
+
+**Decline vs. answer.** A key/entry that is **absent** declines the lookup: the library keeps its placeholder and records the reference on `MarkdownResult.unresolved()`. A **present** entry is an answer — including the empty answers a blank URL (decline for media/attachment/page), an empty `markdown` string (suppresses an excerpt), or an empty page-tree array (renders nothing) express.
+
+`--page-tree-map` is keyed by macro kind then root page id (`""` for a rootless `@self`-style macro); each entry carries `depth`/`title`/`pageNodeId`:
+
+```json
+{ "pagetree": { "<root>": [ { "depth": 0, "title": "Overview", "pageNodeId": "123" } ] },
+  "children": { "<root>": [] } }
+```
+
+`--excerpt-map` is an array; `name` is the excerpt selector with `null` meaning the page's unnamed excerpt, and `page` keeps any `SPACEKEY:` prefix verbatim:
+
+```json
+[ { "page": "DOCS:Onboarding", "name": "summary", "markdown": "…" },
+  { "page": "Roadmap", "name": null, "markdown": "…" } ]
+```
+
+`--extension-map` is an array matched by `key` (and optional `type`); `template` interpolates `ExtensionContext` parameters via `{param}`:
+
+```json
+[ { "type": "com.example", "key": "chart", "template": "![chart]({src})" } ]
+```
+
+> **Verbatim content.** `--excerpt-map` and `--extension-map` values are emitted **verbatim and are not HTML-sanitized** (the library's documented contract). Use only files from a trusted source; the CLI prints a stderr warning when either is used.
+
+### Exit codes
+
+| Code | Meaning |
+| --- | --- |
+| 0 | success |
+| 1 | usage error (unknown flag/subcommand, unknown placeholder, malformed/invalid map file) |
+| 2 | I/O error (input or map file not found/unreadable, output write failure) |
+| 3 | content failure (`validate` invalid root or ERROR diagnostic; `convert --unknown-nodes fail` aborted) |
+| 4 | quality gate (`convert --fail-on-lossy` on a lossy result, or `validate --fail-on-warning`) |
+| 70 | unexpected internal error (a bug; please report it) |
+
+Malformed ADF does **not** by itself cause a non-zero exit: `convert` never throws on bad input, so it prints an empty body and exits `0` (use `-f json` to see the `INVALID_JSON` diagnostic, or `--fail-on-lossy` / `validate` to gate on it).
+
+### Distribution
+
+The examples use the `adf4j-cli` executable produced by the GraalVM `native` build profile (a WebAssembly build is available via the `wasm` profile). The CLI is reflection-free and uses Jackson in tree mode only, so it adds no native-image metadata. The module's jar is **not** a standalone fat jar, so to run it on the JVM put its dependencies (the `adf4j` library, Jackson, CommonMark, jsoup, SLF4J) on the classpath/module-path yourself.
 
 ## ADF → Markdown reference
 
