@@ -81,6 +81,17 @@ jobs:
       - name: Verify Native Image installation
         run: native-image --version
 
+      # GraalVM's WASM backend needs `wasm-as` from Binaryen >= 119; Ubuntu's apt build is older.
+      - name: Install Binaryen (wasm-as)
+        shell: bash
+        run: |
+          BINARYEN=version_130
+          curl -fsSL -o /tmp/binaryen.tar.gz \
+            "https://github.com/WebAssembly/binaryen/releases/download/${BINARYEN}/binaryen-${BINARYEN}-x86_64-linux.tar.gz"
+          tar -xzf /tmp/binaryen.tar.gz -C /tmp
+          echo "/tmp/binaryen-${BINARYEN}/bin" >> "$GITHUB_PATH"
+          /tmp/binaryen-${BINARYEN}/bin/wasm-as --version
+
       - name: Build WASM CLI
         run: ./mvnw package -Pwasm -pl adf4j-cli -am -DskipTests
 

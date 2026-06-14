@@ -1,0 +1,318 @@
+name: Release
+
+# Cut a release from the Actions UI. Bumps the POM to the release version + commits, builds +
+# publishes, lets JReleaser tag/release, then bumps the POM to the next -SNAPSHOT + commits.
+# Pushes use GITHUB_TOKEN. See RELEASE.md for prerequisites, secrets, and the protected-branch note.
+
+on:
+  workflow_dispatch:
+    inputs:
+      releaseVersion:
+        description: "Release version, without -SNAPSHOT (e.g. 1.0.0 or 1.0.0-rc.1)."
+        required: true
+        type: string
+      nextVersion:
+        description: "Next development version, must end with -SNAPSHOT (e.g. 1.1.0-SNAPSHOT). Blank = bump the minor."
+        required: false
+        type: string
+      dryRun:
+        description: "Dry run: build + validate everything, but do not commit, tag, publish, or release."
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  # Bump the POM to the release version and commit it; everything downstream builds from that commit.
+  prepare:
+    name: Prepare
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      releaseVersion: ${{ steps.versions.outputs.release }}
+      nextVersion: ${{ steps.versions.outputs.next }}
+      sha: ${{ steps.commit.outputs.sha }}
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up GraalVM JDK 25
+        uses: graalvm/setup-graalvm@bef4b0e916c7dd079bf60fb95d49139f67e32c5f # v1.5.3
+        with:
+          java-version: "25"
+          distribution: "graalvm"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          cache: "maven"
+
+      - name: Compute versions
+        id: versions
+        shell: bash
+        run: |
+          REL="${{ inputs.releaseVersion }}"
+          case "$REL" in *-SNAPSHOT) echo "::error::releaseVersion must not be a -SNAPSHOT ($REL)."; exit 1 ;; esac
+          NEXT="${{ inputs.nextVersion }}"
+          if [ -z "$NEXT" ]; then
+            BASE="${REL%%-*}"            # drop any pre-release qualifier (e.g. 1.0.0-rc.1 -> 1.0.0)
+            IFS=. read -r MA MI _ <<< "$BASE"
+            NEXT="${MA}.$((MI + 1)).0-SNAPSHOT"
+          fi
+          case "$NEXT" in *-SNAPSHOT) : ;; *) echo "::error::nextVersion must end with -SNAPSHOT ($NEXT)."; exit 1 ;; esac
+          echo "release=$REL" >> "$GITHUB_OUTPUT"
+          echo "next=$NEXT" >> "$GITHUB_OUTPUT"
+          echo "Release version: $REL    Next development version: $NEXT"
+
+      - name: Bump POM to release version and commit
+        id: commit
+        shell: bash
+        run: |
+          REL="${{ steps.versions.outputs.release }}"
+          if [ "${{ inputs.dryRun }}" = "true" ]; then
+            echo "Dry run — not committing. Would set the POM version to $REL and commit to main."
+            echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          ./mvnw -B -ntp versions:set -DnewVersion="$REL" -DprocessAllModules -DgenerateBackupPoms=false
+          # Tolerate a no-op (recovery re-run already at $REL): commit fails on an empty commit.
+          git diff --quiet || git commit -am "chore(release): $REL"
+          git push origin HEAD:main
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  # Build a GraalVM native CLI per OS (native images can't be cross-compiled — one runner each).
+  build-native:
+    name: Native CLI (${{ matrix.platform }})
+    needs: prepare
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux-x86_64
+            archive: tar.gz
+          - os: macos-latest
+            platform: osx-aarch64
+            archive: tar.gz
+          - os: windows-latest
+            platform: windows-x86_64
+            archive: zip
+    steps:
+      - name: Checkout release commit
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+
+      - name: Set up GraalVM JDK 25
+        uses: graalvm/setup-graalvm@bef4b0e916c7dd079bf60fb95d49139f67e32c5f # v1.5.3
+        with:
+          java-version: "25"
+          distribution: "graalvm"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          cache: "maven"
+
+      # Dry runs skip the commit, so set the version ephemerally here.
+      - name: Set release version (dry run)
+        if: inputs.dryRun
+        shell: bash
+        run: ./mvnw -B -ntp versions:set -DnewVersion=${{ needs.prepare.outputs.releaseVersion }} -DprocessAllModules -DgenerateBackupPoms=false
+
+      - name: Build native CLI
+        shell: bash
+        run: ./mvnw -B -ntp package -Pnative -pl adf4j-cli -am -DskipTests
+
+      - name: Package archive (tar.gz)
+        if: matrix.archive == 'tar.gz'
+        shell: bash
+        run: |
+          VERSION="${{ needs.prepare.outputs.releaseVersion }}"
+          NAME="adf4j-cli-${VERSION}-${{ matrix.platform }}"
+          mkdir -p "dist/${NAME}"
+          cp adf4j-cli/target/adf4j-cli "dist/${NAME}/adf4j-cli"
+          cp LICENSE README.md "dist/${NAME}/"
+          tar -C dist -czf "dist/${NAME}.tar.gz" "${NAME}"
+          rm -rf "dist/${NAME}"
+
+      - name: Package archive (zip)
+        if: matrix.archive == 'zip'
+        shell: bash
+        run: |
+          VERSION="${{ needs.prepare.outputs.releaseVersion }}"
+          NAME="adf4j-cli-${VERSION}-${{ matrix.platform }}"
+          mkdir -p "dist/${NAME}"
+          if [ -f adf4j-cli/target/adf4j-cli.exe ]; then
+            cp adf4j-cli/target/adf4j-cli.exe "dist/${NAME}/adf4j-cli.exe"
+          else
+            cp adf4j-cli/target/adf4j-cli "dist/${NAME}/adf4j-cli"
+          fi
+          cp LICENSE README.md "dist/${NAME}/"
+          (cd dist && 7z a -tzip "${NAME}.zip" "${NAME}" >/dev/null)
+          rm -rf "dist/${NAME}"
+
+      - name: Upload native archive
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: native-${{ matrix.platform }}
+          path: dist/adf4j-cli-*
+          if-no-files-found: error
+
+  build-wasm:
+    name: WASM CLI
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout release commit
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+
+      - name: Set up GraalVM JDK 25
+        uses: graalvm/setup-graalvm@bef4b0e916c7dd079bf60fb95d49139f67e32c5f # v1.5.3
+        with:
+          java-version: "25"
+          distribution: "graalvm"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          cache: "maven"
+          native-image-job-reports: "true"
+
+      - name: Set release version (dry run)
+        if: inputs.dryRun
+        run: ./mvnw -B -ntp versions:set -DnewVersion=${{ needs.prepare.outputs.releaseVersion }} -DprocessAllModules -DgenerateBackupPoms=false
+
+      # GraalVM's WASM backend needs `wasm-as` from Binaryen >= 119; Ubuntu's apt build is older.
+      - name: Install Binaryen (wasm-as)
+        shell: bash
+        run: |
+          BINARYEN=version_130
+          curl -fsSL -o /tmp/binaryen.tar.gz \
+            "https://github.com/WebAssembly/binaryen/releases/download/${BINARYEN}/binaryen-${BINARYEN}-x86_64-linux.tar.gz"
+          tar -xzf /tmp/binaryen.tar.gz -C /tmp
+          echo "/tmp/binaryen-${BINARYEN}/bin" >> "$GITHUB_PATH"
+          /tmp/binaryen-${BINARYEN}/bin/wasm-as --version
+
+      - name: Build WASM CLI
+        run: ./mvnw -B -ntp package -Pwasm -pl adf4j-cli -am -DskipTests
+
+      - name: Package WASM bundle
+        run: |
+          VERSION="${{ needs.prepare.outputs.releaseVersion }}"
+          NAME="adf4j-cli-${VERSION}-wasm"
+          mkdir -p "dist/${NAME}"
+          cp adf4j-cli/target/adf4j-cli.js "dist/${NAME}/"
+          cp adf4j-cli/target/adf4j-cli.js.wasm "dist/${NAME}/"
+          cp LICENSE README.md "dist/${NAME}/"
+          (cd dist && zip -r "${NAME}.zip" "${NAME}" >/dev/null)
+          rm -rf "dist/${NAME}"
+
+      - name: Upload WASM bundle
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: wasm
+          path: dist/adf4j-cli-*-wasm.zip
+          if-no-files-found: error
+
+  # Stage the library, then run JReleaser once to sign, deploy to Central, tag, and create the release.
+  release:
+    name: Publish release
+    needs: [prepare, build-native, build-wasm]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout release commit
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+          fetch-depth: 0 # JReleaser needs full history for the changelog
+
+      - name: Set up GraalVM JDK 25
+        uses: graalvm/setup-graalvm@bef4b0e916c7dd079bf60fb95d49139f67e32c5f # v1.5.3
+        with:
+          java-version: "25"
+          distribution: "graalvm"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          cache: "maven"
+
+      - name: Set release version (dry run)
+        if: inputs.dryRun
+        run: ./mvnw -B -ntp versions:set -DnewVersion=${{ needs.prepare.outputs.releaseVersion }} -DprocessAllModules -DgenerateBackupPoms=false
+
+      - name: Stage library for Maven Central
+        run: ./mvnw -B -ntp -Ppublication -pl adf4j-lib -DskipTests clean deploy
+
+      - name: Download CLI artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: List release assets
+        run: ls -la dist
+
+      - name: Run JReleaser (full release)
+        uses: jreleaser/release-action@90ac653bb9c79d11179e65d81499f3f34527dcd5 # 2.5.0
+        with:
+          version: 1.24.0
+          arguments: ${{ inputs.dryRun && 'full-release --dry-run' || 'full-release' }}
+        env:
+          JRELEASER_PROJECT_VERSION: ${{ needs.prepare.outputs.releaseVersion }}
+          JRELEASER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JRELEASER_GPG_PUBLIC_KEY: ${{ secrets.JRELEASER_GPG_PUBLIC_KEY }}
+          JRELEASER_GPG_SECRET_KEY: ${{ secrets.JRELEASER_GPG_SECRET_KEY }}
+          JRELEASER_GPG_PASSPHRASE: ${{ secrets.JRELEASER_GPG_PASSPHRASE }}
+          JRELEASER_MAVENCENTRAL_SONATYPE_USERNAME: ${{ secrets.JRELEASER_MAVENCENTRAL_USERNAME }}
+          JRELEASER_MAVENCENTRAL_SONATYPE_PASSWORD: ${{ secrets.JRELEASER_MAVENCENTRAL_PASSWORD }}
+
+      - name: Upload JReleaser logs
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: jreleaser-logs
+          path: |
+            out/jreleaser/trace.log
+            out/jreleaser/output.properties
+          if-no-files-found: warn
+
+  # Bump the POM to the next -SNAPSHOT and commit it.
+  finalize:
+    name: Finalize
+    needs: [prepare, release]
+    if: ${{ !inputs.dryRun }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up GraalVM JDK 25
+        uses: graalvm/setup-graalvm@bef4b0e916c7dd079bf60fb95d49139f67e32c5f # v1.5.3
+        with:
+          java-version: "25"
+          distribution: "graalvm"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          cache: "maven"
+
+      - name: Bump POM to next development version and commit
+        shell: bash
+        run: |
+          NEXT="${{ needs.prepare.outputs.nextVersion }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          ./mvnw -B -ntp versions:set -DnewVersion="$NEXT" -DprocessAllModules -DgenerateBackupPoms=false
+          # Tolerate a no-op (re-run already at $NEXT): commit fails on an empty commit.
+          git diff --quiet || git commit -am "chore(release): prepare for next development iteration $NEXT"
+          git push origin HEAD:main

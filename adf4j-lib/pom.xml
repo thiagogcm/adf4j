@@ -7,12 +7,19 @@
     <parent>
         <groupId>dev.nthings</groupId>
         <artifactId>adf4j-parent</artifactId>
-        <version>1.0-SNAPSHOT</version>
+        <version>1.0.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>adf4j</artifactId>
     <name>adf4j</name>
     <description>Atlassian Document Format processing library for Java.</description>
+    <!-- Declared explicitly so Maven does not append the module path to the inherited URL. -->
+    <url>https://github.com/thiagogcm/adf4j</url>
+
+    <properties>
+        <!-- The only published artifact; re-enable the deploy the parent disables. -->
+        <maven.deploy.skip>false</maven.deploy.skip>
+    </properties>
 
     <dependencies>
         <dependency>
@@ -71,8 +78,7 @@
 
     <build>
         <plugins>
-            <!-- Fail the build (at `mvn verify`) if coverage regresses below the gate. The agent and
-                 report executions are inherited from the parent; this adds the enforcement. -->
+            <!-- Fail `mvn verify` if coverage regresses below the gate (agent/report come from the parent). -->
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
@@ -107,4 +113,71 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- Release pipeline (`-Ppublication`): build the source/javadoc jars Central requires, flatten
+             the POM to a self-contained artifact, and stage `deploy` locally for JReleaser to upload. -->
+        <profile>
+            <id>publication</id>
+            <properties>
+                <altDeploymentRepository>local::file:${maven.multiModuleProjectDirectory}/target/staging-deploy</altDeploymentRepository>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>attach-sources</id>
+                                <goals>
+                                    <goal>jar-no-fork</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <configuration>
+                            <doclint>none</doclint>
+                            <failOnError>false</failOnError>
+                            <quiet>true</quiet>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>attach-javadocs</id>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>flatten-maven-plugin</artifactId>
+                        <configuration>
+                            <flattenMode>ossrh</flattenMode>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>flatten</id>
+                                <phase>process-resources</phase>
+                                <goals>
+                                    <goal>flatten</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>flatten-clean</id>
+                                <phase>clean</phase>
+                                <goals>
+                                    <goal>clean</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

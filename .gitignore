@@ -62,3 +62,7 @@ Thumbs.db
 .notes/
 legacy/
 
+# Release pipeline outputs
+dist/
+out/
+.flattened-pom.xml

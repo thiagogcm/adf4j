@@ -1,0 +1,83 @@
+# `jreleaser full-release` signs the staged artifacts, deploys the library to Maven Central, and
+# creates the GitHub release with the CLI binaries attached. The version comes from the POM via
+# JRELEASER_PROJECT_VERSION. See RELEASE.md for the secrets and the end-to-end process.
+
+project:
+  name: adf4j
+  description: Atlassian Document Format processing library for Java
+  longDescription: |
+    adf4j converts between Atlassian Document Format (ADF) JSON and Markdown.
+    It ships as a Java library (published to Maven Central) and as a standalone
+    CLI distributed as GraalVM native executables and a WASM build.
+  authors:
+    - Thiago Moura
+  license: Apache-2.0
+  copyright: 2025 Thiago Moura
+  inceptionYear: "2025"
+  links:
+    homepage: https://github.com/thiagogcm/adf4j
+  languages:
+    java:
+      groupId: dev.nthings
+      artifactId: adf4j
+      version: 25
+
+release:
+  github:
+    owner: thiagogcm
+    name: adf4j
+    # JReleaser creates + pushes the v{{projectVersion}} tag at the release commit.
+    skipTag: false
+    overwrite: false
+    draft: false
+    # Tags with a hyphen (v1.0.0-rc.1) become GitHub pre-releases.
+    prerelease:
+      pattern: .*-.*
+    changelog:
+      formatted: ALWAYS
+      preset: conventional-commits
+      contributors:
+        enabled: true
+
+# mode=MEMORY reads the armored keys + passphrase from JRELEASER_GPG_* env vars (no keyring needed).
+signing:
+  active: ALWAYS
+  pgp:
+    armored: true
+    mode: MEMORY
+
+deploy:
+  maven:
+    # Release versions -> Central Portal. Staged by `mvn -Ppublication deploy` (see adf4j-lib/pom.xml).
+    mavenCentral:
+      sonatype:
+        active: RELEASE
+        url: https://central.sonatype.com/api/v1/publisher
+        applyMavenCentralRules: true
+        stagingRepositories:
+          - target/staging-deploy
+    # -SNAPSHOT versions -> Central snapshots repo (from snapshot.yml), same token under nexus2 env vars.
+    nexus2:
+      snapshots:
+        active: SNAPSHOT
+        snapshotUrl: https://central.sonatype.com/repository/maven-snapshots/
+        applyMavenCentralRules: true
+        snapshotSupported: true
+        closeRepository: true
+        releaseRepository: true
+        stagingRepositories:
+          - target/staging-deploy
+
+checksum:
+  algorithms:
+    - SHA-256
+    - SHA-512
+
+# CLI artifacts attached straight to the GitHub release; produced by the release workflow into ./dist.
+files:
+  active: RELEASE
+  artifacts:
+    - path: dist/adf4j-cli-{{projectVersion}}-linux-x86_64.tar.gz
+    - path: dist/adf4j-cli-{{projectVersion}}-osx-aarch64.tar.gz
+    - path: dist/adf4j-cli-{{projectVersion}}-windows-x86_64.zip
+    - path: dist/adf4j-cli-{{projectVersion}}-wasm.zip
