@@ -43,7 +43,7 @@ final class Cli {
     }
     var command = args.getFirst();
     if (command.equals("-V") || command.equals("--version")) {
-      out.println("adf4j " + VERSION);
+      out.print("adf4j " + VERSION + "\n");
       return ExitCodes.OK;
     }
     var rest = args.subList(1, args.size());
@@ -78,7 +78,7 @@ final class Cli {
       return true;
     }
     if (args.has("version")) {
-      out.println("adf4j " + VERSION);
+      out.print("adf4j " + VERSION + "\n");
       return true;
     }
     return false;
@@ -114,7 +114,7 @@ final class Cli {
     String output;
     if (format.equals("json")) {
       var node = new JsonRenderer(json, converter, options).markdownResult(result);
-      output = json.write(node, !args.has("compact")) + System.lineSeparator();
+      output = json.write(node, !args.has("compact")) + "\n";
     } else {
       output = result.body();
     }
@@ -153,8 +153,7 @@ final class Cli {
     if (format.equals("text")) {
       output = analyzeText(metadata, selected, converter, options);
     } else {
-      output = json.write(renderer.metadata(metadata, selected), !args.has("compact"))
-          + System.lineSeparator();
+      output = json.write(renderer.metadata(metadata, selected), !args.has("compact")) + "\n";
     }
     CliIo.writeOutput(args.value("output"), output, out);
     return ExitCodes.OK;
@@ -186,7 +185,7 @@ final class Cli {
     String output;
     if (format.equals("json")) {
       var renderer = new JsonRenderer(json, converter, MarkdownOptions.defaults());
-      output = json.write(renderer.parseResult(parsed), !args.has("compact")) + System.lineSeparator();
+      output = json.write(renderer.parseResult(parsed), !args.has("compact")) + "\n";
     } else {
       output = validateText(parsed);
     }

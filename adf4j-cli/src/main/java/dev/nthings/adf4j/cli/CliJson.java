@@ -10,6 +10,8 @@ import java.util.Set;
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.StreamReadConstraints;
 import tools.jackson.core.json.JsonFactory;
+import tools.jackson.core.util.DefaultIndenter;
+import tools.jackson.core.util.DefaultPrettyPrinter;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
@@ -28,6 +30,11 @@ final class CliJson {
   private static final int MAX_NESTING_DEPTH = 64;
   private static final int MAX_STRING_LENGTH = 20_000_000;
   private static final int MAX_NUMBER_LENGTH = 1_000;
+
+  // Pin the pretty-printer newline to '\n' (Jackson defaults to System.lineSeparator()) so JSON
+  // output is byte-identical across platforms.
+  private static final DefaultPrettyPrinter PRETTY_LF =
+      new DefaultPrettyPrinter().withObjectIndenter(new DefaultIndenter("  ", "\n"));
 
   private final JsonMapper mapper;
 
@@ -53,7 +60,7 @@ final class CliJson {
   /** Serializes a tree node; pretty (indented) or compact (single line). */
   String write(JsonNode node, boolean pretty) {
     return pretty
-        ? mapper.writerWithDefaultPrettyPrinter().writeValueAsString(node)
+        ? mapper.writer().with(PRETTY_LF).writeValueAsString(node)
         : mapper.writeValueAsString(node);
   }
 
