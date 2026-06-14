@@ -40,6 +40,8 @@ import dev.nthings.adf4j.ast.Mention;
 import dev.nthings.adf4j.ast.MultiBodiedExtension;
 import dev.nthings.adf4j.ast.Text;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * Harvests the four content-reference kinds (page, external, mention, attachment) as the
  * {@link AdfNodeWalker} visits each node, then materializes a {@link ContentMetadata}. Holds the
@@ -57,7 +59,7 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
   private final ArrayList<ExcerptDefinition> excerpts = new ArrayList<>();
   private final ConfluenceRenderContext confluenceContext;
 
-  AdfContentMetadataExtractor(ConfluenceRenderContext confluenceContext) {
+  AdfContentMetadataExtractor(@Nullable ConfluenceRenderContext confluenceContext) {
     this.confluenceContext =
         confluenceContext == null ? ConfluenceRenderContext.empty() : confluenceContext;
   }
@@ -109,7 +111,7 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
     }
   }
 
-  ContentMetadata build(List<HeadingReference> outline) {
+  ContentMetadata build(@Nullable List<HeadingReference> outline) {
     var attachments = new ArrayList<AttachmentReference>(attachmentRefs.size());
     for (var builder : attachmentRefs.values()) {
       attachments.add(builder.build());
@@ -138,14 +140,14 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
     }
   }
 
-  private void collectCardLink(CardAttrs attrs) {
+  private void collectCardLink(@Nullable CardAttrs attrs) {
     if (attrs == null) {
       return;
     }
     collectLink(attrs.url(), attrs.attrs());
   }
 
-  private void collectLink(String rawUrl, Attributes attrs) {
+  private void collectLink(@Nullable String rawUrl, Attributes attrs) {
     var normalized = ConfluenceSupport.trimToNull(rawUrl);
     if (normalized == null || "#".equals(normalized)) {
       return;
@@ -158,7 +160,7 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
     externalRefs.add(normalized);
   }
 
-  private void collectMediaAttrs(MediaAttrs attrs) {
+  private void collectMediaAttrs(@Nullable MediaAttrs attrs) {
     if (attrs == null) {
       return;
     }
@@ -195,12 +197,16 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
   }
 
   private void collectExtension(
-      String extensionType, String extensionKey, MacroParams macroParams, Attributes parameters) {
+      @Nullable String extensionType, @Nullable String extensionKey, MacroParams macroParams,
+      Attributes parameters) {
     if (ConfluenceSupport.isInlineMediaImage(extensionType, extensionKey)) {
       // A media node in disguise: its file id is referenced like any media id.
       var mediaAttrs = ConfluenceSupport.inlineMediaImageAttrs(parameters);
       if (mediaAttrs != null) {
-        upsertAttachmentRef(mediaAttrs.id(), mediaAttrs);
+        var fileId = mediaAttrs.id();
+        if (fileId != null) {
+          upsertAttachmentRef(fileId, mediaAttrs);
+        }
       }
       return;
     }
@@ -266,7 +272,7 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
   }
 
   // First non-blank candidate, stripped, or null when all are blank.
-  private static String firstNonBlank(String... candidates) {
+  private static @Nullable String firstNonBlank(@Nullable String... candidates) {
     return Stream.of(candidates)
         .map(ConfluenceSupport::trimToNull)
         .filter(Objects::nonNull)
@@ -277,8 +283,8 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
   private static final class AttachmentRefBuilder {
 
     final String fileId;
-    String title;
-    String mediaType;
+    @Nullable String title;
+    @Nullable String mediaType;
 
     AttachmentRefBuilder(String fileId) {
       this.fileId = fileId;

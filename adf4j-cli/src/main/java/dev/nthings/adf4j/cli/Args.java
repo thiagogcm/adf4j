@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * A tiny getopt-style argument parser, kept reflection-free so the native/wasm images stay
  * reflection-free. Supports clustered short flags ({@code -cp}), {@code -oVALUE}/{@code --long=VALUE}
@@ -143,7 +145,7 @@ final class Args {
   }
 
   /** The last value given for a repeated option, or {@code null} when absent. */
-  String value(String canonical) {
+  @Nullable String value(String canonical) {
     var list = values.get(canonical);
     return list == null || list.isEmpty() ? null : list.getLast();
   }

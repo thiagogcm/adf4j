@@ -15,6 +15,8 @@ import dev.nthings.adf4j.result.UnresolvedReferences;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * Builds the CLI's JSON output trees from library result types. Output is decoupled from the library
  * records: a {@link Diagnostic}'s {@code cause} (a {@code Throwable}) is structurally absent here, so
@@ -166,7 +168,7 @@ final class JsonRenderer {
     return node;
   }
 
-  private ObjectNode attachmentNode(String fileId, String title, String mediaType) {
+  private ObjectNode attachmentNode(String fileId, @Nullable String title, @Nullable String mediaType) {
     var item = json.object();
     item.put("fileId", fileId);
     item.put("title", title);

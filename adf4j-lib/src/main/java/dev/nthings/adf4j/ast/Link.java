@@ -1,6 +1,9 @@
 package dev.nthings.adf4j.ast;
 
-public record Link(String href, String title, Attributes attrs) implements AdfMark {
+import org.jspecify.annotations.Nullable;
+
+public record Link(@Nullable String href, @Nullable String title, Attributes attrs)
+    implements AdfMark {
 
   public Link {
     attrs = attrs == null ? Attributes.empty() : attrs;

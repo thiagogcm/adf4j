@@ -1,9 +1,11 @@
 package dev.nthings.adf4j.ast;
 
+import org.jspecify.annotations.Nullable;
+
 public record Extension(
-    String extensionType,
-    String extensionKey,
-    String text,
+    @Nullable String extensionType,
+    @Nullable String extensionKey,
+    @Nullable String text,
     MacroParams macroParams,
     Attributes parameters)
     implements AdfBlock {

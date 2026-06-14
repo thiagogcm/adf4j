@@ -1,6 +1,7 @@
 package dev.nthings.adf4j.ast;
 
 import java.util.Map;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Generic, immutable view over a node's raw ADF {@code attrs}. Holds only plain JSON-shaped values
@@ -27,7 +28,7 @@ public record Attributes(Map<String, Object> values) {
   }
 
   /** The value at {@code key} when it is a string, otherwise {@code null}. */
-  public String string(String key) {
+  public @Nullable String string(String key) {
     return values.get(key) instanceof String value ? value : null;
   }
 

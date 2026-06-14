@@ -40,6 +40,8 @@ import dev.nthings.adf4j.ast.TaskItem;
 import dev.nthings.adf4j.ast.TaskList;
 import dev.nthings.adf4j.ast.UnknownBlock;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * The analyze phase's one tree-walk: descends a document in order, handing every block and inline to
  * each {@link NodeVisitor}. The single home for "what are a node's children".
@@ -52,7 +54,7 @@ final class AdfNodeWalker {
     this.visitors = visitors;
   }
 
-  static void walk(AdfDocument document, List<NodeVisitor> visitors) {
+  static void walk(@Nullable AdfDocument document, List<NodeVisitor> visitors) {
     if (document == null || visitors.isEmpty()) {
       return;
     }

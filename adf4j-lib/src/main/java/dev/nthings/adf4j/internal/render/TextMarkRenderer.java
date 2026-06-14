@@ -28,11 +28,13 @@ import dev.nthings.adf4j.ast.UnknownMark;
 import dev.nthings.adf4j.confluence.ConfluenceMetadata;
 import dev.nthings.adf4j.internal.ConfluenceSupport;
 
+import org.jspecify.annotations.Nullable;
+
 final class TextMarkRenderer {
 
   private static final Comparator<AdfMark> INLINE_MARK_ORDER = Comparator.comparingInt(TextMarkRenderer::canonicalRank);
 
-  String applyMarks(String value, List<AdfMark> marks, RenderContext context) {
+  String applyMarks(String value, @Nullable List<AdfMark> marks, RenderContext context) {
     if (marks == null || marks.isEmpty()) {
       return value;
     }
@@ -83,7 +85,7 @@ final class TextMarkRenderer {
   // Wraps formatted text in a Markdown link, or returns it unchanged when the link has no href. A
   // PageLinkResolver rewrites an internal page href to the caller's destination; the visible label
   // (the original text, or the original href when the text is blank) is left untouched.
-  private String applyLink(String rendered, Link link, RenderContext context) {
+  private String applyLink(@Nullable String rendered, Link link, RenderContext context) {
     var href = link.href();
     if (href == null || href.isBlank()) {
       return rendered;
@@ -111,7 +113,7 @@ final class TextMarkRenderer {
 
   // The resolver's destination for a page node id, or null when there is no id/resolver or it
   // declines; a decline is recorded as an unresolved page ref.
-  static String resolvePageId(String pageNodeId, RenderContext context) {
+  static @Nullable String resolvePageId(@Nullable String pageNodeId, RenderContext context) {
     var resolver = context.options().pageLinkResolver();
     if (resolver == null || pageNodeId == null || pageNodeId.isBlank()) {
       return null;
@@ -156,7 +158,7 @@ final class TextMarkRenderer {
     return String.join("; ", declarations);
   }
 
-  private void addDeclaration(List<String> declarations, String property, String value) {
+  private void addDeclaration(List<String> declarations, String property, @Nullable String value) {
     if (value != null && !value.isBlank()) {
       declarations.add(property + ":" + HtmlFragments.escapeHtmlText(value));
     }

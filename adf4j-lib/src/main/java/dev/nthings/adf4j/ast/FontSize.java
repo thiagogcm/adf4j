@@ -1,6 +1,8 @@
 package dev.nthings.adf4j.ast;
 
-public record FontSize(String fontSize) implements AdfMark {
+import org.jspecify.annotations.Nullable;
+
+public record FontSize(@Nullable String fontSize) implements AdfMark {
 
   @Override
   public String type() {

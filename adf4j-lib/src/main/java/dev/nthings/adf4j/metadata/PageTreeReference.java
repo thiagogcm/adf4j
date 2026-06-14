@@ -3,6 +3,8 @@ package dev.nthings.adf4j.metadata;
 import java.util.Map;
 import java.util.OptionalInt;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * One {@code pagetree} or {@code children} macro occurrence in a document — both a metadata fact
  * (a document with any of these depends on the page hierarchy, not just its own content) and the
@@ -14,7 +16,7 @@ import java.util.OptionalInt;
  * {@code all}, {@code startDepth}); the standard {@code depth} and {@code all} parameters are also
  * exposed pre-parsed via {@link #depth()} and {@link #all()}.
  */
-public record PageTreeReference(PageTreeMacro macro, String root, Map<String, String> parameters) {
+public record PageTreeReference(PageTreeMacro macro, @Nullable String root, Map<String, String> parameters) {
 
   public PageTreeReference {
     parameters = parameters == null ? Map.of() : Map.copyOf(parameters);

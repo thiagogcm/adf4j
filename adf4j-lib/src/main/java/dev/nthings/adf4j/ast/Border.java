@@ -1,6 +1,8 @@
 package dev.nthings.adf4j.ast;
 
-public record Border(String color, String size) implements AdfMark {
+import org.jspecify.annotations.Nullable;
+
+public record Border(@Nullable String color, @Nullable String size) implements AdfMark {
 
   @Override
   public String type() {

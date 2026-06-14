@@ -1,6 +1,7 @@
 package dev.nthings.adf4j.ast;
 
 import java.util.Map;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A macro's flattened parameter map (each ADF {@code macroParams} entry's {@code value}), keeping the
@@ -18,7 +19,7 @@ public record MacroParams(Map<String, String> values) {
     return EMPTY;
   }
 
-  public String value(String key) {
+  public @Nullable String value(String key) {
     return values.get(key);
   }
 }

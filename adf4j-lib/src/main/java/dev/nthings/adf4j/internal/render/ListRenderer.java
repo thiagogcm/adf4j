@@ -16,6 +16,8 @@ import dev.nthings.adf4j.ast.Paragraph;
 import dev.nthings.adf4j.ast.TaskItem;
 import dev.nthings.adf4j.ast.TaskList;
 
+import org.jspecify.annotations.Nullable;
+
 final class ListRenderer {
 
   String renderTaskList(TaskList node, RendererState context, BlockRecursion recursion) {
@@ -144,7 +146,7 @@ final class ListRenderer {
       RendererState context,
       BlockRecursion recursion,
       boolean ordered,
-      Integer number,
+      @Nullable Integer number,
       String parentIndent) {
     var marker = ordered && number != null ? number + "." : "-";
     var prefix = parentIndent + marker + " ";

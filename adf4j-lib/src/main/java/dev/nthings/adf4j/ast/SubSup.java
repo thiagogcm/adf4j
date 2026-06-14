@@ -1,6 +1,8 @@
 package dev.nthings.adf4j.ast;
 
-public record SubSup(String subSupType) implements AdfMark {
+import org.jspecify.annotations.Nullable;
+
+public record SubSup(@Nullable String subSupType) implements AdfMark {
 
   @Override
   public String type() {

@@ -25,6 +25,11 @@
             <groupId>dev.nthings</groupId>
             <artifactId>adf4j</artifactId>
         </dependency>
+        <!-- JSpecify nullness annotations; for this package's @NullMarked marker (also transitive via adf4j). -->
+        <dependency>
+            <groupId>org.jspecify</groupId>
+            <artifactId>jspecify</artifactId>
+        </dependency>
         <!-- A no-op SLF4J binding: the converter's internal logging is discarded (JS consumers read
              structured diagnostics off the result instead), and it silences the "no providers" notice. -->
         <dependency>

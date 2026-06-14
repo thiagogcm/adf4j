@@ -1,5 +1,7 @@
 package dev.nthings.adf4j.options;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * Rewrites an inter-page link to a caller-supplied destination. Given the Confluence page node id
  * that the library extracts from a page link or page smart-card (the same ids surfaced as
@@ -10,5 +12,5 @@ package dev.nthings.adf4j.options;
  */
 @FunctionalInterface
 public interface PageLinkResolver {
-  String resolve(String pageNodeId);
+  @Nullable String resolve(String pageNodeId);
 }

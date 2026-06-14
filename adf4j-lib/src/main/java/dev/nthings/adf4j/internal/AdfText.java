@@ -4,6 +4,8 @@ import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.ZoneOffset;
 
+import org.jspecify.annotations.Nullable;
+
 /** Phase-neutral helpers interpreting raw ADF scalar values, shared by the analyze and render phases. */
 public final class AdfText {
 
@@ -16,7 +18,7 @@ public final class AdfText {
 
   // Values under 10^11 are read as epoch seconds, larger ones as epoch milliseconds; a blank or
   // non-numeric timestamp is returned as-is.
-  public static String dateFromTimestamp(String timestamp) {
+  public static String dateFromTimestamp(@Nullable String timestamp) {
     if (timestamp == null || timestamp.isBlank()) {
       return "";
     }

@@ -16,6 +16,8 @@ import dev.nthings.adf4j.result.Diagnostic;
 import dev.nthings.adf4j.ast.Heading;
 import dev.nthings.adf4j.internal.analyze.HeadingOutline;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * The traversal cursor: a shared immutable {@link RenderContext} plus the position-dependent state
  * that changes as the renderer descends (list depth, table scope). Transitions copy only the cursor
@@ -47,7 +49,7 @@ record RendererState(RenderContext context, int listDepth, TableCellKind tableCe
     return context.options().tableFallback();
   }
 
-  MediaResolver mediaResolver() {
+  @Nullable MediaResolver mediaResolver() {
     return context.options().mediaResolver();
   }
 
@@ -67,19 +69,19 @@ record RendererState(RenderContext context, int listDepth, TableCellKind tableCe
     return context.options().extensionRenderers();
   }
 
-  AttachmentResolver attachmentResolver() {
+  @Nullable AttachmentResolver attachmentResolver() {
     return context.options().attachmentResolver();
   }
 
-  PageTreeResolver pageTreeResolver() {
+  @Nullable PageTreeResolver pageTreeResolver() {
     return context.options().pageTreeResolver();
   }
 
-  ExcerptResolver excerptResolver() {
+  @Nullable ExcerptResolver excerptResolver() {
     return context.options().excerptResolver();
   }
 
-  void recordUnsupportedExtension(String extensionType, String extensionKey) {
+  void recordUnsupportedExtension(@Nullable String extensionType, @Nullable String extensionKey) {
     context.macroDiagnostics().recordUnsupported(extensionType, extensionKey);
   }
 
@@ -91,7 +93,7 @@ record RendererState(RenderContext context, int listDepth, TableCellKind tableCe
     return context.macroDiagnostics().build();
   }
 
-  HeadingReference headingInfo(Heading heading) {
+  @Nullable HeadingReference headingInfo(Heading heading) {
     return context.headingOutline().infoFor(heading);
   }
 

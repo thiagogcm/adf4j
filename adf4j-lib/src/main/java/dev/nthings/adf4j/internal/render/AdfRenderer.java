@@ -72,6 +72,7 @@ import org.commonmark.ext.image.attributes.ImageAttributesExtension;
 import org.commonmark.ext.task.list.items.TaskListItemsExtension;
 import org.commonmark.parser.Parser;
 import org.commonmark.renderer.html.HtmlRenderer;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -132,7 +133,7 @@ public final class AdfRenderer implements BlockRecursion {
   }
 
   public RenderOutput render(
-      AdfDocument document, MarkdownOptions options, HeadingOutline headingOutline) {
+      @Nullable AdfDocument document, MarkdownOptions options, @Nullable HeadingOutline headingOutline) {
     var requiredOptions = Objects.requireNonNull(options, "options");
     if (document == null) {
       return new RenderOutput(
@@ -151,7 +152,7 @@ public final class AdfRenderer implements BlockRecursion {
   }
 
   // Prepends the optional documentTitle as a level-1 heading, blank-line separated from the body.
-  private static String prependTitle(String body, String rawTitle, boolean escapeParentheses) {
+  private static String prependTitle(String body, @Nullable String rawTitle, boolean escapeParentheses) {
     var heading = titleHeading(rawTitle, escapeParentheses);
     if (heading == null) {
       return body;
@@ -161,7 +162,7 @@ public final class AdfRenderer implements BlockRecursion {
 
   // Formats the title like renderHeading's plain level-1 case: collapsed to one line, punctuation
   // escaped (atLineStart=false, since the text follows "# "). Null/blank yields no heading.
-  private static String titleHeading(String rawTitle, boolean escapeParentheses) {
+  private static @Nullable String titleHeading(@Nullable String rawTitle, boolean escapeParentheses) {
     if (rawTitle == null) {
       return null;
     }
@@ -217,7 +218,7 @@ public final class AdfRenderer implements BlockRecursion {
   }
 
   @Override
-  public List<String> renderBlocks(List<AdfBlock> blocks, RendererState context) {
+  public List<String> renderBlocks(@Nullable List<AdfBlock> blocks, RendererState context) {
     if (blocks == null || blocks.isEmpty()) {
       return List.of();
     }
@@ -230,7 +231,7 @@ public final class AdfRenderer implements BlockRecursion {
   // list item's first paragraph, a caption); false for mid-line text (headings, task/decision items).
   @Override
   public String renderInlineNodes(
-      List<AdfInline> nodes, RendererState context, boolean startAtLineStart) {
+      @Nullable List<AdfInline> nodes, RendererState context, boolean startAtLineStart) {
     if (nodes == null || nodes.isEmpty()) {
       return "";
     }
@@ -448,7 +449,7 @@ public final class AdfRenderer implements BlockRecursion {
    * Maps an Atlassian panel type to a GFM alert keyword: warning -&gt; WARNING, error -&gt; CAUTION,
    * tip/success -&gt; TIP, everything else (info/note/custom/unknown) -&gt; NOTE.
    */
-  private static String gfmAlert(String panelType) {
+  private static String gfmAlert(@Nullable String panelType) {
     if (panelType == null) {
       return "NOTE";
     }
@@ -483,7 +484,7 @@ public final class AdfRenderer implements BlockRecursion {
         .toList());
   }
 
-  private String renderExpand(String title, List<AdfBlock> content, RendererState context) {
+  private String renderExpand(@Nullable String title, List<AdfBlock> content, RendererState context) {
     var safeTitle = title == null ? "" : title.trim();
     var body = joinBlocks(renderBlocks(content, context));
     var summary = safeTitle.isBlank()

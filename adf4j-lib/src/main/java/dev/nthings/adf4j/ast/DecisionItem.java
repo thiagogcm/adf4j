@@ -1,8 +1,9 @@
 package dev.nthings.adf4j.ast;
 
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 
-public record DecisionItem(String state, List<AdfInline> content) implements AdfBlock {
+public record DecisionItem(@Nullable String state, List<AdfInline> content) implements AdfBlock {
 
   public DecisionItem {
     content = content == null ? List.of() : List.copyOf(content);

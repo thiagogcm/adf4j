@@ -15,6 +15,8 @@ import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * Tree-mode-only JSON for the CLI (no record databind), so it adds no reflection surface to the
  * native/wasm image. The mapper is hardened with {@link StreamReadConstraints} so a hostile map file
@@ -112,7 +114,7 @@ final class CliJson {
   }
 
   /** A string field, or {@code null} when absent or JSON null. */
-  static String string(JsonNode object, String field) {
+  static @Nullable String string(JsonNode object, String field) {
     var value = object.get(field);
     return value == null || value.isNull() ? null : value.asString();
   }

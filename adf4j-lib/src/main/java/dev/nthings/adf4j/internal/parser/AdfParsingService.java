@@ -5,6 +5,7 @@ import java.util.List;
 import dev.nthings.adf4j.result.Diagnostic;
 import dev.nthings.adf4j.result.ParseResult;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,7 +44,7 @@ public final class AdfParsingService {
     return new AdfParsingService(mapper, new AdfAstParser(mapper));
   }
 
-  public ParseResult parse(String rawAdf) {
+  public ParseResult parse(@Nullable String rawAdf) {
     if (rawAdf == null || rawAdf.isBlank()) {
       log.debug("parse called with null or blank input – returning empty result");
       return ParseResult.empty();

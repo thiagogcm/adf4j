@@ -12,6 +12,7 @@ import dev.nthings.adf4j.ast.TableRow;
 
 import org.jsoup.nodes.Element;
 import org.jsoup.parser.Tag;
+import org.jspecify.annotations.Nullable;
 
 /**
  * The HTML table-fallback renderer: builds a jsoup {@code <table>} for ADF tables GFM pipe syntax
@@ -126,7 +127,7 @@ final class HtmlTableRenderer {
     return HtmlFragments.outerHtml(list);
   }
 
-  private Element renderHtmlListItem(ListItem item, RendererState context, BlockRecursion recursion) {
+  private @Nullable Element renderHtmlListItem(ListItem item, RendererState context, BlockRecursion recursion) {
     var fragments = new ArrayList<String>();
     for (var block : item.content()) {
       var rendered =

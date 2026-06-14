@@ -9,6 +9,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * Reads the ADF input (a path argument or stdin) and writes the deliverable; a file output goes
  * through a temp file + atomic rename so a crash mid-write can't leave a truncated file.
@@ -39,7 +41,7 @@ final class CliIo {
     }
   }
 
-  static void writeOutput(String outputPath, String content, PrintStream stdout) {
+  static void writeOutput(@Nullable String outputPath, String content, PrintStream stdout) {
     if (outputPath == null) {
       stdout.print(content);
       stdout.flush();
@@ -67,7 +69,7 @@ final class CliIo {
     }
   }
 
-  private static void deleteQuietly(Path path) {
+  private static void deleteQuietly(@Nullable Path path) {
     if (path == null) {
       return;
     }

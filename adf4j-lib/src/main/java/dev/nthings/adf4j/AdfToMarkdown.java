@@ -2,6 +2,8 @@ package dev.nthings.adf4j;
 
 import java.util.Objects;
 
+import org.jspecify.annotations.Nullable;
+
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.internal.engine.AdfPipeline;
 import dev.nthings.adf4j.metadata.ContentMetadata;
@@ -50,7 +52,7 @@ public final class AdfToMarkdown {
   }
 
   /** Parses ADF JSON into an {@link AdfDocument} with diagnostics, without rendering. */
-  public ParseResult parse(String adfJson) {
+  public ParseResult parse(@Nullable String adfJson) {
     return pipeline.parse(adfJson);
   }
 
@@ -61,12 +63,12 @@ public final class AdfToMarkdown {
    * resolve against {@code options.confluenceContext()}, so supply the attachment context here too. Returns
    * {@link ContentMetadata#empty()} for blank or invalid input.
    */
-  public ContentMetadata analyze(String adfJson) {
+  public ContentMetadata analyze(@Nullable String adfJson) {
     return pipeline.analyze(adfJson, options);
   }
 
   /** Extracts {@link ContentMetadata} from ADF JSON with options supplied for this call. */
-  public ContentMetadata analyze(String adfJson, MarkdownOptions perCallOptions) {
+  public ContentMetadata analyze(@Nullable String adfJson, MarkdownOptions perCallOptions) {
     return pipeline.analyze(adfJson, Objects.requireNonNull(perCallOptions, "options"));
   }
 
@@ -74,17 +76,17 @@ public final class AdfToMarkdown {
    * Extracts {@link ContentMetadata} from an already-parsed {@link AdfDocument} using bound options.
    * A {@code null} document yields {@link ContentMetadata#empty()}.
    */
-  public ContentMetadata analyze(AdfDocument document) {
+  public ContentMetadata analyze(@Nullable AdfDocument document) {
     return pipeline.analyze(document, options);
   }
 
   /** Extracts {@link ContentMetadata} from an {@link AdfDocument} with options supplied for this call. */
-  public ContentMetadata analyze(AdfDocument document, MarkdownOptions perCallOptions) {
+  public ContentMetadata analyze(@Nullable AdfDocument document, MarkdownOptions perCallOptions) {
     return pipeline.analyze(document, Objects.requireNonNull(perCallOptions, "options"));
   }
 
   /** Converts ADF JSON to Markdown using the bound options. */
-  public MarkdownResult convert(String adfJson) {
+  public MarkdownResult convert(@Nullable String adfJson) {
     return pipeline.convert(adfJson, options);
   }
 
@@ -94,12 +96,12 @@ public final class AdfToMarkdown {
    * number of times without re-parsing. A {@code null}/invalid result yields an empty body (plus the
    * configured {@code documentTitle}, if any) with the parse issues preserved.
    */
-  public MarkdownResult convert(ParseResult parsed) {
+  public MarkdownResult convert(@Nullable ParseResult parsed) {
     return pipeline.convert(parsed, options);
   }
 
   /** Converts a previously parsed {@link ParseResult} with options supplied for this call. */
-  public MarkdownResult convert(ParseResult parsed, MarkdownOptions perCallOptions) {
+  public MarkdownResult convert(@Nullable ParseResult parsed, MarkdownOptions perCallOptions) {
     return pipeline.convert(parsed, Objects.requireNonNull(perCallOptions, "options"));
   }
 
@@ -108,7 +110,7 @@ public final class AdfToMarkdown {
    * document yields an empty-body {@link MarkdownResult}. Prefer {@link #convert(ParseResult)} when
    * the document came from {@link #parse(String)}, so its parse issues reach the result.
    */
-  public MarkdownResult convert(AdfDocument document) {
+  public MarkdownResult convert(@Nullable AdfDocument document) {
     return pipeline.convert(document, options);
   }
 
@@ -117,22 +119,22 @@ public final class AdfToMarkdown {
    * Lets a single reusable converter handle documents whose options differ (per-page media,
    * attachment, or page-link context) without rebuilding the pipeline.
    */
-  public MarkdownResult convert(String adfJson, MarkdownOptions perCallOptions) {
+  public MarkdownResult convert(@Nullable String adfJson, MarkdownOptions perCallOptions) {
     return pipeline.convert(adfJson, Objects.requireNonNull(perCallOptions, "options"));
   }
 
   /** Converts an already-parsed {@link AdfDocument} to Markdown with options supplied for this call. */
-  public MarkdownResult convert(AdfDocument document, MarkdownOptions perCallOptions) {
+  public MarkdownResult convert(@Nullable AdfDocument document, MarkdownOptions perCallOptions) {
     return pipeline.convert(document, Objects.requireNonNull(perCallOptions, "options"));
   }
 
   /** Convenience for {@code convert(adfJson).body()}. */
-  public String toMarkdown(String adfJson) {
+  public String toMarkdown(@Nullable String adfJson) {
     return convert(adfJson).body();
   }
 
   /** Convenience for {@code convert(adfJson, perCallOptions).body()}. */
-  public String toMarkdown(String adfJson, MarkdownOptions perCallOptions) {
+  public String toMarkdown(@Nullable String adfJson, MarkdownOptions perCallOptions) {
     return convert(adfJson, perCallOptions).body();
   }
 }

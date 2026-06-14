@@ -7,6 +7,8 @@ import java.util.Objects;
 import dev.nthings.adf4j.result.Diagnostic;
 import dev.nthings.adf4j.result.Diagnostic.Severity;
 
+import org.jspecify.annotations.Nullable;
+
 import tools.jackson.databind.JsonNode;
 
 /** Validates the ADF root node, reporting structural problems as {@link Diagnostic}s. */
@@ -15,7 +17,7 @@ final class RootValidator {
   private RootValidator() {
   }
 
-  static List<Diagnostic> validate(JsonNode document) {
+  static List<Diagnostic> validate(@Nullable JsonNode document) {
     if (document == null) {
       return List.of(new Diagnostic("MISSING_DOCUMENT", "ADF document is null.", null));
     }
@@ -51,7 +53,7 @@ final class RootValidator {
   }
 
   // Accept the version as a JSON number or a numeric string ("1"); anything else yields null.
-  private static Integer versionOf(JsonNode versionNode) {
+  private static @Nullable Integer versionOf(JsonNode versionNode) {
     if (versionNode.isNumber()) {
       return versionNode.asInt();
     }

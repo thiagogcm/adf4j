@@ -3,13 +3,14 @@ package dev.nthings.adf4j.internal.render;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.parser.Tag;
+import org.jspecify.annotations.Nullable;
 
 final class HtmlFragments {
 
   private HtmlFragments() {
   }
 
-  static String anchor(String anchor) {
+  static String anchor(@Nullable String anchor) {
     if (anchor == null || anchor.isBlank()) {
       return "";
     }
@@ -20,7 +21,7 @@ final class HtmlFragments {
   }
 
   /** Escapes the HTML text-significant characters so an ADF string is safe inside element text. */
-  static String escapeHtmlText(String value) {
+  static String escapeHtmlText(@Nullable String value) {
     if (value == null) {
       return "";
     }

@@ -1,5 +1,7 @@
 package dev.nthings.adf4j.options;
 
+import org.jspecify.annotations.Nullable;
+
 import dev.nthings.adf4j.ast.MediaAttrs;
 
 /**
@@ -10,5 +12,5 @@ import dev.nthings.adf4j.ast.MediaAttrs;
  */
 @FunctionalInterface
 public interface MediaResolver {
-  String resolve(MediaAttrs attrs);
+  @Nullable String resolve(MediaAttrs attrs);
 }

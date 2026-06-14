@@ -19,6 +19,11 @@
             <groupId>dev.nthings</groupId>
             <artifactId>adf4j</artifactId>
         </dependency>
+        <!-- JSpecify nullness annotations; declared explicitly because the CLI imports @Nullable directly. -->
+        <dependency>
+            <groupId>org.jspecify</groupId>
+            <artifactId>jspecify</artifactId>
+        </dependency>
         <!-- Tree-mode JSON only (ObjectNode/ArrayNode + readTree); already a transitive, native-image-proven
              dependency of adf4j. Declared explicitly because the CLI imports it directly. -->
         <dependency>

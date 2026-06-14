@@ -1,4 +1,7 @@
 package dev.nthings.adf4j.ast;
 
-public record Status(String text, String color, String style, String localId)
+import org.jspecify.annotations.Nullable;
+
+public record Status(
+    @Nullable String text, @Nullable String color, @Nullable String style, @Nullable String localId)
     implements AdfInline {}

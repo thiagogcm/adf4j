@@ -19,6 +19,8 @@ import dev.nthings.adf4j.options.UnknownNodePolicy;
 import dev.nthings.adf4j.result.Diagnostic;
 import dev.nthings.adf4j.result.Diagnostic.Severity;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * Counts the unmodelled constructs the {@link AdfNodeWalker} visits so the conversion can report
  * whether rendering them was lossy: unknown node types (governed by the active
@@ -87,7 +89,7 @@ final class AdfLossinessCollector implements NodeVisitor {
     return List.copyOf(issues);
   }
 
-  private Diagnostic unknownNodeIssue(UnknownNodePolicy policy) {
+  private @Nullable Diagnostic unknownNodeIssue(UnknownNodePolicy policy) {
     return switch (policy) {
       case PLACEHOLDER -> new Diagnostic(
           "UNKNOWN_NODE_PLACEHOLDER",

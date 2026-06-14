@@ -1,9 +1,10 @@
 package dev.nthings.adf4j.ast;
 
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 
 public record TableCell(
-    boolean header, int colspan, int rowspan, String background, List<AdfBlock> content)
+    boolean header, int colspan, int rowspan, @Nullable String background, List<AdfBlock> content)
     implements AdfBlock {
 
   public TableCell {

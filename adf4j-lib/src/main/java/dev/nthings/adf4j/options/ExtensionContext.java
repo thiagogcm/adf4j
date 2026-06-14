@@ -2,6 +2,8 @@ package dev.nthings.adf4j.options;
 
 import java.util.Map;
 
+import org.jspecify.annotations.Nullable;
+
 import dev.nthings.adf4j.ast.Attributes;
 
 /**
@@ -16,9 +18,9 @@ import dev.nthings.adf4j.ast.Attributes;
  * outside {@code macroParams}, and this is the only place it surfaces.
  */
 public record ExtensionContext(
-    String extensionType,
-    String extensionKey,
-    String text,
+    @Nullable String extensionType,
+    @Nullable String extensionKey,
+    @Nullable String text,
     Map<String, String> parameters,
     Attributes rawParameters) {
 
@@ -28,7 +30,7 @@ public record ExtensionContext(
   }
 
   /** The macro parameter for {@code name}, or {@code null} when absent. */
-  public String parameter(String name) {
+  public @Nullable String parameter(String name) {
     return parameters.get(name);
   }
 }

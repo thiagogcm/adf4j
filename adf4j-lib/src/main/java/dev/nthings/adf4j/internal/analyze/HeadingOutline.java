@@ -9,6 +9,8 @@ import dev.nthings.adf4j.metadata.HeadingReference;
 import dev.nthings.adf4j.ast.Heading;
 import dev.nthings.adf4j.internal.AdfText;
 
+import org.jspecify.annotations.Nullable;
+
 /** The analyze phase's heading model, consumed by the render phase. */
 public final class HeadingOutline {
 
@@ -21,9 +23,9 @@ public final class HeadingOutline {
   private final Set<Integer> tocReferencedLevels;
 
   private HeadingOutline(
-      List<HeadingReference> headings,
-      Map<Heading, HeadingReference> headingsByNode,
-      Set<Integer> tocReferencedLevels) {
+      @Nullable List<HeadingReference> headings,
+      @Nullable Map<Heading, HeadingReference> headingsByNode,
+      @Nullable Set<Integer> tocReferencedLevels) {
     this.headings = headings == null ? List.of() : List.copyOf(headings);
     this.headingsByNode = headingsByNode == null ? new IdentityHashMap<>() : headingsByNode;
     this.tocReferencedLevels =
@@ -35,9 +37,9 @@ public final class HeadingOutline {
   }
 
   static HeadingOutline of(
-      List<HeadingReference> headings,
-      IdentityHashMap<Heading, HeadingReference> headingsByNode,
-      Set<Integer> tocReferencedLevels) {
+      @Nullable List<HeadingReference> headings,
+      @Nullable IdentityHashMap<Heading, HeadingReference> headingsByNode,
+      @Nullable Set<Integer> tocReferencedLevels) {
     if ((headings == null || headings.isEmpty())
         && (headingsByNode == null || headingsByNode.isEmpty())) {
       return EMPTY;
@@ -50,7 +52,7 @@ public final class HeadingOutline {
     return headings;
   }
 
-  public HeadingReference infoFor(Heading heading) {
+  public @Nullable HeadingReference infoFor(Heading heading) {
     return headingsByNode.get(heading);
   }
 

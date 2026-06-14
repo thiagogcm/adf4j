@@ -2,6 +2,8 @@ package dev.nthings.adf4j.options;
 
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
+
 import dev.nthings.adf4j.metadata.PageTreeReference;
 
 /**
@@ -17,5 +19,5 @@ import dev.nthings.adf4j.metadata.PageTreeReference;
  */
 @FunctionalInterface
 public interface PageTreeResolver {
-  List<PageTreeEntry> resolve(PageTreeReference reference);
+  @Nullable List<PageTreeEntry> resolve(PageTreeReference reference);
 }

@@ -1,3 +1,5 @@
 package dev.nthings.adf4j.ast;
 
-public record Date(String timestamp, String localId) implements AdfInline {}
+import org.jspecify.annotations.Nullable;
+
+public record Date(@Nullable String timestamp, @Nullable String localId) implements AdfInline {}

@@ -1,4 +1,11 @@
 package dev.nthings.adf4j.ast;
 
-public record Mention(String id, String text, String userType, String accessLevel, String localId)
+import org.jspecify.annotations.Nullable;
+
+public record Mention(
+    @Nullable String id,
+    String text,
+    @Nullable String userType,
+    @Nullable String accessLevel,
+    @Nullable String localId)
     implements AdfInline {}

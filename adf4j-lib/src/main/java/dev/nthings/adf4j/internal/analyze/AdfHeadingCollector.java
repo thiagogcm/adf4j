@@ -28,6 +28,7 @@ import dev.nthings.adf4j.ast.Status;
 import dev.nthings.adf4j.ast.Text;
 
 import org.commonmark.ext.heading.anchor.IdGenerator;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Records every {@link Heading} and the union of toc-macro level ranges as the {@link AdfNodeWalker}
@@ -40,7 +41,7 @@ final class AdfHeadingCollector implements NodeVisitor {
   private final Set<Integer> tocReferencedLevels = new HashSet<>();
 
   // Standalone single-document collection: one walk over this collector, then build the outline.
-  static HeadingOutline collect(AdfDocument document) {
+  static HeadingOutline collect(@Nullable AdfDocument document) {
     if (document == null) {
       return HeadingOutline.empty();
     }
@@ -94,7 +95,8 @@ final class AdfHeadingCollector implements NodeVisitor {
     return HeadingOutline.of(references, headingsByNode, tocReferencedLevels);
   }
 
-  private void recordToc(String extensionType, String extensionKey, MacroParams macroParams) {
+  private void recordToc(
+      @Nullable String extensionType, @Nullable String extensionKey, MacroParams macroParams) {
     if (!ConfluenceSupport.isConfluenceMacroExtension(extensionType)
         || !"toc".equals(extensionKey)) {
       return;

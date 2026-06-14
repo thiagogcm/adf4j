@@ -1,3 +1,5 @@
 package dev.nthings.adf4j.ast;
 
-public record SyncBlock(String resourceId) implements AdfBlock {}
+import org.jspecify.annotations.Nullable;
+
+public record SyncBlock(@Nullable String resourceId) implements AdfBlock {}

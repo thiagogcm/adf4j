@@ -1,5 +1,7 @@
 package dev.nthings.adf4j.options;
 
+import org.jspecify.annotations.Nullable;
+
 import dev.nthings.adf4j.metadata.ExcerptIncludeReference;
 
 /**
@@ -16,5 +18,5 @@ import dev.nthings.adf4j.metadata.ExcerptIncludeReference;
  */
 @FunctionalInterface
 public interface ExcerptResolver {
-  String resolve(ExcerptIncludeReference reference);
+  @Nullable String resolve(ExcerptIncludeReference reference);
 }

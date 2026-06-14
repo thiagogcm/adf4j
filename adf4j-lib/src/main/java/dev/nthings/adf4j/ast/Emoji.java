@@ -1,3 +1,6 @@
 package dev.nthings.adf4j.ast;
 
-public record Emoji(String id, String text, String shortName) implements AdfInline {}
+import org.jspecify.annotations.Nullable;
+
+public record Emoji(@Nullable String id, @Nullable String text, @Nullable String shortName)
+    implements AdfInline {}

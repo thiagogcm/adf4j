@@ -4,6 +4,8 @@ import java.util.stream.Stream;
 
 import dev.nthings.adf4j.ast.CardAttrs;
 
+import org.jspecify.annotations.Nullable;
+
 /** Renders smart-link nodes (block/inline/embed cards) to Markdown links. */
 final class CardRenderer {
 
@@ -40,7 +42,7 @@ final class CardRenderer {
    * internal page card's destination; a url-only card whose destination is rewritten keeps the
    * original url as its visible label.
    */
-  private String renderCardLink(CardAttrs attrs, RenderContext context) {
+  private @Nullable String renderCardLink(CardAttrs attrs, RenderContext context) {
     var url = attrs.url();
     var hasUrl = url != null && !url.isBlank();
 

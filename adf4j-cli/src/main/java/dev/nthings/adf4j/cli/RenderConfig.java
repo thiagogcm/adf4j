@@ -26,6 +26,8 @@ import dev.nthings.adf4j.options.UnknownNodePolicy;
 
 import tools.jackson.databind.JsonNode;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * Translates the shared rendering/resolver flags into a {@link MarkdownOptions}. Resolvers are
  * data-driven (URL templates plus JSON lookup tables) and preserve the library's decline-vs-answer
@@ -96,7 +98,7 @@ final class RenderConfig {
 
   // ---- URL-rewriting resolvers (template + map, map wins) -----------------
 
-  private static MediaResolver mediaResolver(Args args, CliJson json) {
+  private static @Nullable MediaResolver mediaResolver(Args args, CliJson json) {
     var lookup = urlResolver(args, json, "media-map", "media-url", MEDIA_PLACEHOLDERS);
     return lookup == null ? null : attrs -> lookup.apply(attrs.id(), Map.of(
         "id", requireNonNullElse(attrs.id(), ""),
@@ -104,14 +106,14 @@ final class RenderConfig {
         "localId", requireNonNullElse(attrs.localId(), "")));
   }
 
-  private static AttachmentResolver attachmentResolver(Args args, CliJson json) {
+  private static @Nullable AttachmentResolver attachmentResolver(Args args, CliJson json) {
     var lookup = urlResolver(args, json, "attachment-map", "attachment-url", ATTACHMENT_PLACEHOLDERS);
     return lookup == null ? null : reference -> lookup.apply(reference.fileId(), Map.of(
         "fileId", requireNonNullElse(reference.fileId(), ""),
         "title", requireNonNullElse(reference.title(), "")));
   }
 
-  private static PageLinkResolver pageLinkResolver(Args args, CliJson json) {
+  private static @Nullable PageLinkResolver pageLinkResolver(Args args, CliJson json) {
     var lookup = urlResolver(args, json, "page-map", "page-url", PAGE_PLACEHOLDERS);
     return lookup == null
         ? null
@@ -120,7 +122,7 @@ final class RenderConfig {
 
   // (key, placeholders) -> URL: the map wins on a non-blank hit, else the template expands; null when
   // neither flag was given (so the resolver stays unset and the library keeps its default behavior).
-  private static BiFunction<String, Map<String, String>, String> urlResolver(
+  private static @Nullable BiFunction<String, Map<String, String>, @Nullable String> urlResolver(
       Args args, CliJson json, String mapFlag, String urlFlag, Set<String> placeholders) {
     var map = readStringMap(args.value(mapFlag), json, "--" + mapFlag);
     var template = template(args.value(urlFlag), placeholders, "--" + urlFlag);
@@ -138,7 +140,7 @@ final class RenderConfig {
 
   // ---- structured-data resolvers ------------------------------------------
 
-  private static PageTreeResolver pageTreeResolver(Args args, CliJson json) {
+  private static @Nullable PageTreeResolver pageTreeResolver(Args args, CliJson json) {
     var path = args.value("page-tree-map");
     if (path == null) {
       return null;
@@ -156,7 +158,7 @@ final class RenderConfig {
     };
   }
 
-  private static Map<String, List<PageTreeEntry>> readPageTreeBucket(JsonNode bucketNode, String name) {
+  private static Map<String, List<PageTreeEntry>> readPageTreeBucket(@Nullable JsonNode bucketNode, String name) {
     var bucket = new LinkedHashMap<String, List<PageTreeEntry>>();
     if (bucketNode == null || bucketNode.isNull()) {
       return bucket;
@@ -176,7 +178,7 @@ final class RenderConfig {
     return bucket;
   }
 
-  private static ExcerptResolver excerptResolver(Args args, CliJson json) {
+  private static @Nullable ExcerptResolver excerptResolver(Args args, CliJson json) {
     var path = args.value("excerpt-map");
     if (path == null) {
       return null;
@@ -193,7 +195,7 @@ final class RenderConfig {
     return reference -> byKey.get(new ExcerptKey(reference.page(), reference.excerptName()));
   }
 
-  private static ExtensionRenderer extensionRenderer(Args args, CliJson json) {
+  private static @Nullable ExtensionRenderer extensionRenderer(Args args, CliJson json) {
     var path = args.value("extension-map");
     if (path == null) {
       return null;
@@ -242,11 +244,11 @@ final class RenderConfig {
 
   // ---- helpers ------------------------------------------------------------
 
-  private static UrlTemplate template(String value, Set<String> allowed, String flag) {
+  private static @Nullable UrlTemplate template(@Nullable String value, Set<String> allowed, String flag) {
     return value == null ? null : new UrlTemplate(value, allowed, flag);
   }
 
-  private static Map<String, String> readStringMap(String path, CliJson json, String flag) {
+  private static Map<String, String> readStringMap(@Nullable String path, CliJson json, String flag) {
     if (path == null) {
       return Map.of();
     }
@@ -258,7 +260,7 @@ final class RenderConfig {
     return map;
   }
 
-  private record ExcerptKey(String page, String name) {}
+  private record ExcerptKey(String page, @Nullable String name) {}
 
-  private record ExtensionEntry(String type, String key, String template) {}
+  private record ExtensionEntry(@Nullable String type, String key, String template) {}
 }

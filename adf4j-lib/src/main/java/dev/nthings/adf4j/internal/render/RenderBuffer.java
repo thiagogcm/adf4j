@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import org.jspecify.annotations.Nullable;
+
 
 final class RenderBuffer {
 
@@ -12,7 +14,7 @@ final class RenderBuffer {
   private RenderBuffer() {
   }
 
-  static String joinBlocks(List<String> source) {
+  static String joinBlocks(@Nullable List<String> source) {
     if (source == null || source.isEmpty()) {
       return "";
     }
@@ -25,11 +27,11 @@ final class RenderBuffer {
     return String.join("\n\n", blocks);
   }
 
-  static List<String> indentLines(String value, int depth, String indentUnit) {
+  static List<String> indentLines(@Nullable String value, int depth, String indentUnit) {
     return indentLines(value, indentUnit.repeat(Math.max(0, depth)));
   }
 
-  static List<String> indentLines(String value, String indent) {
+  static List<String> indentLines(@Nullable String value, String indent) {
     if (value == null || value.isBlank()) {
       return List.of();
     }

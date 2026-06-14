@@ -3,6 +3,8 @@ package dev.nthings.adf4j.internal.engine;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
+
 import dev.nthings.adf4j.metadata.ContentMetadata;
 import dev.nthings.adf4j.options.MarkdownOptions;
 import dev.nthings.adf4j.result.MarkdownResult;
@@ -43,11 +45,11 @@ public final class AdfPipeline {
         AdfRenderer.createDefault());
   }
 
-  public ParseResult parse(String adfJson) {
+  public ParseResult parse(@Nullable String adfJson) {
     return parsingService.parse(adfJson);
   }
 
-  public ContentMetadata analyze(String adfJson, MarkdownOptions options) {
+  public ContentMetadata analyze(@Nullable String adfJson, MarkdownOptions options) {
     if (adfJson == null || adfJson.isBlank()) {
       return ContentMetadata.empty();
     }
@@ -58,14 +60,14 @@ public final class AdfPipeline {
     return analyze(parsed.document(), options);
   }
 
-  public ContentMetadata analyze(AdfDocument document, MarkdownOptions options) {
+  public ContentMetadata analyze(@Nullable AdfDocument document, MarkdownOptions options) {
     if (document == null) {
       return ContentMetadata.empty();
     }
     return analyzer.analyze(document, options).metadata();
   }
 
-  public MarkdownResult convert(String adfJson, MarkdownOptions options) {
+  public MarkdownResult convert(@Nullable String adfJson, MarkdownOptions options) {
     if (adfJson == null || adfJson.isBlank()) {
       return render(null, options, List.of());
     }
@@ -77,20 +79,20 @@ public final class AdfPipeline {
     return render(parsed.document(), options, parsed.issues());
   }
 
-  public MarkdownResult convert(ParseResult parsed, MarkdownOptions options) {
+  public MarkdownResult convert(@Nullable ParseResult parsed, MarkdownOptions options) {
     if (parsed == null) {
       return render(null, options, List.of());
     }
     return render(parsed.validAdfRoot() ? parsed.document() : null, options, parsed.issues());
   }
 
-  public MarkdownResult convert(AdfDocument document, MarkdownOptions options) {
+  public MarkdownResult convert(@Nullable AdfDocument document, MarkdownOptions options) {
     return render(document, options, List.of());
   }
 
   // A null document yields an empty (possibly titled) body.
   private MarkdownResult render(
-      AdfDocument document, MarkdownOptions options, List<Diagnostic> diagnostics) {
+      @Nullable AdfDocument document, MarkdownOptions options, List<Diagnostic> diagnostics) {
     var analysis = analyzer.analyze(document, options);
     var rendered = renderer.render(document, options, analysis.outline());
     // Diagnostics in pipeline order: parse, then analyze-phase lossiness, then render-phase macros.

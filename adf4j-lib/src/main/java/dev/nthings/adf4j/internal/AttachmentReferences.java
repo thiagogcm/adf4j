@@ -5,6 +5,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import org.jspecify.annotations.Nullable;
+
 import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
 import dev.nthings.adf4j.metadata.AttachmentReference;
 import dev.nthings.adf4j.ast.MacroParams;
@@ -33,7 +35,7 @@ public final class AttachmentReferences {
   }
 
   /** Classifies media by MIME/type, falling back to each name/URL extension; unknown is non-image. */
-  public static boolean isImage(String mimeOrType, String... fileNames) {
+  public static boolean isImage(@Nullable String mimeOrType, @Nullable String... fileNames) {
     var classification = classify(mimeOrType);
     for (var fileName : fileNames) {
       if (classification != null) {
@@ -44,7 +46,7 @@ public final class AttachmentReferences {
     return classification != null && classification;
   }
 
-  private static Boolean classify(String mimeOrType) {
+  private static @Nullable Boolean classify(@Nullable String mimeOrType) {
     var normalized = mimeOrType == null ? null : mimeOrType.strip().toLowerCase(Locale.ROOT);
     if (normalized == null || normalized.isEmpty()) {
       return null;
@@ -55,8 +57,8 @@ public final class AttachmentReferences {
     return normalized.indexOf('/') >= 0 ? Boolean.FALSE : null;
   }
 
-  public static AttachmentReference resolve(
-      MacroParams macroParams, ConfluenceRenderContext confluenceContext) {
+  public static @Nullable AttachmentReference resolve(
+      @Nullable MacroParams macroParams, @Nullable ConfluenceRenderContext confluenceContext) {
     if (macroParams == null) {
       return null;
     }
@@ -84,7 +86,7 @@ public final class AttachmentReferences {
   }
 
   /** The file name a URL or path carries: its last path segment, or null when none is present. */
-  public static String fileName(String urlOrPath) {
+  public static @Nullable String fileName(@Nullable String urlOrPath) {
     if (urlOrPath == null) {
       return null;
     }
@@ -92,7 +94,7 @@ public final class AttachmentReferences {
     return name.isEmpty() ? null : name;
   }
 
-  public static String inferMediaType(String fileNameOrUrl) {
+  public static @Nullable String inferMediaType(@Nullable String fileNameOrUrl) {
     if (fileNameOrUrl == null) {
       return null;
     }

@@ -2,6 +2,8 @@ package dev.nthings.adf4j.metadata;
 
 import java.util.Map;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * One Confluence {@code excerpt-include} macro occurrence in a document — both a metadata fact (the
  * document embeds content owned by another page, so it depends on that page) and the request an
@@ -13,7 +15,7 @@ import java.util.Map;
  * (e.g. {@code nopanel}).
  */
 public record ExcerptIncludeReference(
-    String page, String excerptName, Map<String, String> parameters) {
+    String page, @Nullable String excerptName, Map<String, String> parameters) {
 
   public ExcerptIncludeReference {
     parameters = parameters == null ? Map.of() : Map.copyOf(parameters);

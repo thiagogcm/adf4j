@@ -1,6 +1,8 @@
 package dev.nthings.adf4j.ast;
 
-public record CodeBlock(String language, String text) implements AdfBlock {
+import org.jspecify.annotations.Nullable;
+
+public record CodeBlock(@Nullable String language, String text) implements AdfBlock {
 
   public CodeBlock {
     text = text == null ? "" : text;

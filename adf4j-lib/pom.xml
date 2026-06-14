@@ -22,6 +22,11 @@
     </properties>
 
     <dependencies>
+        <!-- JSpecify nullness annotations; compile scope so the annotated API contract ships for consumers. -->
+        <dependency>
+            <groupId>org.jspecify</groupId>
+            <artifactId>jspecify</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.commonmark</groupId>
             <artifactId>commonmark</artifactId>

@@ -10,6 +10,8 @@ import dev.nthings.adf4j.ast.MediaGroup;
 import dev.nthings.adf4j.ast.MediaInline;
 import dev.nthings.adf4j.ast.MediaSingle;
 
+import org.jspecify.annotations.Nullable;
+
 final class MediaRenderer {
 
   String renderMediaSingle(MediaSingle node, RendererState context, BlockRecursion recursion) {
@@ -95,14 +97,14 @@ final class MediaRenderer {
 
   // The resolved destination (a MediaResolver path or URL) carries the real filename, so its extension
   // classifies a file node whose own attrs omit the type — as Confluence's do, supplying it via the resolver.
-  private boolean isImage(MediaAttrs attrs, String resolvedSource) {
+  private boolean isImage(MediaAttrs attrs, @Nullable String resolvedSource) {
     return AttachmentReferences.isImage(
         attrs.mimeOrType(), attrs.fileName(), attrs.name(), attrs.alt(), attrs.url(), resolvedSource);
   }
 
   // A url attr or media resolver, never the synthetic placeholder; null so the label and image-ness
   // are decided only by genuine filenames.
-  private String resolveMediaSource(MediaAttrs attrs, RendererState context) {
+  private @Nullable String resolveMediaSource(MediaAttrs attrs, RendererState context) {
     var url = attrs.url();
     if (url != null && !url.isBlank()) {
       return url;
@@ -128,7 +130,7 @@ final class MediaRenderer {
     return "media:%s/%s".formatted(collection, id);
   }
 
-  private String renderImageAttributeSuffix(Integer width, Integer height) {
+  private String renderImageAttributeSuffix(@Nullable Integer width, @Nullable Integer height) {
     var attributes = new ArrayList<String>();
     if (width != null) {
       attributes.add("width=%d".formatted(width));
@@ -142,7 +144,7 @@ final class MediaRenderer {
     return "{%s}".formatted(String.join(" ", attributes));
   }
 
-  private Integer positiveInteger(String rawValue) {
+  private @Nullable Integer positiveInteger(@Nullable String rawValue) {
     if (rawValue == null || rawValue.isBlank()) {
       return null;
     }

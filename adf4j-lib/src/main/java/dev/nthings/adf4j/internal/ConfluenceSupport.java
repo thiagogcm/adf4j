@@ -3,6 +3,8 @@ package dev.nthings.adf4j.internal;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import org.jspecify.annotations.Nullable;
+
 import dev.nthings.adf4j.ast.Attributes;
 import dev.nthings.adf4j.ast.MacroParams;
 import dev.nthings.adf4j.ast.MediaAttrs;
@@ -23,7 +25,7 @@ public final class ConfluenceSupport {
   private ConfluenceSupport() {
   }
 
-  public static boolean isConfluenceMacroExtension(String extensionType) {
+  public static boolean isConfluenceMacroExtension(@Nullable String extensionType) {
     return CONFLUENCE_MACRO_EXTENSION.equals(extensionType);
   }
 
@@ -31,7 +33,7 @@ public final class ConfluenceSupport {
    * Whether the extension is a chart: the modern chart app ({@code com.atlassian.chart}, any key) or
    * the legacy Confluence {@code chart}/{@code chart:*} macro.
    */
-  public static boolean isChartExtension(String extensionType, String extensionKey) {
+  public static boolean isChartExtension(@Nullable String extensionType, @Nullable String extensionKey) {
     if (isModernChartExtension(extensionType)) {
       return true;
     }
@@ -41,7 +43,7 @@ public final class ConfluenceSupport {
   }
 
   /** Whether the extension belongs to the modern chart app ({@code com.atlassian.chart}). */
-  public static boolean isModernChartExtension(String extensionType) {
+  public static boolean isModernChartExtension(@Nullable String extensionType) {
     return CHART_EXTENSION.equals(extensionType);
   }
 
@@ -51,7 +53,7 @@ public final class ConfluenceSupport {
    * {@code parameters.chartGroup.customizeTab.titlesField.chartTitle} with the generic
    * {@code extensionTitle} as a fallback.
    */
-  public static String chartTitle(MacroParams macroParams, Attributes parameters) {
+  public static @Nullable String chartTitle(@Nullable MacroParams macroParams, @Nullable Attributes parameters) {
     var fromParams = macroParams == null ? null : macroParams.value("title");
     var nested = parameters == null
         ? null
@@ -66,7 +68,7 @@ public final class ConfluenceSupport {
   }
 
   /** Whether the extension is the editor-migration {@code inline-media-image} macro. */
-  public static boolean isInlineMediaImage(String extensionType, String extensionKey) {
+  public static boolean isInlineMediaImage(@Nullable String extensionType, @Nullable String extensionKey) {
     return MIGRATION_EXTENSION.equals(extensionType) && "inline-media-image".equals(extensionKey);
   }
 
@@ -76,7 +78,7 @@ public final class ConfluenceSupport {
    * directly under {@code parameters} ({@code id}, {@code collection}, {@code width}, {@code height}),
    * not under {@code macroParams}; it always wraps an image, so the media type is fixed.
    */
-  public static MediaAttrs inlineMediaImageAttrs(Attributes parameters) {
+  public static @Nullable MediaAttrs inlineMediaImageAttrs(@Nullable Attributes parameters) {
     if (parameters == null) {
       return null;
     }
@@ -96,7 +98,7 @@ public final class ConfluenceSupport {
   }
 
   // A parameter as trimmed text (numbers stringified), or null when absent/blank.
-  private static String stringValue(Attributes parameters, String key) {
+  private static @Nullable String stringValue(Attributes parameters, String key) {
     var value = parameters.values().get(key);
     var text = switch (value) {
       case null -> null;
@@ -117,8 +119,8 @@ public final class ConfluenceSupport {
    * The single place the macro's parameters are normalized, shared by rendering and metadata
    * extraction.
    */
-  public static ExcerptIncludeReference excerptIncludeReference(
-      String extensionKey, MacroParams macroParams) {
+  public static @Nullable ExcerptIncludeReference excerptIncludeReference(
+      @Nullable String extensionKey, @Nullable MacroParams macroParams) {
     if (!"excerpt-include".equals(extensionKey)) {
       return null;
     }
@@ -131,12 +133,12 @@ public final class ConfluenceSupport {
   }
 
   /** The {@code excerpt} macro's named-excerpt identifier, or {@code null} for the unnamed excerpt. */
-  public static String excerptName(MacroParams macroParams) {
+  public static @Nullable String excerptName(@Nullable MacroParams macroParams) {
     return macroParams == null ? null : trimToNull(macroParams.value("name"));
   }
 
   /** The stripped value, or {@code null} when it is null or blank. */
-  public static String trimToNull(String value) {
+  public static @Nullable String trimToNull(@Nullable String value) {
     if (value == null) {
       return null;
     }
@@ -144,7 +146,7 @@ public final class ConfluenceSupport {
     return stripped.isEmpty() ? null : stripped;
   }
 
-  public static String pageId(String rawUrl) {
+  public static @Nullable String pageId(@Nullable String rawUrl) {
     if (rawUrl == null) {
       return null;
     }
@@ -165,7 +167,7 @@ public final class ConfluenceSupport {
    * source of truth shared by metadata extraction and {@code PageLinkResolver} rewriting, so both
    * agree on which links are pages.
    */
-  public static String pageNodeId(String url, ConfluenceMetadata metadata) {
+  public static @Nullable String pageNodeId(@Nullable String url, @Nullable ConfluenceMetadata metadata) {
     var normalizedUrl = url == null ? null : url.strip();
     if (normalizedUrl == null || normalizedUrl.isEmpty() || "#".equals(normalizedUrl)) {
       return null;
@@ -193,7 +195,7 @@ public final class ConfluenceSupport {
    * any other extension key. The single place the macro's root parameter ({@code root} for pagetree,
    * {@code page} for children) is normalized, shared by rendering and metadata extraction.
    */
-  public static PageTreeReference pageTreeReference(String extensionKey, MacroParams macroParams) {
+  public static @Nullable PageTreeReference pageTreeReference(@Nullable String extensionKey, @Nullable MacroParams macroParams) {
     var params = macroParams == null ? MacroParams.empty() : macroParams;
     return switch (extensionKey != null ? extensionKey : "") {
       case "pagetree" ->
@@ -205,7 +207,7 @@ public final class ConfluenceSupport {
   }
 
   // A macro root parameter (trimmed), or null for a blank or "@keyword" root.
-  private static String rootParam(MacroParams macroParams, String name) {
+  private static @Nullable String rootParam(MacroParams macroParams, String name) {
     var value = macroParams.value(name);
     if (value == null) {
       return null;
@@ -214,7 +216,7 @@ public final class ConfluenceSupport {
     return trimmed.isEmpty() || trimmed.startsWith("@") ? null : trimmed;
   }
 
-  public static String anchorId(MacroParams macroParams) {
+  public static @Nullable String anchorId(@Nullable MacroParams macroParams) {
     if (macroParams == null) {
       return null;
     }

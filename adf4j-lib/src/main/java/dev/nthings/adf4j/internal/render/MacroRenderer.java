@@ -25,6 +25,7 @@ import dev.nthings.adf4j.internal.analyze.TocLevelRange;
 import dev.nthings.adf4j.options.ExtensionContext;
 import dev.nthings.adf4j.options.PageTreeEntry;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,9 +55,9 @@ final class MacroRenderer {
   }
 
   private String renderExtensionCore(
-      String extensionType,
-      String extensionKey,
-      String text,
+      @Nullable String extensionType,
+      @Nullable String extensionKey,
+      @Nullable String text,
       MacroParams macroParams,
       Attributes parameters,
       RendererState context) {
@@ -122,9 +123,9 @@ final class MacroRenderer {
 
   // Header (custom renderer, else macro text or "[Extension: …]" placeholder) then the body blocks.
   private List<String> headerThenBodies(
-      String text,
-      String extensionType,
-      String extensionKey,
+      @Nullable String text,
+      @Nullable String extensionType,
+      @Nullable String extensionKey,
       MacroParams macroParams,
       Attributes parameters,
       List<AdfBlock> content,
@@ -150,10 +151,10 @@ final class MacroRenderer {
   }
 
   // Custom renderers, consulted in order (first non-null wins); null defers to the next, then default.
-  private String renderCustom(
-      String extensionType,
-      String extensionKey,
-      String text,
+  private @Nullable String renderCustom(
+      @Nullable String extensionType,
+      @Nullable String extensionKey,
+      @Nullable String text,
       MacroParams macroParams,
       Attributes parameters,
       RendererState context) {
@@ -174,7 +175,7 @@ final class MacroRenderer {
   }
 
   private String extensionFallback(
-      String text, String extensionType, String extensionKey, RendererState context) {
+      @Nullable String text, @Nullable String extensionType, @Nullable String extensionKey, RendererState context) {
     if (text != null && !text.isBlank()) {
       // Attribute-derived text; a block extension emits it at column 0, so neutralise leading markers.
       return MarkdownText.escapeInlineText(text, true, context.escapeParentheses());
@@ -195,7 +196,7 @@ final class MacroRenderer {
     return blocks;
   }
 
-  private String syncBlockLabel(String resourceId, RendererState context) {
+  private String syncBlockLabel(@Nullable String resourceId, RendererState context) {
     return MarkdownText.labelToken(
         resourceId == null || resourceId.isBlank() ? "Sync block" : "Sync block: " + resourceId,
         context.escapeParentheses());
@@ -223,7 +224,7 @@ final class MacroRenderer {
 
   // The resolver's entries as an indented bullet list ("" for an authoritative empty answer), or null
   // to fall back to the token (no resolver, a null return, or a throw — recorded as unresolved).
-  private String expandPageTree(PageTreeReference reference, RendererState context) {
+  private @Nullable String expandPageTree(PageTreeReference reference, RendererState context) {
     var resolver = context.pageTreeResolver();
     var entries = resolver == null
         ? null
@@ -246,7 +247,7 @@ final class MacroRenderer {
   }
 
   // A link when the page id resolves, else the escaped (single-line) title; null when nothing renders.
-  private String pageTreeLabel(PageTreeEntry entry, RendererState context) {
+  private @Nullable String pageTreeLabel(PageTreeEntry entry, RendererState context) {
     var title = entry.title();
     var label = title == null ? "" : title.replaceAll("\\s+", " ").strip();
     var href = TextMarkRenderer.resolvePageId(entry.pageNodeId(), context.context());
@@ -257,7 +258,7 @@ final class MacroRenderer {
   }
 
   // The {{pagetree:<root>}} token root: the request root with whitespace collapsed and braces dropped.
-  private String pageTreeRoot(String root) {
+  private @Nullable String pageTreeRoot(@Nullable String root) {
     if (root == null) {
       return null;
     }
@@ -267,7 +268,7 @@ final class MacroRenderer {
 
   // Expand via the resolver, else the labelled placeholder (recorded as unresolved); a null
   // reference (no source page) defers to the generic extension fallback.
-  private String renderExcerptInclude(ExcerptIncludeReference reference, RendererState context) {
+  private @Nullable String renderExcerptInclude(@Nullable ExcerptIncludeReference reference, RendererState context) {
     if (reference == null) {
       return null;
     }
@@ -287,7 +288,7 @@ final class MacroRenderer {
 
   // The supplied attachment inventory as a bullet list of links ("" for an authoritative empty
   // inventory), or null when no inventory was supplied — only that keeps the placeholder.
-  private String renderAttachmentsMacro(RendererState context) {
+  private @Nullable String renderAttachmentsMacro(RendererState context) {
     var confluenceContext = context.confluenceContext();
     if (confluenceContext == null || !confluenceContext.attachmentsSupplied()) {
       return null;
@@ -377,7 +378,7 @@ final class MacroRenderer {
   }
 
   private String renderExtensionPlaceholder(
-      String extensionType, String extensionKey, RendererState context) {
+      @Nullable String extensionType, @Nullable String extensionKey, RendererState context) {
     var label = MacroDiagnostics.label(extensionType, extensionKey);
     if (placeholderWarned.add(label)) {
       log.warn(

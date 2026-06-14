@@ -7,6 +7,8 @@ import dev.nthings.adf4j.ast.HardBreak;
 import dev.nthings.adf4j.ast.InlineExtension;
 import dev.nthings.adf4j.internal.ConfluenceSupport;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * Interpretation of a heading's inline content, shared by the analyze phase (slugging) and the render
  * phase (emission), so both agree on which nodes a heading "is" and what explicit anchor it carries.
@@ -20,7 +22,7 @@ public final class HeadingContent {
    * The heading's significant inline nodes: leading and trailing {@link HardBreak}s trimmed and any
    * Confluence {@code anchor} macro removed (its id is read separately via {@link #extractAnchorId}).
    */
-  public static List<AdfInline> normalizedHeadingNodes(List<AdfInline> content) {
+  public static List<AdfInline> normalizedHeadingNodes(@Nullable List<AdfInline> content) {
     if (content == null || content.isEmpty()) {
       return List.of();
     }
@@ -43,13 +45,13 @@ public final class HeadingContent {
   }
 
   /** True iff the heading carries an explicit Confluence {@code anchor} macro with a non-blank id. */
-  public static boolean hasExplicitAnchor(List<AdfInline> content) {
+  public static boolean hasExplicitAnchor(@Nullable List<AdfInline> content) {
     var anchorId = extractAnchorId(content);
     return anchorId != null && !anchorId.isBlank();
   }
 
   /** The id of the heading's explicit Confluence {@code anchor} macro, or {@code null} if none. */
-  public static String extractAnchorId(List<AdfInline> content) {
+  public static @Nullable String extractAnchorId(@Nullable List<AdfInline> content) {
     if (content == null || content.isEmpty()) {
       return null;
     }

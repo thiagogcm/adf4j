@@ -2,6 +2,8 @@ package dev.nthings.adf4j.options;
 
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
+
 import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
 
 /**
@@ -42,15 +44,15 @@ public final class MarkdownOptions {
   private final ConfluenceRenderContext confluenceContext;
   private final boolean imageSizeAttributes;
   private final TableFallback tableFallback;
-  private final MediaResolver mediaResolver;
+  private final @Nullable MediaResolver mediaResolver;
   private final boolean htmlVisualMarks;
   private final List<ExtensionRenderer> extensionRenderers;
-  private final AttachmentResolver attachmentResolver;
-  private final PageLinkResolver pageLinkResolver;
-  private final PageTreeResolver pageTreeResolver;
-  private final ExcerptResolver excerptResolver;
+  private final @Nullable AttachmentResolver attachmentResolver;
+  private final @Nullable PageLinkResolver pageLinkResolver;
+  private final @Nullable PageTreeResolver pageTreeResolver;
+  private final @Nullable ExcerptResolver excerptResolver;
   private final boolean collapseHardBreaks;
-  private final String documentTitle;
+  private final @Nullable String documentTitle;
   private final boolean escapeParentheses;
 
   private MarkdownOptions(Builder builder) {
@@ -73,7 +75,7 @@ public final class MarkdownOptions {
     this.escapeParentheses = builder.escapeParentheses;
   }
 
-  private static List<ExtensionRenderer> copyOfRenderers(List<ExtensionRenderer> renderers) {
+  private static List<ExtensionRenderer> copyOfRenderers(@Nullable List<ExtensionRenderer> renderers) {
     if (renderers == null || renderers.isEmpty()) {
       return List.of();
     }
@@ -130,7 +132,7 @@ public final class MarkdownOptions {
     return tableFallback;
   }
 
-  public MediaResolver mediaResolver() {
+  public @Nullable MediaResolver mediaResolver() {
     return mediaResolver;
   }
 
@@ -142,19 +144,19 @@ public final class MarkdownOptions {
     return extensionRenderers;
   }
 
-  public AttachmentResolver attachmentResolver() {
+  public @Nullable AttachmentResolver attachmentResolver() {
     return attachmentResolver;
   }
 
-  public PageLinkResolver pageLinkResolver() {
+  public @Nullable PageLinkResolver pageLinkResolver() {
     return pageLinkResolver;
   }
 
-  public PageTreeResolver pageTreeResolver() {
+  public @Nullable PageTreeResolver pageTreeResolver() {
     return pageTreeResolver;
   }
 
-  public ExcerptResolver excerptResolver() {
+  public @Nullable ExcerptResolver excerptResolver() {
     return excerptResolver;
   }
 
@@ -162,7 +164,7 @@ public final class MarkdownOptions {
     return collapseHardBreaks;
   }
 
-  public String documentTitle() {
+  public @Nullable String documentTitle() {
     return documentTitle;
   }
 
@@ -170,12 +172,12 @@ public final class MarkdownOptions {
     return escapeParentheses;
   }
 
-  public MarkdownOptions withUnknownNodePolicy(UnknownNodePolicy policy) {
+  public MarkdownOptions withUnknownNodePolicy(@Nullable UnknownNodePolicy policy) {
     return toBuilder().unknownNodePolicy(policy).build();
   }
 
   /** Sets the Confluence context; {@code null} resets to {@link ConfluenceRenderContext#empty()}. */
-  public MarkdownOptions withConfluenceContext(ConfluenceRenderContext context) {
+  public MarkdownOptions withConfluenceContext(@Nullable ConfluenceRenderContext context) {
     return toBuilder().confluenceContext(context).build();
   }
 
@@ -183,12 +185,12 @@ public final class MarkdownOptions {
     return toBuilder().imageSizeAttributes(enabled).build();
   }
 
-  public MarkdownOptions withTableFallback(TableFallback fallback) {
+  public MarkdownOptions withTableFallback(@Nullable TableFallback fallback) {
     return toBuilder().tableFallback(fallback).build();
   }
 
   /** Sets the media resolver; {@code null} clears it (the default {@code media:} placeholder path). */
-  public MarkdownOptions withMediaResolver(MediaResolver resolver) {
+  public MarkdownOptions withMediaResolver(@Nullable MediaResolver resolver) {
     return toBuilder().mediaResolver(resolver).build();
   }
 
@@ -196,27 +198,27 @@ public final class MarkdownOptions {
     return toBuilder().htmlVisualMarks(enabled).build();
   }
 
-  public MarkdownOptions withExtensionRenderers(List<ExtensionRenderer> renderers) {
+  public MarkdownOptions withExtensionRenderers(@Nullable List<ExtensionRenderer> renderers) {
     return toBuilder().extensionRenderers(renderers).build();
   }
 
   /** Sets the attachment resolver; {@code null} clears it (the default {@code attachment:} path). */
-  public MarkdownOptions withAttachmentResolver(AttachmentResolver resolver) {
+  public MarkdownOptions withAttachmentResolver(@Nullable AttachmentResolver resolver) {
     return toBuilder().attachmentResolver(resolver).build();
   }
 
   /** Sets the page-link resolver; {@code null} clears it (links keep their original href). */
-  public MarkdownOptions withPageLinkResolver(PageLinkResolver resolver) {
+  public MarkdownOptions withPageLinkResolver(@Nullable PageLinkResolver resolver) {
     return toBuilder().pageLinkResolver(resolver).build();
   }
 
   /** Sets the page-tree resolver; {@code null} clears it (pagetree macros keep the {@code {{pagetree}}} token). */
-  public MarkdownOptions withPageTreeResolver(PageTreeResolver resolver) {
+  public MarkdownOptions withPageTreeResolver(@Nullable PageTreeResolver resolver) {
     return toBuilder().pageTreeResolver(resolver).build();
   }
 
   /** Sets the excerpt resolver; {@code null} clears it (excerpt-include macros keep their placeholder). */
-  public MarkdownOptions withExcerptResolver(ExcerptResolver resolver) {
+  public MarkdownOptions withExcerptResolver(@Nullable ExcerptResolver resolver) {
     return toBuilder().excerptResolver(resolver).build();
   }
 
@@ -226,7 +228,7 @@ public final class MarkdownOptions {
   }
 
   /** Sets a level-1 title heading prepended to the output; {@code null}/blank emits no title. */
-  public MarkdownOptions withDocumentTitle(String title) {
+  public MarkdownOptions withDocumentTitle(@Nullable String title) {
     return toBuilder().documentTitle(title).build();
   }
 
@@ -245,26 +247,26 @@ public final class MarkdownOptions {
     private ConfluenceRenderContext confluenceContext;
     private boolean imageSizeAttributes;
     private TableFallback tableFallback;
-    private MediaResolver mediaResolver;
+    private @Nullable MediaResolver mediaResolver;
     private boolean htmlVisualMarks;
     private List<ExtensionRenderer> extensionRenderers;
-    private AttachmentResolver attachmentResolver;
-    private PageLinkResolver pageLinkResolver;
-    private PageTreeResolver pageTreeResolver;
-    private ExcerptResolver excerptResolver;
+    private @Nullable AttachmentResolver attachmentResolver;
+    private @Nullable PageLinkResolver pageLinkResolver;
+    private @Nullable PageTreeResolver pageTreeResolver;
+    private @Nullable ExcerptResolver excerptResolver;
     private boolean collapseHardBreaks;
-    private String documentTitle;
+    private @Nullable String documentTitle;
     private boolean escapeParentheses;
 
     private Builder() {
     }
 
-    public Builder unknownNodePolicy(UnknownNodePolicy policy) {
+    public Builder unknownNodePolicy(@Nullable UnknownNodePolicy policy) {
       this.unknownNodePolicy = policy;
       return this;
     }
 
-    public Builder confluenceContext(ConfluenceRenderContext context) {
+    public Builder confluenceContext(@Nullable ConfluenceRenderContext context) {
       this.confluenceContext = context;
       return this;
     }
@@ -274,12 +276,12 @@ public final class MarkdownOptions {
       return this;
     }
 
-    public Builder tableFallback(TableFallback fallback) {
+    public Builder tableFallback(@Nullable TableFallback fallback) {
       this.tableFallback = fallback;
       return this;
     }
 
-    public Builder mediaResolver(MediaResolver resolver) {
+    public Builder mediaResolver(@Nullable MediaResolver resolver) {
       this.mediaResolver = resolver;
       return this;
     }
@@ -289,27 +291,27 @@ public final class MarkdownOptions {
       return this;
     }
 
-    public Builder extensionRenderers(List<ExtensionRenderer> renderers) {
+    public Builder extensionRenderers(@Nullable List<ExtensionRenderer> renderers) {
       this.extensionRenderers = renderers;
       return this;
     }
 
-    public Builder attachmentResolver(AttachmentResolver resolver) {
+    public Builder attachmentResolver(@Nullable AttachmentResolver resolver) {
       this.attachmentResolver = resolver;
       return this;
     }
 
-    public Builder pageLinkResolver(PageLinkResolver resolver) {
+    public Builder pageLinkResolver(@Nullable PageLinkResolver resolver) {
       this.pageLinkResolver = resolver;
       return this;
     }
 
-    public Builder pageTreeResolver(PageTreeResolver resolver) {
+    public Builder pageTreeResolver(@Nullable PageTreeResolver resolver) {
       this.pageTreeResolver = resolver;
       return this;
     }
 
-    public Builder excerptResolver(ExcerptResolver resolver) {
+    public Builder excerptResolver(@Nullable ExcerptResolver resolver) {
       this.excerptResolver = resolver;
       return this;
     }
@@ -320,7 +322,7 @@ public final class MarkdownOptions {
     }
 
     /** Sets a level-1 title heading prepended to the output; {@code null}/blank emits no title. */
-    public Builder documentTitle(String title) {
+    public Builder documentTitle(@Nullable String title) {
       this.documentTitle = title;
       return this;
     }

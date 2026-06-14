@@ -80,6 +80,7 @@ import dev.nthings.adf4j.ast.UnknownBlock;
 import dev.nthings.adf4j.ast.UnknownInline;
 import dev.nthings.adf4j.ast.UnknownMark;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -97,7 +98,7 @@ public final class AdfAstParser {
     this.mapper = Objects.requireNonNull(mapper, "mapper");
   }
 
-  public AdfDocument parseDocument(JsonNode root) {
+  public AdfDocument parseDocument(@Nullable JsonNode root) {
     if (root == null || !root.isObject()) {
       return new AdfDocument(1, List.of());
     }
@@ -106,7 +107,7 @@ public final class AdfAstParser {
 
   // Maps every object element of a JSON array through fn, skipping non-objects and any null fn maps to.
   // The single place array traversal lives; type-filtered lists differ only by what their fn returns.
-  private <T> List<T> mapArray(JsonNode arrayNode, Function<JsonNode, T> fn) {
+  private <T> List<T> mapArray(@Nullable JsonNode arrayNode, Function<JsonNode, @Nullable T> fn) {
     if (arrayNode == null || !arrayNode.isArray() || arrayNode.isEmpty()) {
       return List.of();
     }
@@ -134,7 +135,7 @@ public final class AdfAstParser {
     return false;
   }
 
-  List<AdfBlock> parseBlocks(JsonNode arrayNode) {
+  List<AdfBlock> parseBlocks(@Nullable JsonNode arrayNode) {
     return mapArray(arrayNode, this::parseBlock);
   }
 
@@ -185,7 +186,7 @@ public final class AdfAstParser {
     };
   }
 
-  public List<AdfInline> parseInlines(JsonNode arrayNode) {
+  public List<AdfInline> parseInlines(@Nullable JsonNode arrayNode) {
     return mapArray(arrayNode, this::parseInline);
   }
 
@@ -222,7 +223,7 @@ public final class AdfAstParser {
     };
   }
 
-  List<AdfMark> parseMarks(JsonNode arrayNode) {
+  List<AdfMark> parseMarks(@Nullable JsonNode arrayNode) {
     return mapArray(arrayNode, this::parseMark);
   }
 
@@ -254,7 +255,7 @@ public final class AdfAstParser {
     };
   }
 
-  public MacroParams parseMacroParams(JsonNode macroParams) {
+  public MacroParams parseMacroParams(@Nullable JsonNode macroParams) {
     if (macroParams == null || !macroParams.isObject()) {
       return MacroParams.empty();
     }
@@ -276,7 +277,7 @@ public final class AdfAstParser {
     return new MacroParams(values);
   }
 
-  private static String scalarText(Object value) {
+  private static @Nullable String scalarText(@Nullable Object value) {
     return switch (value) {
       case String text -> text;
       case Number number -> number.toString();
@@ -302,7 +303,7 @@ public final class AdfAstParser {
     return new CodeBlock(language, builder.toString());
   }
 
-  private List<ListItem> parseListItems(JsonNode arrayNode) {
+  private List<ListItem> parseListItems(@Nullable JsonNode arrayNode) {
     return mapArray(arrayNode, child ->
         isType(child, "listItem") ? new ListItem(parseBlocks(child.get("content"))) : null);
   }
@@ -313,12 +314,12 @@ public final class AdfAstParser {
   }
 
   // A nested taskList is schema-valid; parse it as a TaskList block so the renderer can recurse.
-  private List<AdfBlock> parseTaskListItems(JsonNode arrayNode) {
+  private List<AdfBlock> parseTaskListItems(@Nullable JsonNode arrayNode) {
     return mapArray(arrayNode, child ->
         isType(child, "taskItem", "blockTaskItem", "taskList") ? parseBlock(child) : null);
   }
 
-  private List<DecisionItem> parseDecisionItems(JsonNode arrayNode) {
+  private List<DecisionItem> parseDecisionItems(@Nullable JsonNode arrayNode) {
     return mapArray(arrayNode, child ->
         isType(child, "decisionItem")
             ? new DecisionItem(
@@ -335,7 +336,7 @@ public final class AdfAstParser {
     return new Table(numberColumnEnabled, rows);
   }
 
-  private List<TableCell> parseTableCells(JsonNode arrayNode) {
+  private List<TableCell> parseTableCells(@Nullable JsonNode arrayNode) {
     return mapArray(arrayNode, cellNode ->
         isType(cellNode, "tableCell", "tableHeader")
             ? parseTableCell(cellNode, isType(cellNode, "tableHeader"))
@@ -359,7 +360,7 @@ public final class AdfAstParser {
         layout, widthType, width, parseBlocks(node.get("content")), parseMarks(node.get("marks")));
   }
 
-  private List<LayoutColumn> parseLayoutColumns(JsonNode arrayNode) {
+  private List<LayoutColumn> parseLayoutColumns(@Nullable JsonNode arrayNode) {
     return mapArray(arrayNode, child ->
         isType(child, "layoutColumn")
             ? new LayoutColumn(
@@ -368,7 +369,8 @@ public final class AdfAstParser {
   }
 
   private record ExtensionFields(
-      String type, String key, String text, MacroParams macroParams, Attributes parameters) {
+      @Nullable String type, @Nullable String key, @Nullable String text, MacroParams macroParams,
+      Attributes parameters) {
   }
 
   // One walk of the raw parameters envelope (some extensions carry data outside macroParams);
@@ -409,7 +411,7 @@ public final class AdfAstParser {
         fields.type(), fields.key(), fields.text(), fields.macroParams(), fields.parameters());
   }
 
-  private CardAttrs parseCardAttrs(JsonNode attrs) {
+  private CardAttrs parseCardAttrs(@Nullable JsonNode attrs) {
     if (attrs == null || !attrs.isObject()) {
       return new CardAttrs(null, null, null, null, Attributes.empty());
     }
@@ -424,7 +426,7 @@ public final class AdfAstParser {
     return new CardAttrs(url, datasourceId, localId, title, toAttributes(attrs));
   }
 
-  private MediaAttrs parseMediaAttrs(JsonNode attrs) {
+  private MediaAttrs parseMediaAttrs(@Nullable JsonNode attrs) {
     if (attrs == null || !attrs.isObject()) {
       return MediaAttrs.builder().build();
     }
@@ -449,7 +451,7 @@ public final class AdfAstParser {
    * The conversion is product-neutral: every key (including any {@code __*} extension keys) is copied
    * as-is, leaving interpretation of product-specific extras to higher layers.
    */
-  private Attributes toAttributes(JsonNode attrs) {
+  private Attributes toAttributes(@Nullable JsonNode attrs) {
     if (attrs == null || !attrs.isObject()) {
       return Attributes.empty();
     }
@@ -463,7 +465,7 @@ public final class AdfAstParser {
     return new Attributes(values);
   }
 
-  private Object toPlainValue(JsonNode node) {
+  private @Nullable Object toPlainValue(@Nullable JsonNode node) {
     if (node == null || node.isNull() || node.isMissingNode()) {
       return null;
     }

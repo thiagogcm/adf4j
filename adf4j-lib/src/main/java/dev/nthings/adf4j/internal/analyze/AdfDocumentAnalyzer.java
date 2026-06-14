@@ -5,6 +5,8 @@ import java.util.List;
 import dev.nthings.adf4j.options.MarkdownOptions;
 import dev.nthings.adf4j.ast.AdfDocument;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * The analyze phase: one {@link AdfNodeWalker} pass drives the heading and content-metadata collectors
  * together into a {@link DocumentAnalysis}. Stateless and thread-safe (the per-document accumulation
@@ -19,7 +21,7 @@ public final class AdfDocumentAnalyzer {
     return new AdfDocumentAnalyzer();
   }
 
-  public DocumentAnalysis analyze(AdfDocument document, MarkdownOptions options) {
+  public DocumentAnalysis analyze(@Nullable AdfDocument document, MarkdownOptions options) {
     if (document == null) {
       return DocumentAnalysis.empty();
     }

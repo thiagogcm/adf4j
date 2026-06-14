@@ -2,6 +2,8 @@ package dev.nthings.adf4j.metadata;
 
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
+
 import dev.nthings.adf4j.ast.AdfBlock;
 
 /**
@@ -12,7 +14,7 @@ import dev.nthings.adf4j.ast.AdfBlock;
  * render one with {@code convert(new AdfDocument(1, definition.content()), options)} when another
  * page includes it.
  */
-public record ExcerptDefinition(String name, List<AdfBlock> content) {
+public record ExcerptDefinition(@Nullable String name, List<AdfBlock> content) {
 
   public ExcerptDefinition {
     content = content == null ? List.of() : List.copyOf(content);

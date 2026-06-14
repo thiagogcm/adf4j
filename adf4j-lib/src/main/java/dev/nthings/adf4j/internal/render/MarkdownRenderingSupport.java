@@ -3,6 +3,7 @@ package dev.nthings.adf4j.internal.render;
 import org.commonmark.parser.Parser;
 import org.commonmark.renderer.html.HtmlRenderer;
 import org.jsoup.nodes.Entities;
+import org.jspecify.annotations.Nullable;
 
 /** Renders Markdown fragments to inline HTML for table cells GFM can't express (colspan/rowspan). */
 final class MarkdownRenderingSupport {
@@ -15,7 +16,7 @@ final class MarkdownRenderingSupport {
     this.htmlRenderer = htmlRenderer;
   }
 
-  private String renderHtmlDocument(String markdown) {
+  private String renderHtmlDocument(@Nullable String markdown) {
     if (markdown == null || markdown.isBlank()) {
       return "";
     }
@@ -23,7 +24,7 @@ final class MarkdownRenderingSupport {
     return htmlRenderer.render(markdownParser.parse(cleaned)).stripTrailing();
   }
 
-  String renderHtmlFragment(String markdown) {
+  String renderHtmlFragment(@Nullable String markdown) {
     if (markdown == null || markdown.isBlank()) {
       return "";
     }

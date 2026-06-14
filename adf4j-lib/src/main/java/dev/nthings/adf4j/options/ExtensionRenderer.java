@@ -1,5 +1,7 @@
 package dev.nthings.adf4j.options;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * Renders a custom ADF extension (macro) to Markdown, or returns {@code null} to defer — the same
  * decline convention as the resolver hooks. An empty string is a valid answer that suppresses the
@@ -12,5 +14,5 @@ package dev.nthings.adf4j.options;
 @FunctionalInterface
 public interface ExtensionRenderer {
 
-  String render(ExtensionContext extension);
+  @Nullable String render(ExtensionContext extension);
 }

@@ -1,6 +1,8 @@
 package dev.nthings.adf4j.ast;
 
-public record Alignment(String align) implements AdfMark {
+import org.jspecify.annotations.Nullable;
+
+public record Alignment(@Nullable String align) implements AdfMark {
 
   @Override
   public String type() {

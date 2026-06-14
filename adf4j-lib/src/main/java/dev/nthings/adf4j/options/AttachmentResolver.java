@@ -1,5 +1,7 @@
 package dev.nthings.adf4j.options;
 
+import org.jspecify.annotations.Nullable;
+
 import dev.nthings.adf4j.metadata.AttachmentReference;
 
 /**
@@ -12,5 +14,5 @@ import dev.nthings.adf4j.metadata.AttachmentReference;
  */
 @FunctionalInterface
 public interface AttachmentResolver {
-  String resolve(AttachmentReference reference);
+  @Nullable String resolve(AttachmentReference reference);
 }
