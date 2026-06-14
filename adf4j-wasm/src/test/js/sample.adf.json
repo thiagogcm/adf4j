@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "type": "doc",
+  "content": [
+    {
+      "type": "heading",
+      "attrs": { "level": 1 },
+      "content": [{ "type": "text", "text": "Release notes" }]
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        { "type": "text", "text": "adf4j compiled to " },
+        { "type": "text", "text": "WebAssembly", "marks": [{ "type": "strong" }] },
+        { "type": "text", "text": " and driven from Node." }
+      ]
+    },
+    {
+      "type": "panel",
+      "attrs": { "panelType": "info" },
+      "content": [
+        {
+          "type": "paragraph",
+          "content": [{ "type": "text", "text": "Runs entirely inside the GraalVM web image." }]
+        }
+      ]
+    },
+    {
+      "type": "bulletList",
+      "content": [
+        {
+          "type": "listItem",
+          "content": [
+            { "type": "paragraph", "content": [{ "type": "text", "text": "Parse ADF JSON" }] }
+          ]
+        },
+        {
+          "type": "listItem",
+          "content": [
+            { "type": "paragraph", "content": [{ "type": "text", "text": "Render Markdown" }] }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "codeBlock",
+      "attrs": { "language": "bash" },
+      "content": [{ "type": "text", "text": "node run.mjs convert" }]
+    }
+  ]
+}

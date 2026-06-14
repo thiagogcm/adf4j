@@ -7,8 +7,9 @@ project:
   description: Atlassian Document Format processing library for Java
   longDescription: |
     adf4j converts between Atlassian Document Format (ADF) JSON and Markdown.
-    It ships as a Java library (published to Maven Central) and as a standalone
-    CLI distributed as GraalVM native executables and a WASM build.
+    It ships as a Java library (published to Maven Central), a standalone CLI
+    distributed as GraalVM native executables, and a WebAssembly build callable
+    from JavaScript/Node.
   authors:
     - Thiago Moura
   license: Apache-2.0
@@ -80,4 +81,4 @@ files:
     - path: dist/adf4j-cli-{{projectVersion}}-linux-x86_64.tar.gz
     - path: dist/adf4j-cli-{{projectVersion}}-osx-aarch64.tar.gz
     - path: dist/adf4j-cli-{{projectVersion}}-windows-x86_64.zip
-    - path: dist/adf4j-cli-{{projectVersion}}-wasm.zip
+    - path: dist/adf4j-wasm-{{projectVersion}}.zip

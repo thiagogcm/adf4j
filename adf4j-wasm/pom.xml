@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>dev.nthings</groupId>
+        <artifactId>adf4j-parent</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>adf4j-wasm</artifactId>
+    <name>adf4j-wasm</name>
+    <description>GraalVM Web Image (WebAssembly) build of adf4j, callable from JavaScript/Node.</description>
+
+    <!--
+      Built only under the parent's `wasm` profile (needs an Oracle GraalVM JDK for the svm-wasm tool
+      and the org.graalvm.webimage.api system module), so it stays out of the default reactor and a
+      plain `mvn install` on any JDK is unaffected. Emits target/adf4j-wasm.js{,.wasm}; not deployed.
+    -->
+
+    <dependencies>
+        <dependency>
+            <groupId>dev.nthings</groupId>
+            <artifactId>adf4j</artifactId>
+        </dependency>
+        <!-- A no-op SLF4J binding: the converter's internal logging is discarded (JS consumers read
+             structured diagnostics off the result instead), and it silences the "no providers" notice. -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-nop</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- The @JS bridge API ships only inside the GraalVM JDK as a system module, not on
+                 Maven Central. Add that module so the (unnamed-module) sources can read it, and
+                 compile in source/target mode rather than release mode: release mode limits javac
+                 to the standard ct.sym module set, which excludes vendor modules like this one. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <release combine.self="override"></release>
+                    <source>25</source>
+                    <target>25</target>
+                    <compilerArgs>
+                        <arg>--add-modules</arg>
+                        <arg>org.graalvm.webimage.api</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+
+            <!-- Emit the WebAssembly web image: the native CLI build plus the svm-wasm tool flag. -->
+            <plugin>
+                <groupId>org.graalvm.buildtools</groupId>
+                <artifactId>native-maven-plugin</artifactId>
+                <extensions>true</extensions>
+                <executions>
+                    <execution>
+                        <id>build-wasm</id>
+                        <goals>
+                            <goal>compile-no-fork</goal>
+                        </goals>
+                        <phase>package</phase>
+                    </execution>
+                </executions>
+                <configuration>
+                    <imageName>adf4j-wasm</imageName>
+                    <mainClass>dev.nthings.adf4j.wasm.WasmBridge</mainClass>
+                    <fallback>false</fallback>
+                    <verbose>true</verbose>
+                    <buildArgs>
+                        <buildArg>--no-fallback</buildArg>
+                        <buildArg>--tool:svm-wasm</buildArg>
+                    </buildArgs>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

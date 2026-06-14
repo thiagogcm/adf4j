@@ -93,39 +93,5 @@
                 </plugins>
             </build>
         </profile>
-        <profile>
-            <id>wasm</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.graalvm.buildtools</groupId>
-                        <artifactId>native-maven-plugin</artifactId>
-                        <extensions>true</extensions>
-                        <executions>
-                            <execution>
-                                <id>build-wasm</id>
-                                <goals>
-                                    <goal>compile-no-fork</goal>
-                                </goals>
-                                <phase>package</phase>
-                            </execution>
-                        </executions>
-                        <configuration>
-                            <imageName>adf4j-cli</imageName>
-                            <mainClass>dev.nthings.adf4j.cli.Main</mainClass>
-                            <fallback>false</fallback>
-                            <verbose>true</verbose>
-                            <buildArgs>
-                                <buildArg>--no-fallback</buildArg>
-                                <buildArg>--tool:svm-wasm</buildArg>
-                            </buildArgs>
-                            <metadataRepository>
-                                <enabled>true</enabled>
-                            </metadataRepository>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
     </profiles>
 </project>

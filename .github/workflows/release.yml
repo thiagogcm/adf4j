@@ -200,16 +200,17 @@ jobs:
           echo "/tmp/binaryen-${BINARYEN}/bin" >> "$GITHUB_PATH"
           /tmp/binaryen-${BINARYEN}/bin/wasm-as --version
 
-      - name: Build WASM CLI
-        run: ./mvnw -B -ntp package -Pwasm -pl adf4j-cli -am -DskipTests
+      - name: Build WASM (web image)
+        run: ./mvnw -B -ntp package -Pwasm -pl adf4j-wasm -am -DskipTests
 
       - name: Package WASM bundle
         run: |
           VERSION="${{ needs.prepare.outputs.releaseVersion }}"
-          NAME="adf4j-cli-${VERSION}-wasm"
+          NAME="adf4j-wasm-${VERSION}"
           mkdir -p "dist/${NAME}"
-          cp adf4j-cli/target/adf4j-cli.js "dist/${NAME}/"
-          cp adf4j-cli/target/adf4j-cli.js.wasm "dist/${NAME}/"
+          cp adf4j-wasm/target/adf4j-wasm.js "dist/${NAME}/"
+          cp adf4j-wasm/target/adf4j-wasm.js.wasm "dist/${NAME}/"
+          cp adf4j-wasm/src/test/js/*.mjs adf4j-wasm/src/test/js/sample.adf.json "dist/${NAME}/"
           cp LICENSE README.md "dist/${NAME}/"
           (cd dist && zip -r "${NAME}.zip" "${NAME}" >/dev/null)
           rm -rf "dist/${NAME}"
@@ -218,7 +219,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: wasm
-          path: dist/adf4j-cli-*-wasm.zip
+          path: dist/adf4j-wasm-*.zip
           if-no-files-found: error
 
   # Stage the library, then run JReleaser once to sign, deploy to Central, tag, and create the release.

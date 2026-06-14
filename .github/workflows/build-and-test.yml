@@ -92,18 +92,23 @@ jobs:
           echo "/tmp/binaryen-${BINARYEN}/bin" >> "$GITHUB_PATH"
           /tmp/binaryen-${BINARYEN}/bin/wasm-as --version
 
-      - name: Build WASM CLI
-        run: ./mvnw package -Pwasm -pl adf4j-cli -am -DskipTests
+      - name: Build WASM (web image)
+        run: ./mvnw package -Pwasm -pl adf4j-wasm -am -DskipTests
+
+      # Prove the wasm actually converts: load it from Node and run the smoke test.
+      # ubuntu-latest ships a current Node; the harness needs only ESM + top-level await.
+      - name: Smoke-test the wasm from Node
+        run: node adf4j-wasm/src/test/js/test.mjs
 
       - name: Prepare WASM artifact
         run: |
           mkdir -p dist
-          cp adf4j-cli/target/adf4j-cli.js dist/adf4j-cli.js
-          cp adf4j-cli/target/adf4j-cli.js.wasm dist/adf4j-cli.js.wasm
+          cp adf4j-wasm/target/adf4j-wasm.js dist/adf4j-wasm.js
+          cp adf4j-wasm/target/adf4j-wasm.js.wasm dist/adf4j-wasm.js.wasm
 
       - name: Upload WASM Artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: adf4j-cli-wasm
+          name: adf4j-wasm
           path: dist/*
           if-no-files-found: error

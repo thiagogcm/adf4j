@@ -43,6 +43,21 @@
         <module>adf4j-cli</module>
     </modules>
 
+    <profiles>
+        <!--
+          The WebAssembly build. Kept out of the default reactor because it requires an Oracle
+          GraalVM JDK (for the `svm-wasm` tool and the `org.graalvm.webimage.api` system module),
+          so `mvn install` on a stock JDK is unaffected. Build it with `-Pwasm`, e.g.:
+              ./mvnw -Pwasm -pl adf4j-wasm -am package
+        -->
+        <profile>
+            <id>wasm</id>
+            <modules>
+                <module>adf4j-wasm</module>
+            </modules>
+        </profile>
+    </profiles>
+
     <properties>
         <maven.compiler.source>25</maven.compiler.source>
         <maven.compiler.target>25</maven.compiler.target>
@@ -132,6 +147,11 @@
             <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-simple</artifactId>
+                <version>${slf4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-nop</artifactId>
                 <version>${slf4j.version}</version>
             </dependency>
             <dependency>
