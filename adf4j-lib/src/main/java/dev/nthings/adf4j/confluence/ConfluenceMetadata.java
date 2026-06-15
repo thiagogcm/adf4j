@@ -1,13 +1,18 @@
 package dev.nthings.adf4j.confluence;
 
 import dev.nthings.adf4j.ast.Attributes;
+import org.jspecify.annotations.Nullable;
 
 /**
- * Confluence-specific link/card metadata. This lives in the Confluence layer and is derived from the
- * product-neutral {@link Attributes} carried by AST nodes via {@link #from(Attributes)} — the AST
- * itself never depends on this type.
+ * Confluence-specific link/card metadata. This lives in the Confluence layer and is derived from
+ * the product-neutral {@link Attributes} carried by AST nodes via {@link #from(Attributes)} — the
+ * AST itself never depends on this type.
  */
-public record ConfluenceMetadata(String linkType, String pageId, String contentId, String id) {
+public record ConfluenceMetadata(
+    @Nullable String linkType,
+    @Nullable String pageId,
+    @Nullable String contentId,
+    @Nullable String id) {
 
   private static final ConfluenceMetadata EMPTY = new ConfluenceMetadata(null, null, null, null);
   private static final String METADATA_KEY = "__confluenceMetadata";

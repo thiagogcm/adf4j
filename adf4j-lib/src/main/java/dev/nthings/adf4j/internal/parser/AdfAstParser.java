@@ -1,20 +1,12 @@
 package dev.nthings.adf4j.internal.parser;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.function.Function;
-
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.ast.AdfInline;
 import dev.nthings.adf4j.ast.AdfMark;
 import dev.nthings.adf4j.ast.Alignment;
-import dev.nthings.adf4j.ast.Attributes;
 import dev.nthings.adf4j.ast.Annotation;
+import dev.nthings.adf4j.ast.Attributes;
 import dev.nthings.adf4j.ast.BackgroundColor;
 import dev.nthings.adf4j.ast.BlockCard;
 import dev.nthings.adf4j.ast.BlockTaskItem;
@@ -79,11 +71,16 @@ import dev.nthings.adf4j.ast.Underline;
 import dev.nthings.adf4j.ast.UnknownBlock;
 import dev.nthings.adf4j.ast.UnknownInline;
 import dev.nthings.adf4j.ast.UnknownMark;
-
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -102,23 +99,28 @@ public final class AdfAstParser {
     if (root == null || !root.isObject()) {
       return new AdfDocument(1, List.of());
     }
-    return new AdfDocument(JsonFields.integer(root, "version", 1), parseBlocks(root.get("content")));
+    return new AdfDocument(
+        JsonFields.integer(root, "version", 1), parseBlocks(root.get("content")));
   }
 
-  // Maps every object element of a JSON array through fn, skipping non-objects and any null fn maps to.
-  // The single place array traversal lives; type-filtered lists differ only by what their fn returns.
-  private <T> List<T> mapArray(@Nullable JsonNode arrayNode, Function<JsonNode, @Nullable T> fn) {
+  // Maps every object element of a JSON array through fn; non-object elements are skipped. The
+  // single
+  // place array traversal lives.
+  private <T> List<T> mapObjects(@Nullable JsonNode arrayNode, Function<JsonNode, T> fn) {
+    return mapTyped(arrayNode, fn);
+  }
+
+  // Maps the array's object elements through fn, keeping only those whose "type" is one of `types`
+  // (or all object elements when no type is given); others are skipped.
+  private <T> List<T> mapTyped(
+      @Nullable JsonNode arrayNode, Function<JsonNode, T> fn, String... types) {
     if (arrayNode == null || !arrayNode.isArray() || arrayNode.isEmpty()) {
       return List.of();
     }
     var result = new ArrayList<T>(arrayNode.size());
     for (var child : arrayNode) {
-      if (child == null || !child.isObject()) {
-        continue;
-      }
-      var mapped = fn.apply(child);
-      if (mapped != null) {
-        result.add(mapped);
+      if (child != null && child.isObject() && (types.length == 0 || isType(child, types))) {
+        result.add(fn.apply(child));
       }
     }
     return result;
@@ -136,29 +138,35 @@ public final class AdfAstParser {
   }
 
   List<AdfBlock> parseBlocks(@Nullable JsonNode arrayNode) {
-    return mapArray(arrayNode, this::parseBlock);
+    return mapObjects(arrayNode, this::parseBlock);
   }
 
   AdfBlock parseBlock(JsonNode node) {
     var type = JsonFields.text(node, "type", "");
     return switch (type) {
-      case "paragraph" -> new Paragraph(parseInlines(node.get("content")), parseMarks(node.get("marks")));
+      case "paragraph" ->
+          new Paragraph(parseInlines(node.get("content")), parseMarks(node.get("marks")));
       case "heading" -> parseHeading(node);
       case "blockquote" -> new Blockquote(parseBlocks(node.get("content")));
       case "codeBlock" -> parseCodeBlock(node);
-      case "panel" -> new Panel(JsonFields.text(node.path("attrs"), "panelType"), parseBlocks(node.get("content")));
+      case "panel" ->
+          new Panel(
+              JsonFields.text(node.path("attrs"), "panelType"), parseBlocks(node.get("content")));
       case "rule" -> new Rule();
       case "bulletList" -> new BulletList(parseListItems(node.get("content")));
       case "orderedList" -> parseOrderedList(node);
       case "listItem" -> new ListItem(parseBlocks(node.get("content")));
       case "taskList" -> new TaskList(parseTaskListItems(node.get("content")));
-      case "taskItem" -> new TaskItem(
-          JsonFields.text(node.path("attrs"), "state"), parseInlines(node.get("content")));
-      case "blockTaskItem" -> new BlockTaskItem(
-          JsonFields.text(node.path("attrs"), "state"), parseBlocks(node.get("content")));
+      case "taskItem" ->
+          new TaskItem(
+              JsonFields.text(node.path("attrs"), "state"), parseInlines(node.get("content")));
+      case "blockTaskItem" ->
+          new BlockTaskItem(
+              JsonFields.text(node.path("attrs"), "state"), parseBlocks(node.get("content")));
       case "decisionList" -> new DecisionList(parseDecisionItems(node.get("content")));
-      case "decisionItem" -> new DecisionItem(
-          JsonFields.text(node.path("attrs"), "state"), parseInlines(node.get("content")));
+      case "decisionItem" ->
+          new DecisionItem(
+              JsonFields.text(node.path("attrs"), "state"), parseInlines(node.get("content")));
       case "table" -> parseTable(node);
       case "tableRow" -> new TableRow(parseTableCells(node.get("content")));
       case "tableCell" -> parseTableCell(node, false);
@@ -167,19 +175,24 @@ public final class AdfAstParser {
       case "mediaGroup" -> new MediaGroup(parseBlocks(node.get("content")));
       case "media" -> new Media(parseMediaAttrs(node.path("attrs")), parseMarks(node.get("marks")));
       case "caption" -> new Caption(parseInlines(node.get("content")));
-      case "expand" -> new Expand(JsonFields.text(node.path("attrs"), "title", ""), parseBlocks(node.get("content")));
-      case "nestedExpand" -> new NestedExpand(
-          JsonFields.text(node.path("attrs"), "title", ""), parseBlocks(node.get("content")));
+      case "expand" ->
+          new Expand(
+              JsonFields.text(node.path("attrs"), "title", ""), parseBlocks(node.get("content")));
+      case "nestedExpand" ->
+          new NestedExpand(
+              JsonFields.text(node.path("attrs"), "title", ""), parseBlocks(node.get("content")));
       case "layoutSection" -> new LayoutSection(parseLayoutColumns(node.get("content")));
-      case "layoutColumn" -> new LayoutColumn(
-          JsonFields.integer(node.path("attrs"), "width", 0), parseBlocks(node.get("content")));
+      case "layoutColumn" ->
+          new LayoutColumn(
+              JsonFields.integer(node.path("attrs"), "width", 0), parseBlocks(node.get("content")));
       case "extension" -> parseExtension(node);
       case "bodiedExtension" -> parseBodiedExtension(node);
       case "multiBodiedExtension" -> parseMultiBodiedExtension(node);
       case "extensionFrame" -> new ExtensionFrame(parseBlocks(node.get("content")));
       case "syncBlock" -> new SyncBlock(JsonFields.text(node.path("attrs"), "resourceId"));
-      case "bodiedSyncBlock" -> new BodiedSyncBlock(
-          JsonFields.text(node.path("attrs"), "resourceId"), parseBlocks(node.get("content")));
+      case "bodiedSyncBlock" ->
+          new BodiedSyncBlock(
+              JsonFields.text(node.path("attrs"), "resourceId"), parseBlocks(node.get("content")));
       case "blockCard" -> new BlockCard(parseCardAttrs(node.path("attrs")));
       case "embedCard" -> new EmbedCard(parseCardAttrs(node.path("attrs")));
       default -> new UnknownBlock(type, rawJson(node));
@@ -187,7 +200,7 @@ public final class AdfAstParser {
   }
 
   public List<AdfInline> parseInlines(@Nullable JsonNode arrayNode) {
-    return mapArray(arrayNode, this::parseInline);
+    return mapObjects(arrayNode, this::parseInline);
   }
 
   AdfInline parseInline(JsonNode node) {
@@ -198,33 +211,38 @@ public final class AdfAstParser {
       case "inlineCard" -> new InlineCard(parseCardAttrs(node.path("attrs")));
       case "embedCard" -> new InlineCard(parseCardAttrs(node.path("attrs")));
       case "blockCard" -> new InlineCard(parseCardAttrs(node.path("attrs")));
-      case "mediaInline" -> new MediaInline(parseMediaAttrs(node.path("attrs")), parseMarks(node.get("marks")));
-      case "date" -> new Date(
-          JsonFields.text(node.path("attrs"), "timestamp"),
-          JsonFields.text(node.path("attrs"), "localId"));
-      case "emoji" -> new Emoji(
-          JsonFields.text(node.path("attrs"), "id"),
-          JsonFields.text(node.path("attrs"), "text"),
-          JsonFields.text(node.path("attrs"), "shortName"));
-      case "mention" -> new Mention(
-          JsonFields.text(node.path("attrs"), "id"),
-          mentionText(node.path("attrs")),
-          JsonFields.text(node.path("attrs"), "userType"),
-          JsonFields.text(node.path("attrs"), "accessLevel"),
-          JsonFields.text(node.path("attrs"), "localId"));
+      case "mediaInline" ->
+          new MediaInline(parseMediaAttrs(node.path("attrs")), parseMarks(node.get("marks")));
+      case "date" ->
+          new Date(
+              JsonFields.text(node.path("attrs"), "timestamp"),
+              JsonFields.text(node.path("attrs"), "localId"));
+      case "emoji" ->
+          new Emoji(
+              JsonFields.text(node.path("attrs"), "id"),
+              JsonFields.text(node.path("attrs"), "text"),
+              JsonFields.text(node.path("attrs"), "shortName"));
+      case "mention" ->
+          new Mention(
+              JsonFields.text(node.path("attrs"), "id"),
+              mentionText(node.path("attrs")),
+              JsonFields.text(node.path("attrs"), "userType"),
+              JsonFields.text(node.path("attrs"), "accessLevel"),
+              JsonFields.text(node.path("attrs"), "localId"));
       case "placeholder" -> new Placeholder(JsonFields.text(node.path("attrs"), "text", ""));
-      case "status" -> new Status(
-          JsonFields.text(node.path("attrs"), "text"),
-          JsonFields.text(node.path("attrs"), "color"),
-          JsonFields.text(node.path("attrs"), "style"),
-          JsonFields.text(node.path("attrs"), "localId"));
+      case "status" ->
+          new Status(
+              JsonFields.text(node.path("attrs"), "text"),
+              JsonFields.text(node.path("attrs"), "color"),
+              JsonFields.text(node.path("attrs"), "style"),
+              JsonFields.text(node.path("attrs"), "localId"));
       case "inlineExtension" -> parseInlineExtension(node);
       default -> new UnknownInline(type, rawJson(node));
     };
   }
 
   List<AdfMark> parseMarks(@Nullable JsonNode arrayNode) {
-    return mapArray(arrayNode, this::parseMark);
+    return mapObjects(arrayNode, this::parseMark);
   }
 
   AdfMark parseMark(JsonNode node) {
@@ -237,10 +255,9 @@ public final class AdfAstParser {
       case "strike" -> new Strike();
       case "underline" -> new Underline();
       case "subsup" -> new SubSup(JsonFields.text(attrs, "type"));
-      case "link" -> new Link(
-          JsonFields.text(attrs, "href"),
-          JsonFields.text(attrs, "title"),
-          toAttributes(attrs));
+      case "link" ->
+          new Link(
+              JsonFields.text(attrs, "href"), JsonFields.text(attrs, "title"), toAttributes(attrs));
       case "textColor" -> new TextColor(JsonFields.text(attrs, "color"));
       case "backgroundColor" -> new BackgroundColor(JsonFields.text(attrs, "color"));
       case "alignment" -> new Alignment(JsonFields.text(attrs, "align"));
@@ -266,10 +283,11 @@ public final class AdfAstParser {
   private static MacroParams flattenMacroParams(Attributes macroParams) {
     var values = new LinkedHashMap<String, String>();
     for (var entry : macroParams.values().entrySet()) {
-      var resolved = switch (entry.getValue()) {
-        case Map<?, ?> envelope -> scalarText(envelope.get("value"));
-        case Object scalar -> scalarText(scalar);
-      };
+      var resolved =
+          switch (entry.getValue()) {
+            case Map<?, ?> envelope -> scalarText(envelope.get("value"));
+            case Object scalar -> scalarText(scalar);
+          };
       if (resolved != null) {
         values.put(entry.getKey(), resolved);
       }
@@ -304,8 +322,8 @@ public final class AdfAstParser {
   }
 
   private List<ListItem> parseListItems(@Nullable JsonNode arrayNode) {
-    return mapArray(arrayNode, child ->
-        isType(child, "listItem") ? new ListItem(parseBlocks(child.get("content"))) : null);
+    return mapTyped(
+        arrayNode, child -> new ListItem(parseBlocks(child.get("content"))), "listItem");
   }
 
   private OrderedList parseOrderedList(JsonNode node) {
@@ -315,32 +333,34 @@ public final class AdfAstParser {
 
   // A nested taskList is schema-valid; parse it as a TaskList block so the renderer can recurse.
   private List<AdfBlock> parseTaskListItems(@Nullable JsonNode arrayNode) {
-    return mapArray(arrayNode, child ->
-        isType(child, "taskItem", "blockTaskItem", "taskList") ? parseBlock(child) : null);
+    return mapTyped(arrayNode, this::parseBlock, "taskItem", "blockTaskItem", "taskList");
   }
 
   private List<DecisionItem> parseDecisionItems(@Nullable JsonNode arrayNode) {
-    return mapArray(arrayNode, child ->
-        isType(child, "decisionItem")
-            ? new DecisionItem(
-                JsonFields.text(child.path("attrs"), "state"), parseInlines(child.get("content")))
-            : null);
+    return mapTyped(
+        arrayNode,
+        child ->
+            new DecisionItem(
+                JsonFields.text(child.path("attrs"), "state"), parseInlines(child.get("content"))),
+        "decisionItem");
   }
 
   private Table parseTable(JsonNode node) {
     var numberColumnEnabled = JsonFields.bool(node.path("attrs"), "isNumberColumnEnabled", false);
-    var rows = mapArray(node.get("content"), rowNode ->
-        isType(rowNode, "tableRow")
-            ? new TableRow(parseTableCells(rowNode.get("content")))
-            : null);
+    var rows =
+        mapTyped(
+            node.get("content"),
+            rowNode -> new TableRow(parseTableCells(rowNode.get("content"))),
+            "tableRow");
     return new Table(numberColumnEnabled, rows);
   }
 
   private List<TableCell> parseTableCells(@Nullable JsonNode arrayNode) {
-    return mapArray(arrayNode, cellNode ->
-        isType(cellNode, "tableCell", "tableHeader")
-            ? parseTableCell(cellNode, isType(cellNode, "tableHeader"))
-            : null);
+    return mapTyped(
+        arrayNode,
+        cellNode -> parseTableCell(cellNode, isType(cellNode, "tableHeader")),
+        "tableCell",
+        "tableHeader");
   }
 
   private TableCell parseTableCell(JsonNode node, boolean header) {
@@ -361,17 +381,21 @@ public final class AdfAstParser {
   }
 
   private List<LayoutColumn> parseLayoutColumns(@Nullable JsonNode arrayNode) {
-    return mapArray(arrayNode, child ->
-        isType(child, "layoutColumn")
-            ? new LayoutColumn(
-                JsonFields.integer(child.path("attrs"), "width", 0), parseBlocks(child.get("content")))
-            : null);
+    return mapTyped(
+        arrayNode,
+        child ->
+            new LayoutColumn(
+                JsonFields.integer(child.path("attrs"), "width", 0),
+                parseBlocks(child.get("content"))),
+        "layoutColumn");
   }
 
   private record ExtensionFields(
-      @Nullable String type, @Nullable String key, @Nullable String text, MacroParams macroParams,
-      Attributes parameters) {
-  }
+      @Nullable String type,
+      @Nullable String key,
+      @Nullable String text,
+      MacroParams macroParams,
+      Attributes parameters) {}
 
   // One walk of the raw parameters envelope (some extensions carry data outside macroParams);
   // macroParams is the flattened convenience view derived from it.
@@ -394,14 +418,22 @@ public final class AdfAstParser {
   private BodiedExtension parseBodiedExtension(JsonNode node) {
     var fields = extensionFields(node.path("attrs"));
     return new BodiedExtension(
-        fields.type(), fields.key(), fields.text(), fields.macroParams(), fields.parameters(),
+        fields.type(),
+        fields.key(),
+        fields.text(),
+        fields.macroParams(),
+        fields.parameters(),
         parseBlocks(node.get("content")));
   }
 
   private MultiBodiedExtension parseMultiBodiedExtension(JsonNode node) {
     var fields = extensionFields(node.path("attrs"));
     return new MultiBodiedExtension(
-        fields.type(), fields.key(), fields.text(), fields.macroParams(), fields.parameters(),
+        fields.type(),
+        fields.key(),
+        fields.text(),
+        fields.macroParams(),
+        fields.parameters(),
         parseBlocks(node.get("content")));
   }
 
@@ -447,9 +479,9 @@ public final class AdfAstParser {
   }
 
   /**
-   * Converts a node's raw {@code attrs} into a generic {@link Attributes} view of plain Java values.
-   * The conversion is product-neutral: every key (including any {@code __*} extension keys) is copied
-   * as-is, leaving interpretation of product-specific extras to higher layers.
+   * Converts a node's raw {@code attrs} into a generic {@link Attributes} view of plain Java
+   * values. The conversion is product-neutral: every key (including any {@code __*} extension keys)
+   * is copied as-is, leaving interpretation of product-specific extras to higher layers.
    */
   private Attributes toAttributes(@Nullable JsonNode attrs) {
     if (attrs == null || !attrs.isObject()) {

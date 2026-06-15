@@ -1,10 +1,5 @@
 package dev.nthings.adf4j.internal.render;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.function.Function;
-
 import dev.nthings.adf4j.ast.AdfMark;
 import dev.nthings.adf4j.ast.Alignment;
 import dev.nthings.adf4j.ast.Annotation;
@@ -27,12 +22,16 @@ import dev.nthings.adf4j.ast.Underline;
 import dev.nthings.adf4j.ast.UnknownMark;
 import dev.nthings.adf4j.confluence.ConfluenceMetadata;
 import dev.nthings.adf4j.internal.ConfluenceSupport;
-
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.function.Function;
 import org.jspecify.annotations.Nullable;
 
 final class TextMarkRenderer {
 
-  private static final Comparator<AdfMark> INLINE_MARK_ORDER = Comparator.comparingInt(TextMarkRenderer::canonicalRank);
+  private static final Comparator<AdfMark> INLINE_MARK_ORDER =
+      Comparator.comparingInt(TextMarkRenderer::canonicalRank);
 
   String applyMarks(String value, @Nullable List<AdfMark> marks, RenderContext context) {
     if (marks == null || marks.isEmpty()) {
@@ -43,7 +42,8 @@ final class TextMarkRenderer {
 
   // Inside-out decorator chain: format marks (canonical order) innermost, then an optional combined
   // visual <span>, then the link outermost. A code mark makes the text literal, superseding the
-  // format/visual layers. identity().andThen(...) nests so the first decorator added wraps innermost.
+  // format/visual layers. identity().andThen(...) nests so the first decorator added wraps
+  // innermost.
   private Function<String, String> markDecorator(List<AdfMark> marks, RenderContext context) {
     var htmlVisualMarks = context.options().htmlVisualMarks();
     Link link = null;
@@ -53,7 +53,7 @@ final class TextMarkRenderer {
       switch (mark) {
         case Link found -> link = found;
         case Code _ -> hasCode = true;
-        case UnknownMark _ -> { }
+        case UnknownMark _ -> {}
         default -> formatMarks.add(mark);
       }
     }
@@ -85,14 +85,15 @@ final class TextMarkRenderer {
   // Wraps formatted text in a Markdown link, or returns it unchanged when the link has no href. A
   // PageLinkResolver rewrites an internal page href to the caller's destination; the visible label
   // (the original text, or the original href when the text is blank) is left untouched.
-  private String applyLink(@Nullable String rendered, Link link, RenderContext context) {
+  private String applyLink(String rendered, Link link, RenderContext context) {
     var href = link.href();
     if (href == null || href.isBlank()) {
       return rendered;
     }
-    var label = (rendered == null || rendered.isBlank())
-        ? MarkdownText.escapeInlineText(href, false, context.options().escapeParentheses())
-        : rendered;
+    var label =
+        rendered.isBlank()
+            ? MarkdownText.escapeInlineText(href, false, context.options().escapeParentheses())
+            : rendered;
     var resolvedHref = resolvePageHref(href, link.attrs(), context);
     var title = link.title();
     return (title == null || title.isBlank())
@@ -100,7 +101,8 @@ final class TextMarkRenderer {
         : MarkdownText.linkRendered(label, resolvedHref, title);
   }
 
-  // The caller-resolved destination for an internal page href, or the original href when there is no
+  // The caller-resolved destination for an internal page href, or the original href when there is
+  // no
   // PageLinkResolver, the href is not a page reference, or the resolver declines.
   static String resolvePageHref(String href, Attributes attrs, RenderContext context) {
     if (context.options().pageLinkResolver() == null) {
@@ -118,7 +120,8 @@ final class TextMarkRenderer {
     if (resolver == null || pageNodeId == null || pageNodeId.isBlank()) {
       return null;
     }
-    var resolved = CallbackGuards.guardNonBlank("PageLinkResolver", () -> resolver.resolve(pageNodeId));
+    var resolved =
+        CallbackGuards.guardNonBlank("PageLinkResolver", () -> resolver.resolve(pageNodeId));
     if (resolved == null) {
       context.unresolvedTracker().recordPageId(pageNodeId);
     }
@@ -136,8 +139,16 @@ final class TextMarkRenderer {
       case TextColor _ -> 6;
       case BackgroundColor _ -> 7;
       case Border _ -> 8;
-      case Alignment _,Annotation _,Breakout _,Code _,DataConsumer _,Fragment _,Indentation _,Link _,UnknownMark _ ->
-        99;
+      case Alignment _,
+          Annotation _,
+          Breakout _,
+          Code _,
+          DataConsumer _,
+          Fragment _,
+          Indentation _,
+          Link _,
+          UnknownMark _ ->
+          99;
     };
   }
 
@@ -150,9 +161,9 @@ final class TextMarkRenderer {
         case FontSize fontSize -> addDeclaration(declarations, "font-size", fontSize.fontSize());
         case TextColor textColor -> addDeclaration(declarations, "color", textColor.color());
         case BackgroundColor backgroundColor ->
-          addDeclaration(declarations, "background-color", backgroundColor.color());
+            addDeclaration(declarations, "background-color", backgroundColor.color());
         case Border border -> addBorderDeclaration(declarations, border);
-        default -> { }
+        default -> {}
       }
     }
     return String.join("; ", declarations);
@@ -171,19 +182,36 @@ final class TextMarkRenderer {
       return;
     }
     declarations.add(
-        "border:" + HtmlFragments.escapeHtmlText(size) + "px solid " + HtmlFragments.escapeHtmlText(color));
+        "border:"
+            + HtmlFragments.escapeHtmlText(size)
+            + "px solid "
+            + HtmlFragments.escapeHtmlText(color));
   }
 
   private boolean isVisualOnlyHtmlMark(AdfMark mark) {
     return switch (mark) {
-      case TextColor _,BackgroundColor _,Border _,FontSize _ -> true;
-      case Alignment _,Annotation _,Breakout _,Code _,DataConsumer _,Em _,Fragment _,Indentation _,Link _,Strike _,Strong _,SubSup _,Underline _,UnknownMark _ ->
-        false;
+      case TextColor _, BackgroundColor _, Border _, FontSize _ -> true;
+      case Alignment _,
+          Annotation _,
+          Breakout _,
+          Code _,
+          DataConsumer _,
+          Em _,
+          Fragment _,
+          Indentation _,
+          Link _,
+          Strike _,
+          Strong _,
+          SubSup _,
+          Underline _,
+          UnknownMark _ ->
+          false;
     };
   }
 
   private String applyInlineMark(String value, AdfMark mark) {
-    // Pure-visual marks (colour/background/border/size) are dropped; sub/sup and underline map to HTML.
+    // Pure-visual marks (colour/background/border/size) are dropped; sub/sup and underline map to
+    // HTML.
     if (isVisualOnlyHtmlMark(mark)) {
       return value;
     }
@@ -196,8 +224,20 @@ final class TextMarkRenderer {
       case SubSup s when "sub".equalsIgnoreCase(s.subSupType()) -> wrapTag(value, "sub");
       case SubSup _ -> value; // unknown subtype: leave unwrapped rather than guess
       case Underline _ -> wrapTag(value, "u");
-      case TextColor _,BackgroundColor _,Border _,FontSize _,Alignment _,Indentation _,Annotation _,Fragment _,DataConsumer _,Breakout _,Link _,Code _,UnknownMark _ ->
-        value;
+      case TextColor _,
+          BackgroundColor _,
+          Border _,
+          FontSize _,
+          Alignment _,
+          Indentation _,
+          Annotation _,
+          Fragment _,
+          DataConsumer _,
+          Breakout _,
+          Link _,
+          Code _,
+          UnknownMark _ ->
+          value;
     };
   }
 
@@ -223,7 +263,10 @@ final class TextMarkRenderer {
       return value;
     }
 
-    return value.substring(0, leadingWhitespaceLength) + open + content + close
+    return value.substring(0, leadingWhitespaceLength)
+        + open
+        + content
+        + close
         + value.substring(contentEnd);
   }
 

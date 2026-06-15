@@ -1,15 +1,5 @@
 package dev.nthings.adf4j.internal.render;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-
-import dev.nthings.adf4j.metadata.AttachmentReference;
-import dev.nthings.adf4j.metadata.ExcerptIncludeReference;
-import dev.nthings.adf4j.metadata.HeadingReference;
-import dev.nthings.adf4j.metadata.PageTreeReference;
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.Attributes;
 import dev.nthings.adf4j.ast.BodiedExtension;
@@ -22,9 +12,17 @@ import dev.nthings.adf4j.ast.SyncBlock;
 import dev.nthings.adf4j.internal.AttachmentReferences;
 import dev.nthings.adf4j.internal.ConfluenceSupport;
 import dev.nthings.adf4j.internal.analyze.TocLevelRange;
+import dev.nthings.adf4j.metadata.AttachmentReference;
+import dev.nthings.adf4j.metadata.ExcerptIncludeReference;
+import dev.nthings.adf4j.metadata.HeadingReference;
+import dev.nthings.adf4j.metadata.PageTreeReference;
 import dev.nthings.adf4j.options.ExtensionContext;
 import dev.nthings.adf4j.options.PageTreeEntry;
-
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,14 +42,22 @@ final class MacroRenderer {
 
   String renderExtension(Extension node, RendererState context) {
     return renderExtensionCore(
-        node.extensionType(), node.extensionKey(), node.text(), node.macroParams(),
-        node.parameters(), context);
+        node.extensionType(),
+        node.extensionKey(),
+        node.text(),
+        node.macroParams(),
+        node.parameters(),
+        context);
   }
 
   String renderInlineExtension(InlineExtension node, RendererState context) {
     return renderExtensionCore(
-        node.extensionType(), node.extensionKey(), node.text(), node.macroParams(),
-        node.parameters(), context);
+        node.extensionType(),
+        node.extensionKey(),
+        node.text(),
+        node.macroParams(),
+        node.parameters(),
+        context);
   }
 
   private String renderExtensionCore(
@@ -81,21 +87,26 @@ final class MacroRenderer {
       return extensionFallback(text, extensionType, extensionKey, context);
     }
 
-    var rendered = switch (extensionKey != null ? extensionKey : "") {
-      case "children", "pagetree" ->
-          renderPageTreeMacro(ConfluenceSupport.pageTreeReference(extensionKey, macroParams), context);
-      case "toc" -> renderTocMacro(macroParams, context);
-      case "anchor" -> HtmlFragments.anchor(ConfluenceSupport.anchorId(macroParams));
-      case "iframe" -> renderIframeMacro(macroParams, context);
-      case "viewpdf" -> renderViewPdfMacro(macroParams, context);
-      case "chart:default" -> renderChartMacro(macroParams, context);
-      case "excerpt-include" ->
-          renderExcerptInclude(
-              ConfluenceSupport.excerptIncludeReference(extensionKey, macroParams), context);
-      case "attachments" -> renderAttachmentsMacro(context);
-      default -> null;
-    };
-    return rendered != null ? rendered : extensionFallback(text, extensionType, extensionKey, context);
+    var rendered =
+        switch (extensionKey != null ? extensionKey : "") {
+          case "children", "pagetree" -> {
+            var reference = ConfluenceSupport.pageTreeReference(extensionKey, macroParams);
+            yield reference == null ? null : renderPageTreeMacro(reference, context);
+          }
+          case "toc" -> renderTocMacro(macroParams, context);
+          case "anchor" -> HtmlFragments.anchor(ConfluenceSupport.anchorId(macroParams));
+          case "iframe" -> renderIframeMacro(macroParams, context);
+          case "viewpdf" -> renderViewPdfMacro(macroParams, context);
+          case "chart:default" -> renderChartMacro(macroParams, context);
+          case "excerpt-include" ->
+              renderExcerptInclude(
+                  ConfluenceSupport.excerptIncludeReference(extensionKey, macroParams), context);
+          case "attachments" -> renderAttachmentsMacro(context);
+          default -> null;
+        };
+    return rendered != null
+        ? rendered
+        : extensionFallback(text, extensionType, extensionKey, context);
   }
 
   List<String> renderBodiedExtension(
@@ -109,16 +120,28 @@ final class MacroRenderer {
       return captionThenBodies(node, context, recursion);
     }
     return headerThenBodies(
-        node.text(), node.extensionType(), node.extensionKey(), node.macroParams(),
-        node.parameters(), node.content(), context, recursion);
+        node.text(),
+        node.extensionType(),
+        node.extensionKey(),
+        node.macroParams(),
+        node.parameters(),
+        node.content(),
+        context,
+        recursion);
   }
 
   List<String> renderMultiBodiedExtension(
       MultiBodiedExtension node, RendererState context, BlockRecursion recursion) {
     // The schema predates this node; salvage the frame bodies.
     return headerThenBodies(
-        node.text(), node.extensionType(), node.extensionKey(), node.macroParams(),
-        node.parameters(), node.content(), context, recursion);
+        node.text(),
+        node.extensionType(),
+        node.extensionKey(),
+        node.macroParams(),
+        node.parameters(),
+        node.content(),
+        context,
+        recursion);
   }
 
   // Header (custom renderer, else macro text or "[Extension: …]" placeholder) then the body blocks.
@@ -133,7 +156,8 @@ final class MacroRenderer {
       BlockRecursion recursion) {
     var blocks = new ArrayList<String>();
     var custom = renderCustom(extensionType, extensionKey, text, macroParams, parameters, context);
-    blocks.add(custom != null ? custom : extensionFallback(text, extensionType, extensionKey, context));
+    blocks.add(
+        custom != null ? custom : extensionFallback(text, extensionType, extensionKey, context));
     blocks.addAll(recursion.renderBlocks(content, context));
     return blocks;
   }
@@ -142,15 +166,22 @@ final class MacroRenderer {
   private List<String> captionThenBodies(
       BodiedExtension node, RendererState context, BlockRecursion recursion) {
     var blocks = new ArrayList<String>();
-    var custom = renderCustom(
-        node.extensionType(), node.extensionKey(), node.text(), node.macroParams(),
-        node.parameters(), context);
-    blocks.add(custom != null ? custom : chartCaption(node.macroParams(), node.parameters(), context));
+    var custom =
+        renderCustom(
+            node.extensionType(),
+            node.extensionKey(),
+            node.text(),
+            node.macroParams(),
+            node.parameters(),
+            context);
+    blocks.add(
+        custom != null ? custom : chartCaption(node.macroParams(), node.parameters(), context));
     blocks.addAll(recursion.renderBlocks(node.content(), context));
     return blocks;
   }
 
-  // Custom renderers, consulted in order (first non-null wins); null defers to the next, then default.
+  // Custom renderers, consulted in order (first non-null wins); null defers to the next, then
+  // default.
   private @Nullable String renderCustom(
       @Nullable String extensionType,
       @Nullable String extensionKey,
@@ -162,11 +193,11 @@ final class MacroRenderer {
     if (renderers.isEmpty()) {
       return null;
     }
-    var extension = new ExtensionContext(
-        extensionType, extensionKey, text,
-        macroParams == null ? null : macroParams.values(), parameters);
+    var extension =
+        new ExtensionContext(extensionType, extensionKey, text, macroParams.values(), parameters);
     for (var renderer : renderers) {
-      var rendered = CallbackGuards.guard("ExtensionRenderer", () -> renderer.render(extension), null);
+      var rendered =
+          CallbackGuards.guard("ExtensionRenderer", () -> renderer.render(extension), null);
       if (rendered != null) {
         return rendered;
       }
@@ -175,9 +206,13 @@ final class MacroRenderer {
   }
 
   private String extensionFallback(
-      @Nullable String text, @Nullable String extensionType, @Nullable String extensionKey, RendererState context) {
+      @Nullable String text,
+      @Nullable String extensionType,
+      @Nullable String extensionKey,
+      RendererState context) {
     if (text != null && !text.isBlank()) {
-      // Attribute-derived text; a block extension emits it at column 0, so neutralise leading markers.
+      // Attribute-derived text; a block extension emits it at column 0, so neutralise leading
+      // markers.
       return MarkdownText.escapeInlineText(text, true, context.escapeParentheses());
     }
     context.recordUnsupportedExtension(extensionType, extensionKey);
@@ -222,19 +257,22 @@ final class MacroRenderer {
     };
   }
 
-  // The resolver's entries as an indented bullet list ("" for an authoritative empty answer), or null
+  // The resolver's entries as an indented bullet list ("" for an authoritative empty answer), or
+  // null
   // to fall back to the token (no resolver, a null return, or a throw — recorded as unresolved).
   private @Nullable String expandPageTree(PageTreeReference reference, RendererState context) {
     var resolver = context.pageTreeResolver();
-    var entries = resolver == null
-        ? null
-        : CallbackGuards.guard("PageTreeResolver", () -> resolver.resolve(reference), null);
+    var entries =
+        resolver == null
+            ? null
+            : CallbackGuards.guard("PageTreeResolver", () -> resolver.resolve(reference), null);
     if (entries == null) {
       context.unresolvedTracker().recordPageTree(reference);
       return null;
     }
 
-    // Shift the shallowest entry to column 0 so a deeper-rooted list does not over-indent into code.
+    // Shift the shallowest entry to column 0 so a deeper-rooted list does not over-indent into
+    // code.
     var baseDepth = entries.stream().mapToInt(PageTreeEntry::depth).min().orElse(0);
     var lines = new ArrayList<String>();
     for (var entry : entries) {
@@ -246,7 +284,8 @@ final class MacroRenderer {
     return String.join("\n", lines);
   }
 
-  // A link when the page id resolves, else the escaped (single-line) title; null when nothing renders.
+  // A link when the page id resolves, else the escaped (single-line) title; null when nothing
+  // renders.
   private @Nullable String pageTreeLabel(PageTreeEntry entry, RendererState context) {
     var title = entry.title();
     var label = title == null ? "" : title.replaceAll("\\s+", " ").strip();
@@ -254,10 +293,13 @@ final class MacroRenderer {
     if (href != null) {
       return MarkdownText.link(label.isEmpty() ? href : label, href, context.escapeParentheses());
     }
-    return label.isEmpty() ? null : MarkdownText.escapeInlineText(label, false, context.escapeParentheses());
+    return label.isEmpty()
+        ? null
+        : MarkdownText.escapeInlineText(label, false, context.escapeParentheses());
   }
 
-  // The {{pagetree:<root>}} token root: the request root with whitespace collapsed and braces dropped.
+  // The {{pagetree:<root>}} token root: the request root with whitespace collapsed and braces
+  // dropped.
   private @Nullable String pageTreeRoot(@Nullable String root) {
     if (root == null) {
       return null;
@@ -268,21 +310,24 @@ final class MacroRenderer {
 
   // Expand via the resolver, else the labelled placeholder (recorded as unresolved); a null
   // reference (no source page) defers to the generic extension fallback.
-  private @Nullable String renderExcerptInclude(@Nullable ExcerptIncludeReference reference, RendererState context) {
+  private @Nullable String renderExcerptInclude(
+      @Nullable ExcerptIncludeReference reference, RendererState context) {
     if (reference == null) {
       return null;
     }
     var resolver = context.excerptResolver();
-    var resolved = resolver == null
-        ? null
-        : CallbackGuards.guard("ExcerptResolver", () -> resolver.resolve(reference), null);
+    var resolved =
+        resolver == null
+            ? null
+            : CallbackGuards.guard("ExcerptResolver", () -> resolver.resolve(reference), null);
     if (resolved != null) {
       return resolved;
     }
     context.unresolvedTracker().recordExcerpt(reference);
-    var label = reference.excerptName() == null
-        ? "Excerpt include: " + reference.page()
-        : "Excerpt include: " + reference.page() + " / " + reference.excerptName();
+    var label =
+        reference.excerptName() == null
+            ? "Excerpt include: " + reference.page()
+            : "Excerpt include: " + reference.page() + " / " + reference.excerptName();
     return MarkdownText.labelToken(label, context.escapeParentheses());
   }
 
@@ -295,8 +340,12 @@ final class MacroRenderer {
     }
     var lines = new ArrayList<String>();
     for (var reference : confluenceContext.attachmentReferencesByTitle().values()) {
-      lines.add("- " + MarkdownText.link(
-          reference.title(), resolveAttachment(reference, context), context.escapeParentheses()));
+      lines.add(
+          "- "
+              + MarkdownText.link(
+                  reference.title(),
+                  resolveAttachment(reference, context),
+                  context.escapeParentheses()));
     }
     return String.join("\n", lines);
   }
@@ -308,9 +357,7 @@ final class MacroRenderer {
     }
 
     var range = TocLevelRange.of(macroParams);
-    var filtered = headings.stream()
-        .filter(heading -> range.includes(heading.level()))
-        .toList();
+    var filtered = headings.stream().filter(heading -> range.includes(heading.level())).toList();
     if (filtered.isEmpty()) {
       return "";
     }
@@ -320,11 +367,17 @@ final class MacroRenderer {
     for (var heading : filtered) {
       var indent = RenderBuffer.LIST_INDENT.repeat(Math.max(0, heading.level() - baseLevel));
       if (heading.anchor() != null && !heading.anchor().isBlank()) {
-        lines.add(indent + "- "
-            + MarkdownText.link(heading.text(), "#" + heading.anchor(), context.escapeParentheses()));
+        lines.add(
+            indent
+                + "- "
+                + MarkdownText.link(
+                    heading.text(), "#" + heading.anchor(), context.escapeParentheses()));
       } else {
-        lines.add(indent + "- "
-            + MarkdownText.escapeInlineText(heading.text(), false, context.escapeParentheses()));
+        lines.add(
+            indent
+                + "- "
+                + MarkdownText.escapeInlineText(
+                    heading.text(), false, context.escapeParentheses()));
       }
     }
     return String.join("\n", lines);
@@ -340,7 +393,8 @@ final class MacroRenderer {
 
   private String renderViewPdfMacro(MacroParams macroParams, RendererState context) {
     var name = macroParams.value("name");
-    var attachmentReference = AttachmentReferences.resolve(macroParams, context.confluenceContext());
+    var attachmentReference =
+        AttachmentReferences.resolve(macroParams, context.confluenceContext());
     if (attachmentReference == null
         || attachmentReference.fileId() == null
         || attachmentReference.fileId().isBlank()) {
@@ -353,27 +407,33 @@ final class MacroRenderer {
     return MarkdownText.link(label, destination, context.escapeParentheses());
   }
 
-  // The caller-resolved link for an attachment, or the synthetic attachment:<fileId> placeholder when
+  // The caller-resolved link for an attachment, or the synthetic attachment:<fileId> placeholder
+  // when
   // there is no AttachmentResolver or it declines.
   private String resolveAttachment(AttachmentReference reference, RendererState context) {
     var resolver = context.attachmentResolver();
-    var resolved = resolver == null
-        ? null
-        : CallbackGuards.guardNonBlank("AttachmentResolver", () -> resolver.resolve(reference));
+    var resolved =
+        resolver == null
+            ? null
+            : CallbackGuards.guardNonBlank("AttachmentResolver", () -> resolver.resolve(reference));
     return resolved != null ? resolved : "attachment:" + reference.fileId();
   }
 
-  // The bodyless legacy chart macro: nothing recoverable in the document, so a labelled placeholder.
+  // The bodyless legacy chart macro: nothing recoverable in the document, so a labelled
+  // placeholder.
   private String renderChartMacro(MacroParams macroParams, RendererState context) {
     var title = macroParams.value("title");
     return MarkdownText.labelToken(
-        title == null || title.isBlank() ? "Chart" : "Chart: " + title, context.escapeParentheses());
+        title == null || title.isBlank() ? "Chart" : "Chart: " + title,
+        context.escapeParentheses());
   }
 
   // The italic "Chart: <title>" caption; one line so the emphasis wrapping survives any title.
-  private String chartCaption(MacroParams macroParams, Attributes parameters, RendererState context) {
+  private String chartCaption(
+      MacroParams macroParams, Attributes parameters, RendererState context) {
     var title = ConfluenceSupport.chartTitle(macroParams, parameters);
-    var label = title == null ? "Chart" : "Chart: " + MarkdownText.collapseLineBreaks(title).strip();
+    var label =
+        title == null ? "Chart" : "Chart: " + MarkdownText.collapseLineBreaks(title).strip();
     return "*" + MarkdownText.escapeInlineText(label, false, context.escapeParentheses()) + "*";
   }
 

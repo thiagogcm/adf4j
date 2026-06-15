@@ -1,9 +1,7 @@
 package dev.nthings.adf4j.internal.render;
 
-import java.util.stream.Stream;
-
 import dev.nthings.adf4j.ast.CardAttrs;
-
+import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
 
 /** Renders smart-link nodes (block/inline/embed cards) to Markdown links. */
@@ -15,10 +13,11 @@ final class CardRenderer {
       return link;
     }
 
-    var identifier = Stream.of(attrs.datasourceId(), attrs.localId())
-        .filter(s -> s != null && !s.isBlank())
-        .findFirst()
-        .orElse(null);
+    var identifier =
+        Stream.of(attrs.datasourceId(), attrs.localId())
+            .filter(s -> s != null && !s.isBlank())
+            .findFirst()
+            .orElse(null);
     if (identifier == null) {
       return MarkdownText.labelToken("Card", context.options().escapeParentheses());
     }
@@ -27,29 +26,31 @@ final class CardRenderer {
 
   String renderInlineCard(CardAttrs attrs, RenderContext context) {
     var link = renderCardLink(attrs, context);
-    return link != null ? link : MarkdownText.labelToken("Inline card", context.options().escapeParentheses());
+    return link != null
+        ? link
+        : MarkdownText.labelToken("Inline card", context.options().escapeParentheses());
   }
 
   String renderEmbedCard(CardAttrs attrs, RenderContext context) {
     var link = renderCardLink(attrs, context);
-    return link != null ? link : MarkdownText.labelToken("Embed card", context.options().escapeParentheses());
+    return link != null
+        ? link
+        : MarkdownText.labelToken("Embed card", context.options().escapeParentheses());
   }
 
   /**
    * Shared url/title rendering for all three card kinds, or {@code null} when the card has neither:
-   * url+title -&gt; {@code [title](url)}; url only -&gt; {@code <url>} (or {@code [url](url)} if not
-   * clean); title only -&gt; the escaped title as plain text. A {@code PageLinkResolver} rewrites an
-   * internal page card's destination; a url-only card whose destination is rewritten keeps the
-   * original url as its visible label.
+   * url+title -&gt; {@code [title](url)}; url only -&gt; {@code <url>} (or {@code [url](url)} if
+   * not clean); title only -&gt; the escaped title as plain text. A {@code PageLinkResolver}
+   * rewrites an internal page card's destination; a url-only card whose destination is rewritten
+   * keeps the original url as its visible label.
    */
   private @Nullable String renderCardLink(CardAttrs attrs, RenderContext context) {
     var url = attrs.url();
-    var hasUrl = url != null && !url.isBlank();
-
     var title = attrs.title();
     var hasTitle = title != null && !title.isBlank();
 
-    if (hasUrl) {
+    if (url != null && !url.isBlank()) {
       var resolvedUrl = TextMarkRenderer.resolvePageHref(url, attrs.attrs(), context);
       if (hasTitle) {
         return MarkdownText.link(title, resolvedUrl, context.options().escapeParentheses());
@@ -58,7 +59,7 @@ final class CardRenderer {
       // back to a labelled link that keeps the original url visible.
       var rewritten = !resolvedUrl.equals(url);
       var destination = MarkdownText.escapeUrlDestination(resolvedUrl);
-      return !rewritten && destination.equals(url) && isAbsoluteUri(url)
+      return !rewritten && url.equals(destination) && isAbsoluteUri(url)
           ? "<%s>".formatted(url)
           : MarkdownText.link(url, resolvedUrl, context.options().escapeParentheses());
     }

@@ -1,13 +1,11 @@
 package dev.nthings.adf4j.internal.render;
 
-import org.jspecify.annotations.Nullable;
-
 final class MarkdownInputCleaner {
 
   private MarkdownInputCleaner() {}
 
-  static @Nullable String clean(@Nullable String markdown) {
-    if (markdown == null || markdown.isEmpty()) {
+  static String clean(String markdown) {
+    if (markdown.isEmpty()) {
       return markdown;
     }
 

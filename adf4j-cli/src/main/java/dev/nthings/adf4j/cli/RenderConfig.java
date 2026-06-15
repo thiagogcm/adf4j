@@ -2,14 +2,6 @@ package dev.nthings.adf4j.cli;
 
 import static java.util.Objects.requireNonNullElse;
 
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.BiFunction;
-
 import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
 import dev.nthings.adf4j.metadata.AttachmentReference;
 import dev.nthings.adf4j.metadata.PageTreeMacro;
@@ -23,16 +15,21 @@ import dev.nthings.adf4j.options.PageTreeEntry;
 import dev.nthings.adf4j.options.PageTreeResolver;
 import dev.nthings.adf4j.options.TableFallback;
 import dev.nthings.adf4j.options.UnknownNodePolicy;
-
-import tools.jackson.databind.JsonNode;
-
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.BiFunction;
 import org.jspecify.annotations.Nullable;
+import tools.jackson.databind.JsonNode;
 
 /**
  * Translates the shared rendering/resolver flags into a {@link MarkdownOptions}. Resolvers are
  * data-driven (URL templates plus JSON lookup tables) and preserve the library's decline-vs-answer
- * contract: an absent key/entry declines, a present entry answers (an empty value being a valid empty
- * answer). See {@code docs/usage-guide.md} for the data-file schemas.
+ * contract: an absent key/entry declines, a present entry answers (an empty value being a valid
+ * empty answer). See {@code docs/usage-guide.md} for the data-file schemas.
  */
 final class RenderConfig {
 
@@ -81,8 +78,9 @@ final class RenderConfig {
       case "skip" -> UnknownNodePolicy.SKIP;
       case "fail" -> UnknownNodePolicy.FAIL;
       case "preserve-raw" -> UnknownNodePolicy.PRESERVE_RAW;
-      default -> throw CliException.usage(
-          "--unknown-nodes must be one of: placeholder, skip, fail, preserve-raw");
+      default ->
+          throw CliException.usage(
+              "--unknown-nodes must be one of: placeholder, skip, fail, preserve-raw");
     };
   }
 
@@ -91,8 +89,9 @@ final class RenderConfig {
       case "gfm-promote-first-row" -> TableFallback.GFM_PROMOTE_FIRST_ROW;
       case "gfm-empty-header" -> TableFallback.GFM_EMPTY_HEADER;
       case "html" -> TableFallback.HTML;
-      default -> throw CliException.usage(
-          "--table-fallback must be one of: gfm-promote-first-row, gfm-empty-header, html");
+      default ->
+          throw CliException.usage(
+              "--table-fallback must be one of: gfm-promote-first-row, gfm-empty-header, html");
     };
   }
 
@@ -100,28 +99,42 @@ final class RenderConfig {
 
   private static @Nullable MediaResolver mediaResolver(Args args, CliJson json) {
     var lookup = urlResolver(args, json, "media-map", "media-url", MEDIA_PLACEHOLDERS);
-    return lookup == null ? null : attrs -> lookup.apply(attrs.id(), Map.of(
-        "id", requireNonNullElse(attrs.id(), ""),
-        "collection", requireNonNullElse(attrs.collection(), ""),
-        "localId", requireNonNullElse(attrs.localId(), "")));
+    return lookup == null
+        ? null
+        : attrs ->
+            lookup.apply(
+                attrs.id(),
+                Map.of(
+                    "id", requireNonNullElse(attrs.id(), ""),
+                    "collection", requireNonNullElse(attrs.collection(), ""),
+                    "localId", requireNonNullElse(attrs.localId(), "")));
   }
 
   private static @Nullable AttachmentResolver attachmentResolver(Args args, CliJson json) {
-    var lookup = urlResolver(args, json, "attachment-map", "attachment-url", ATTACHMENT_PLACEHOLDERS);
-    return lookup == null ? null : reference -> lookup.apply(reference.fileId(), Map.of(
-        "fileId", requireNonNullElse(reference.fileId(), ""),
-        "title", requireNonNullElse(reference.title(), "")));
+    var lookup =
+        urlResolver(args, json, "attachment-map", "attachment-url", ATTACHMENT_PLACEHOLDERS);
+    return lookup == null
+        ? null
+        : reference ->
+            lookup.apply(
+                reference.fileId(),
+                Map.of(
+                    "fileId", requireNonNullElse(reference.fileId(), ""),
+                    "title", requireNonNullElse(reference.title(), "")));
   }
 
   private static @Nullable PageLinkResolver pageLinkResolver(Args args, CliJson json) {
     var lookup = urlResolver(args, json, "page-map", "page-url", PAGE_PLACEHOLDERS);
     return lookup == null
         ? null
-        : pageNodeId -> lookup.apply(pageNodeId, Map.of("pageId", requireNonNullElse(pageNodeId, "")));
+        : pageNodeId ->
+            lookup.apply(pageNodeId, Map.of("pageId", requireNonNullElse(pageNodeId, "")));
   }
 
-  // (key, placeholders) -> URL: the map wins on a non-blank hit, else the template expands; null when
-  // neither flag was given (so the resolver stays unset and the library keeps its default behavior).
+  // (key, placeholders) -> URL: the map wins on a non-blank hit, else the template expands; null
+  // when
+  // neither flag was given (so the resolver stays unset and the library keeps its default
+  // behavior).
   private static @Nullable BiFunction<String, Map<String, String>, @Nullable String> urlResolver(
       Args args, CliJson json, String mapFlag, String urlFlag, Set<String> placeholders) {
     var map = readStringMap(args.value(mapFlag), json, "--" + mapFlag);
@@ -145,20 +158,22 @@ final class RenderConfig {
     if (path == null) {
       return null;
     }
-    var root = CliJson.requireObject(json.readFile(Path.of(path), "--page-tree-map"), "--page-tree-map");
+    var root =
+        CliJson.requireObject(json.readFile(Path.of(path), "--page-tree-map"), "--page-tree-map");
     CliJson.rejectUnknownKeys(root, Set.of("pagetree", "children"), "--page-tree-map");
     var byMacro = new LinkedHashMap<PageTreeMacro, Map<String, List<PageTreeEntry>>>();
     byMacro.put(PageTreeMacro.PAGETREE, readPageTreeBucket(root.get("pagetree"), "pagetree"));
     byMacro.put(PageTreeMacro.CHILDREN, readPageTreeBucket(root.get("children"), "children"));
 
     return reference -> {
-      var bucket = byMacro.get(reference.macro());
+      var bucket = byMacro.getOrDefault(reference.macro(), Map.of());
       var key = reference.root() == null ? "" : reference.root();
       return bucket.get(key); // absent key -> null (decline); present (even empty) -> authoritative
     };
   }
 
-  private static Map<String, List<PageTreeEntry>> readPageTreeBucket(@Nullable JsonNode bucketNode, String name) {
+  private static Map<String, List<PageTreeEntry>> readPageTreeBucket(
+      @Nullable JsonNode bucketNode, String name) {
     var bucket = new LinkedHashMap<String, List<PageTreeEntry>>();
     if (bucketNode == null || bucketNode.isNull()) {
       return bucket;
@@ -166,12 +181,15 @@ final class RenderConfig {
     var object = CliJson.requireObject(bucketNode, "--page-tree-map '" + name + "'");
     for (var entry : object.properties()) {
       var entries = new ArrayList<PageTreeEntry>();
-      var array = CliJson.requireArray(entry.getValue(), "--page-tree-map '" + name + "/" + entry.getKey() + "'");
+      var array =
+          CliJson.requireArray(
+              entry.getValue(), "--page-tree-map '" + name + "/" + entry.getKey() + "'");
       for (var item : array) {
-        entries.add(new PageTreeEntry(
-            item.path("depth").asInt(),
-            requireNonNullElse(CliJson.string(item, "title"), ""),
-            CliJson.string(item, "pageNodeId")));
+        entries.add(
+            new PageTreeEntry(
+                item.path("depth").asInt(),
+                requireNonNullElse(CliJson.string(item, "title"), ""),
+                CliJson.string(item, "pageNodeId")));
       }
       bucket.put(entry.getKey(), List.copyOf(entries));
     }
@@ -183,14 +201,17 @@ final class RenderConfig {
     if (path == null) {
       return null;
     }
-    var array = CliJson.requireArray(json.readFile(Path.of(path), "--excerpt-map"), "--excerpt-map");
+    var array =
+        CliJson.requireArray(json.readFile(Path.of(path), "--excerpt-map"), "--excerpt-map");
     var byKey = new LinkedHashMap<ExcerptKey, String>();
     for (var item : array) {
       var object = CliJson.requireObject(item, "--excerpt-map entry");
       CliJson.rejectUnknownKeys(object, Set.of("page", "name", "markdown"), "--excerpt-map entry");
       var page = CliJson.requireString(object, "page", "--excerpt-map entry");
       var excerptName = CliJson.string(object, "name"); // null == the unnamed excerpt
-      byKey.put(new ExcerptKey(page, excerptName), requireNonNullElse(CliJson.string(object, "markdown"), ""));
+      byKey.put(
+          new ExcerptKey(page, excerptName),
+          requireNonNullElse(CliJson.string(object, "markdown"), ""));
     }
     return reference -> byKey.get(new ExcerptKey(reference.page(), reference.excerptName()));
   }
@@ -200,15 +221,17 @@ final class RenderConfig {
     if (path == null) {
       return null;
     }
-    var array = CliJson.requireArray(json.readFile(Path.of(path), "--extension-map"), "--extension-map");
+    var array =
+        CliJson.requireArray(json.readFile(Path.of(path), "--extension-map"), "--extension-map");
     var entries = new ArrayList<ExtensionEntry>();
     for (var item : array) {
       var object = CliJson.requireObject(item, "--extension-map entry");
       CliJson.rejectUnknownKeys(object, Set.of("type", "key", "template"), "--extension-map entry");
-      entries.add(new ExtensionEntry(
-          CliJson.string(object, "type"),
-          CliJson.requireString(object, "key", "--extension-map entry"),
-          requireNonNullElse(CliJson.string(object, "template"), "")));
+      entries.add(
+          new ExtensionEntry(
+              CliJson.string(object, "type"),
+              CliJson.requireString(object, "key", "--extension-map entry"),
+              requireNonNullElse(CliJson.string(object, "template"), "")));
     }
     return context -> {
       for (var entry : entries) {
@@ -228,15 +251,19 @@ final class RenderConfig {
     if (path == null) {
       return ConfluenceRenderContext.empty();
     }
-    var array = CliJson.requireArray(json.readFile(Path.of(path), "--attachments-map"), "--attachments-map");
+    var array =
+        CliJson.requireArray(
+            json.readFile(Path.of(path), "--attachments-map"), "--attachments-map");
     var references = new ArrayList<AttachmentReference>();
     for (var item : array) {
       var object = CliJson.requireObject(item, "--attachments-map entry");
-      CliJson.rejectUnknownKeys(object, Set.of("fileId", "title", "mediaType"), "--attachments-map entry");
-      references.add(new AttachmentReference(
-          CliJson.requireString(object, "fileId", "--attachments-map entry"),
-          CliJson.string(object, "title"),
-          CliJson.string(object, "mediaType")));
+      CliJson.rejectUnknownKeys(
+          object, Set.of("fileId", "title", "mediaType"), "--attachments-map entry");
+      references.add(
+          new AttachmentReference(
+              CliJson.requireString(object, "fileId", "--attachments-map entry"),
+              CliJson.string(object, "title"),
+              CliJson.string(object, "mediaType")));
     }
     // A supplied inventory (even empty) is authoritative: attachmentsSupplied becomes true.
     return ConfluenceRenderContext.empty().withAttachmentReferences(references);
@@ -244,11 +271,13 @@ final class RenderConfig {
 
   // ---- helpers ------------------------------------------------------------
 
-  private static @Nullable UrlTemplate template(@Nullable String value, Set<String> allowed, String flag) {
+  private static @Nullable UrlTemplate template(
+      @Nullable String value, Set<String> allowed, String flag) {
     return value == null ? null : new UrlTemplate(value, allowed, flag);
   }
 
-  private static Map<String, String> readStringMap(@Nullable String path, CliJson json, String flag) {
+  private static Map<String, String> readStringMap(
+      @Nullable String path, CliJson json, String flag) {
     if (path == null) {
       return Map.of();
     }

@@ -1,15 +1,5 @@
 package dev.nthings.adf4j.internal.analyze;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Stream;
-
-import dev.nthings.adf4j.metadata.HeadingReference;
-import dev.nthings.adf4j.internal.AdfText;
-import dev.nthings.adf4j.internal.ConfluenceSupport;
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.ast.AdfInline;
@@ -26,14 +16,23 @@ import dev.nthings.adf4j.ast.Mention;
 import dev.nthings.adf4j.ast.Placeholder;
 import dev.nthings.adf4j.ast.Status;
 import dev.nthings.adf4j.ast.Text;
-
+import dev.nthings.adf4j.internal.AdfText;
+import dev.nthings.adf4j.internal.ConfluenceSupport;
+import dev.nthings.adf4j.metadata.HeadingReference;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Stream;
 import org.commonmark.ext.heading.anchor.IdGenerator;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Records every {@link Heading} and the union of toc-macro level ranges as the {@link AdfNodeWalker}
- * visits each node, then turns them into a {@link HeadingOutline} ({@link #build()} derives the
- * slug/anchor). Holds the accumulation for one document; create a fresh instance per document.
+ * Records every {@link Heading} and the union of toc-macro level ranges as the {@link
+ * AdfNodeWalker} visits each node, then turns them into a {@link HeadingOutline} ({@link #build()}
+ * derives the slug/anchor). Holds the accumulation for one document; create a fresh instance per
+ * document.
  */
 final class AdfHeadingCollector implements NodeVisitor {
 
@@ -56,8 +55,7 @@ final class AdfHeadingCollector implements NodeVisitor {
       case Heading heading -> headings.add(heading);
       case Extension extension ->
           recordToc(extension.extensionType(), extension.extensionKey(), extension.macroParams());
-      default -> {
-      }
+      default -> {}
     }
   }
 
@@ -68,8 +66,10 @@ final class AdfHeadingCollector implements NodeVisitor {
     }
   }
 
-  // Clamp level, extract text (skipping blank headings), derive an anchor (explicit Confluence anchor,
-  // else a commonmark slug). The slug generator is per-build, giving repeated headings stable suffixes.
+  // Clamp level, extract text (skipping blank headings), derive an anchor (explicit Confluence
+  // anchor,
+  // else a commonmark slug). The slug generator is per-build, giving repeated headings stable
+  // suffixes.
   HeadingOutline build() {
     var references = new ArrayList<HeadingReference>();
     var idGenerator = IdGenerator.builder().defaultId("section").build();
@@ -133,13 +133,15 @@ final class AdfHeadingCollector implements NodeVisitor {
         }
         case InlineCard card -> {
           var title = card.attrs().title();
-          appendPlainText(builder, title == null || title.isBlank() ? card.attrs().url() : title);
+          var label = title != null && !title.isBlank() ? title : card.attrs().url();
+          if (label != null) {
+            appendPlainText(builder, label);
+          }
         }
         case MediaInline media -> appendPlainText(builder, media.attrs().imageAlt());
         case Date date -> appendPlainText(builder, AdfText.dateFromTimestamp(date.timestamp()));
         case Placeholder placeholder -> appendPlainText(builder, placeholder.text());
-        default -> {
-        }
+        default -> {}
       }
     }
     return builder.toString().trim();
