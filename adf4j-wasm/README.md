@@ -38,7 +38,7 @@ target/adf4j-wasm.js.wasm   # the compiled module (~16 MB)
 import { loadAdf4j } from './adf4j-wasm.mjs';   // see src/test/js/
 
 const adf4j = await loadAdf4j();                // loads target/adf4j-wasm.js by default
-adf4j.version();                                // "1.0.0-SNAPSHOT"
+adf4j.version();                                // "1.0.0"
 adf4j.convert(adfJsonString);                   // -> Markdown string
 adf4j.convertJson(adfJsonString);
 // -> { ok, lossy, warnings, errors, body }

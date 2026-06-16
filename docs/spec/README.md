@@ -18,7 +18,7 @@ Note from Atlassian: "Marks and nodes included in the JSON schema may not be val
 ## Refreshing
 
 ```sh
-curl -sL -o docs/spec/adf-schema.json https://go.atlassian.com/adf-json-schema
+curl -sL -o spec/adf-schema.json https://go.atlassian.com/adf-json-schema
 ```
 
 For the structure doc, re-fetch the page above and update `structure.md`.

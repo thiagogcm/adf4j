@@ -50,7 +50,7 @@ final class Help {
             --unknown-nodes V      placeholder (default) | skip | fail | preserve-raw
             --table-fallback V     gfm-promote-first-row (default) | gfm-empty-header | html
 
-      Resolvers (data-driven; see docs/usage-guide.md for file schemas):
+      Resolvers:
             --media-url TEMPLATE   File-media URL template; placeholders {id} {collection} {localId}
             --media-map FILE       JSON object: file id -> URL (wins over the template)
             --attachment-url TPL   Attachment URL template; placeholders {fileId} {title}

@@ -29,7 +29,7 @@ import tools.jackson.databind.JsonNode;
  * Translates the shared rendering/resolver flags into a {@link MarkdownOptions}. Resolvers are
  * data-driven (URL templates plus JSON lookup tables) and preserve the library's decline-vs-answer
  * contract: an absent key/entry declines, a present entry answers (an empty value being a valid
- * empty answer). See {@code docs/usage-guide.md} for the data-file schemas.
+ * empty answer).
  */
 final class RenderConfig {
 

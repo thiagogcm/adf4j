@@ -1,110 +1,143 @@
-# Release process
+# Release guide
 
-Releases are automated with [JReleaser](https://jreleaser.org) on GitHub Actions. One manual **Release** run produces one release that publishes everything:
+`adf4j` releases are automated with GitHub Actions and JReleaser.
 
-| Artifact | Destination |
-| --- | --- |
-| `dev.nthings:adf4j` (library jar + sources + javadoc) | [Maven Central](https://central.sonatype.com/artifact/dev.nthings/adf4j) |
-| `adf4j-cli` native binaries — Linux, macOS, Windows | GitHub release assets |
-| `adf4j-cli` WASM bundle (`.js` + `.wasm`) | GitHub release asset |
-| `checksums_*.txt` + `.asc` signatures | GitHub release assets |
+One full release publishes:
 
-Between releases, every library change on `main` publishes a **snapshot** of `dev.nthings:adf4j` to the Central snapshots repository.
+| Artifact                                         | Destination           |
+| ------------------------------------------------ | --------------------- |
+| `dev.nthings:adf4j` jar, sources, javadocs, SBOM | Maven Central         |
+| `adf4j-cli-<version>-linux-x86_64.tar.gz`        | GitHub release asset  |
+| `adf4j-cli-<version>-osx-aarch64.tar.gz`         | GitHub release asset  |
+| `adf4j-cli-<version>-windows-x86_64.zip`         | GitHub release asset  |
+| `adf4j-wasm-<version>.zip`                       | GitHub release asset  |
+| Checksums and `.asc` signatures                  | GitHub release assets |
 
-### Versioning model — the POM is the source of truth
+Only the Java library is published to Maven Central. The native CLI and WASM bundle are distributed from GitHub Releases.
 
-The version lives in `pom.xml` as `X.Y.Z-SNAPSHOT` during development. A release (1) bumps the POM to `X.Y.Z` and commits it, (2) builds and publishes from that commit (JReleaser creates the `vX.Y.Z` tag + GitHub release), then (3) bumps the POM to the next `X.(Y+1).0-SNAPSHOT` and commits that. So the tagged commit carries the released version and the git history records every change. Versions follow [semver](https://semver.org).
+## Release model
 
-The moving parts:
+`pom.xml` is the version source of truth.
 
-- [`jreleaser.yml`](jreleaser.yml) — what to sign, deploy, release, and attach.
-- [`.github/workflows/release.yml`](.github/workflows/release.yml) — the release pipeline (manual).
-- [`.github/workflows/snapshot.yml`](.github/workflows/snapshot.yml) — publishes library snapshots.
-- [`pom.xml`](pom.xml) / [`adf4j-lib/pom.xml`](adf4j-lib/pom.xml) — the `publication` profile that produces the source/javadoc jars and a flattened, self-contained POM staged for Central.
+- Development versions end in `-SNAPSHOT`, for example `1.1.0-SNAPSHOT`.
+- Release versions do not end in `-SNAPSHOT`, for example `1.1.0` or `1.1.0-rc.1`.
+- Tags are `v<version>`.
+- Versions with a hyphen, such as `1.1.0-rc.1`, become GitHub pre-releases.
 
----
+JReleaser creates the tag and GitHub release. The workflow commits the release-version bump before publishing and the next `-SNAPSHOT` bump after publishing.
 
-## One-time setup
+Treat these as release-significant surfaces:
 
-Done once before the first release. They need accounts and DNS access that CI cannot reach.
+- exported Java API in `dev.nthings.adf4j`;
+- ADF-to-Markdown conversion behavior, diagnostics, metadata, and unresolved references;
+- CLI commands, options, exit codes, stdout/stderr contracts, and output formats;
+- WASM bridge API, loader behavior, and packaged examples;
+- Java/GraalVM/Binaryen runtime or build requirements.
 
-> [!IMPORTANT]
-> **Make the repository public first.** On a private repo the GitHub Release assets aren't downloadable anonymously, and the POM `url`/`scm` + README links (`https://github.com/thiagogcm/adf4j`) return 404 to consumers and to Maven Central's validators. Publish before the first tag:
-> ```bash
-> gh repo edit thiagogcm/adf4j --visibility public --accept-visibility-change-consequences
-> ```
+## Required setup
 
-### 1. Sonatype Central account + namespace
+Repository secrets:
 
-1. Create an account at <https://central.sonatype.com>.
-2. Register the **`dev.nthings`** namespace (*Namespaces → Add Namespace*); Central issues a DNS `TXT` verification key.
-3. Add that `TXT` record to the **`nthings.dev`** domain's DNS, then click *Verify*. The groupId `dev.nthings` maps to the domain `nthings.dev` — if you don't control it, change the `groupId` (in `pom.xml`, `adf4j-lib/pom.xml`, `jreleaser.yml`) to a namespace you can verify, e.g. `io.github.thiagogcm` (verified automatically via this GitHub account).
-4. Generate a **user token** (*Account → Generate User Token*). The username/password pair becomes the `JRELEASER_MAVENCENTRAL_*` secrets below — not your login email/password.
+| Secret                            | Purpose                             |
+| --------------------------------- | ----------------------------------- |
+| `JRELEASER_GPG_PUBLIC_KEY`        | Armored public signing key          |
+| `JRELEASER_GPG_SECRET_KEY`        | Armored private signing key         |
+| `JRELEASER_GPG_PASSPHRASE`        | Signing key passphrase              |
+| `JRELEASER_MAVENCENTRAL_USERNAME` | Maven Central Portal token username |
+| `JRELEASER_MAVENCENTRAL_PASSWORD` | Maven Central Portal token password |
 
-### 2. GPG signing key
+The Release workflow pushes version commits with `GITHUB_TOKEN`, so branch protection must allow that path or the version commits need to be done manually.
 
-Maven Central requires every artifact to be GPG-signed and the public key discoverable on a keyserver.
+Relevant files:
+
+- [`pom.xml`](pom.xml) - version and reactor.
+- [`adf4j-lib/pom.xml`](adf4j-lib/pom.xml) - Central `publication` staging.
+- [`adf4j-cli/pom.xml`](adf4j-cli/pom.xml) - native CLI build.
+- [`adf4j-wasm/pom.xml`](adf4j-wasm/pom.xml) - WASM build.
+- [`jreleaser.yml`](jreleaser.yml) - signing, deploy, release, checksums, assets.
+- [`.github/workflows/release.yml`](.github/workflows/release.yml) and [`.github/workflows/snapshot.yml`](.github/workflows/snapshot.yml) - release automation.
+
+## Before release
+
+Confirm:
+
+- `main` is green.
+- User-facing commits follow Conventional Commits for release notes.
+- The current POM version is the expected `X.Y.Z-SNAPSHOT`.
+- docs and examples match the released behavior.
+- conversion, CLI, WASM, parser, URL, macro, and HTML-rendering changes have focused tests.
+
+Useful local checks:
 
 ```bash
-gpg --full-generate-key                              # RSA 4096, real name/email
-gpg --list-secret-keys --keyid-format=long           # find <KEY_ID> (hex after rsa4096/)
-gpg --keyserver keyserver.ubuntu.com --send-keys <KEY_ID>   # publish so Central can verify
-gpg --armor --export             <KEY_ID> > gpg-public.asc
-gpg --armor --export-secret-keys <KEY_ID> > gpg-secret.asc
+./mvnw -B -ntp verify
+./mvnw -B -ntp -Ppublication -pl adf4j-lib -DskipTests clean deploy
+find target/staging-deploy -type f | sort
 ```
 
-### 3. GitHub repository secrets
-
-Add these under *Settings → Secrets and variables → Actions* (the workflow maps them to the `JRELEASER_*` env vars JReleaser expects):
-
-| Secret | Value |
-| --- | --- |
-| `JRELEASER_GPG_PUBLIC_KEY` | contents of `gpg-public.asc` (armored) |
-| `JRELEASER_GPG_SECRET_KEY` | contents of `gpg-secret.asc` (armored) |
-| `JRELEASER_GPG_PASSPHRASE` | the key's passphrase |
-| `JRELEASER_MAVENCENTRAL_USERNAME` | Central **user token** username |
-| `JRELEASER_MAVENCENTRAL_PASSWORD` | Central **user token** password |
+Optional CLI/WASM checks:
 
 ```bash
-gh secret set JRELEASER_GPG_PUBLIC_KEY  < gpg-public.asc
-gh secret set JRELEASER_GPG_SECRET_KEY  < gpg-secret.asc
-gh secret set JRELEASER_GPG_PASSPHRASE          # prompts
-gh secret set JRELEASER_MAVENCENTRAL_USERNAME   # prompts
-gh secret set JRELEASER_MAVENCENTRAL_PASSWORD   # prompts
-rm -f gpg-public.asc gpg-secret.asc             # clean up exported keys
+./mvnw -B -ntp package -Pnative -pl adf4j-cli -am -DskipTests
+./mvnw -B -ntp package -Pwasm -pl adf4j-wasm -am -DskipTests
+node adf4j-wasm/src/test/js/test.mjs
 ```
 
-`GITHUB_TOKEN` is provided automatically (the jobs grant it `contents: write` to create the release and commit the version bumps); no secret needed.
+## Cut release
 
-> [!IMPORTANT]
-> The release workflow commits the version bumps to `main` with `GITHUB_TOKEN`. If `main` is protected, allow `github-actions[bot]` to push (Branch protection → *Allow specified actors to bypass required pull requests*). A push made with `GITHUB_TOKEN` does **not** trigger other workflows, which is why the release is self-contained.
+Run **Actions** -> **Release** -> **Run workflow** on `main`.
 
----
+Inputs:
 
-## Cutting a release
+- `releaseVersion`: version to publish, for example `1.1.0` or `1.1.0-rc.1`.
+- `nextVersion`: next development version, for example `1.2.0-SNAPSHOT`.
+- `dryRun`: build and validate without committing, tagging, publishing, or creating a release.
 
-1. Make sure `main` is green (**Build and Test** passes) and the changelog-worthy commits are merged. Messages follow [Conventional Commits](https://www.conventionalcommits.org/) — JReleaser turns them into release notes.
-2. *Actions → **Release** → Run workflow*, and fill in:
-   - **releaseVersion** — the version to publish, e.g. `1.0.0` (or a pre-release like `1.0.0-rc.1`).
-   - **nextVersion** *(optional)* — next development version, e.g. `1.1.0-SNAPSHOT`. Blank auto-bumps the minor (`1.0.0` → `1.1.0-SNAPSHOT`).
-   - **dryRun** *(optional)* — see [Dry run](#dry-run).
+If `nextVersion` is blank, the workflow bumps the minor version:
 
-The workflow then runs, in order: **prepare** (bump POM to `releaseVersion`, commit) → **build-native** (CLI on Linux/macOS/Windows runners — native-image can't be cross-compiled) → **build-wasm** → **release** (stage the library, then JReleaser `full-release`: sign, deploy to Central, tag, create the GitHub release, upload the CLI archives) → **finalize** (bump POM to `nextVersion`, commit).
+```text
+1.1.0 -> 1.2.0-SNAPSHOT
+```
 
-### Pre-releases
+For pre-releases, always pass `nextVersion` explicitly. Otherwise `1.1.0-rc.1` auto-bumps to `1.2.0-SNAPSHOT`, not `1.1.0-SNAPSHOT`.
 
-A `releaseVersion` with a hyphen (`1.0.0-rc.1`) is tagged `v1.0.0-rc.1` and marked a **pre-release** on GitHub (via `prerelease.pattern` in `jreleaser.yml`). Central rejects `-SNAPSHOT` but accepts semver qualifiers like `-rc.1`.
+The workflow runs:
 
-> [!NOTE]
-> For a pre-release, **always pass an explicit `nextVersion`** (e.g. cut `1.0.0-rc.1` with `nextVersion: 1.0.0-SNAPSHOT`). The blank auto-bump strips the qualifier and bumps the minor, skipping past the final (`1.0.0-rc.1` → `1.1.0-SNAPSHOT`).
+`Prepare` -> native CLI builds -> WASM build -> `jreleaser full-release` -> `Finalize`.
 
----
+## Dry run
 
-## Publishing snapshots
+Use dry runs before changing release infrastructure or credentials.
 
-The **Publish snapshot** workflow ([`snapshot.yml`](.github/workflows/snapshot.yml)) runs on every push to `main` that touches the library (and on demand). It stages the library at its `X.Y.Z-SNAPSHOT` version and runs `jreleaser deploy` to the Central snapshots repo, self-skipping if the POM isn't a `-SNAPSHOT`. Only the library is snapshotted; no GitHub release is created. It authenticates with the **same** Central user token, exposed to JReleaser's `nexus2` deployer as `JRELEASER_NEXUS2_SNAPSHOTS_USERNAME` / `_PASSWORD` (mapped from the `JRELEASER_MAVENCENTRAL_*` secrets).
+A dry run builds native/WASM assets, stages the library, and runs:
 
-Consume a snapshot by adding the Central snapshots repository:
+```bash
+jreleaser full-release --dry-run
+```
+
+It skips commits, tags, Central deployment, attestations, GitHub release creation, and the final version bump. Inspect the uploaded `jreleaser-logs` artifact.
+
+## Verify release
+
+Check:
+
+- `main` has the release commit and the next snapshot commit.
+- `https://github.com/thiagogcm/adf4j/releases/tag/v<version>` exists.
+- release notes, native CLI archives, WASM zip, checksums, and signatures are present.
+- `dev.nthings:adf4j:<version>` appears in Maven Central Portal.
+- GitHub artifact attestations exist for jars and release archives.
+
+Maven Central releases are immutable. Fix bad releases with a new patch version.
+
+## Snapshots
+
+The **Publish snapshot** workflow publishes only `dev.nthings:adf4j` snapshots. It runs on relevant pushes to `main` and manually, self-skips unless the version ends in `-SNAPSHOT`, stages with `-Ppublication`, and runs:
+
+```bash
+jreleaser deploy
+```
+
+Consumers can use:
 
 ```xml
 <repositories>
@@ -117,45 +150,22 @@ Consume a snapshot by adding the Central snapshots repository:
 </repositories>
 ```
 
----
+Snapshots are mutable; republish by pushing again or rerunning the workflow.
 
-## Dry run
+## Recovery
 
-Validate the whole pipeline without publishing or committing. *Actions → **Release** → Run workflow*, set **releaseVersion** and tick **dryRun**: this builds the native/WASM CLI, stages all artifacts, and runs `jreleaser full-release --dry-run` — no commits, tag, Central deploy, or release; **finalize** is skipped. Inspect the `jreleaser-logs` artifact afterward.
+Start with the uploaded JReleaser logs: `trace.log` and `output.properties`.
 
-You can also validate locally:
+- Central rejection: inspect `target/staging-deploy` and Central validation messages.
+- Existing tag or release: `overwrite: false` means reruns will not replace `v<version>`.
+- Final bump failure: manually set `nextVersion`, commit, and push `main`.
+- Native or WASM failure: fix the platform build, clean partial release state, and rerun after a dry run.
+
+Cleanup before rerunning a failed unpublished release:
 
 ```bash
-# JReleaser config (version + token can be dummies for `config`)
-JRELEASER_PROJECT_VERSION=1.0.0 JRELEASER_GITHUB_TOKEN=x \
-JRELEASER_GPG_PUBLIC_KEY=x JRELEASER_GPG_SECRET_KEY=x JRELEASER_GPG_PASSPHRASE=x \
-JRELEASER_MAVENCENTRAL_SONATYPE_USERNAME=x JRELEASER_MAVENCENTRAL_SONATYPE_PASSWORD=x \
-jreleaser config
-
-# Publication staging, end-to-end (no upload)
-./mvnw -Ppublication -pl adf4j-lib -DskipTests clean deploy && find target/staging-deploy -type f
+gh release delete vX.Y.Z --yes 2>/dev/null || true
+git push --delete origin vX.Y.Z 2>/dev/null || true
+git revert --no-edit <release-commit-sha>
+git push origin main
 ```
-
----
-
-## Verifying a release
-
-- **GitHub release** (<https://github.com/thiagogcm/adf4j/releases>): three native archives, the WASM zip, `checksums_*.txt`, and `.asc` signatures attached, with notes generated from the commits.
-- **Maven Central**: deployments appear in the *Deployments* tab at <https://central.sonatype.com>. With `active: RELEASE` + `applyMavenCentralRules: true`, JReleaser uploads and releases automatically; artifacts are searchable at <https://central.sonatype.com/artifact/dev.nthings/adf4j> within ~10–30 minutes (and on `repo1.maven.org` later).
-
----
-
-## Troubleshooting & rollback
-
-- **Read the logs first.** The `release` job uploads `jreleaser-logs` (`trace.log`) on every run — it has the full JReleaser trace.
-- **Central deploy rejected** (missing signature / javadoc / POM field): inspect the staged POM (`target/staging-deploy/.../adf4j-*.pom`) and the validation messages in `trace.log`. The flattened POM must carry `name`, `description`, `url`, `licenses`, `scm`, and `developers`.
-- **Re-running a failed release**: JReleaser creates the tag with `overwrite: false`, so it won't clobber an existing release. Because **prepare** already committed the release-version bump, a clean re-run needs that commit undone. Typical recovery for a failure after the release commit but before the GitHub release:
-  ```bash
-  gh release delete vX.Y.Z --yes 2>/dev/null || true   # if it got created
-  git push --delete origin vX.Y.Z 2>/dev/null || true  # if the tag got pushed
-  git revert --no-edit <release-commit-sha>            # or reset main back to before it
-  git push origin main
-  ```
-  then run the workflow again. A dry run first avoids most of this.
-- **Maven Central is immutable**: a released version cannot be deleted or overwritten — fix a bad release by publishing a new patch version.
-- **Snapshots** are mutable: re-publish freely by pushing again or re-running **Publish snapshot**.

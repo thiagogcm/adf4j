@@ -1,31 +1,40 @@
 # adf4j — Architecture
 
-`adf4j` is a Java library that converts **Atlassian Document Format (ADF)** JSON into **GitHub-Flavored Markdown (GFM)**. This document describes its internal design: the module layout, the conversion pipeline, the data model, and the extensibility and error-handling models that hold it together.
+`adf4j` converts **Atlassian Document Format (ADF)** JSON into **GitHub-Flavored Markdown (GFM)**. This document describes its internal design: the module layout, the conversion pipeline, the data model, and the extensibility and error-handling models that hold it together.
 
-It is written for contributors and for integrators who need to reason about behaviour beyond the public surface. For task-oriented examples, see the [Usage Guide](./usage-guide.md); for the exhaustive list of conversion options and their lossy/by-design behaviours, see [Markdown Conversion](./markdown-conversion.md); for the ADF source format, see the [spec reference](./spec/README.md).
+It is written for contributors and for integrators who need to reason about behaviour beyond the public surface. For a first conversion, see [Getting Started](./getting-started.md); for task recipes and the mental model, the [Guide](./guide.md); for the exhaustive option table, mapping matrix, diagnostics, and CLI flags, the [Reference](./reference.md).
 
 ## Table of contents
 
-- [Design goals](#design-goals)
-- [System context](#system-context)
-- [Module and package structure](#module-and-package-structure)
-- [The conversion pipeline](#the-conversion-pipeline)
-- [Phase 1 — Parsing](#phase-1--parsing)
-- [Phase 2 — Analysis](#phase-2--analysis)
-- [Phase 3 — Rendering](#phase-3--rendering)
-- [Extensibility model](#extensibility-model)
-- [Error handling and diagnostics](#error-handling-and-diagnostics)
-- [Concurrency and lifecycle](#concurrency-and-lifecycle)
-- [Dependencies and packaging](#dependencies-and-packaging)
-- [Key design decisions](#key-design-decisions)
+- [adf4j — Architecture](#adf4j--architecture)
+  - [Table of contents](#table-of-contents)
+  - [Design goals](#design-goals)
+  - [System context](#system-context)
+  - [Module and package structure](#module-and-package-structure)
+  - [The conversion pipeline](#the-conversion-pipeline)
+  - [Phase 1 — Parsing](#phase-1--parsing)
+    - [The AST type model](#the-ast-type-model)
+    - [Unknown node handling](#unknown-node-handling)
+    - [Robustness](#robustness)
+  - [Phase 2 — Analysis](#phase-2--analysis)
+    - [The metadata model](#the-metadata-model)
+    - [The Confluence layer](#the-confluence-layer)
+  - [Phase 3 — Rendering](#phase-3--rendering)
+    - [Targeting GFM, and degrading predictably](#targeting-gfm-and-degrading-predictably)
+    - [Text escaping and URL safety](#text-escaping-and-url-safety)
+  - [Extensibility model](#extensibility-model)
+  - [Error handling and diagnostics](#error-handling-and-diagnostics)
+  - [Concurrency and lifecycle](#concurrency-and-lifecycle)
+  - [Dependencies and packaging](#dependencies-and-packaging)
+  - [Key design decisions](#key-design-decisions)
 
 ## Design goals
 
 The architecture is shaped by five priorities, in roughly this order:
 
 1. **Correctness and fidelity to GFM.** The output target is plain GitHub-Flavored Markdown. Constructs that GFM cannot express degrade predictably (HTML fallback, placeholders, or dropped marks) rather than producing malformed Markdown.
-2. **Lossless awareness.** Where information *is* lost, the conversion records a diagnostic. Callers can detect this programmatically and never have to diff input against output to discover a problem.
-3. **Safety against untrusted input.** ADF is treated as adversarial: parsing is bounded against resource-exhaustion, URL destinations are scheme-sanitized, and caller callbacks are sandboxed so a single failure cannot abort a conversion.
+2. **Lossless awareness.** Where information *is* lost, the conversion records a diagnostic. Callers detect this programmatically and never have to diff input against output to discover a problem.
+3. **Safety against untrusted input.** ADF is treated as adversarial: parsing is bounded against resource exhaustion, URL destinations are scheme-sanitized, and caller callbacks are sandboxed so a single failure cannot abort a conversion.
 4. **Encapsulation.** A small, deliberately curated public API sits on top of a large internal implementation. The boundary is enforced by the Java Platform Module System (JPMS), not by convention.
 5. **Reuse and thread-safety.** A converter is built once and reused across documents and threads. Per-document variation is expressed through immutable options, never by rebuilding the engine.
 
@@ -44,7 +53,7 @@ flowchart LR
     end
 
     lib -->|callbacks| host["Host application<br/>(URL/page/attachment resolution)"]
-    host -.->|resolved URLs & page trees| lib
+    host -.->|"resolved URLs & page trees"| lib
 
     lib --> md["GFM Markdown"]
     lib --> meta["ContentMetadata<br/>(references, outline)"]
@@ -57,14 +66,16 @@ The library never reaches out to Confluence, a CDN, or a database. That isolatio
 
 ## Module and package structure
 
-The project is a Maven multi-module build with two artifacts under the `dev.nthings` group:
+The project is a Maven multi-module build under the `dev.nthings` group:
 
-| Artifact | Module | Role |
-| --- | --- | --- |
-| `dev.nthings:adf4j` | `adf4j-lib` | The library (a JPMS module, `dev.nthings.adf4j`). |
-| `dev.nthings:adf4j-cli` | `adf4j-cli` | A thin command-line wrapper over the library. |
+| Artifact                | Module      | Role                                              |
+| ----------------------- | ----------- | ------------------------------------------------- |
+| `dev.nthings:adf4j`     | `adf4j-lib` | The library (a JPMS module, `dev.nthings.adf4j`). |
+| `dev.nthings:adf4j-cli` | `adf4j-cli` | A thin command-line wrapper over the library.     |
 
-The library’s public API is defined by its `module-info.java`: six exported packages, everything else encapsulated.
+A third module, `adf4j-wasm`, packages the same CLI as a WebAssembly build; it is excluded from the default reactor and builds only under the `wasm` profile.
+
+The library's public API is defined by its `module-info.java`: six exported packages, everything else encapsulated.
 
 ```mermaid
 flowchart TB
@@ -92,7 +103,7 @@ flowchart TB
 
 The significance of this split is contractual: **only the exported packages are API.** The `internal.*` packages — the parser, the analyzer, the renderer, and the pipeline that wires them — can change freely between releases. Integrators interact with the engine exclusively through `AdfToMarkdown` and the option, result, and metadata types.
 
-The public packages are themselves layered, with dependencies pointing strictly downward: `ast` and `metadata` are leaves, `result` and `confluence` build on them, `options` (which carries every caller-implemented hook) sits above those, and the root package's `AdfToMarkdown` is the only public class that touches `internal.*` — as the composition root, never in a signature.
+The public packages are themselves layered, dependencies pointing strictly downward: `ast` and `metadata` are leaves, `result` and `confluence` build on them, `options` (which carries every caller-implemented hook) sits above those, and the root package's `AdfToMarkdown` is the only public class that touches `internal.*` — as the composition root, never in a signature.
 
 Within the public surface, `MarkdownOptions` has no public constructor: it is built through `defaults()` + `withX(...)` withers, a `builder()`, or `toBuilder()` on an existing instance, all of which stay source-compatible as options are added.
 
@@ -128,21 +139,19 @@ flowchart LR
 
 The three phases have distinct responsibilities and distinct outputs:
 
-| Phase | Component | Input | Output |
-| --- | --- | --- | --- |
-| Parse | `AdfParsingService` | JSON string | `AdfDocument` AST + parse issues |
-| Analyze | `AdfDocumentAnalyzer` | `AdfDocument` | Heading outline, `ContentMetadata`, lossiness diagnostics |
-| Render | `AdfRenderer` | `AdfDocument` + outline | Markdown body + macro diagnostics |
+| Phase   | Component             | Input                   | Output                                                    |
+| ------- | --------------------- | ----------------------- | --------------------------------------------------------- |
+| Parse   | `AdfParsingService`   | JSON string             | `AdfDocument` AST + parse issues                          |
+| Analyze | `AdfDocumentAnalyzer` | `AdfDocument`           | Heading outline, `ContentMetadata`, lossiness diagnostics |
+| Render  | `AdfRenderer`         | `AdfDocument` + outline | Markdown body + macro diagnostics                         |
 
-A key structural decision is that **analysis precedes rendering and feeds it.** The renderer needs the document’s full heading outline before it emits the first line — a Table-of-Contents macro near the top of a document refers to headings further down, and heading anchors must be globally unique. Running a complete analysis pass first means the renderer is a pure forward walk with no need to look ahead or backpatch.
+A key structural decision is that **analysis precedes rendering and feeds it.** The renderer needs the document's full heading outline before it emits the first line — a Table-of-Contents macro near the top of a document refers to headings further down, and heading anchors must be globally unique. Running a complete analysis pass first means the renderer is a pure forward walk with no need to look ahead or backpatch.
 
-`AdfToMarkdown` exposes the pipeline phases selectively. `parse()` runs phase 1 only; `analyze()` runs phases 1–2 (no rendering); `convert()`/`toMarkdown()` run all three. `analyze()` and `convert()` accept either a JSON string or a pre-parsed input (so a document can be analyzed and rendered repeatedly without re-parsing): `convert()` takes the `ParseResult` itself — carrying its parse issues into each render — or a bare `AdfDocument`, and `analyze()` takes an `AdfDocument`; `parse()` and `toMarkdown()` take the JSON string. The `convert`, `analyze`, and `toMarkdown` forms each accept per-call `MarkdownOptions` to override the converter’s bound options without rebuilding anything.
-
-The three phases’ diagnostics are concatenated in pipeline order — parse issues first, then analyze-phase lossiness, then render-phase macro warnings — into the single `MarkdownResult.diagnostics()` list.
+`AdfToMarkdown` exposes the phases selectively: `parse()` runs phase 1 only; `analyze()` runs phases 1–2 (no rendering); `convert()`/`toMarkdown()` run all three. `analyze()` and `convert()` accept either a JSON string or a pre-parsed input so a document can be analyzed and rendered repeatedly without re-parsing — `convert()` takes the `ParseResult` itself (carrying its parse issues into each render) or a bare `AdfDocument`, and `analyze()` takes an `AdfDocument`; `parse()` and `toMarkdown()` take the JSON string. The `convert`, `analyze`, and `toMarkdown` forms each accept per-call `MarkdownOptions` to override the converter's bound options without rebuilding anything. The phases' diagnostics are concatenated in pipeline order — parse issues, then analyze-phase lossiness, then render-phase macro warnings — into the single `MarkdownResult.diagnostics()` list.
 
 ## Phase 1 — Parsing
 
-The parser turns a raw JSON string into a typed, immutable AST. It uses Jackson (`tools.jackson`, v3) purely as a tree reader: `JsonMapper.readTree(...)` produces a `JsonNode`, and a hand-written recursive descent (`AdfAstParser`) maps that tree onto the AST records by switching on each node’s `"type"` field.
+The parser turns a raw JSON string into a typed, immutable AST. It uses Jackson (`tools.jackson`, v3) purely as a tree reader: `JsonMapper.readTree(...)` produces a `JsonNode`, and a hand-written recursive descent (`AdfAstParser`) maps that tree onto the AST records by switching on each node's `"type"` field.
 
 ```mermaid
 flowchart TB
@@ -200,22 +209,22 @@ classDiagram
     AdfMark <|-- UnknownMark
 ```
 
-The four roots organize roughly sixty concrete types:
+The four roots organize more than sixty concrete types:
 
 - **`AdfNode`** is the top of the structural tree and permits exactly `AdfDocument`, `AdfBlock`, and `AdfInline`.
-- **`AdfBlock`** permits the 34 block-level constructs: structural (`Paragraph`, `Heading`, `Blockquote`, `Rule`), lists (`BulletList`, `OrderedList`, `ListItem`, `TaskList`/`TaskItem`, `DecisionList`/`DecisionItem`), tables (`Table`, `TableRow`, `TableCell`), media and layout (`MediaSingle`, `MediaGroup`, `Media`, `LayoutSection`, `LayoutColumn`, `Expand`), cards (`BlockCard`, `EmbedCard`), and extensions (`Extension`, `BodiedExtension`, `MultiBodiedExtension`), plus `UnknownBlock`.
-- **`AdfInline`** permits the 11 inline constructs: `Text`, `HardBreak`, `Mention`, `Emoji`, `Date`, `Status`, `Placeholder`, `InlineCard`, `MediaInline`, `InlineExtension`, plus `UnknownInline`.
-- **`AdfMark`** is a *separate* hierarchy (marks decorate text and media, they are not nodes). It permits the 18 formatting marks: `Strong`, `Em`, `Code`, `Strike`, `Underline`, `Link`, the visual-only marks (`TextColor`, `BackgroundColor`, `Border`, `FontSize`, `Alignment`, `Indentation`), and others, plus `UnknownMark`.
+- **`AdfBlock`** permits 33 block-level constructs plus `UnknownBlock`: structural (`Paragraph`, `Heading`, `Blockquote`, `Panel`, `Rule`), lists (`BulletList`, `OrderedList`, `ListItem`, `TaskList`/`TaskItem`/`BlockTaskItem`, `DecisionList`/`DecisionItem`), tables (`Table`, `TableRow`, `TableCell`), media and layout (`MediaSingle`, `MediaGroup`, `Media`, `Caption`, `Expand`, `NestedExpand`, `LayoutSection`, `LayoutColumn`), cards (`BlockCard`, `EmbedCard`), and extensions (`Extension`, `BodiedExtension`, `MultiBodiedExtension`, `ExtensionFrame`, `SyncBlock`, `BodiedSyncBlock`).
+- **`AdfInline`** permits 10 inline constructs plus `UnknownInline`: `Text`, `HardBreak`, `InlineCard`, `MediaInline`, `Date`, `Emoji`, `Mention`, `Placeholder`, `Status`, `InlineExtension`.
+- **`AdfMark`** is a *separate* hierarchy (marks decorate text and media — they wrap nodes rather than nest as children). It permits 17 formatting marks plus `UnknownMark`: `Strong`, `Em`, `Code`, `Strike`, `Underline`, `SubSup`, `Link`, the visual-only marks (`TextColor`, `BackgroundColor`, `Alignment`, `Indentation`, `FontSize`, `Border`), and `Annotation`, `Breakout`, `Fragment`, `DataConsumer`.
 
-Every AST type is an immutable `record`. Collection components are defensively copied in compact constructors (`List.copyOf`, `Map.copyOf`), and missing fields normalize to safe defaults (empty collections, empty strings) rather than nulls. Product-specific attributes that the AST does not model explicitly are preserved generically: `Attributes` wraps a `Map<String, Object>` and `MacroParams` wraps a `Map<String, String>`, decoupling the AST from both the JSON library and any single product’s schema. This is how, for example, the Confluence layer later reads `__confluenceMetadata` off a link without the core AST depending on Confluence.
+Every AST type is an immutable `record`. Collection components are defensively copied in compact constructors (`List.copyOf`, `Map.copyOf`), and missing fields normalize to safe defaults (empty collections, empty strings) rather than nulls. Product-specific attributes the AST does not model explicitly are preserved generically: `Attributes` wraps a `Map<String, Object>` and `MacroParams` wraps a `Map<String, String>`, decoupling the AST from both the JSON library and any single product's schema. Frequently-used node attributes also get typed records — `MediaAttrs` for media nodes and `CardAttrs` for the card nodes. This is how, for example, the Confluence layer later reads `__confluenceMetadata` off a link without the core AST depending on Confluence.
 
 ### Unknown node handling
 
-Forward-compatibility is built into the type model. Any `type` the parser does not recognize becomes an `UnknownBlock`, `UnknownInline`, or `UnknownMark` that carries the node’s **re-serialized raw JSON**. Nothing is silently discarded at parse time — the decision of what to *do* with an unknown node (placeholder, skip, preserve, or fail) is deferred to the render phase and governed by `UnknownNodePolicy`. This is what lets the library round-trip or gracefully degrade documents that use ADF features newer than the library itself.
+Forward-compatibility is built into the type model. Any `type` the parser does not recognize becomes an `UnknownBlock`, `UnknownInline`, or `UnknownMark` that carries the node's **re-serialized raw JSON**. Nothing is silently discarded at parse time — the decision of what to *do* with an unknown node (placeholder, skip, preserve, or fail) is deferred to the render phase and governed by `UnknownNodePolicy`. This is what lets the library round-trip or gracefully degrade documents that use ADF features newer than the library itself.
 
 ### Robustness
 
-The parser is hardened against adversarial input. JSON nesting is capped (depth 100, via Jackson’s `StreamReadConstraints`) so a pathologically deep payload surfaces as an `INVALID_JSON` diagnostic with an empty body rather than overflowing the stack. `RootValidator` checks the document envelope before AST construction and emits coded issues — `MISSING_DOCUMENT`, `INVALID_ROOT_TYPE`, `INVALID_ROOT_NODE` (type ≠ `"doc"`), `INVALID_VERSION`, `INVALID_CONTENT` (content not an array), and the non-fatal `UNSUPPORTED_VERSION` warning. Blank or unparseable input yields `ParseResult.empty()` (a null document, `validAdfRoot == false`).
+The parser is hardened against adversarial input. JSON nesting is capped (depth 100, via Jackson's `StreamReadConstraints`) so a pathologically deep payload surfaces as an `INVALID_JSON` diagnostic with an empty body rather than overflowing the stack. `RootValidator` checks the document envelope before AST construction and emits coded issues — `MISSING_DOCUMENT`, `INVALID_ROOT_TYPE`, `INVALID_ROOT_NODE` (type ≠ `"doc"`), `INVALID_VERSION`, `INVALID_CONTENT` (content not an array), and the non-fatal `UNSUPPORTED_VERSION` warning. Blank or unparseable input yields `ParseResult.empty()` (a null document, `validAdfRoot == false`).
 
 ## Phase 2 — Analysis
 
@@ -240,15 +249,15 @@ flowchart TB
 
 The walker is an exhaustive `switch` over the sealed block/inline types (no `default` clause — the compiler guarantees every type is visited), descending pre-order into children and invoking each visitor before recursion. Visitors are pure accumulators: they observe nodes in document order and never re-walk the tree. The three default collectors are:
 
-- **`AdfHeadingCollector`** builds the `HeadingOutline`. It clamps heading levels to 1–6, extracts plain text from each heading’s inline content, and assigns an anchor — an explicit Confluence anchor macro if present, otherwise a generated slug made unique across the document (`section`, `section-1`, …). It also records which heading levels are referenced by any `toc` macro (`TocLevelRange`), so the renderer can later build the table of contents over exactly the requested levels. The outline indexes headings by AST node identity (`IdentityHashMap`) so the renderer can look up a heading’s computed anchor in O(1) during its forward pass.
-- **`AdfContentMetadataExtractor`** harvests outbound references — internal page links and page cards (`PageReference`), external links (`ExternalReference`), mentions (`MentionReference`), attachments/media (`AttachmentReference`), `pagetree`/`children` macro occurrences (`PageTreeReference`), `excerpt-include` occurrences (`ExcerptIncludeReference`), and the page's own `excerpt` regions (`ExcerptDefinition`) — deduplicating each in first-seen order (tree and excerpt macros keep every occurrence, since their count is itself a signal). It uses the `ConfluenceRenderContext` (carried on the options) to resolve attachment macros such as `viewpdf` against the caller-supplied attachment table, and to credit the `attachments` macro's expansion of that inventory.
+- **`AdfHeadingCollector`** builds the `HeadingOutline`. It clamps heading levels to 1–6, extracts plain text from each heading's inline content, and assigns an anchor — an explicit Confluence anchor macro if present, otherwise a generated slug made unique across the document (`section`, `section-1`, …). It also records which heading levels are referenced by any `toc` macro (`TocLevelRange`), so the renderer can later build the table of contents over exactly the requested levels. The outline indexes headings by AST node identity (`IdentityHashMap`) so the renderer can look up a heading's computed anchor in O(1) during its forward pass.
+- **`AdfContentMetadataExtractor`** harvests outbound references — internal page links and page smart-cards (`PageReference`), external links (`ExternalReference`), mentions (`MentionReference`), attachments/media (`AttachmentReference`), `pagetree`/`children` macro occurrences (`PageTreeReference`), `excerpt-include` occurrences (`ExcerptIncludeReference`), and the page's own `excerpt` regions (`ExcerptDefinition`) — deduplicating each in first-seen order (tree and excerpt macros keep every occurrence, since their count is itself a signal). It uses the `ConfluenceRenderContext` (carried on the options) to resolve attachment macros such as `viewpdf` against the caller-supplied attachment table, and to credit the `attachments` macro's expansion of that inventory.
 - **`AdfLossinessCollector`** counts unknown nodes and unknown marks and turns them into diagnostics according to the active `UnknownNodePolicy`.
 
-The three outputs are bundled into a `DocumentAnalysis` record. Crucially, `ContentMetadata` is a *first-class deliverable*, not an internal artifact: callers can run `analyze()` on its own to plan work — most importantly, `ContentMetadata.referencedFileIds()` returns the set of attachment file IDs a document depends on, so an integrator can pre-fetch exactly those binaries before (or instead of) rendering.
+The three outputs are bundled into a `DocumentAnalysis` record. Crucially, `ContentMetadata` is a *first-class deliverable*, not an internal artifact: callers can run `analyze()` on its own to plan work — most importantly, `ContentMetadata.referencedFileIds()` returns the set of attachment file IDs a document depends on, so an integrator can pre-fetch exactly those binaries before (or instead of) rendering. The [analyze-first recipe](./guide.md#planning-fetches-with-analyze-first) in the Guide shows that pattern end to end.
 
 ### The metadata model
 
-`ContentMetadata` aggregates six immutable lists:
+`ContentMetadata` aggregates the document's outbound references and outline as immutable lists, plus the derived `referencedFileIds()` set:
 
 ```mermaid
 classDiagram
@@ -258,18 +267,10 @@ classDiagram
         +List~MentionReference~ mentionRefs
         +List~AttachmentReference~ attachmentRefs
         +List~PageTreeReference~ pageTreeRefs
+        +List~ExcerptIncludeReference~ excerptRefs
+        +List~ExcerptDefinition~ excerpts
         +List~HeadingReference~ outline
         +Set~String~ referencedFileIds()
-    }
-    class PageReference {
-        +String pageNodeId
-    }
-    class ExternalReference {
-        +String url
-    }
-    class MentionReference {
-        +String id
-        +String text
     }
     class AttachmentReference {
         +String fileId
@@ -285,9 +286,6 @@ classDiagram
         +String text
         +String anchor
     }
-    ContentMetadata o-- PageReference
-    ContentMetadata o-- ExternalReference
-    ContentMetadata o-- MentionReference
     ContentMetadata o-- AttachmentReference
     ContentMetadata o-- PageTreeReference
     ContentMetadata o-- HeadingReference
@@ -295,13 +293,13 @@ classDiagram
 
 ### The Confluence layer
 
-ADF is product-agnostic, but Confluence overloads it with conventions the core AST does not name: page links carry a `__confluenceMetadata` object, page identity hides in URL patterns, and macros live under the `com.atlassian.confluence.macro.core` extension namespace. This knowledge is isolated in two places:
+ADF is product-agnostic, but Confluence overloads it with conventions the core AST does not name: page links carry a `__confluenceMetadata` object, page identity hides in URL patterns, and macros live under the `com.atlassian.confluence.macro.core` extension namespace. This knowledge is isolated in three places:
 
 - `confluence.ConfluenceRenderContext` (public) carries the caller-supplied attachment table and owns its lookup invariant: entries are re-keyed by normalized (trimmed, lower-cased) title on construction, and `attachment(title)` resolves a macro's by-name reference to a file ID regardless of how the caller keyed the input.
-- `confluence.ConfluenceMetadata` (public) is the typed view of the `__confluenceMetadata` object that Confluence attaches to a link’s `Attributes` — `linkType`, `pageId`, `contentId`, `id`.
+- `confluence.ConfluenceMetadata` (public) is the typed view of the `__confluenceMetadata` object Confluence attaches to a link's `Attributes` — `linkType`, `pageId`, `contentId`, `id`.
 - `internal.ConfluenceSupport` (encapsulated) is the single source of truth for Confluence heuristics: extracting a page node id from a URL (a tolerant regex over `/pages/<id>` forms) and/or a `ConfluenceMetadata`, detecting macro extensions (the `com.atlassian.confluence.macro.core` namespace), and reading anchor ids.
 
-Keeping these heuristics in one internal module means the rest of the engine treats “is this a page reference?” as a single function call, and the Confluence-specific surface area stays small and replaceable.
+Keeping these heuristics in one internal module means the rest of the engine treats "is this a page reference?" as a single function call, and the Confluence-specific surface area stays small and replaceable.
 
 ## Phase 3 — Rendering
 
@@ -332,20 +330,13 @@ flowchart TB
     emptyh --> gfm
 ```
 
-The same degrade-predictably principle governs the other lossy paths, each of which is either configurable or recorded as a diagnostic:
-
-- **Visual-only marks** (colour, background, border, font size, block alignment) have no GFM equivalent and are dropped by default; with `htmlVisualMarks` enabled they are preserved as inline `<span style>` / `<div align>`.
-- **Media and attachments** with no resolver render to inert `media:`/`attachment:` placeholder destinations rather than broken links.
-- **Unsupported macros** become a labelled placeholder and a `WARNING` diagnostic collected through `MacroDiagnostics`.
-- **Hard breaks** render as the two-trailing-space GFM break, collapsed to a single space inside headings and to `\n` inside table cells (and to a soft newline document-wide when `collapseHardBreaks` is set).
-
-For the complete catalogue of lossy and by-design behaviours, see [Markdown Conversion](./markdown-conversion.md).
+The same degrade-predictably principle governs the other lossy paths — visual-only marks dropped (or kept as inline HTML under `htmlVisualMarks`), resolver-less media/attachments rendered as inert `media:`/`attachment:` placeholders, unsupported macros emitted as a labelled placeholder plus a `WARNING`, and hard breaks adapted to their context (heading, table cell, body). Each is either configurable or recorded as a diagnostic; the full catalogue lives in [the lossy and by-design behaviours](./reference.md#lossy-and-by-design-behaviours).
 
 ### Text escaping and URL safety
 
 Escaping is centralized in `MarkdownText`, which backslash-escapes CommonMark inline punctuation, neutralizes leading block markers per line (so body text cannot accidentally become a heading or list item), and fences code spans/blocks with a backtick run long enough to contain their content. `MarkdownInputCleaner` normalizes exotic Unicode whitespace and invisible characters before any text re-enters a CommonMark parse (used when HTML table cells are rebuilt via the CommonMark + jsoup path).
 
-Because ADF is untrusted, **URL destinations are scheme-sanitized** against a safe allow-list before they reach the output, so a non-allow-listed scheme such as `javascript:` or `data:` can no longer execute. `ExtensionRenderer` output is the one exception: it is emitted verbatim and is the caller’s responsibility to escape. The allow-list and the exact sanitization mechanism are specified in [URL handling and safety](./markdown-conversion.md#url-handling-and-safety).
+Because ADF is untrusted, **URL destinations are scheme-sanitized** against a safe allow-list before they reach the output, so a non-allow-listed scheme such as `javascript:` or `data:` can no longer execute. `ExtensionRenderer` and `ExcerptResolver` output are the exceptions: emitted verbatim, the caller's responsibility to escape. The allow-list and the exact sanitization mechanism are specified in [URL handling and safety](./reference.md#url-handling-and-safety).
 
 ## Extensibility model
 
@@ -372,19 +363,10 @@ sequenceDiagram
     Conv-->>App: MarkdownResult
 ```
 
-| Hook | Signature | Fired for | Decline / failure behaviour |
-| --- | --- | --- | --- |
-| `MediaResolver` | `String resolve(MediaAttrs)` | File media nodes (which carry ids, not URLs) | `null`/blank → `media:<collection>/<id>` placeholder |
-| `AttachmentResolver` | `String resolve(AttachmentReference)` | Resolved Confluence `attachment:` references | `null`/blank → `attachment:<fileId>` placeholder |
-| `PageLinkResolver` | `String resolve(String pageNodeId)` | Inter-page links, page cards, and page-tree entries | `null`/blank → original href / plain text |
-| `PageTreeResolver` | `List<PageTreeEntry> resolve(PageTreeReference)` | `pagetree` / `children` macros | `null`/throws → `{{pagetree}}` / `{{children}}` token; an empty list is authoritative and renders nothing |
-| `ExcerptResolver` | `String resolve(ExcerptIncludeReference)` | `excerpt-include` macros | `null`/throws → `[Excerpt include: page]` token; an empty string is authoritative and renders nothing |
-| `ExtensionRenderer` | `String render(ExtensionContext)` | Any extension/macro, consulted in order before built-ins | `null`/throws → next renderer, then built-in handling |
+The hooks are `MediaResolver`, `AttachmentResolver`, `PageLinkResolver`, `PageTreeResolver`, `ExcerptResolver`, and `ExtensionRenderer` (consulted in order before the built-ins, first non-null wins). Their signatures, what fires each one, and the decline/fallback conventions are tabulated in [the resolver model](./guide.md#the-resolver-model); the task-oriented recipes are in the [Guide](./guide.md). Two design choices make the model robust:
 
-Two design choices make this model robust:
-
-- **Callback isolation.** Every hook invocation is wrapped by `CallbackGuards.guard(...)`: a `RuntimeException` thrown from a caller’s lambda is logged and converted into the hook’s fallback value. One buggy resolver cannot abort a whole document.
-- **Render-time injection of caller knowledge.** `PageTreeResolver` is the sharpest example. A `pagetree`/`children` macro in ADF is just a *reference* — Confluence builds the actual list server-side from the space hierarchy, which the document does not carry. The resolver lets the caller supply that hierarchy as depth-tagged `PageTreeEntry` values, each of whose `pageNodeId` is then routed back through the `pageLinkResolver` to produce real links. The engine contributes the structure and escaping; the caller contributes the data only it has.
+- **Callback isolation.** Every hook invocation is wrapped by `CallbackGuards.guard(...)`: a `RuntimeException` thrown from a caller's lambda is logged and converted into the hook's fallback value. One buggy resolver cannot abort a whole document.
+- **Render-time injection of caller knowledge.** `PageTreeResolver` is the sharpest example. A `pagetree`/`children` macro in ADF is just a *reference* — Confluence builds the actual list server-side from the space hierarchy, which the document does not carry. The resolver lets the caller supply that hierarchy as depth-tagged `PageTreeEntry` values, each of whose `pageNodeId` is then routed back through the `pageLinkResolver` to produce real links. The engine contributes the structure and escaping; the caller contributes the data only it has. The decline convention reflects this division: a present (even empty) answer is authoritative, while `null`/blank/throws keeps the placeholder and records the reference on `MarkdownResult.unresolved()`.
 
 ## Error handling and diagnostics
 
@@ -392,51 +374,43 @@ Two design choices make this model robust:
 
 - **`ParseResult`** (`parse()`) — the parsed `AdfDocument` (null on blank/invalid input), the list of parse `Diagnostic`s, and a `validAdfRoot` flag.
 - **`MarkdownResult`** (`convert()`) — the Markdown `body`, the `ContentMetadata`, the merged `diagnostics` list, and the `unresolved` references (lookups this render's resolvers declined: page ids a `PageLinkResolver` returned nothing for, and tree/excerpt macros that fell back to their placeholder token).
-- **`Diagnostic`** — a `code`, human `message`, optional `cause`, and a `Severity` of `INFO`, `WARNING`, or `ERROR`; raised by all three phases (parse, analyze, render).
+- **`Diagnostic`** — a `code`, human `message`, optional `cause`, and a `Severity` of `INFO`, `WARNING`, or `ERROR`; raised by all three phases.
 
-The severity ladder is the contract for “did this convert cleanly?”:
+The severity ladder is the contract for "did this convert cleanly?": `INFO` is a non-lossy note, `WARNING` means content was converted but altered or dropped, `ERROR` means conversion aborted or produced an empty body. `MarkdownResult.wasLossy()` returns true when any diagnostic is `WARNING` or `ERROR`. Callers gate "real loss" on this rather than on the mere presence of diagnostics, because some are informational. The contract draws a deliberate line: `wasLossy()` flags content that was *unexpectedly* dropped or altered, but **not** *options-driven, by-design* lossiness (the [catalogue](./reference.md#lossy-and-by-design-behaviours)), since those are expected outcomes of the chosen configuration. The full code-and-severity table is in [the diagnostics reference](./reference.md#diagnostics).
 
-| Severity | Meaning | Example |
-| --- | --- | --- |
-| `INFO` | Non-lossy note | An unknown node preserved as raw JSON under `PRESERVE_RAW` |
-| `WARNING` | Content converted but altered or dropped | Unsupported macro placeholdered; unknown mark dropped |
-| `ERROR` | Conversion aborted or produced an empty body | `INVALID_JSON`; structural validation failure |
-
-`MarkdownResult.wasLossy()` returns true when any diagnostic is `WARNING` or `ERROR`. Callers gate “real loss” on this rather than on the mere presence of diagnostics, because some are informational. The contract draws a deliberate line: `wasLossy()` flags content that was *unexpectedly* dropped or altered, but **not** *options-driven, by-design* lossiness (the catalogue of which lives in [Lossy and by-design behaviours](./markdown-conversion.md#lossy-and-by-design-behaviours)), since those are expected outcomes of the chosen configuration, not surprises.
-
-The single hard-failure mode is `UnknownNodePolicy.FAIL`, which throws `IllegalStateException` when an unknown node is encountered. Every other policy degrades to diagnostics.
+The single hard-failure mode is `UnknownNodePolicy.FAIL`, which throws `IllegalStateException` when an unknown node is rendered. Every other policy degrades to diagnostics.
 
 ## Concurrency and lifecycle
 
-`AdfToMarkdown` is **immutable and thread-safe**. Its internal `AdfPipeline` and the parser/analyzer/renderer it owns are all stateless after construction (the only mutable state, `MacroDiagnostics`, is created fresh per render and never shared). The intended lifecycle is therefore:
+`AdfToMarkdown` is **immutable and thread-safe**. Its internal `AdfPipeline` and the parser/analyzer/renderer it owns are all stateless after construction (the only mutable state — `MacroDiagnostics` and `UnresolvedTracker` — is created fresh per render and never shared). The intended lifecycle is therefore:
 
 1. Build one converter — `AdfToMarkdown.create()` or `AdfToMarkdown.with(options)` — at startup.
 2. Reuse it across all documents and threads.
 3. When options must vary per document (per-page media base URLs, attachment tables, page-link maps), keep the single converter and pass the varying `MarkdownOptions` to the per-call `convert(json, options)` / `analyze(json, options)` overloads — never rebuild the engine per document.
 
-
 ## Dependencies and packaging
 
 The library targets **JDK 25** and depends on a deliberately small set of well-scoped libraries, declared as JPMS `requires`:
 
-| Dependency | Purpose |
-| --- | --- |
-| Jackson (`tools.jackson`, v3) core + databind | JSON tree reading in the parser |
+| Dependency                                                                                                | Purpose                                                             |
+| --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| Jackson (`tools.jackson`, v3) core + databind                                                             | JSON tree reading in the parser                                     |
 | CommonMark + GFM extensions (tables, strikethrough, task lists, alerts, heading-anchor, image-attributes) | Re-rendering Markdown fragments to HTML for the HTML table fallback |
-| jsoup | Building and serializing the HTML table fallback |
-| SLF4J | Logging (notably for guarded-callback failures) |
+| jsoup                                                                                                     | Building and serializing the HTML table fallback                    |
+| JSpecify                                                                                                  | Nullness annotations (`@NullMarked`/`@Nullable`)                    |
+| SLF4J                                                                                                     | Logging (notably for guarded-callback failures)                     |
 
-The CLI module (`adf4j-cli`) adds JLine for argument parsing and is a thin wrapper that reads ADF from a file or stdin and writes Markdown to a file or stdout. It is distributed primarily as a GraalVM **native** executable (with a **WebAssembly** build profile as well) rather than a fat jar. Its flags and invocation are documented in the [Usage Guide](./usage-guide.md#using-the-cli).
+The CLI module (`adf4j-cli`) adds no parsing framework — its arguments are handled by a hand-written parser (`Args`) — and is a thin wrapper that reads ADF from a file or stdin and writes Markdown to a file or stdout. It is reflection-free and uses Jackson in tree mode only, so it carries no native-image metadata. It is distributed primarily as a GraalVM **native** executable (with a **WebAssembly** build under the `wasm` profile) rather than a fat jar; running it on the JVM requires putting its dependencies on the path yourself. Its flags and invocation are documented in [the CLI reference](./reference.md#cli).
 
 ## Key design decisions
 
-| Decision | Rationale | Trade-off accepted |
-| --- | --- | --- |
-| Three-phase pipeline (parse → analyze → render) with analysis feeding rendering | The renderer needs the global heading outline (TOC macros, unique anchors) before its first line; a separate analysis pass keeps rendering a pure forward walk | One extra tree traversal per conversion |
-| Sealed interfaces + records for the AST | Compiler-enforced exhaustiveness across the walker and renderer; immutability for free | Adding a node type touches every exhaustive `switch` (by design — it surfaces every site needing attention) |
-| Unknown nodes preserved with raw JSON; behaviour deferred to `UnknownNodePolicy` | Forward-compatibility with newer ADF; caller chooses placeholder / skip / preserve / fail | Slightly larger AST surface (`Unknown*` variants) |
-| Single walk, multiple `NodeVisitor` collectors | Heading outline, metadata, and lossiness share one O(n) traversal | Collectors must be independent and order-insensitive |
-| Diagnostics-as-data with a severity ladder, not exceptions | Callers detect loss programmatically and proceed on best-effort output | Callers must inspect `wasLossy()`/severities rather than rely on a thrown error |
-| Caller knowledge injected via guarded resolver callbacks | Keeps the library I/O-free and deterministic; environment specifics stay in the host | Callers must implement resolvers to get real URLs/links/page trees |
-| JPMS encapsulation of `internal.*` | A small, stable public API over a freely-evolving implementation | Reflective or cross-module access to internals is blocked |
-| Immutable, reusable converter; per-call options for variation | Thread-safety and cheap reuse; no engine rebuild per document | Options are immutable values that must be threaded explicitly |
+| Decision                                                                         | Rationale                                                                                                                                                      | Trade-off accepted                                                                                          |
+| -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Three-phase pipeline (parse → analyze → render) with analysis feeding rendering  | The renderer needs the global heading outline (TOC macros, unique anchors) before its first line; a separate analysis pass keeps rendering a pure forward walk | One extra tree traversal per conversion                                                                     |
+| Sealed interfaces + records for the AST                                          | Compiler-enforced exhaustiveness across the walker and renderer; immutability for free                                                                         | Adding a node type touches every exhaustive `switch` (by design — it surfaces every site needing attention) |
+| Unknown nodes preserved with raw JSON; behaviour deferred to `UnknownNodePolicy` | Forward-compatibility with newer ADF; caller chooses placeholder / skip / preserve / fail                                                                      | Slightly larger AST surface (`Unknown*` variants)                                                           |
+| Single walk, multiple `NodeVisitor` collectors                                   | Heading outline, metadata, and lossiness share one O(n) traversal                                                                                              | Collectors must be independent and order-insensitive                                                        |
+| Diagnostics-as-data with a severity ladder, not exceptions                       | Callers detect loss programmatically and proceed on best-effort output                                                                                         | Callers must inspect `wasLossy()`/severities rather than rely on a thrown error                             |
+| Caller knowledge injected via guarded resolver callbacks                         | Keeps the library I/O-free and deterministic; environment specifics stay in the host                                                                           | Callers must implement resolvers to get real URLs/links/page trees                                          |
+| JPMS encapsulation of `internal.*`                                               | A small, stable public API over a freely-evolving implementation                                                                                               | Reflective or cross-module access to internals is blocked                                                   |
+| Immutable, reusable converter; per-call options for variation                    | Thread-safety and cheap reuse; no engine rebuild per document                                                                                                  | Options are immutable values that must be threaded explicitly                                               |

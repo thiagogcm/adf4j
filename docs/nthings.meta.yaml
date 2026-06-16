@@ -1,0 +1,5 @@
+slug: adf4j
+include:
+  project: true
+exclude:
+  - "spec/**"

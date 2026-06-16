@@ -27,9 +27,7 @@ import dev.nthings.adf4j.result.ParseResult;
  * }
  *
  * <p>The target is GitHub-Flavored Markdown. Some ADF constructs are lossy or by-design (dropped
- * visual marks, the table HTML fallback, synthetic {@code media:} placeholders). These behaviors,
- * URL scheme sanitization, and the available {@link MarkdownOptions} are documented in
- * {@code docs/markdown-conversion.md}.
+ * visual marks, the table HTML fallback, synthetic {@code media:} placeholders).
  */
 public final class AdfToMarkdown {
 

@@ -1,6 +1,6 @@
 package dev.nthings.adf4j.cli;
 
-/** The CLI's exit-code contract (see {@code docs/usage-guide.md}); codes are stable and scriptable. */
+/** The CLI's exit-code contract; codes are stable and scriptable. */
 final class ExitCodes {
 
   /** Normal completion. */

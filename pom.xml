@@ -12,7 +12,7 @@
     <name>adf4j-parent</name>
     <description>Atlassian Document Format processing library for Java.</description>
     <url>https://github.com/thiagogcm/adf4j</url>
-    <inceptionYear>2025</inceptionYear>
+    <inceptionYear>2026</inceptionYear>
 
     <licenses>
         <license>
@@ -31,8 +31,8 @@
     </developers>
 
     <scm child.scm.connection.inherit.append.path="false"
-         child.scm.developerConnection.inherit.append.path="false"
-         child.scm.url.inherit.append.path="false">
+        child.scm.developerConnection.inherit.append.path="false"
+        child.scm.url.inherit.append.path="false">
         <connection>scm:git:https://github.com/thiagogcm/adf4j.git</connection>
         <developerConnection>scm:git:git@github.com:thiagogcm/adf4j.git</developerConnection>
         <url>https://github.com/thiagogcm/adf4j</url>
@@ -44,12 +44,6 @@
     </modules>
 
     <profiles>
-        <!--
-          The WebAssembly build. Kept out of the default reactor because it requires an Oracle
-          GraalVM JDK (for the `svm-wasm` tool and the `org.graalvm.webimage.api` system module),
-          so `mvn install` on a stock JDK is unaffected. Build it with `-Pwasm`, e.g.:
-              ./mvnw -Pwasm -pl adf4j-wasm -am package
-        -->
         <profile>
             <id>wasm</id>
             <modules>
@@ -59,41 +53,39 @@
     </profiles>
 
     <properties>
+        <maven.compiler.release>25</maven.compiler.release>
         <maven.compiler.source>25</maven.compiler.source>
         <maven.compiler.target>25</maven.compiler.target>
-        <maven.compiler.release>25</maven.compiler.release>
-        <jspecify.version>1.0.0</jspecify.version>
-        <commonmark.version>0.28.0</commonmark.version>
-        <jsoup.version>1.22.2</jsoup.version>
-        <jackson.version>3.2.0</jackson.version>
-        <slf4j.version>2.0.18</slf4j.version>
-        <junit-jupiter.version>6.1.0</junit-jupiter.version>
-        <assertj-core.version>3.27.7</assertj-core.version>
-        <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
-        <maven-enforcer-plugin.version>3.6.3</maven-enforcer-plugin.version>
-        <maven-surefire-plugin.version>3.5.5</maven-surefire-plugin.version>
-        <maven-jar-plugin.version>3.5.0</maven-jar-plugin.version>
-        <maven-clean-plugin.version>3.5.0</maven-clean-plugin.version>
-        <maven-resources-plugin.version>3.5.0</maven-resources-plugin.version>
-        <maven-install-plugin.version>3.1.4</maven-install-plugin.version>
-        <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
-        <native-maven-plugin.version>1.1.2</native-maven-plugin.version>
-        <maven-source-plugin.version>3.4.0</maven-source-plugin.version>
-        <maven-javadoc-plugin.version>3.12.0</maven-javadoc-plugin.version>
-        <maven-deploy-plugin.version>3.1.4</maven-deploy-plugin.version>
-        <flatten-maven-plugin.version>1.7.3</flatten-maven-plugin.version>
-        <cyclonedx-maven-plugin.version>2.9.1</cyclonedx-maven-plugin.version>
-        <spotless-maven-plugin.version>2.44.5</spotless-maven-plugin.version>
-        <!-- palantir-java-format 2.68.0 (latest) breaks on JDK 25 (javac-internal API change); google-java-format does not. -->
-        <google-java-format.version>1.27.0</google-java-format.version>
-        <errorprone.version>2.48.0</errorprone.version>
-        <nullaway.version>0.12.7</nullaway.version>
+        <maven.deploy.skip>true</maven.deploy.skip>
+        <project.build.outputTimestamp>2026-06-14T00:00:00Z</project.build.outputTimestamp>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <!-- Reproducible builds: pin archive entry timestamps. Bump when cutting a release. -->
-        <project.build.outputTimestamp>2026-06-14T00:00:00Z</project.build.outputTimestamp>
-        <!-- Nothing is published by default; adf4j-lib opts back in. -->
-        <maven.deploy.skip>true</maven.deploy.skip>
+
+        <assertj-core.version>3.27.7</assertj-core.version>
+        <commonmark.version>0.28.0</commonmark.version>
+        <cyclonedx-maven-plugin.version>2.9.1</cyclonedx-maven-plugin.version>
+        <errorprone.version>2.48.0</errorprone.version>
+        <flatten-maven-plugin.version>1.7.3</flatten-maven-plugin.version>
+        <google-java-format.version>1.27.0</google-java-format.version>
+        <jackson.version>3.2.0</jackson.version>
+        <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
+        <jsoup.version>1.22.2</jsoup.version>
+        <jspecify.version>1.0.0</jspecify.version>
+        <junit-jupiter.version>6.1.0</junit-jupiter.version>
+        <maven-clean-plugin.version>3.5.0</maven-clean-plugin.version>
+        <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
+        <maven-deploy-plugin.version>3.1.4</maven-deploy-plugin.version>
+        <maven-enforcer-plugin.version>3.6.3</maven-enforcer-plugin.version>
+        <maven-install-plugin.version>3.1.4</maven-install-plugin.version>
+        <maven-jar-plugin.version>3.5.0</maven-jar-plugin.version>
+        <maven-javadoc-plugin.version>3.12.0</maven-javadoc-plugin.version>
+        <maven-resources-plugin.version>3.5.0</maven-resources-plugin.version>
+        <maven-source-plugin.version>3.4.0</maven-source-plugin.version>
+        <maven-surefire-plugin.version>3.5.5</maven-surefire-plugin.version>
+        <native-maven-plugin.version>1.1.2</native-maven-plugin.version>
+        <nullaway.version>0.12.7</nullaway.version>
+        <slf4j.version>2.0.18</slf4j.version>
+        <spotless-maven-plugin.version>2.44.5</spotless-maven-plugin.version>
     </properties>
 
     <dependencyManagement>
@@ -262,9 +254,6 @@
             </plugins>
         </pluginManagement>
         <plugins>
-            <!-- Error Prone hosts NullAway, enforcing the JSpecify nullness contract over @NullMarked
-                 main sources (scoped to default-compile, so tests don't pay for it). ERROR: a contract
-                 violation fails the build. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -275,7 +264,9 @@
                             <compilerArgs>
                                 <arg>-XDcompilePolicy=simple</arg>
                                 <arg>--should-stop=ifError=FLOW</arg>
-                                <arg>-Xplugin:ErrorProne -XepDisableAllChecks -Xep:NullAway:ERROR -XepOpt:NullAway:OnlyNullMarked=true -XepOpt:NullAway:JSpecifyMode=true</arg>
+                                <arg>-Xplugin:ErrorProne -XepDisableAllChecks -Xep:NullAway:ERROR
+                                    -XepOpt:NullAway:OnlyNullMarked=true
+                                    -XepOpt:NullAway:JSpecifyMode=true</arg>
                             </compilerArgs>
                             <annotationProcessorPaths>
                                 <path>
@@ -308,7 +299,7 @@
                                     <version>[25,)</version>
                                 </requireJavaVersion>
                                 <requireMavenVersion>
-                                    <version>[3.9.0,)</version>
+                                    <version>[3.14.0,)</version>
                                 </requireMavenVersion>
                             </rules>
                         </configuration>
@@ -338,8 +329,6 @@
                     </execution>
                 </executions>
             </plugin>
-            <!-- google-java-format. ratchetFrom only checks files changed vs origin/main, so adoption
-                 reformats nothing up front. Run `./mvnw spotless:apply` to fix. -->
             <plugin>
                 <groupId>com.diffplug.spotless</groupId>
                 <artifactId>spotless-maven-plugin</artifactId>
@@ -349,11 +338,11 @@
                         <googleJavaFormat>
                             <version>${google-java-format.version}</version>
                         </googleJavaFormat>
-                        <removeUnusedImports/>
-                        <importOrder/>
-                        <formatAnnotations/>
-                        <trimTrailingWhitespace/>
-                        <endWithNewline/>
+                        <removeUnusedImports />
+                        <importOrder />
+                        <formatAnnotations />
+                        <trimTrailingWhitespace />
+                        <endWithNewline />
                     </java>
                 </configuration>
                 <executions>

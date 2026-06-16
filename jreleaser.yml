@@ -1,27 +1,24 @@
-# `jreleaser full-release` signs the staged artifacts, deploys the library to Maven Central, and
-# creates the GitHub release with the CLI binaries attached. The version comes from the POM via
-# JRELEASER_PROJECT_VERSION. See RELEASE.md for the secrets and the end-to-end process.
-
 project:
   name: adf4j
   description: Atlassian Document Format processing library for Java
   longDescription: |
     adf4j converts between Atlassian Document Format (ADF) JSON and Markdown.
-    It ships as a Java library (published to Maven Central), a standalone CLI
-    distributed as GraalVM native executables, and a WebAssembly build callable
-    from JavaScript/Node.
+    It ships as:
+      - Java library
+      - Standalone CLI (GraalVM native executables for Linux, macOS, and Windows)
+      - WebAssembly build callable from JavaScript/Node
   authors:
     - Thiago Moura
   license: Apache-2.0
-  copyright: 2025 Thiago Moura
-  inceptionYear: "2025"
+  copyright: 2026 Thiago Moura
+  inceptionYear: "2026"
   links:
     homepage: https://github.com/thiagogcm/adf4j
   languages:
     java:
       groupId: dev.nthings
       artifactId: adf4j
-      version: 25
+      version: "25"
 
 release:
   github:
@@ -71,8 +68,7 @@ deploy:
 
 checksum:
   algorithms:
-    - SHA-256
-    - SHA-512
+    - SHA_512
 
 # CLI artifacts attached straight to the GitHub release; produced by the release workflow into ./dist.
 files:
