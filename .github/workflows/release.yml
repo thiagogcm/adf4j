@@ -41,13 +41,13 @@ jobs:
       sha: ${{ steps.commit.outputs.sha }}
     steps:
       - name: Checkout main
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           ref: main
           fetch-depth: 0
 
       - name: Set up GraalVM JDK 25
-        uses: graalvm/setup-graalvm@bef4b0e916c7dd079bf60fb95d49139f67e32c5f # v1.5.3
+        uses: graalvm/setup-graalvm@809afe62741147990fbf405045cd15e61bffedfe # v1.5.5
         with:
           java-version: "25"
           distribution: "graalvm"
@@ -109,12 +109,12 @@ jobs:
             archive: zip
     steps:
       - name: Checkout release commit
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           ref: ${{ needs.prepare.outputs.sha }}
 
       - name: Set up GraalVM JDK 25
-        uses: graalvm/setup-graalvm@bef4b0e916c7dd079bf60fb95d49139f67e32c5f # v1.5.3
+        uses: graalvm/setup-graalvm@809afe62741147990fbf405045cd15e61bffedfe # v1.5.5
         with:
           java-version: "25"
           distribution: "graalvm"
@@ -172,12 +172,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout release commit
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           ref: ${{ needs.prepare.outputs.sha }}
 
       - name: Set up GraalVM JDK 25
-        uses: graalvm/setup-graalvm@bef4b0e916c7dd079bf60fb95d49139f67e32c5f # v1.5.3
+        uses: graalvm/setup-graalvm@809afe62741147990fbf405045cd15e61bffedfe # v1.5.5
         with:
           java-version: "25"
           distribution: "graalvm"
@@ -233,13 +233,13 @@ jobs:
       attestations: write
     steps:
       - name: Checkout release commit
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           ref: ${{ needs.prepare.outputs.sha }}
           fetch-depth: 0 # JReleaser needs full history for the changelog
 
       - name: Set up GraalVM JDK 25
-        uses: graalvm/setup-graalvm@bef4b0e916c7dd079bf60fb95d49139f67e32c5f # v1.5.3
+        uses: graalvm/setup-graalvm@809afe62741147990fbf405045cd15e61bffedfe # v1.5.5
         with:
           java-version: "25"
           distribution: "graalvm"
@@ -307,13 +307,13 @@ jobs:
       contents: write
     steps:
       - name: Checkout main
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           ref: main
           fetch-depth: 0
 
       - name: Set up GraalVM JDK 25
-        uses: graalvm/setup-graalvm@bef4b0e916c7dd079bf60fb95d49139f67e32c5f # v1.5.3
+        uses: graalvm/setup-graalvm@809afe62741147990fbf405045cd15e61bffedfe # v1.5.5
         with:
           java-version: "25"
           distribution: "graalvm"
