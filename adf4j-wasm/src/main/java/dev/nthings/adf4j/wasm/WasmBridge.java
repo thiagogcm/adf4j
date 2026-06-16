@@ -1,5 +1,7 @@
 package dev.nthings.adf4j.wasm;
 
+import java.io.IOException;
+import java.util.Properties;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -7,29 +9,27 @@ import org.graalvm.webimage.api.JS;
 import org.graalvm.webimage.api.JSString;
 
 import dev.nthings.adf4j.AdfToMarkdown;
-import dev.nthings.adf4j.result.Diagnostic;
 import dev.nthings.adf4j.result.MarkdownResult;
 
-/**
- * GraalVM Web Image entry point exposing the adf4j converter to JavaScript. The wasm backend has no
- * stdin and only an in-memory filesystem, so {@code main} publishes plain {@code (string) -> string}
- * functions onto {@code globalThis} via the {@code @JS} helper pattern (the stand-in while
- * {@code @JS.Export} is unimplemented), then calls {@code globalThis.__adf4jOnReady()}. A JS host
- * installs that callback before loading the image, then calls the functions in-process. See
- * {@code src/test/js} for a consumer.
- */
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ObjectNode;
+
+/** Web Image entry point that exposes adf4j on {@code globalThis}. */
 public final class WasmBridge {
 
-  private static final String VERSION = "1.0.0-SNAPSHOT";
+  private static final JsonMapper JSON = JsonMapper.builder().build();
+  private static final String UNKNOWN_VERSION = "unknown";
+  private static final String VERSION = loadVersion();
+  private static final String VERSION_RESOURCE = "/dev/nthings/adf4j/wasm/adf4j-wasm.properties";
+  private static final String VERSION_KEY = "version";
 
   public static void main(String[] args) {
-    registerConvert(json -> JSString.of(convert(json.asString())));
-    registerConvertJson(json -> JSString.of(convertJson(json.asString())));
-    registerVersion(() -> JSString.of(VERSION));
-    signalReady();
+    installApi(
+        (var json) -> JSString.of(convert(json.asString())),
+        (var json) -> JSString.of(convertJson(json.asString())),
+        () -> JSString.of(VERSION));
   }
 
-  /** Plain conversion: ADF JSON in, Markdown body out. */
   private static String convert(String adfJson) {
     try {
       return AdfToMarkdown.create().convert(adfJson).body();
@@ -38,71 +38,90 @@ public final class WasmBridge {
     }
   }
 
-  /** Richer envelope so the JS side can see lossiness and diagnostics, marshalled as JSON. */
   private static String convertJson(String adfJson) {
     try {
-      MarkdownResult result = AdfToMarkdown.create().convert(adfJson);
-      int warnings = 0;
-      int errors = 0;
-      for (Diagnostic diagnostic : result.diagnostics()) {
-        if (diagnostic.severity() == Diagnostic.Severity.WARNING) {
-          warnings++;
-        } else if (diagnostic.severity() == Diagnostic.Severity.ERROR) {
-          errors++;
-        }
-      }
-      return "{\"ok\":true,\"lossy\":" + result.wasLossy()
-          + ",\"warnings\":" + warnings
-          + ",\"errors\":" + errors
-          + ",\"body\":" + jsonString(result.body()) + "}";
+      return writeJson(ConversionEnvelope.success(AdfToMarkdown.create().convert(adfJson)));
     } catch (RuntimeException failure) {
-      return "{\"ok\":false,\"error\":" + jsonString(String.valueOf(failure)) + "}";
+      return writeJson(ConversionEnvelope.failure(String.valueOf(failure)));
     }
   }
 
-  private static String jsonString(String value) {
-    StringBuilder sb = new StringBuilder(value.length() + 2);
-    sb.append('"');
-    for (int i = 0; i < value.length(); i++) {
-      char c = value.charAt(i);
-      switch (c) {
-        case '"' -> sb.append("\\\"");
-        case '\\' -> sb.append("\\\\");
-        case '\n' -> sb.append("\\n");
-        case '\r' -> sb.append("\\r");
-        case '\t' -> sb.append("\\t");
-        default -> {
-          if (c < 0x20) {
-            sb.append(String.format("\\u%04x", (int) c));
-          } else {
-            sb.append(c);
+  private static String loadVersion() {
+    var stream = WasmBridge.class.getResourceAsStream(VERSION_RESOURCE);
+    if (stream == null) {
+      return UNKNOWN_VERSION;
+    }
+    try (stream) {
+      var properties = new Properties();
+      properties.load(stream);
+      return properties.getProperty(VERSION_KEY, UNKNOWN_VERSION);
+    } catch (IOException failure) {
+      return UNKNOWN_VERSION;
+    }
+  }
+
+  private static String writeJson(ConversionEnvelope envelope) {
+    return JSON.writeValueAsString(envelope.toJsonNode(JSON.createObjectNode()));
+  }
+
+  private record ConversionEnvelope(
+      boolean ok,
+      boolean lossy,
+      int warnings,
+      int errors,
+      String body,
+      String error) {
+
+    private static ConversionEnvelope success(MarkdownResult result) {
+      var warnings = 0;
+      var errors = 0;
+      for (var diagnostic : result.diagnostics()) {
+        switch (diagnostic.severity()) {
+          case WARNING -> warnings++;
+          case ERROR -> errors++;
+          default -> {
           }
         }
       }
+      return new ConversionEnvelope(true, result.wasLossy(), warnings, errors, result.body(), "");
     }
-    return sb.append('"').toString();
+
+    private static ConversionEnvelope failure(String error) {
+      return new ConversionEnvelope(false, false, 0, 0, "", error);
+    }
+
+    private ObjectNode toJsonNode(ObjectNode node) {
+      node.put("ok", ok);
+      if (ok) {
+        node.put("lossy", lossy);
+        node.put("warnings", warnings);
+        node.put("errors", errors);
+        node.put("body", body);
+      } else {
+        node.put("error", error);
+      }
+      return node;
+    }
   }
 
-  // The wasm boundary may hand a returned JSString back as a primitive JS string or as a JSValue
-  // proxy, so coerce defensively in both directions.
-  @JS(args = {"fn"}, value =
-      "const str = (v) => typeof v === 'string' ? v : v.asString();"
-      + "(globalThis.adf4j ??= {}).convert = (s) => str(fn(s));")
-  private static native void registerConvert(Function<JSString, JSString> fn);
+  @JS(args = { "convertFn", "convertJsonFn", "versionFn" }, value = """
+      const str = (value) => typeof value === 'string' ? value : value.asString();
+      const api = (globalThis.adf4j ??= {});
+      Object.assign(api, {
+        convert: (json) => str(convertFn(json)),
+        convertJson: (json) => JSON.parse(str(convertJsonFn(json))),
+        version: () => str(versionFn()),
+        ready: true
+      });
+      if (typeof globalThis.__adf4jOnReady === 'function') {
+        globalThis.__adf4jOnReady();
+      }
+      """)
+  private static native void installApi(
+      Function<JSString, JSString> convertFn,
+      Function<JSString, JSString> convertJsonFn,
+      Supplier<JSString> versionFn);
 
-  @JS(args = {"fn"}, value =
-      "const str = (v) => typeof v === 'string' ? v : v.asString();"
-      + "(globalThis.adf4j ??= {}).convertJson = (s) => JSON.parse(str(fn(s)));")
-  private static native void registerConvertJson(Function<JSString, JSString> fn);
-
-  @JS(args = {"fn"}, value =
-      "const str = (v) => typeof v === 'string' ? v : v.asString();"
-      + "(globalThis.adf4j ??= {}).version = () => str(fn());")
-  private static native void registerVersion(Supplier<JSString> fn);
-
-  @JS(value = "globalThis.adf4j ??= {}; globalThis.adf4j.ready = true;"
-      + " if (typeof globalThis.__adf4jOnReady === 'function') globalThis.__adf4jOnReady();")
-  private static native void signalReady();
-
-  private WasmBridge() {}
+  private WasmBridge() {
+  }
 }

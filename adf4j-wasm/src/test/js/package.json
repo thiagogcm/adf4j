@@ -4,7 +4,7 @@
   "private": true,
   "description": "Node smoke test / example consumer for the adf4j wasm build.",
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=24.0.0"
   },
   "scripts": {
     "convert": "node run.mjs",

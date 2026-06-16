@@ -33,5 +33,8 @@ if (!result.ok) {
 }
 
 process.stdout.write(result.body);
-if (!result.body.endsWith('\n')) process.stdout.write('\n');
+if (!result.body.endsWith('\n')) {
+  process.stdout.write('\n');
+}
+
 console.error(`\n[lossy=${result.lossy} warnings=${result.warnings} errors=${result.errors}]`);

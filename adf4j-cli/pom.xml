@@ -19,13 +19,10 @@
             <groupId>dev.nthings</groupId>
             <artifactId>adf4j</artifactId>
         </dependency>
-        <!-- JSpecify nullness annotations; declared explicitly because the CLI imports @Nullable directly. -->
         <dependency>
             <groupId>org.jspecify</groupId>
             <artifactId>jspecify</artifactId>
         </dependency>
-        <!-- Tree-mode JSON only (ObjectNode/ArrayNode + readTree); already a transitive, native-image-proven
-             dependency of adf4j. Declared explicitly because the CLI imports it directly. -->
         <dependency>
             <groupId>tools.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
@@ -49,13 +46,27 @@
     </dependencies>
 
     <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <configuration>
+                    <propertiesEncoding>${project.build.sourceEncoding}</propertiesEncoding>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
                 <configuration>
                     <archive>
                         <manifest>
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                             <mainClass>dev.nthings.adf4j.cli.Main</mainClass>
                         </manifest>
                     </archive>
@@ -89,6 +100,8 @@
                             <verbose>true</verbose>
                             <buildArgs>
                                 <buildArg>--no-fallback</buildArg>
+                                <buildArg>
+                                    -H:IncludeResources=dev/nthings/adf4j/cli/adf4j-cli\\.properties</buildArg>
                             </buildArgs>
                             <metadataRepository>
                                 <enabled>true</enabled>

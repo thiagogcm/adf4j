@@ -12,6 +12,7 @@ class GlobalOptionsTest {
 
   @Test
   void versionLongAndShortPrintTheVersion() {
+    assertThat(Cli.VERSION).isNotBlank().isNotEqualTo("unknown");
     assertThat(runNoInput("--version").out()).isEqualTo("adf4j " + Cli.VERSION + "\n");
     assertThat(runNoInput("-V").out()).isEqualTo("adf4j " + Cli.VERSION + "\n");
   }

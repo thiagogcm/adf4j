@@ -41,20 +41,24 @@ check('heading renders as ATX', () => {
 
 check('strong + paragraph', () => {
   const md = adf4j.convert(doc([
-    { type: 'paragraph', content: [
-      { type: 'text', text: 'hello ' },
-      { type: 'text', text: 'world', marks: [{ type: 'strong' }] },
-    ] },
+    {
+      type: 'paragraph', content: [
+        { type: 'text', text: 'hello ' },
+        { type: 'text', text: 'world', marks: [{ type: 'strong' }] },
+      ]
+    },
   ]));
   assert.equal(md.trim(), 'hello **world**');
 });
 
 check('bullet list', () => {
   const md = adf4j.convert(doc([
-    { type: 'bulletList', content: [
-      { type: 'listItem', content: [para('one')] },
-      { type: 'listItem', content: [para('two')] },
-    ] },
+    {
+      type: 'bulletList', content: [
+        { type: 'listItem', content: [para('one')] },
+        { type: 'listItem', content: [para('two')] },
+      ]
+    },
   ]));
   assert.match(md, /[-*] +one/);
   assert.match(md, /[-*] +two/);
@@ -72,6 +76,12 @@ check('convertJson reports a clean (non-lossy) doc', () => {
   assert.equal(r.ok, true);
   assert.equal(r.lossy, false);
   assert.equal(r.body.trim(), 'plain text');
+});
+
+check('convertJson preserves quoted text in the body', () => {
+  const r = adf4j.convertJson(doc([para('say "hi"')]));
+  assert.equal(r.ok, true);
+  assert.equal(r.body.trim(), 'say "hi"');
 });
 
 check('invalid JSON degrades gracefully (diagnostics, no crash)', () => {

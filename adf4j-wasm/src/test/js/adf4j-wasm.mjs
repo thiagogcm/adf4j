@@ -32,7 +32,9 @@ let cached;
  *                     version(): string }>}
  */
 export function loadAdf4j(opts = {}) {
-  if (cached) return cached;
+  if (cached) {
+    return cached;
+  }
   const { timeoutMs = 30_000 } = opts;
   const imagePath = resolveImage(opts.imagePath);
 

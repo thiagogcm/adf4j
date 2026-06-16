@@ -14,24 +14,29 @@
     <name>adf4j-wasm</name>
     <description>GraalVM Web Image (WebAssembly) build of adf4j, callable from JavaScript/Node.</description>
 
-    <!--
-      Built only under the parent's `wasm` profile (needs an Oracle GraalVM JDK for the svm-wasm tool
-      and the org.graalvm.webimage.api system module), so it stays out of the default reactor and a
-      plain `mvn install` on any JDK is unaffected. Emits target/adf4j-wasm.js{,.wasm}; not deployed.
-    -->
+    <!-- Built only under the parent `wasm` profile; the generated JS/WASM bundle is not deployed. -->
 
     <dependencies>
         <dependency>
             <groupId>dev.nthings</groupId>
             <artifactId>adf4j</artifactId>
         </dependency>
-        <!-- JSpecify nullness annotations; for this package's @NullMarked marker (also transitive via adf4j). -->
+        <dependency>
+            <groupId>org.graalvm.sdk</groupId>
+            <artifactId>webimage-preview</artifactId>
+            <version>25.0.3</version>
+        </dependency>
+        <!-- JSpecify annotations are used by the WASM bridge package metadata. -->
         <dependency>
             <groupId>org.jspecify</groupId>
             <artifactId>jspecify</artifactId>
         </dependency>
-        <!-- A no-op SLF4J binding: the converter's internal logging is discarded (JS consumers read
-             structured diagnostics off the result instead), and it silences the "no providers" notice. -->
+        <!-- Tree-mode JSON serialization for bridge responses; avoids hand-rolled escaping. -->
+        <dependency>
+            <groupId>tools.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <!-- A no-op SLF4J binding keeps the WASM image quiet at runtime. -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-nop</artifactId>
@@ -40,11 +45,14 @@
     </dependencies>
 
     <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
         <plugins>
-            <!-- The @JS bridge API ships only inside the GraalVM JDK as a system module, not on
-                 Maven Central. Add that module so the (unnamed-module) sources can read it, and
-                 compile in source/target mode rather than release mode: release mode limits javac
-                 to the standard ct.sym module set, which excludes vendor modules like this one. -->
+            <!-- Compile the WASM bridge with the Web Image API on the module path. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -59,7 +67,7 @@
                 </configuration>
             </plugin>
 
-            <!-- Emit the WebAssembly web image: the native CLI build plus the svm-wasm tool flag. -->
+            <!-- Build the WebAssembly image for JavaScript/Node consumers. -->
             <plugin>
                 <groupId>org.graalvm.buildtools</groupId>
                 <artifactId>native-maven-plugin</artifactId>
@@ -81,6 +89,7 @@
                     <buildArgs>
                         <buildArg>--no-fallback</buildArg>
                         <buildArg>--tool:svm-wasm</buildArg>
+                        <buildArg>-H:IncludeResources=dev/nthings/adf4j/wasm/adf4j-wasm\\.properties</buildArg>
                     </buildArgs>
                 </configuration>
             </plugin>

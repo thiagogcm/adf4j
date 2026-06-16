@@ -1,12 +1,5 @@
 package dev.nthings.adf4j.cli;
 
-import java.io.InputStream;
-import java.io.PrintStream;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
-
 import dev.nthings.adf4j.AdfToMarkdown;
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.metadata.ContentMetadata;
@@ -14,14 +7,26 @@ import dev.nthings.adf4j.options.MarkdownOptions;
 import dev.nthings.adf4j.result.Diagnostic;
 import dev.nthings.adf4j.result.MarkdownResult;
 import dev.nthings.adf4j.result.ParseResult;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.PrintStream;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Properties;
+import java.util.Set;
 
 /**
- * The CLI: dispatches to {@code convert} / {@code analyze} / {@code validate} and owns the exit-code
- * contract. Stdout carries only the deliverable; diagnostics and warnings go to stderr.
+ * The CLI: dispatches to {@code convert} / {@code analyze} / {@code validate} and owns the
+ * exit-code contract. Stdout carries only the deliverable; diagnostics and warnings go to stderr.
  */
 final class Cli {
 
-  static final String VERSION = "1.0-SNAPSHOT";
+  private static final String UNKNOWN_VERSION = "unknown";
+  private static final String VERSION_RESOURCE = "/dev/nthings/adf4j/cli/adf4j-cli.properties";
+  private static final String VERSION_KEY = "version";
+
+  static final String VERSION = resolveVersion();
 
   private final InputStream in;
   private final PrintStream out;
@@ -35,6 +40,31 @@ final class Cli {
     this.err = err;
   }
 
+  private static String resolveVersion() {
+    var implementationVersion = Cli.class.getPackage().getImplementationVersion();
+    return implementationVersion != null && !implementationVersion.isBlank()
+        ? implementationVersion
+        : loadVersionResource();
+  }
+
+  private static String loadVersionResource() {
+    var stream = Cli.class.getResourceAsStream(VERSION_RESOURCE);
+    if (stream == null) {
+      return UNKNOWN_VERSION;
+    }
+    try (stream) {
+      var properties = new Properties();
+      properties.load(stream);
+      return properties.getProperty(VERSION_KEY, UNKNOWN_VERSION);
+    } catch (IOException failure) {
+      return UNKNOWN_VERSION;
+    }
+  }
+
+  private static String versionLine() {
+    return "adf4j " + VERSION + "\n";
+  }
+
   int run(String[] argv) {
     var args = List.of(argv);
     if (args.isEmpty() || args.getFirst().equals("-h") || args.getFirst().equals("--help")) {
@@ -43,7 +73,7 @@ final class Cli {
     }
     var command = args.getFirst();
     if (command.equals("-V") || command.equals("--version")) {
-      out.print("adf4j " + VERSION + "\n");
+      out.print(versionLine());
       return ExitCodes.OK;
     }
     var rest = args.subList(1, args.size());
@@ -54,8 +84,9 @@ final class Cli {
         case "convert" -> convert(rest);
         case "analyze" -> analyze(rest);
         case "validate" -> validate(rest);
-        default -> throw CliException.usage(
-            "unknown command '" + command + "'; expected convert, analyze, or validate");
+        default ->
+            throw CliException.usage(
+                "unknown command '" + command + "'; expected convert, analyze, or validate");
       };
     } catch (CliException exception) {
       err.println("error: " + exception.getMessage());
@@ -78,7 +109,7 @@ final class Cli {
       return true;
     }
     if (args.has("version")) {
-      out.print("adf4j " + VERSION + "\n");
+      out.print(versionLine());
       return true;
     }
     return false;
@@ -87,10 +118,11 @@ final class Cli {
   // ---- convert ------------------------------------------------------------
 
   private int convert(List<String> tokens) {
-    var spec = baseSpec()
-        .value("format", "-f", "--format")
-        .flag("compact", "--compact")
-        .flag("fail-on-lossy", "--fail-on-lossy");
+    var spec =
+        baseSpec()
+            .value("format", "-f", "--format")
+            .flag("compact", "--compact")
+            .flag("fail-on-lossy", "--fail-on-lossy");
     addRenderingOptions(spec);
     var args = Args.parse(tokens, spec);
     if (printedHelpOrVersion(args, Help.CONVERT)) {
@@ -107,8 +139,10 @@ final class Cli {
     try {
       result = converter.convert(input);
     } catch (IllegalStateException fail) { // UnknownNodePolicy.FAIL aborts
-      throw new CliException(ExitCodes.CONTENT_FAILURE,
-          "conversion aborted by --unknown-nodes fail: " + fail.getMessage(), fail);
+      throw new CliException(
+          ExitCodes.CONTENT_FAILURE,
+          "conversion aborted by --unknown-nodes fail: " + fail.getMessage(),
+          fail);
     }
 
     String output;
@@ -130,10 +164,11 @@ final class Cli {
   // ---- analyze ------------------------------------------------------------
 
   private int analyze(List<String> tokens) {
-    var spec = baseSpec()
-        .value("format", "-f", "--format")
-        .flag("compact", "--compact")
-        .value("select", "--select");
+    var spec =
+        baseSpec()
+            .value("format", "-f", "--format")
+            .flag("compact", "--compact")
+            .value("select", "--select");
     addRenderingOptions(spec);
     var args = Args.parse(tokens, spec);
     if (printedHelpOrVersion(args, Help.ANALYZE)) {
@@ -162,10 +197,11 @@ final class Cli {
   // ---- validate -----------------------------------------------------------
 
   private int validate(List<String> tokens) {
-    var spec = baseSpec()
-        .value("format", "-f", "--format")
-        .flag("compact", "--compact")
-        .flag("fail-on-warning", "--fail-on-warning");
+    var spec =
+        baseSpec()
+            .value("format", "-f", "--format")
+            .flag("compact", "--compact")
+            .flag("fail-on-warning", "--fail-on-warning");
     var args = Args.parse(tokens, spec);
     if (printedHelpOrVersion(args, Help.VALIDATE)) {
       return ExitCodes.OK;
@@ -219,9 +255,12 @@ final class Cli {
         .flag("html-visual-marks", "--html-visual-marks")
         .value("unknown-nodes", "--unknown-nodes")
         .value("table-fallback", "--table-fallback")
-        .value("media-url", "--media-url").value("media-map", "--media-map")
-        .value("attachment-url", "--attachment-url").value("attachment-map", "--attachment-map")
-        .value("page-url", "--page-url").value("page-map", "--page-map")
+        .value("media-url", "--media-url")
+        .value("media-map", "--media-map")
+        .value("attachment-url", "--attachment-url")
+        .value("attachment-map", "--attachment-map")
+        .value("page-url", "--page-url")
+        .value("page-map", "--page-map")
         .value("page-tree-map", "--page-tree-map")
         .value("excerpt-map", "--excerpt-map")
         .value("attachments-map", "--attachments-map")
@@ -251,8 +290,11 @@ final class Cli {
           continue;
         }
         if (!JsonRenderer.METADATA_KEY_SET.contains(section)) {
-          throw CliException.usage("--select unknown section '" + section + "'; allowed: "
-              + String.join(", ", JsonRenderer.METADATA_KEYS));
+          throw CliException.usage(
+              "--select unknown section '"
+                  + section
+                  + "'; allowed: "
+                  + String.join(", ", JsonRenderer.METADATA_KEYS));
         }
         selected.add(section);
       }
@@ -266,8 +308,11 @@ final class Cli {
     }
     for (var flag : List.of("excerpt-map", "extension-map")) {
       if (args.value(flag) != null) {
-        err.println("warning: --" + flag + " content is emitted verbatim and not HTML-sanitized;"
-            + " use only trusted files");
+        err.println(
+            "warning: --"
+                + flag
+                + " content is emitted verbatim and not HTML-sanitized;"
+                + " use only trusted files");
       }
     }
   }
@@ -289,14 +334,23 @@ final class Cli {
   }
 
   private String analyzeText(
-      ContentMetadata metadata, Set<String> selected, AdfToMarkdown converter, MarkdownOptions options) {
+      ContentMetadata metadata,
+      Set<String> selected,
+      AdfToMarkdown converter,
+      MarkdownOptions options) {
     var sb = new StringBuilder();
     if (selected.contains("outline")) {
       sb.append("outline:\n");
       for (var heading : metadata.outline()) {
-        sb.append("  ").append("  ".repeat(Math.max(0, heading.level() - 1)))
-            .append("H").append(heading.level()).append(' ').append(heading.text())
-            .append(" (#").append(heading.anchor()).append(")\n");
+        sb.append("  ")
+            .append("  ".repeat(Math.max(0, heading.level() - 1)))
+            .append("H")
+            .append(heading.level())
+            .append(' ')
+            .append(heading.text())
+            .append(" (#")
+            .append(heading.anchor())
+            .append(")\n");
       }
     }
     if (selected.contains("pageRefs")) {
@@ -306,29 +360,52 @@ final class Cli {
       appendList(sb, "externalRefs", metadata.externalRefs().stream().map(e -> e.url()).toList());
     }
     if (selected.contains("mentionRefs")) {
-      appendList(sb, "mentionRefs",
+      appendList(
+          sb,
+          "mentionRefs",
           metadata.mentionRefs().stream().map(m -> m.text() + " [" + m.id() + "]").toList());
     }
     if (selected.contains("attachmentRefs")) {
-      appendList(sb, "attachmentRefs",
-          metadata.attachmentRefs().stream().map(a -> a.title() + " [" + a.fileId() + "]").toList());
+      appendList(
+          sb,
+          "attachmentRefs",
+          metadata.attachmentRefs().stream()
+              .map(a -> a.title() + " [" + a.fileId() + "]")
+              .toList());
     }
     if (selected.contains("referencedFileIds")) {
       appendList(sb, "referencedFileIds", List.copyOf(metadata.referencedFileIds()));
     }
     if (selected.contains("pageTreeRefs")) {
-      appendList(sb, "pageTreeRefs", metadata.pageTreeRefs().stream()
-          .map(r -> r.macro().name().toLowerCase(Locale.ROOT) + " root=" + r.root()).toList());
+      appendList(
+          sb,
+          "pageTreeRefs",
+          metadata.pageTreeRefs().stream()
+              .map(r -> r.macro().name().toLowerCase(Locale.ROOT) + " root=" + r.root())
+              .toList());
     }
     if (selected.contains("excerptRefs")) {
-      appendList(sb, "excerptRefs", metadata.excerptRefs().stream()
-          .map(r -> r.page() + (r.excerptName() == null ? "" : "/" + r.excerptName())).toList());
+      appendList(
+          sb,
+          "excerptRefs",
+          metadata.excerptRefs().stream()
+              .map(r -> r.page() + (r.excerptName() == null ? "" : "/" + r.excerptName()))
+              .toList());
     }
     if (selected.contains("excerpts")) {
-      appendList(sb, "excerpts", metadata.excerpts().stream()
-          .map(e -> (e.name() == null ? "(unnamed)" : e.name()) + ": "
-              + converter.convert(new AdfDocument(1, e.content()), options).body().strip())
-          .toList());
+      appendList(
+          sb,
+          "excerpts",
+          metadata.excerpts().stream()
+              .map(
+                  e ->
+                      (e.name() == null ? "(unnamed)" : e.name())
+                          + ": "
+                          + converter
+                              .convert(new AdfDocument(1, e.content()), options)
+                              .body()
+                              .strip())
+              .toList());
     }
     return sb.toString();
   }
@@ -354,8 +431,13 @@ final class Cli {
     }
     sb.append("issues:\n");
     for (var issue : parsed.issues()) {
-      sb.append("  [").append(issue.severity()).append("] ")
-          .append(issue.code()).append(": ").append(issue.message()).append('\n');
+      sb.append("  [")
+          .append(issue.severity())
+          .append("] ")
+          .append(issue.code())
+          .append(": ")
+          .append(issue.message())
+          .append('\n');
     }
     return sb.toString();
   }
