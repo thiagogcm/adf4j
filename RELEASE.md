@@ -11,9 +11,10 @@ One full release publishes:
 | `adf4j-cli-<version>-osx-aarch64.tar.gz`         | GitHub release asset  |
 | `adf4j-cli-<version>-windows-x86_64.zip`         | GitHub release asset  |
 | `adf4j-wasm-<version>.zip`                       | GitHub release asset  |
+| `@nthings.dev/adf4j-wasm`                        | npm registry          |
 | Checksums and `.asc` signatures                  | GitHub release assets |
 
-Only the Java library is published to Maven Central. The native CLI and WASM bundle are distributed from GitHub Releases.
+Only the Java library is published to Maven Central. The native CLI is distributed from GitHub Releases. The WASM bundle is distributed from GitHub Releases and npm.
 
 ## Release model
 
@@ -38,13 +39,14 @@ Treat these as release-significant surfaces:
 
 Repository secrets:
 
-| Secret                            | Purpose                             |
-| --------------------------------- | ----------------------------------- |
-| `JRELEASER_GPG_PUBLIC_KEY`        | Armored public signing key          |
-| `JRELEASER_GPG_SECRET_KEY`        | Armored private signing key         |
-| `JRELEASER_GPG_PASSPHRASE`        | Signing key passphrase              |
-| `JRELEASER_MAVENCENTRAL_USERNAME` | Maven Central Portal token username |
-| `JRELEASER_MAVENCENTRAL_PASSWORD` | Maven Central Portal token password |
+| Secret                            | Purpose                               |
+| --------------------------------- | ------------------------------------- |
+| `JRELEASER_GPG_PUBLIC_KEY`        | Armored public signing key            |
+| `JRELEASER_GPG_SECRET_KEY`        | Armored private signing key           |
+| `JRELEASER_GPG_PASSPHRASE`        | Signing key passphrase                |
+| `JRELEASER_MAVENCENTRAL_USERNAME` | Maven Central Portal token username   |
+| `JRELEASER_MAVENCENTRAL_PASSWORD` | Maven Central Portal token password   |
+| `NPM_TOKEN`                       | npm automation token for `@nthings.dev/adf4j-wasm` |
 
 The Release workflow pushes version commits with `GITHUB_TOKEN`, so branch protection must allow that path or the version commits need to be done manually.
 
@@ -54,6 +56,7 @@ Relevant files:
 - [`adf4j-lib/pom.xml`](adf4j-lib/pom.xml) - Central `publication` staging.
 - [`adf4j-cli/pom.xml`](adf4j-cli/pom.xml) - native CLI build.
 - [`adf4j-wasm/pom.xml`](adf4j-wasm/pom.xml) - WASM build.
+- [`adf4j-wasm/src/npm`](adf4j-wasm/src/npm) - npm package metadata and loader.
 - [`jreleaser.yml`](jreleaser.yml) - signing, deploy, release, checksums, assets.
 - [`.github/workflows/release.yml`](.github/workflows/release.yml) and [`.github/workflows/snapshot.yml`](.github/workflows/snapshot.yml) - release automation.
 
@@ -103,7 +106,7 @@ For pre-releases, always pass `nextVersion` explicitly. Otherwise `1.1.0-rc.1` a
 
 The workflow runs:
 
-`Prepare` -> native CLI builds -> WASM build -> `jreleaser full-release` -> `Finalize`.
+`Prepare` -> native CLI builds -> WASM build + npm pack -> npm publish -> `jreleaser full-release` -> `Finalize`.
 
 ## Dry run
 
@@ -115,7 +118,7 @@ A dry run builds native/WASM assets, stages the library, and runs:
 jreleaser full-release --dry-run
 ```
 
-It skips commits, tags, Central deployment, attestations, GitHub release creation, and the final version bump. Inspect the uploaded `jreleaser-logs` artifact.
+It also packages `@nthings.dev/adf4j-wasm` for npm and runs `npm publish --dry-run`. It skips commits, tags, Central deployment, npm publication, attestations, GitHub release creation, and the final version bump. Inspect the uploaded `jreleaser-logs` artifact.
 
 ## Verify release
 
@@ -125,13 +128,14 @@ Check:
 - `https://github.com/thiagogcm/adf4j/releases/tag/v<version>` exists.
 - release notes, native CLI archives, WASM zip, checksums, and signatures are present.
 - `dev.nthings:adf4j:<version>` appears in Maven Central Portal.
-- GitHub artifact attestations exist for jars and release archives.
+- `@nthings.dev/adf4j-wasm@<version>` appears in npm with the expected dist-tag (`latest` for stable releases, `next` for pre-releases).
+- GitHub artifact attestations exist for jars, release archives, and the npm tarball.
 
 Maven Central releases are immutable. Fix bad releases with a new patch version.
 
 ## Snapshots
 
-The **Publish snapshot** workflow publishes only `dev.nthings:adf4j` snapshots. It runs on relevant pushes to `main` and manually, self-skips unless the version ends in `-SNAPSHOT`, stages with `-Ppublication`, and runs:
+The **Publish snapshot** workflow publishes only `dev.nthings:adf4j` snapshots. It does not publish npm snapshots. It runs on relevant pushes to `main` and manually, self-skips unless the version ends in `-SNAPSHOT`, stages with `-Ppublication`, and runs:
 
 ```bash
 jreleaser deploy

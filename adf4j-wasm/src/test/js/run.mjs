@@ -9,7 +9,7 @@
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import { loadAdf4j } from './adf4j-wasm.mjs';
+import { loadAdf4j } from '../../npm/adf4j-wasm.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const inputPath = resolve(process.argv[2] ?? resolve(here, 'sample.adf.json'));

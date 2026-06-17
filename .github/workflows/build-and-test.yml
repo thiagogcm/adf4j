@@ -103,6 +103,30 @@ jobs:
       - name: Smoke-test the wasm from Node
         run: node adf4j-wasm/src/test/js/test.mjs
 
+      - name: Package npm library
+        shell: bash
+        run: |
+          VERSION=$(./mvnw -q -ntp -pl adf4j-wasm help:evaluate -Dexpression=project.version -DforceStdout)
+          PKG="dist/npm/adf4j-wasm"
+          node adf4j-wasm/scripts/prepare-npm-package.mjs "$VERSION" "$PKG"
+          npm pack "$PKG" --dry-run
+
+      - name: Smoke-test npm package layout
+        shell: bash
+        run: |
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import { loadAdf4j } from './dist/npm/adf4j-wasm/adf4j-wasm.mjs';
+
+          const adf4j = await loadAdf4j();
+          const doc = JSON.stringify({
+            version: 1,
+            type: 'doc',
+            content: [{ type: 'paragraph', content: [{ type: 'text', text: 'npm package' }] }],
+          });
+          assert.equal(adf4j.convert(doc).trim(), 'npm package');
+          JS
+
       - name: Prepare WASM artifact
         run: |
           mkdir -p dist
@@ -113,5 +137,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: adf4j-wasm
-          path: dist/*
+          path: |
+            dist/adf4j-wasm.js
+            dist/adf4j-wasm.js.wasm
           if-no-files-found: error

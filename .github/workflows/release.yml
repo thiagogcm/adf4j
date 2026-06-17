@@ -77,15 +77,19 @@ jobs:
         run: |
           REL="${{ steps.versions.outputs.release }}"
           if [ "${{ inputs.dryRun }}" = "true" ]; then
-            echo "Dry run — not committing. Would set the POM version to $REL and commit to main."
+            echo "Dry run — not committing. Would set the POM and npm package version to $REL and commit to main."
             echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           ./mvnw -B -ntp versions:set -DnewVersion="$REL" -DprocessAllModules -DgenerateBackupPoms=false
+          npm version "$REL" --prefix adf4j-wasm/src/npm --no-git-tag-version --allow-same-version
           # Tolerate a no-op (recovery re-run already at $REL): commit fails on an empty commit.
-          git diff --quiet || git commit -am "chore(release): $REL"
+          git diff --quiet || {
+            git add pom.xml adf4j-lib/pom.xml adf4j-cli/pom.xml adf4j-wasm/pom.xml adf4j-wasm/src/npm/package.json
+            git commit -m "chore(release): $REL"
+          }
           git push origin HEAD:main
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
@@ -203,6 +207,30 @@ jobs:
       - name: Build WASM (web image)
         run: ./mvnw -B -ntp package -Pwasm -pl adf4j-wasm -am -DskipTests
 
+      - name: Smoke-test the wasm from Node
+        run: node adf4j-wasm/src/test/js/test.mjs
+
+      - name: Package npm library
+        shell: bash
+        run: |
+          VERSION="${{ needs.prepare.outputs.releaseVersion }}"
+          PKG="dist/npm/adf4j-wasm"
+          node adf4j-wasm/scripts/prepare-npm-package.mjs "$VERSION" "$PKG"
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import { loadAdf4j } from './dist/npm/adf4j-wasm/adf4j-wasm.mjs';
+
+          const adf4j = await loadAdf4j();
+          const doc = JSON.stringify({
+            version: 1,
+            type: 'doc',
+            content: [{ type: 'paragraph', content: [{ type: 'text', text: 'npm package' }] }],
+          });
+          assert.equal(adf4j.convert(doc).trim(), 'npm package');
+          JS
+          TARBALL=$(npm pack "$PKG" --pack-destination dist --json | node -e "let s=''; process.stdin.on('data', d => s += d); process.stdin.on('end', () => process.stdout.write(JSON.parse(s)[0].filename));")
+          mv "dist/${TARBALL}" "dist/adf4j-wasm-npm-${VERSION}.tgz"
+
       - name: Package WASM bundle
         run: |
           VERSION="${{ needs.prepare.outputs.releaseVersion }}"
@@ -210,7 +238,10 @@ jobs:
           mkdir -p "dist/${NAME}"
           cp adf4j-wasm/target/adf4j-wasm.js "dist/${NAME}/"
           cp adf4j-wasm/target/adf4j-wasm.js.wasm "dist/${NAME}/"
-          cp adf4j-wasm/src/test/js/*.mjs adf4j-wasm/src/test/js/sample.adf.json "dist/${NAME}/"
+          cp adf4j-wasm/src/npm/adf4j-wasm.mjs "dist/${NAME}/"
+          cp adf4j-wasm/src/test/js/run.mjs "dist/${NAME}/"
+          cp adf4j-wasm/src/test/js/test.mjs "dist/${NAME}/"
+          cp adf4j-wasm/src/test/js/sample.adf.json "dist/${NAME}/"
           cp LICENSE README.md "dist/${NAME}/"
           (cd dist && zip -r "${NAME}.zip" "${NAME}" >/dev/null)
           rm -rf "dist/${NAME}"
@@ -219,7 +250,9 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: wasm
-          path: dist/adf4j-wasm-*.zip
+          path: |
+            dist/adf4j-wasm-*.zip
+            dist/adf4j-wasm-npm-*.tgz
           if-no-files-found: error
 
   # Stage the library, then run JReleaser once to sign, deploy to Central, tag, and create the release.
@@ -262,6 +295,33 @@ jobs:
       - name: List release assets
         run: ls -la dist
 
+      - name: Publish WASM npm package
+        if: ${{ !inputs.dryRun }}
+        shell: bash
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          VERSION="${{ needs.prepare.outputs.releaseVersion }}"
+          case "$VERSION" in *-*) TAG=next ;; *) TAG=latest ;; esac
+          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "::error::NPM_TOKEN secret is required to publish @nthings.dev/adf4j-wasm."
+            exit 1
+          fi
+          if npm view "@nthings.dev/adf4j-wasm@${VERSION}" version >/dev/null 2>&1; then
+            echo "@nthings.dev/adf4j-wasm@${VERSION} already exists on npm; skipping publish."
+            exit 0
+          fi
+          printf '%s\n' "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
+          npm publish "./dist/adf4j-wasm-npm-${VERSION}.tgz" --access public --provenance --tag "$TAG"
+
+      - name: Validate WASM npm publish (dry run)
+        if: ${{ inputs.dryRun }}
+        shell: bash
+        run: |
+          VERSION="${{ needs.prepare.outputs.releaseVersion }}"
+          case "$VERSION" in *-*) TAG=next ;; *) TAG=latest ;; esac
+          npm publish "./dist/adf4j-wasm-npm-${VERSION}.tgz" --access public --tag "$TAG" --dry-run
+
       # SLSA build-provenance for the published jars and CLI/WASM archives; verify with
       # `gh attestation verify`.
       - name: Attest build provenance
@@ -272,6 +332,7 @@ jobs:
             target/staging-deploy/dev/nthings/adf4j/**/adf4j-*.jar
             dist/adf4j-cli-*
             dist/adf4j-wasm-*.zip
+            dist/adf4j-wasm-npm-*.tgz
 
       - name: Run JReleaser (full release)
         uses: jreleaser/release-action@90ac653bb9c79d11179e65d81499f3f34527dcd5 # 2.5.0
@@ -327,6 +388,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           ./mvnw -B -ntp versions:set -DnewVersion="$NEXT" -DprocessAllModules -DgenerateBackupPoms=false
+          npm version "$NEXT" --prefix adf4j-wasm/src/npm --no-git-tag-version --allow-same-version
           # Tolerate a no-op (re-run already at $NEXT): commit fails on an empty commit.
-          git diff --quiet || git commit -am "chore(release): prepare for next development iteration $NEXT"
+          git diff --quiet || {
+            git add pom.xml adf4j-lib/pom.xml adf4j-cli/pom.xml adf4j-wasm/pom.xml adf4j-wasm/src/npm/package.json
+            git commit -m "chore(release): prepare for next development iteration $NEXT"
+          }
           git push origin HEAD:main

@@ -3,7 +3,8 @@
 Java tools for Atlassian Document Format (ADF). adf4j converts Confluence and Jira rich-text JSON to GitHub-Flavored Markdown, extracts document metadata, and validates ADF structure.
 
 - **Library:** `dev.nthings:adf4j`, published to Maven Central.
-- **CLI:** native executables for Linux, macOS, and Windows, plus a WebAssembly build, attached to each [GitHub release](https://github.com/thiagogcm/adf4j/releases).
+- **CLI:** native executables for Linux, macOS, and Windows, attached to each [GitHub release](https://github.com/thiagogcm/adf4j/releases).
+- **WASM:** `@nthings.dev/adf4j-wasm`, published to npm and attached to each GitHub release.
 
 adf4j is immutable, thread-safe, dependency-light, and I/O-free. It never calls Confluence, a CDN, or a database. Page, media, attachment, and macro lookups stay in your application through resolver callbacks.
 
@@ -51,6 +52,23 @@ adf4j validate --fail-on-warning doc.adf.json
 ```
 
 Input comes from a file argument or stdin. Stdout contains only the requested output, while diagnostics go to stderr. Run `adf4j <command> --help` for command-specific flags.
+
+## WASM
+
+```bash
+npm install @nthings.dev/adf4j-wasm
+```
+
+```js
+import { loadAdf4j } from '@nthings.dev/adf4j-wasm';
+
+const adf4j = await loadAdf4j();
+const markdown = adf4j.convert(adfJsonString);
+const result = adf4j.convertJson(adfJsonString);
+```
+
+The npm package includes the GraalVM Web Image loader and compiled `.wasm` module for Node.js and
+browser bundlers.
 
 ## Documentation
 

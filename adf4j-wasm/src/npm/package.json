@@ -1,0 +1,45 @@
+{
+  "name": "@nthings.dev/adf4j-wasm",
+  "version": "1.1.0-SNAPSHOT",
+  "description": "WebAssembly build of adf4j for converting Atlassian Document Format JSON to Markdown from JavaScript.",
+  "license": "Apache-2.0",
+  "author": "Thiago Moura",
+  "homepage": "https://github.com/thiagogcm/adf4j#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thiagogcm/adf4j.git",
+    "directory": "adf4j-wasm"
+  },
+  "bugs": {
+    "url": "https://github.com/thiagogcm/adf4j/issues"
+  },
+  "keywords": [
+    "adf",
+    "atlassian",
+    "confluence",
+    "jira",
+    "markdown",
+    "wasm"
+  ],
+  "main": "./adf4j-wasm.mjs",
+  "types": "./adf4j-wasm.d.ts",
+  "browser": "./adf4j-wasm.mjs",
+  "exports": {
+    ".": {
+      "browser": "./adf4j-wasm.mjs",
+      "types": "./adf4j-wasm.d.ts",
+      "import": "./adf4j-wasm.mjs"
+    }
+  },
+  "files": [
+    "adf4j-wasm.d.ts",
+    "adf4j-wasm.js",
+    "adf4j-wasm.js.wasm",
+    "adf4j-wasm.mjs",
+    "LICENSE",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=24.0.0"
+  }
+}

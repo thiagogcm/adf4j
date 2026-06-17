@@ -13,7 +13,9 @@ import org.jspecify.annotations.Nullable;
 /// destination; an entry whose id is `null` or does not resolve renders as plain text.
 public record PageTreeEntry(int depth, String title, @Nullable String pageNodeId) {
 
-  public PageTreeEntry {
-    depth = Math.max(0, depth);
+  public PageTreeEntry(int depth, String title, @Nullable String pageNodeId) {
+    this.depth = Math.max(0, depth);
+    this.title = title;
+    this.pageNodeId = pageNodeId;
   }
 }

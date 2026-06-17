@@ -6,7 +6,7 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import assert from 'node:assert/strict';
-import { loadAdf4j } from './adf4j-wasm.mjs';
+import { loadAdf4j } from '../../npm/adf4j-wasm.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const adf4j = await loadAdf4j();
