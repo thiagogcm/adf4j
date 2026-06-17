@@ -6,7 +6,7 @@
 
     <groupId>dev.nthings</groupId>
     <artifactId>adf4j-parent</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>adf4j-parent</name>
@@ -57,7 +57,7 @@
         <maven.compiler.source>25</maven.compiler.source>
         <maven.compiler.target>25</maven.compiler.target>
         <maven.deploy.skip>true</maven.deploy.skip>
-        <project.build.outputTimestamp>2026-06-17T16:22:56Z</project.build.outputTimestamp>
+        <project.build.outputTimestamp>2026-06-17T17:33:27Z</project.build.outputTimestamp>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
