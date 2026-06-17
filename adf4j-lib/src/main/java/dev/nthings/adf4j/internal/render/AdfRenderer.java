@@ -100,10 +100,8 @@ public final class AdfRenderer implements BlockRecursion {
     this.cardRenderer = cardRenderer;
   }
 
-  /**
-   * Assembles a renderer with its default delegates, keeping the CommonMark dependency a render
-   * detail.
-   */
+  /// Assembles a renderer with its default delegates, keeping the CommonMark dependency a render
+  /// detail.
   public static AdfRenderer createDefault() {
     var mediaRenderer = new MediaRenderer();
     return new AdfRenderer(
@@ -262,11 +260,9 @@ public final class AdfRenderer implements BlockRecursion {
     return builder.toString();
   }
 
-  /**
-   * Merges consecutive {@link Text} inlines with the same mark set into one node, so an adjacent
-   * same-mark run gets a single set of delimiters instead of one per node. Non-Text inlines break a
-   * run.
-   */
+  /// Merges consecutive {@link Text} inlines with the same mark set into one node, so an adjacent
+  /// same-mark run gets a single set of delimiters instead of one per node. Non-Text inlines break
+  /// a run.
   private static List<AdfInline> coalesceAdjacentText(List<AdfInline> nodes) {
     var result = new ArrayList<AdfInline>(nodes.size());
     var run = new StringBuilder();
@@ -407,10 +403,8 @@ public final class AdfRenderer implements BlockRecursion {
     return renderHeadingInlines(headingNodes, context).strip();
   }
 
-  /**
-   * Renders heading inlines, inserting one space between an inline image and adjacent text so they
-   * don't glue (e.g. {@code ![icon](src) Title}). All-text headings are unaffected.
-   */
+  /// Renders heading inlines, inserting one space between an inline image and adjacent text so they
+  /// don't glue (e.g. `![icon](src) Title`). All-text headings are unaffected.
   private String renderHeadingInlines(List<AdfInline> nodes, RendererState context) {
     var headingContext = context.withHeading(true);
     var builder = new StringBuilder();
@@ -468,10 +462,8 @@ public final class AdfRenderer implements BlockRecursion {
     return header + "\n" + toBlockQuote(content);
   }
 
-  /**
-   * Maps an Atlassian panel type to a GFM alert keyword: warning -&gt; WARNING, error -&gt;
-   * CAUTION, tip/success -&gt; TIP, everything else (info/note/custom/unknown) -&gt; NOTE.
-   */
+  /// Maps an Atlassian panel type to a GFM alert keyword: warning -> WARNING, error -> CAUTION,
+  /// tip/success -> TIP, everything else (info/note/custom/unknown) -> NOTE.
   private static String gfmAlert(@Nullable String panelType) {
     if (panelType == null) {
       return "NOTE";

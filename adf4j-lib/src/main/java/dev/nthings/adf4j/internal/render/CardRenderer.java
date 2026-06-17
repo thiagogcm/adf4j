@@ -4,7 +4,7 @@ import dev.nthings.adf4j.ast.CardAttrs;
 import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
 
-/** Renders smart-link nodes (block/inline/embed cards) to Markdown links. */
+/// Renders smart-link nodes (block/inline/embed cards) to Markdown links.
 final class CardRenderer {
 
   String renderBlockCard(CardAttrs attrs, RenderContext context) {
@@ -38,13 +38,11 @@ final class CardRenderer {
         : MarkdownText.labelToken("Embed card", context.options().escapeParentheses());
   }
 
-  /**
-   * Shared url/title rendering for all three card kinds, or {@code null} when the card has neither:
-   * url+title -&gt; {@code [title](url)}; url only -&gt; {@code <url>} (or {@code [url](url)} if
-   * not clean); title only -&gt; the escaped title as plain text. A {@code PageLinkResolver}
-   * rewrites an internal page card's destination; a url-only card whose destination is rewritten
-   * keeps the original url as its visible label.
-   */
+  /// Shared url/title rendering for all three card kinds, or `null` when the card has neither:
+  /// url+title -> `[title](url)`; url only -> `<url>` (or `[url](url)` if not clean); title only ->
+  /// the escaped title as plain text. A `PageLinkResolver` rewrites an internal page card's
+  /// destination; a url-only card whose destination is rewritten keeps the original url as its
+  /// visible label.
   private @Nullable String renderCardLink(CardAttrs attrs, RenderContext context) {
     var url = attrs.url();
     var title = attrs.title();
@@ -71,7 +69,7 @@ final class CardRenderer {
     return null;
   }
 
-  // A CommonMark absolute-URI scheme: a letter, then letters/digits/+/-/., then ':' (min 2 chars).
+  /// A CommonMark absolute-URI scheme: a letter, then letters/digits/+/-/., then ':' (min 2 chars).
   private static boolean isAbsoluteUri(String url) {
     var colon = url.indexOf(':');
     if (colon < 2 || !Character.isLetter(url.charAt(0))) {

@@ -478,11 +478,9 @@ public final class AdfAstParser {
         .build();
   }
 
-  /**
-   * Converts a node's raw {@code attrs} into a generic {@link Attributes} view of plain Java
-   * values. The conversion is product-neutral: every key (including any {@code __*} extension keys)
-   * is copied as-is, leaving interpretation of product-specific extras to higher layers.
-   */
+  /// Converts a node's raw `attrs` into a generic {@link Attributes} view of plain Java
+  /// values. The conversion is product-neutral: every key (including any `__*` extension keys)
+  /// is copied as-is, leaving interpretation of product-specific extras to higher layers.
   private Attributes toAttributes(@Nullable JsonNode attrs) {
     if (attrs == null || !attrs.isObject()) {
       return Attributes.empty();

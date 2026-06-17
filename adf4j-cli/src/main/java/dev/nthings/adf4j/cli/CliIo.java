@@ -8,13 +8,10 @@ import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-
 import org.jspecify.annotations.Nullable;
 
-/**
- * Reads the ADF input (a path argument or stdin) and writes the deliverable; a file output goes
- * through a temp file + atomic rename so a crash mid-write can't leave a truncated file.
- */
+/// Reads the ADF input (a path argument or stdin) and writes the deliverable; a file output goes
+/// through a temp file + atomic rename so a crash mid-write can't leave a truncated file.
 final class CliIo {
 
   private CliIo() {}
@@ -37,7 +34,8 @@ final class CliIo {
     try {
       return Files.readString(path, StandardCharsets.UTF_8);
     } catch (IOException exception) {
-      throw CliException.io("failed to read input file '" + path + "': " + exception.getMessage(), exception);
+      throw CliException.io(
+          "failed to read input file '" + path + "': " + exception.getMessage(), exception);
     }
   }
 
@@ -57,7 +55,8 @@ final class CliIo {
       temp = Files.createTempFile(directory, ".adf4j-", ".tmp");
       Files.writeString(temp, content, StandardCharsets.UTF_8);
       try {
-        Files.move(temp, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+        Files.move(
+            temp, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
       } catch (AtomicMoveNotSupportedException unsupported) {
         Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING);
       }

@@ -28,12 +28,10 @@ import java.util.stream.Stream;
 import org.commonmark.ext.heading.anchor.IdGenerator;
 import org.jspecify.annotations.Nullable;
 
-/**
- * Records every {@link Heading} and the union of toc-macro level ranges as the {@link
- * AdfNodeWalker} visits each node, then turns them into a {@link HeadingOutline} ({@link #build()}
- * derives the slug/anchor). Holds the accumulation for one document; create a fresh instance per
- * document.
- */
+/// Records every {@link Heading} and the union of toc-macro level ranges as the
+/// {@link AdfNodeWalker} visits each node, then turns them into a {@link HeadingOutline}
+/// ({@link #build()} derives the slug/anchor). Holds the accumulation for one document; create a
+/// fresh instance per document.
 final class AdfHeadingCollector implements NodeVisitor {
 
   private final List<Heading> headings = new ArrayList<>();
@@ -147,11 +145,9 @@ final class AdfHeadingCollector implements NodeVisitor {
     return builder.toString().trim();
   }
 
-  /**
-   * Appends a heading-text fragment, inserting one space only when two sources would otherwise fuse
-   * with no whitespace (so an image alt before {@code "Title"} slugs to {@code icon-title}, not
-   * {@code icontitle}). Boundaries that already have whitespace are untouched.
-   */
+  /// Appends a heading-text fragment, inserting one space only when two sources would otherwise
+  /// fuse with no whitespace (so an image alt before `"Title"` slugs to `icon-title`, not
+  /// `icontitle`). Boundaries that already have whitespace are untouched.
   private static void appendPlainText(StringBuilder builder, String fragment) {
     if (fragment == null || fragment.isEmpty()) {
       return;

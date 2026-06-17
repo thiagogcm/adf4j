@@ -1,10 +1,9 @@
 package dev.nthings.adf4j.internal.analyze;
 
 import dev.nthings.adf4j.ast.MacroParams;
-
 import org.jspecify.annotations.Nullable;
 
-/** The clamped 1..6 heading-level window a {@code toc} macro covers (min/max swapped if inverted). */
+/// The clamped 1..6 heading-level window a `toc` macro covers (min/max swapped if inverted).
 public record TocLevelRange(int min, int max) {
 
   public static TocLevelRange of(MacroParams macroParams) {

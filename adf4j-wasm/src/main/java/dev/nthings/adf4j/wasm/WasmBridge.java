@@ -11,7 +11,11 @@ import org.graalvm.webimage.api.JSString;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
-/** Web Image entry point that exposes adf4j on {@code globalThis}. */
+/// Web Image entry point. `main` installs `globalThis.adf4j` with `convert(json)`,
+/// `convertJson(json)`, `version()`, and a `ready` flag, then fires `globalThis.__adf4jOnReady()`
+/// if present. That callback is the only handshake a Node/browser host has, since the wasm image
+/// has no stdin or host filesystem. Conversion never throws across the boundary: failures come back
+/// in-band, as an `ERROR: …` string from `convert` or `{ok:false, error}` from `convertJson`.
 public final class WasmBridge {
 
   private static final JsonMapper JSON = JsonMapper.builder().build();

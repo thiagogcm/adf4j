@@ -1,4 +1,5 @@
-/** The GraalVM Web Image bridge exposing adf4j to JavaScript/Node. {@link org.jspecify.annotations.NullMarked}. */
+/// The GraalVM Web Image bridge exposing adf4j to JavaScript/Node.
+/// {@link NullMarked}.
 @NullMarked
 package dev.nthings.adf4j.wasm;
 

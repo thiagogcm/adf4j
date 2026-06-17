@@ -1,24 +1,20 @@
 package dev.nthings.adf4j.internal.render;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.BulletList;
 import dev.nthings.adf4j.ast.ListItem;
 import dev.nthings.adf4j.ast.OrderedList;
 import dev.nthings.adf4j.ast.TableCell;
 import dev.nthings.adf4j.ast.TableRow;
-
+import java.util.ArrayList;
+import java.util.List;
 import org.jsoup.nodes.Element;
 import org.jsoup.parser.Tag;
 import org.jspecify.annotations.Nullable;
 
-/**
- * The HTML table-fallback renderer: builds a jsoup {@code <table>} for ADF tables GFM pipe syntax
- * can't express (colspan/rowspan, a number column, non-paragraph cell content, non-canonical header
- * placement). Split out of {@link TableRenderer} so the GFM and HTML paths are separate concerns.
- */
+/// The HTML table-fallback renderer: builds a jsoup `<table>` for ADF tables GFM pipe syntax can't
+/// express (colspan/rowspan, a number column, non-paragraph cell content, non-canonical header
+/// placement). Split out of {@link TableRenderer} so the GFM and HTML paths are separate concerns.
 final class HtmlTableRenderer {
 
   private final MarkdownRenderingSupport markdownRenderingSupport;
@@ -59,7 +55,8 @@ final class HtmlTableRenderer {
     return HtmlFragments.outerHtml(table);
   }
 
-  private Element renderHtmlTableCell(TableCell cell, RendererState context, BlockRecursion recursion) {
+  private Element renderHtmlTableCell(
+      TableCell cell, RendererState context, BlockRecursion recursion) {
     var tag = cell.header() ? "th" : "td";
     var element = new Element(Tag.valueOf(tag), "");
 
@@ -71,7 +68,8 @@ final class HtmlTableRenderer {
     }
 
     var value =
-        renderHtmlTableCellContent(cell.content(), context.withTableCell(TableCellKind.HTML), recursion);
+        renderHtmlTableCellContent(
+            cell.content(), context.withTableCell(TableCellKind.HTML), recursion);
     element.html(value);
     return element;
   }
@@ -102,7 +100,8 @@ final class HtmlTableRenderer {
   private String renderHtmlTableCellLeafBlock(
       AdfBlock block, RendererState context, BlockRecursion recursion) {
     var rendered =
-        RenderBuffer.joinBlocks(recursion.renderBlock(block, context.withTableCell(TableCellKind.HTML)))
+        RenderBuffer.joinBlocks(
+                recursion.renderBlock(block, context.withTableCell(TableCellKind.HTML)))
             .trim();
     if (rendered.isBlank()) {
       return "";
@@ -127,7 +126,8 @@ final class HtmlTableRenderer {
     return HtmlFragments.outerHtml(list);
   }
 
-  private @Nullable Element renderHtmlListItem(ListItem item, RendererState context, BlockRecursion recursion) {
+  private @Nullable Element renderHtmlListItem(
+      ListItem item, RendererState context, BlockRecursion recursion) {
     var fragments = new ArrayList<String>();
     for (var block : item.content()) {
       var rendered =

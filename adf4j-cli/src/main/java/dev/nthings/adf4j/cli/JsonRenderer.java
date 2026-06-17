@@ -1,8 +1,5 @@
 package dev.nthings.adf4j.cli;
 
-import java.util.List;
-import java.util.Set;
-
 import dev.nthings.adf4j.AdfToMarkdown;
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.metadata.ContentMetadata;
@@ -11,23 +8,30 @@ import dev.nthings.adf4j.result.Diagnostic;
 import dev.nthings.adf4j.result.MarkdownResult;
 import dev.nthings.adf4j.result.ParseResult;
 import dev.nthings.adf4j.result.UnresolvedReferences;
-
+import java.util.List;
+import java.util.Set;
+import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
-import org.jspecify.annotations.Nullable;
-
-/**
- * Builds the CLI's JSON output trees from library result types. Output is decoupled from the library
- * records: a {@link Diagnostic}'s {@code cause} (a {@code Throwable}) is structurally absent here, so
- * stack traces can't leak into stdout. Excerpt AST is rendered to Markdown rather than dumped.
- */
+/// Builds the CLI's JSON output trees from library result types. Deliberately a hand-written
+/// projection, not databind over the records: a {@link Diagnostic}'s `cause` (`Throwable`) is
+/// omitted so stack traces can't leak into stdout, and excerpt AST is rendered to Markdown rather
+/// than dumped.
 final class JsonRenderer {
 
-  /** Every section key {@code analyze} can emit, in output order. */
-  static final List<String> METADATA_KEYS = List.of(
-      "pageRefs", "externalRefs", "mentionRefs", "attachmentRefs", "referencedFileIds",
-      "pageTreeRefs", "excerptRefs", "excerpts", "outline");
+  /// Every section key `analyze` can emit, in output order.
+  static final List<String> METADATA_KEYS =
+      List.of(
+          "pageRefs",
+          "externalRefs",
+          "mentionRefs",
+          "attachmentRefs",
+          "referencedFileIds",
+          "pageTreeRefs",
+          "excerptRefs",
+          "excerpts",
+          "outline");
 
   static final Set<String> METADATA_KEY_SET = Set.copyOf(METADATA_KEYS);
 
@@ -64,7 +68,8 @@ final class JsonRenderer {
       node.set("pageRefs", strings(metadata.pageRefs().stream().map(p -> p.pageNodeId()).toList()));
     }
     if (selected.contains("externalRefs")) {
-      node.set("externalRefs", strings(metadata.externalRefs().stream().map(e -> e.url()).toList()));
+      node.set(
+          "externalRefs", strings(metadata.externalRefs().stream().map(e -> e.url()).toList()));
     }
     if (selected.contains("mentionRefs")) {
       var array = json.array();
@@ -115,7 +120,8 @@ final class JsonRenderer {
       for (var excerpt : metadata.excerpts()) {
         var item = json.object();
         item.put("name", excerpt.name());
-        item.put("markdown", converter.convert(new AdfDocument(1, excerpt.content()), options).body());
+        item.put(
+            "markdown", converter.convert(new AdfDocument(1, excerpt.content()), options).body());
         array.add(item);
       }
       node.set("excerpts", array);
@@ -168,7 +174,8 @@ final class JsonRenderer {
     return node;
   }
 
-  private ObjectNode attachmentNode(String fileId, @Nullable String title, @Nullable String mediaType) {
+  private ObjectNode attachmentNode(
+      String fileId, @Nullable String title, @Nullable String mediaType) {
     var item = json.object();
     item.put("fileId", fileId);
     item.put("title", title);

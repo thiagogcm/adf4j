@@ -1,15 +1,13 @@
 package dev.nthings.adf4j.options;
 
-/**
- * Controls how a GFM-safe table that lacks an all-{@code tableHeader} first row is rendered. GFM
- * tables require a header row, so the default keeps such tables (and any genuinely inexpressible
- * table — number column, colspan/rowspan, non-GFM cell content) as raw HTML.
- */
+/// Selects how a GFM-expressible table that lacks an all-`tableHeader` first row is rendered. A
+/// table that genuinely cannot be a GFM table (number column, colspan/rowspan, non-GFM cell
+/// content) always falls back to raw HTML regardless of this setting.
 public enum TableFallback {
-  /** Emit raw {@code <table>} HTML for any table without an all-header first row (default). */
+  /// Emit raw `<table>` HTML instead of promoting or synthesizing a header row.
   HTML,
-  /** Treat the first row as the header row so the table renders as GFM Markdown. */
+  /// Promote the first row to the header row so the table renders as GFM Markdown (the default).
   GFM_PROMOTE_FIRST_ROW,
-  /** Prepend a synthesized empty header row so every original row stays a data row in GFM Markdown. */
+  /// Prepend a synthesized empty header row so every original row stays a data row in GFM Markdown.
   GFM_EMPTY_HEADER
 }

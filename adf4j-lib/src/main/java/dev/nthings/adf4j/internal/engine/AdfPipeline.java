@@ -1,28 +1,24 @@
 package dev.nthings.adf4j.internal.engine;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.jspecify.annotations.Nullable;
-
-import dev.nthings.adf4j.metadata.ContentMetadata;
-import dev.nthings.adf4j.options.MarkdownOptions;
-import dev.nthings.adf4j.result.MarkdownResult;
-import dev.nthings.adf4j.result.Diagnostic;
-import dev.nthings.adf4j.result.ParseResult;
+import dev.nthings.adf4j.AdfToMarkdown;
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.internal.analyze.AdfDocumentAnalyzer;
 import dev.nthings.adf4j.internal.parser.AdfParsingService;
 import dev.nthings.adf4j.internal.render.AdfRenderer;
-
+import dev.nthings.adf4j.metadata.ContentMetadata;
+import dev.nthings.adf4j.options.MarkdownOptions;
+import dev.nthings.adf4j.result.Diagnostic;
+import dev.nthings.adf4j.result.MarkdownResult;
+import dev.nthings.adf4j.result.ParseResult;
+import java.util.ArrayList;
+import java.util.List;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Assembles and runs the {@code parse → analyze → render} pipeline behind
- * {@link dev.nthings.adf4j.AdfToMarkdown}. Stateless and thread-safe once built; each phase owns its
- * own construction via {@code createDefault()}.
- */
+/// Assembles and runs the `parse → analyze → render` pipeline behind
+/// {@link AdfToMarkdown}. Stateless and thread-safe once built; each phase owns its
+/// own construction via `createDefault()`.
 public final class AdfPipeline {
 
   private static final Logger log = LoggerFactory.getLogger(AdfPipeline.class);
@@ -96,8 +92,9 @@ public final class AdfPipeline {
     var analysis = analyzer.analyze(document, options);
     var rendered = renderer.render(document, options, analysis.outline());
     // Diagnostics in pipeline order: parse, then analyze-phase lossiness, then render-phase macros.
-    var merged = mergeDiagnostics(
-        mergeDiagnostics(diagnostics, analysis.diagnostics()), rendered.diagnostics());
+    var merged =
+        mergeDiagnostics(
+            mergeDiagnostics(diagnostics, analysis.diagnostics()), rendered.diagnostics());
     return new MarkdownResult(rendered.body(), analysis.metadata(), merged, rendered.unresolved());
   }
 

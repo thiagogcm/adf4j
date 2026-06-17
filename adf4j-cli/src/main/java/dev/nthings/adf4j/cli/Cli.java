@@ -16,10 +16,8 @@ import java.util.Locale;
 import java.util.Properties;
 import java.util.Set;
 
-/**
- * The CLI: dispatches to {@code convert} / {@code analyze} / {@code validate} and owns the
- * exit-code contract. Stdout carries only the deliverable; diagnostics and warnings go to stderr.
- */
+/// The CLI: dispatches to `convert` / `analyze` / `validate` and owns the
+/// exit-code contract. Stdout carries only the deliverable; diagnostics and warnings go to stderr.
 final class Cli {
 
   private static final String UNKNOWN_VERSION = "unknown";

@@ -7,8 +7,7 @@ import org.jspecify.annotations.Nullable;
 
 final class HtmlFragments {
 
-  private HtmlFragments() {
-  }
+  private HtmlFragments() {}
 
   static String anchor(@Nullable String anchor) {
     if (anchor == null || anchor.isBlank()) {
@@ -20,7 +19,7 @@ final class HtmlFragments {
     return outerHtml(element);
   }
 
-  /** Escapes the HTML text-significant characters so an ADF string is safe inside element text. */
+  /// Escapes the HTML text-significant characters so an ADF string is safe inside element text.
   static String escapeHtmlText(@Nullable String value) {
     if (value == null) {
       return "";

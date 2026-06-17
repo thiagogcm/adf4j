@@ -2,15 +2,13 @@ package dev.nthings.adf4j.ast;
 
 import org.jspecify.annotations.Nullable;
 
-/**
- * The attributes of a media node. {@code type} distinguishes {@code file}/{@code link} media
- * (identified by {@code id}/{@code localId} + {@code collection}, resolvable via a
- * {@code MediaResolver}) from {@code external} media (a direct {@code url}). {@code width}/
- * {@code height} are pixel dimensions when present; {@code mediaType} is the coarse kind
- * ({@code image}, {@code file}, …) while {@code fileMimeType} is the exact MIME type; {@code alt},
- * {@code fileName} and {@code name} are display labels (see {@link #imageAlt()} and
- * {@link #fileLabel(String)} for the fallback order).
- */
+/// The attributes of a media node. `type` distinguishes `file`/`link` media
+/// (identified by `id`/`localId` + `collection`, resolvable via a
+/// `MediaResolver`) from `external` media (a direct `url`). `width`/
+/// `height` are pixel dimensions when present; `mediaType` is the coarse kind
+/// (`image`, `file`, ...) while `fileMimeType` is the exact MIME type; `alt`,
+/// `fileName` and `name` are display labels (see {@link #imageAlt()} and
+/// {@link #fileLabel(String)} for the fallback order).
 public record MediaAttrs(
     @Nullable String type,
     @Nullable String id,
@@ -29,18 +27,18 @@ public record MediaAttrs(
     return new Builder();
   }
 
-  /** The explicit MIME type if present, otherwise the coarser media type. */
+  /// The explicit MIME type if present, otherwise the coarser media type.
   public @Nullable String mimeOrType() {
     return firstNonBlank(fileMimeType, mediaType);
   }
 
-  /** Alt text for an image embed: the description if given, else the file name, else {@code "media"}. */
+  /// Alt text for an image embed: the description if given, else the file name, else `"media"`.
   public String imageAlt() {
     var label = firstNonBlank(alt, fileName, name);
     return label == null ? "media" : label;
   }
 
-  /** Label for a file link: the name, file name, alt, or destination's file name, else {@code "file"}. */
+  /// Label for a file link: the name, file name, alt, or destination's file name, else `"file"`.
   public String fileLabel(@Nullable String destinationFileName) {
     var label = firstNonBlank(name, fileName, alt, destinationFileName);
     return label == null ? "file" : label;
@@ -69,8 +67,7 @@ public record MediaAttrs(
     private @Nullable String fileName;
     private @Nullable String name;
 
-    private Builder() {
-    }
+    private Builder() {}
 
     public Builder type(@Nullable String type) {
       this.type = type;
@@ -134,7 +131,17 @@ public record MediaAttrs(
 
     public MediaAttrs build() {
       return new MediaAttrs(
-          type, id, localId, url, collection, alt, width, height, mediaType, fileMimeType, fileName,
+          type,
+          id,
+          localId,
+          url,
+          collection,
+          alt,
+          width,
+          height,
+          mediaType,
+          fileMimeType,
+          fileName,
           name);
     }
   }

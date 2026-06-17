@@ -3,11 +3,15 @@ package dev.nthings.adf4j.confluence;
 import dev.nthings.adf4j.ast.Attributes;
 import org.jspecify.annotations.Nullable;
 
-/**
- * Confluence-specific link/card metadata. This lives in the Confluence layer and is derived from
- * the product-neutral {@link Attributes} carried by AST nodes via {@link #from(Attributes)} — the
- * AST itself never depends on this type.
- */
+/// Confluence-specific link/card metadata. This lives in the Confluence layer and is derived from
+/// the product-neutral {@link Attributes} carried by AST nodes via {@link #from(Attributes)}. The
+/// AST itself never depends on this type.
+///
+/// `linkType` classifies the link as Confluence stored it (e.g. `page`), marking page links even
+/// when no id is present. `pageId`, `contentId`, and `id` are candidate page-content ids in
+/// preference order; the first non-blank of these is the metadata-derived page id, though an id
+/// inferred from the link URL takes precedence over it. All four are `null` when the attributes
+/// carried no Confluence metadata.
 public record ConfluenceMetadata(
     @Nullable String linkType,
     @Nullable String pageId,
@@ -21,7 +25,7 @@ public record ConfluenceMetadata(
     return EMPTY;
   }
 
-  /** Reads the {@value #METADATA_KEY} extras from a node's attributes, or {@link #empty()}. */
+  /// Reads the `__confluenceMetadata` extras from a node's attributes, or {@link #empty()}.
   public static ConfluenceMetadata from(Attributes attrs) {
     if (attrs == null) {
       return EMPTY;

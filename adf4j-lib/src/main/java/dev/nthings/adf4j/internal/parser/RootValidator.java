@@ -1,21 +1,17 @@
 package dev.nthings.adf4j.internal.parser;
 
+import dev.nthings.adf4j.result.Diagnostic;
+import dev.nthings.adf4j.result.Diagnostic.Severity;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-
-import dev.nthings.adf4j.result.Diagnostic;
-import dev.nthings.adf4j.result.Diagnostic.Severity;
-
 import org.jspecify.annotations.Nullable;
-
 import tools.jackson.databind.JsonNode;
 
-/** Validates the ADF root node, reporting structural problems as {@link Diagnostic}s. */
+/// Validates the ADF root node, reporting structural problems as {@link Diagnostic}s.
 final class RootValidator {
 
-  private RootValidator() {
-  }
+  private RootValidator() {}
 
   static List<Diagnostic> validate(@Nullable JsonNode document) {
     if (document == null) {

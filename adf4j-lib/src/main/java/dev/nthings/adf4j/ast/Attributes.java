@@ -3,14 +3,12 @@ package dev.nthings.adf4j.ast;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
 
-/**
- * Generic, immutable view over a node's raw ADF {@code attrs}. Holds only plain JSON-shaped values
- * (String, Long, Double, Boolean, nested {@link Map}/{@link List}); map values are never null, but a
- * nested list may contain null elements so a JSON {@code null} keeps its array index. This keeps the
- * core AST free of any product-specific or JSON-library types. Product layers such as
- * {@code dev.nthings.adf4j.confluence} read their extras from here, which keeps the dependency
- * pointing from those layers to the AST and never the other way around.
- */
+/// Generic, immutable view over a node's raw ADF `attrs`. Holds only plain JSON-shaped values
+/// (String, Long, Double, Boolean, nested `Map`/`List`); map values are never null, but a nested
+/// list may contain null elements so a JSON `null` keeps its array index. This keeps the core AST
+/// free of any product-specific or JSON-library types. Product layers such as the `confluence`
+/// package read their extras from here, which keeps the dependency pointing from those layers to
+/// the AST and never the other way around.
 public record Attributes(Map<String, Object> values) {
 
   private static final Attributes EMPTY = new Attributes(Map.of());
@@ -27,12 +25,12 @@ public record Attributes(Map<String, Object> values) {
     return values.isEmpty();
   }
 
-  /** The value at {@code key} when it is a string, otherwise {@code null}. */
+  /// The value at `key` when it is a string, otherwise `null`.
   public @Nullable String string(String key) {
     return values.get(key) instanceof String value ? value : null;
   }
 
-  /** The nested object at {@code key}, or {@link #empty()} when absent or not an object. */
+  /// The nested object at `key`, or {@link #empty()} when absent or not an object.
   @SuppressWarnings("unchecked")
   public Attributes object(String key) {
     return values.get(key) instanceof Map<?, ?> nested

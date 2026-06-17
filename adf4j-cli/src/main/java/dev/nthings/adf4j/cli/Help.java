@@ -1,9 +1,10 @@
 package dev.nthings.adf4j.cli;
 
-/** Usage text for the CLI and its subcommands. */
+/// Usage text for the CLI and its subcommands.
 final class Help {
 
-  static final String GLOBAL = """
+  static final String GLOBAL =
+      """
       adf4j - Atlassian Document Format (ADF) processing
 
       Usage: adf4j <command> [options] [<input-file>]
@@ -28,7 +29,8 @@ final class Help {
         adf4j validate --fail-on-warning doc.adf.json
       """;
 
-  static final String CONVERT = """
+  static final String CONVERT =
+      """
       adf4j convert - Convert ADF JSON to Markdown
 
       Usage: adf4j convert [options] [<input-file>]
@@ -68,7 +70,8 @@ final class Help {
         adf4j convert --page-url 'https://wiki/pages/{pageId}' doc.adf.json
       """;
 
-  static final String ANALYZE = """
+  static final String ANALYZE =
+      """
       adf4j analyze - Extract references, attachments, and outline
 
       Usage: adf4j analyze [options] [<input-file>]
@@ -90,7 +93,8 @@ final class Help {
         adf4j analyze -f text --select outline doc.adf.json
       """;
 
-  static final String VALIDATE = """
+  static final String VALIDATE =
+      """
       adf4j validate - Parse-check ADF JSON and report diagnostics
 
       Usage: adf4j validate [options] [<input-file>]

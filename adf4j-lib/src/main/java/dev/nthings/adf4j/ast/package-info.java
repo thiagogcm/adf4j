@@ -1,9 +1,7 @@
-/**
- * The immutable ADF abstract syntax tree: the sealed {@code AdfNode}/{@code AdfMark} hierarchies and
- * their attribute records. {@link org.jspecify.annotations.NullMarked}; a record component whose
- * compact constructor normalizes {@code null} to a default ("", empty collection, {@code empty()})
- * stays non-null and never returns {@code null}.
- */
+/// The immutable ADF abstract syntax tree: the sealed `AdfNode`/`AdfMark` hierarchies and
+/// their attribute records. {@link NullMarked}; a record component whose
+/// compact constructor normalizes `null` to a default ("", empty collection, `empty()`)
+/// stays non-null and never returns `null`.
 @NullMarked
 package dev.nthings.adf4j.ast;
 

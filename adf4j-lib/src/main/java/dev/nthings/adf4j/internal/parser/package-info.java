@@ -1,6 +1,4 @@
-/**
- * The internal ADF-JSON-to-AST parser. {@link org.jspecify.annotations.NullMarked}.
- */
+/// The internal ADF-JSON-to-AST parser. {@link NullMarked}.
 @NullMarked
 package dev.nthings.adf4j.internal.parser;
 

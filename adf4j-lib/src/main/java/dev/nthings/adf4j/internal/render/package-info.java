@@ -1,6 +1,4 @@
-/**
- * The internal AST-to-Markdown rendering machinery. {@link org.jspecify.annotations.NullMarked}.
- */
+/// The internal AST-to-Markdown rendering machinery. {@link NullMarked}.
 @NullMarked
 package dev.nthings.adf4j.internal.render;
 

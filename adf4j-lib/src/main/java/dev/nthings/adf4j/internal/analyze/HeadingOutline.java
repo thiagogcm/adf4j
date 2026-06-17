@@ -1,17 +1,15 @@
 package dev.nthings.adf4j.internal.analyze;
 
+import dev.nthings.adf4j.ast.Heading;
+import dev.nthings.adf4j.internal.AdfText;
+import dev.nthings.adf4j.metadata.HeadingReference;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import dev.nthings.adf4j.metadata.HeadingReference;
-import dev.nthings.adf4j.ast.Heading;
-import dev.nthings.adf4j.internal.AdfText;
-
 import org.jspecify.annotations.Nullable;
 
-/** The analyze phase's heading model, consumed by the render phase. */
+/// The analyze phase's heading model, consumed by the render phase.
 public final class HeadingOutline {
 
   private static final HeadingOutline EMPTY =
@@ -19,7 +17,8 @@ public final class HeadingOutline {
 
   private final List<HeadingReference> headings;
   private final Map<Heading, HeadingReference> headingsByNode;
-  // Clamped heading levels covered by at least one toc macro; their headings get an injected anchor.
+  // Clamped heading levels covered by at least one toc macro; their headings get an injected
+  // anchor.
   private final Set<Integer> tocReferencedLevels;
 
   private HeadingOutline(
@@ -44,8 +43,7 @@ public final class HeadingOutline {
         && (headingsByNode == null || headingsByNode.isEmpty())) {
       return EMPTY;
     }
-    return new HeadingOutline(
-        headings, new IdentityHashMap<>(headingsByNode), tocReferencedLevels);
+    return new HeadingOutline(headings, new IdentityHashMap<>(headingsByNode), tocReferencedLevels);
   }
 
   public List<HeadingReference> headings() {

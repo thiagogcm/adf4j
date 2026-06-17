@@ -1,4 +1,4 @@
-/** Confluence-specific render context and metadata. {@link org.jspecify.annotations.NullMarked}. */
+/// Confluence-specific render context and metadata. {@link NullMarked}.
 @NullMarked
 package dev.nthings.adf4j.confluence;
 

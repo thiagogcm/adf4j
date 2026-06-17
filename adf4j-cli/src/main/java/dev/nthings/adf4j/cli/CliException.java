@@ -1,6 +1,6 @@
 package dev.nthings.adf4j.cli;
 
-/** A handled CLI failure carrying the {@link ExitCodes exit code} to return. */
+/// A handled CLI failure carrying the {@link ExitCodes exit code} to return.
 final class CliException extends RuntimeException {
 
   private final int exitCode;

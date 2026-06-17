@@ -1,10 +1,5 @@
 package dev.nthings.adf4j.internal.render;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.IntStream;
-
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.Media;
 import dev.nthings.adf4j.ast.MediaGroup;
@@ -13,11 +8,14 @@ import dev.nthings.adf4j.ast.Paragraph;
 import dev.nthings.adf4j.ast.Table;
 import dev.nthings.adf4j.ast.TableCell;
 import dev.nthings.adf4j.ast.TableRow;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.IntStream;
 
-/**
- * Renders ADF tables as GFM pipe tables and routes to {@link HtmlTableRenderer} when a table can't be
- * expressed as one. Owns the routing and the pipe-table layout (column widths, header mode, separator).
- */
+/// Renders ADF tables as GFM pipe tables and routes to {@link HtmlTableRenderer} when a table
+/// can't be expressed as one. Owns the routing and the pipe-table layout (column widths, header
+/// mode, separator).
 final class TableRenderer {
 
   private final HtmlTableRenderer htmlTableRenderer;
@@ -46,12 +44,18 @@ final class TableRenderer {
     // GFM-safe but headerless: apply the fallback policy.
     return switch (context.tableFallback()) {
       case HTML -> htmlTableRenderer.renderHtmlTable(rows, context, recursion, numberColumn);
-      case GFM_PROMOTE_FIRST_ROW -> renderGfmTable(rows, context, recursion, HeaderMode.PROMOTE_FIRST_ROW);
-      case GFM_EMPTY_HEADER -> renderGfmTable(rows, context, recursion, HeaderMode.SYNTHESIZE_EMPTY);
+      case GFM_PROMOTE_FIRST_ROW ->
+          renderGfmTable(rows, context, recursion, HeaderMode.PROMOTE_FIRST_ROW);
+      case GFM_EMPTY_HEADER ->
+          renderGfmTable(rows, context, recursion, HeaderMode.SYNTHESIZE_EMPTY);
     };
   }
 
-  private enum HeaderMode { NATURAL, PROMOTE_FIRST_ROW, SYNTHESIZE_EMPTY }
+  private enum HeaderMode {
+    NATURAL,
+    PROMOTE_FIRST_ROW,
+    SYNTHESIZE_EMPTY
+  }
 
   private String renderGfmTable(
       List<TableRow> rows, RendererState context, BlockRecursion recursion, HeaderMode mode) {
@@ -118,7 +122,8 @@ final class TableRenderer {
 
   String renderTableCell(TableCell cell, RendererState context, BlockRecursion recursion) {
     var text =
-        RenderBuffer.joinBlocks(recursion.renderBlocks(cell.content(), context.withTableCell(TableCellKind.GFM)))
+        RenderBuffer.joinBlocks(
+                recursion.renderBlocks(cell.content(), context.withTableCell(TableCellKind.GFM)))
             .trim();
     if (text.isBlank()) {
       return "";

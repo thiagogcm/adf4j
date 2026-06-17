@@ -7,12 +7,10 @@ import java.util.function.UnaryOperator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * A resolver URL template such as {@code https://cdn/{collection}/{id}}. Placeholder names are
- * validated against {@code allowed} at construction (an unknown one is a usage error before any input
- * is read). Only the substituted value is percent-encoded (literal separators are preserved), and the
- * result is still scheme-sanitized by the library.
- */
+/// A resolver URL template such as `https://cdn/{collection}/{id}`. Placeholder names are
+/// validated against `allowed` at construction, so an unknown `{token}` is a usage error before any
+/// input is read. Only the substituted value is percent-encoded (literal separators in the
+/// template survive), and the library still scheme-sanitizes the result.
 final class UrlTemplate {
 
   static final Pattern PLACEHOLDER = Pattern.compile("\\{([^}]*)}");
@@ -26,17 +24,22 @@ final class UrlTemplate {
     while (matcher.find()) {
       if (!allowed.contains(matcher.group(1))) {
         throw CliException.usage(
-            "unknown placeholder '{" + matcher.group(1) + "}' in " + flag + "; allowed: " + allowed);
+            "unknown placeholder '{"
+                + matcher.group(1)
+                + "}' in "
+                + flag
+                + "; allowed: "
+                + allowed);
       }
     }
   }
 
-  /** Expands the template, percent-encoding each substituted value; absent values become empty. */
+  /// Expands the template, percent-encoding each substituted value; an absent key becomes empty.
   String expand(Map<String, String> values) {
     return render(template, name -> encode(Objects.requireNonNullElse(values.get(name), "")));
   }
 
-  /** Substitutes {@code {name}} tokens via {@code lookup}; shared by URL and extension templates. */
+  /// Substitutes `{name}` tokens via `lookup`; shared by URL and extension templates.
   static String render(String template, UnaryOperator<String> lookup) {
     var matcher = PLACEHOLDER.matcher(template);
     var out = new StringBuilder();
@@ -47,7 +50,8 @@ final class UrlTemplate {
     return out.toString();
   }
 
-  // Encode everything outside the RFC 3986 unreserved set (uppercase hex), so traversal/query/fragment
+  // Encode everything outside the RFC 3986 unreserved set (uppercase hex), so
+  // traversal/query/fragment
   // metacharacters in an untrusted value can't change the URL's structure.
   private static String encode(String value) {
     var out = new StringBuilder(value.length());
@@ -65,7 +69,12 @@ final class UrlTemplate {
   }
 
   private static boolean isUnreserved(char ch) {
-    return (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9')
-        || ch == '-' || ch == '_' || ch == '.' || ch == '~';
+    return (ch >= 'A' && ch <= 'Z')
+        || (ch >= 'a' && ch <= 'z')
+        || (ch >= '0' && ch <= '9')
+        || ch == '-'
+        || ch == '_'
+        || ch == '.'
+        || ch == '~';
   }
 }

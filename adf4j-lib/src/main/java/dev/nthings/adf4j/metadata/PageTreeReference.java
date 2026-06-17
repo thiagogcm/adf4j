@@ -2,30 +2,26 @@ package dev.nthings.adf4j.metadata;
 
 import java.util.Map;
 import java.util.OptionalInt;
-
 import org.jspecify.annotations.Nullable;
 
-/**
- * One {@code pagetree} or {@code children} macro occurrence in a document — both a metadata fact
- * (a document with any of these depends on the page hierarchy, not just its own content) and the
- * request a {@code PageTreeResolver} is asked to expand. {@code root} is the page the list is rooted
- * at — the {@code pagetree} macro's {@code root} parameter or the {@code children} macro's
- * {@code page} parameter, trimmed — or {@code null} when it is absent, blank, or an {@code @keyword}
- * (e.g. {@code @self}), meaning the current page; the raw value stays reachable via
- * {@code parameters}. {@code parameters} is the macro's full parameter map (e.g. {@code depth},
- * {@code all}, {@code startDepth}); the standard {@code depth} and {@code all} parameters are also
- * exposed pre-parsed via {@link #depth()} and {@link #all()}.
- */
-public record PageTreeReference(PageTreeMacro macro, @Nullable String root, Map<String, String> parameters) {
+/// One `pagetree` or `children` macro occurrence in a document, both a metadata fact
+/// (a document with any of these depends on the page hierarchy, not just its own content) and the
+/// request a `PageTreeResolver` is asked to expand. `root` is the page the list is rooted
+/// at: the `pagetree` macro's `root` parameter or the `children` macro's
+/// `page` parameter, trimmed. It is `null` when absent, blank, or an `@keyword`
+/// (e.g. `@self`), meaning the current page; the raw value stays reachable via
+/// `parameters`. `parameters` is the macro's full parameter map (e.g. `depth`,
+/// `all`, `startDepth`); the standard `depth` and `all` parameters are also
+/// exposed pre-parsed via {@link #depth()} and {@link #all()}.
+public record PageTreeReference(
+    PageTreeMacro macro, @Nullable String root, Map<String, String> parameters) {
 
   public PageTreeReference {
     parameters = parameters == null ? Map.of() : Map.copyOf(parameters);
   }
 
-  /**
-   * The macro's {@code depth} parameter as a positive level count, or empty when it is absent, blank,
-   * non-numeric, or not positive.
-   */
+  /// The macro's `depth` parameter as a positive level count, or empty when it is absent, blank,
+  /// non-numeric, or not positive.
   public OptionalInt depth() {
     var raw = parameters.get("depth");
     if (raw == null || raw.isBlank()) {
@@ -39,11 +35,9 @@ public record PageTreeReference(PageTreeMacro macro, @Nullable String root, Map<
     }
   }
 
-  /**
-   * Whether the macro asks for the whole subtree: the {@code all} parameter (falling back to its
-   * legacy {@code allChildren} spelling when {@code all} is absent or blank) equals {@code "true"},
-   * case-insensitively.
-   */
+  /// Whether the macro asks for the whole subtree: the `all` parameter (falling back to its
+  /// legacy `allChildren` spelling when `all` is absent or blank) equals `"true"`,
+  /// case-insensitively.
   public boolean all() {
     var raw = parameters.get("all");
     if (raw == null || raw.isBlank()) {

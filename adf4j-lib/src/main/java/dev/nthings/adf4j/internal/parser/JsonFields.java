@@ -1,14 +1,12 @@
 package dev.nthings.adf4j.internal.parser;
 
 import org.jspecify.annotations.Nullable;
-
 import tools.jackson.databind.JsonNode;
 
-/** Null/missing-safe readers for the field coercions the parser needs, funnelled through one place. */
+/// Null/missing-safe readers for the field coercions the parser needs, funnelled through one place.
 final class JsonFields {
 
-  private JsonFields() {
-  }
+  private JsonFields() {}
 
   static @Nullable String text(@Nullable JsonNode node, String field) {
     var value = field(node, field);

@@ -1,18 +1,16 @@
 package dev.nthings.adf4j;
 
-import java.util.List;
-import java.util.Map;
+import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.nthings.adf4j.metadata.PageTreeMacro;
 import dev.nthings.adf4j.metadata.PageTreeReference;
 import dev.nthings.adf4j.options.MarkdownOptions;
 import dev.nthings.adf4j.options.PageTreeEntry;
-import dev.nthings.adf4j.metadata.PageTreeMacro;
-
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-/** Covers {@code MarkdownResult.unresolved()}: the lookups a render's resolvers declined. */
+/// Covers `MarkdownResult.unresolved()`: the lookups a render's resolvers declined.
 class UnresolvedReferencesTests {
 
   // A paragraph linking to Confluence page 12345 by URL.
@@ -87,15 +85,19 @@ class UnresolvedReferencesTests {
     var result = AdfToMarkdown.create().convert(ROOTED_PAGETREE);
 
     assertThat(result.unresolved().pageTreeRefs())
-        .containsExactly(new PageTreeReference(PageTreeMacro.PAGETREE, "Docs Home", Map.of("root", "Docs Home")));
+        .containsExactly(
+            new PageTreeReference(
+                PageTreeMacro.PAGETREE, "Docs Home", Map.of("root", "Docs Home")));
 
     // A resolver that declines with null reports the same.
-    var declined = AdfToMarkdown.with(
-            MarkdownOptions.defaults().withPageTreeResolver(request -> null))
-        .convert(ROOTED_PAGETREE);
+    var declined =
+        AdfToMarkdown.with(MarkdownOptions.defaults().withPageTreeResolver(request -> null))
+            .convert(ROOTED_PAGETREE);
 
     assertThat(declined.unresolved().pageTreeRefs())
-        .containsExactly(new PageTreeReference(PageTreeMacro.PAGETREE, "Docs Home", Map.of("root", "Docs Home")));
+        .containsExactly(
+            new PageTreeReference(
+                PageTreeMacro.PAGETREE, "Docs Home", Map.of("root", "Docs Home")));
   }
 
   @Test
@@ -110,23 +112,30 @@ class UnresolvedReferencesTests {
 
   @Test
   void a_throwing_tree_resolver_is_reported_like_a_decline() {
-    var options = MarkdownOptions.defaults().withPageTreeResolver(request -> {
-      throw new RuntimeException("lookup failed");
-    });
+    var options =
+        MarkdownOptions.defaults()
+            .withPageTreeResolver(
+                request -> {
+                  throw new RuntimeException("lookup failed");
+                });
 
     var result = AdfToMarkdown.with(options).convert(ROOTED_PAGETREE);
 
     assertThat(result.unresolved().pageTreeRefs())
-        .containsExactly(new PageTreeReference(PageTreeMacro.PAGETREE, "Docs Home", Map.of("root", "Docs Home")));
+        .containsExactly(
+            new PageTreeReference(
+                PageTreeMacro.PAGETREE, "Docs Home", Map.of("root", "Docs Home")));
   }
 
   @Test
   void declined_tree_entry_ids_are_reported_alongside_resolved_ones() {
-    var options = MarkdownOptions.defaults()
-        .withPageTreeResolver(request -> List.of(
-            new PageTreeEntry(0, "Known", "111"),
-            new PageTreeEntry(0, "Gone", "222")))
-        .withPageLinkResolver(pageNodeId -> "111".equals(pageNodeId) ? "known.md" : null);
+    var options =
+        MarkdownOptions.defaults()
+            .withPageTreeResolver(
+                request ->
+                    List.of(
+                        new PageTreeEntry(0, "Known", "111"), new PageTreeEntry(0, "Gone", "222")))
+            .withPageLinkResolver(pageNodeId -> "111".equals(pageNodeId) ? "known.md" : null);
 
     var result = AdfToMarkdown.with(options).convert(ROOTED_PAGETREE);
 

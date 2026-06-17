@@ -6,31 +6,28 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import org.jspecify.annotations.Nullable;
 
-/**
- * A tiny getopt-style argument parser, kept reflection-free so the native/wasm images stay
- * reflection-free. Supports clustered short flags ({@code -cp}), {@code -oVALUE}/{@code --long=VALUE}
- * and their spaced forms, repeated options, and the {@code --} terminator; short flags are
- * case-sensitive, so {@code -V} and {@code -v} differ.
- */
+/// A tiny getopt-style argument parser, kept reflection-free so the native/wasm images stay
+/// reflection-free. Supports clustered short flags (`-cp`), `-oVALUE`/`--long=VALUE`
+/// and their spaced forms, repeated options, and the `--` terminator; short flags are
+/// case-sensitive, so `-V` and `-v` differ.
 final class Args {
 
-  /** Declares the options a command accepts: which names are flags vs value-bearing, with aliases. */
+  /// Declares the options a command accepts: which names are flags vs value-bearing, with aliases.
   static final class Spec {
     private final Map<String, String> aliasToCanonical = new LinkedHashMap<>();
     private final Set<String> valueOptions = new LinkedHashSet<>();
     private final Set<String> boolOptions = new LinkedHashSet<>();
 
-    /** A boolean flag, e.g. {@code flag("help", "-h", "--help")}. */
+    /// A boolean flag, e.g. `flag("help", "-h", "--help")`.
     Spec flag(String canonical, String... aliases) {
       register(canonical, aliases);
       boolOptions.add(canonical);
       return this;
     }
 
-    /** A value-bearing option, e.g. {@code value("output", "-o", "--output")}. */
+    /// A value-bearing option, e.g. `value("output", "-o", "--output")`.
     Spec value(String canonical, String... aliases) {
       register(canonical, aliases);
       valueOptions.add(canonical);
@@ -144,7 +141,7 @@ final class Args {
     return flags.contains(canonical);
   }
 
-  /** The last value given for a repeated option, or {@code null} when absent. */
+  /// The last value given for a repeated option, or `null` when absent.
   @Nullable String value(String canonical) {
     var list = values.get(canonical);
     return list == null || list.isEmpty() ? null : list.getLast();
@@ -155,7 +152,7 @@ final class Args {
     return value == null ? fallback : value;
   }
 
-  /** Every value given for a repeated option, in order. */
+  /// Every value given for a repeated option, in order.
   List<String> values(String canonical) {
     return values.getOrDefault(canonical, List.of());
   }

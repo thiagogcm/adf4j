@@ -5,7 +5,7 @@ import org.commonmark.renderer.html.HtmlRenderer;
 import org.jsoup.nodes.Entities;
 import org.jspecify.annotations.Nullable;
 
-/** Renders Markdown fragments to inline HTML for table cells GFM can't express (colspan/rowspan). */
+/// Renders Markdown fragments to inline HTML for table cells GFM can't express (colspan/rowspan).
 final class MarkdownRenderingSupport {
 
   private final Parser markdownParser;

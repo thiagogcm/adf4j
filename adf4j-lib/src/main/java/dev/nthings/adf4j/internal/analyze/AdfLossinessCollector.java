@@ -1,8 +1,5 @@
 package dev.nthings.adf4j.internal.analyze;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.AdfInline;
 import dev.nthings.adf4j.ast.AdfMark;
@@ -18,15 +15,15 @@ import dev.nthings.adf4j.ast.UnknownMark;
 import dev.nthings.adf4j.options.UnknownNodePolicy;
 import dev.nthings.adf4j.result.Diagnostic;
 import dev.nthings.adf4j.result.Diagnostic.Severity;
-
+import java.util.ArrayList;
+import java.util.List;
 import org.jspecify.annotations.Nullable;
 
-/**
- * Counts the unmodelled constructs the {@link AdfNodeWalker} visits so the conversion can report
- * whether rendering them was lossy: unknown node types (governed by the active
- * {@link UnknownNodePolicy}) and unknown marks (always dropped — the AST has no way to render a mark
- * type it does not model). Holds the counts for one document; create a fresh instance per document.
- */
+/// Counts the unmodelled constructs the {@link AdfNodeWalker} visits so the conversion can report
+/// whether rendering them was lossy: unknown node types (governed by the active
+/// {@link UnknownNodePolicy}) and unknown marks (always dropped: the AST has no way to render a
+/// mark type it does not model). Holds the counts for one document; create a fresh instance per
+/// document.
 final class AdfLossinessCollector implements NodeVisitor {
 
   private int unknownNodes;
@@ -66,11 +63,9 @@ final class AdfLossinessCollector implements NodeVisitor {
     }
   }
 
-  /**
-   * Diagnostics describing how the unknown constructs fared (empty when none). The unknown-node count
-   * is an upper bound: it counts every parsed unknown node, including any the renderer would also have
-   * dropped because it sits in a subtree dropped by design.
-   */
+  /// Diagnostics describing how the unknown constructs fared (empty when none). The unknown-node
+  /// count is an upper bound: it counts every parsed unknown node, including any the renderer
+  /// would also have dropped because it sits in a subtree dropped by design.
   List<Diagnostic> build(UnknownNodePolicy policy) {
     var issues = new ArrayList<Diagnostic>(2);
     if (unknownNodes > 0) {
@@ -80,32 +75,37 @@ final class AdfLossinessCollector implements NodeVisitor {
       }
     }
     if (unknownMarks > 0) {
-      issues.add(new Diagnostic(
-          "UNKNOWN_MARK_DROPPED",
-          unknownMarks + " unsupported mark(s) dropped from the output.",
-          null,
-          Severity.WARNING));
+      issues.add(
+          new Diagnostic(
+              "UNKNOWN_MARK_DROPPED",
+              unknownMarks + " unsupported mark(s) dropped from the output.",
+              null,
+              Severity.WARNING));
     }
     return List.copyOf(issues);
   }
 
   private @Nullable Diagnostic unknownNodeIssue(UnknownNodePolicy policy) {
     return switch (policy) {
-      case PLACEHOLDER -> new Diagnostic(
-          "UNKNOWN_NODE_PLACEHOLDER",
-          unknownNodes + " unsupported node(s) rendered as placeholders; original content not represented.",
-          null,
-          Severity.WARNING);
-      case SKIP -> new Diagnostic(
-          "UNKNOWN_NODE_SKIPPED",
-          unknownNodes + " unsupported node(s) dropped from the output.",
-          null,
-          Severity.WARNING);
-      case PRESERVE_RAW -> new Diagnostic(
-          "UNKNOWN_NODE_PRESERVED",
-          unknownNodes + " unsupported node(s) preserved as raw JSON.",
-          null,
-          Severity.INFO);
+      case PLACEHOLDER ->
+          new Diagnostic(
+              "UNKNOWN_NODE_PLACEHOLDER",
+              unknownNodes
+                  + " unsupported node(s) rendered as placeholders; original content not represented.",
+              null,
+              Severity.WARNING);
+      case SKIP ->
+          new Diagnostic(
+              "UNKNOWN_NODE_SKIPPED",
+              unknownNodes + " unsupported node(s) dropped from the output.",
+              null,
+              Severity.WARNING);
+      case PRESERVE_RAW ->
+          new Diagnostic(
+              "UNKNOWN_NODE_PRESERVED",
+              unknownNodes + " unsupported node(s) preserved as raw JSON.",
+              null,
+              Severity.INFO);
       // FAIL aborts the render with an exception, so there is no result to diagnose.
       case FAIL -> null;
     };

@@ -1,34 +1,14 @@
 package dev.nthings.adf4j.internal.analyze;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.stream.Stream;
-
-import dev.nthings.adf4j.metadata.AttachmentReference;
-import dev.nthings.adf4j.metadata.ContentMetadata;
-import dev.nthings.adf4j.metadata.ExcerptDefinition;
-import dev.nthings.adf4j.metadata.ExcerptIncludeReference;
-import dev.nthings.adf4j.metadata.ExternalReference;
-import dev.nthings.adf4j.metadata.HeadingReference;
-import dev.nthings.adf4j.metadata.MentionReference;
-import dev.nthings.adf4j.metadata.PageReference;
-import dev.nthings.adf4j.metadata.PageTreeReference;
-import dev.nthings.adf4j.internal.AttachmentReferences;
-import dev.nthings.adf4j.internal.ConfluenceSupport;
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.AdfInline;
 import dev.nthings.adf4j.ast.AdfMark;
-import dev.nthings.adf4j.ast.BlockCard;
 import dev.nthings.adf4j.ast.Attributes;
+import dev.nthings.adf4j.ast.BlockCard;
+import dev.nthings.adf4j.ast.BodiedExtension;
 import dev.nthings.adf4j.ast.CardAttrs;
-import dev.nthings.adf4j.confluence.ConfluenceMetadata;
-import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
 import dev.nthings.adf4j.ast.EmbedCard;
 import dev.nthings.adf4j.ast.Extension;
-import dev.nthings.adf4j.ast.BodiedExtension;
 import dev.nthings.adf4j.ast.InlineCard;
 import dev.nthings.adf4j.ast.InlineExtension;
 import dev.nthings.adf4j.ast.Link;
@@ -39,14 +19,31 @@ import dev.nthings.adf4j.ast.MediaInline;
 import dev.nthings.adf4j.ast.Mention;
 import dev.nthings.adf4j.ast.MultiBodiedExtension;
 import dev.nthings.adf4j.ast.Text;
-
+import dev.nthings.adf4j.confluence.ConfluenceMetadata;
+import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
+import dev.nthings.adf4j.internal.AttachmentReferences;
+import dev.nthings.adf4j.internal.ConfluenceSupport;
+import dev.nthings.adf4j.metadata.AttachmentReference;
+import dev.nthings.adf4j.metadata.ContentMetadata;
+import dev.nthings.adf4j.metadata.ExcerptDefinition;
+import dev.nthings.adf4j.metadata.ExcerptIncludeReference;
+import dev.nthings.adf4j.metadata.ExternalReference;
+import dev.nthings.adf4j.metadata.HeadingReference;
+import dev.nthings.adf4j.metadata.MentionReference;
+import dev.nthings.adf4j.metadata.PageReference;
+import dev.nthings.adf4j.metadata.PageTreeReference;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
 
-/**
- * Harvests the four content-reference kinds (page, external, mention, attachment) as the
- * {@link AdfNodeWalker} visits each node, then materializes a {@link ContentMetadata}. Holds the
- * accumulation for one document; create a fresh instance per document.
- */
+/// Harvests a document's references (page, external, mention, attachment, page-tree, excerpt) and
+/// its own excerpt definitions as the {@link AdfNodeWalker} visits each node, then materializes a
+/// {@link ContentMetadata}. Holds the accumulation for one document; create a fresh instance per
+/// document.
 final class AdfContentMetadataExtractor implements NodeVisitor {
 
   private final LinkedHashSet<String> pageRefs = new LinkedHashSet<>();
@@ -73,16 +70,21 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
       }
       case Extension extension ->
           collectExtension(
-              extension.extensionType(), extension.extensionKey(), extension.macroParams(),
+              extension.extensionType(),
+              extension.extensionKey(),
+              extension.macroParams(),
               extension.parameters());
       case BodiedExtension bodied -> {
         collectExtension(
-            bodied.extensionType(), bodied.extensionKey(), bodied.macroParams(),
+            bodied.extensionType(),
+            bodied.extensionKey(),
+            bodied.macroParams(),
             bodied.parameters());
         collectExcerptDefinition(bodied);
       }
       case MultiBodiedExtension mbe ->
-          collectExtension(mbe.extensionType(), mbe.extensionKey(), mbe.macroParams(), mbe.parameters());
+          collectExtension(
+              mbe.extensionType(), mbe.extensionKey(), mbe.macroParams(), mbe.parameters());
       case BlockCard blockCard -> collectCardLink(blockCard.attrs());
       case EmbedCard embedCard -> collectCardLink(embedCard.attrs());
       default -> {
@@ -102,7 +104,9 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
       }
       case InlineExtension extension ->
           collectExtension(
-              extension.extensionType(), extension.extensionKey(), extension.macroParams(),
+              extension.extensionType(),
+              extension.extensionKey(),
+              extension.macroParams(),
               extension.parameters());
       case Mention mention -> collectMention(mention);
       default -> {
@@ -182,11 +186,12 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
     var builder = attachmentRefs.computeIfAbsent(fileId, AttachmentRefBuilder::new);
 
     var title = firstNonBlank(attrs.fileName(), attrs.name(), attrs.alt());
-    var mediaType = firstNonBlank(
-        attrs.fileMimeType(),
-        attrs.mediaType(),
-        AttachmentReferences.inferMediaType(title),
-        attrs.type());
+    var mediaType =
+        firstNonBlank(
+            attrs.fileMimeType(),
+            attrs.mediaType(),
+            AttachmentReferences.inferMediaType(title),
+            attrs.type());
     if (mediaType != null) {
       builder.mediaType = mediaType;
     }
@@ -197,7 +202,9 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
   }
 
   private void collectExtension(
-      @Nullable String extensionType, @Nullable String extensionKey, MacroParams macroParams,
+      @Nullable String extensionType,
+      @Nullable String extensionKey,
+      MacroParams macroParams,
       Attributes parameters) {
     if (ConfluenceSupport.isInlineMediaImage(extensionType, extensionKey)) {
       // A media node in disguise: its file id is referenced like any media id.
@@ -229,7 +236,8 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
 
     if ("attachments".equals(extensionKey)) {
       // The macro expands to the supplied inventory, so each entry is referenced; without a context
-      // the expansion is unknown and contributes nothing (the same seed-the-context caveat as viewpdf).
+      // the expansion is unknown and contributes nothing (the same seed-the-context caveat as
+      // viewpdf).
       for (var reference : confluenceContext.attachmentReferencesByTitle().values()) {
         upsertAttachmentRef(reference);
       }
@@ -255,8 +263,9 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
         || !"excerpt".equals(bodied.extensionKey())) {
       return;
     }
-    excerpts.add(new ExcerptDefinition(
-        ConfluenceSupport.excerptName(bodied.macroParams()), bodied.content()));
+    excerpts.add(
+        new ExcerptDefinition(
+            ConfluenceSupport.excerptName(bodied.macroParams()), bodied.content()));
   }
 
   private void upsertAttachmentRef(AttachmentReference attachmentReference) {

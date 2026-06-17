@@ -1,7 +1,5 @@
 package dev.nthings.adf4j.internal.analyze;
 
-import java.util.List;
-
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.ast.AdfInline;
@@ -39,13 +37,11 @@ import dev.nthings.adf4j.ast.TableRow;
 import dev.nthings.adf4j.ast.TaskItem;
 import dev.nthings.adf4j.ast.TaskList;
 import dev.nthings.adf4j.ast.UnknownBlock;
-
+import java.util.List;
 import org.jspecify.annotations.Nullable;
 
-/**
- * The analyze phase's one tree-walk: descends a document in order, handing every block and inline to
- * each {@link NodeVisitor}. The single home for "what are a node's children".
- */
+/// The analyze phase's one tree-walk: descends a document in order, handing every block and inline
+/// to each {@link NodeVisitor}. The single home for "what are a node's children".
 final class AdfNodeWalker {
 
   private final List<NodeVisitor> visitors;
@@ -99,8 +95,14 @@ final class AdfNodeWalker {
       case ExtensionFrame node -> blocks(node.content());
       case BodiedSyncBlock node -> blocks(node.content());
       // Leaf blocks: no children. Exhaustive (no default) so new block types must be triaged here.
-      case CodeBlock _, Rule _, Media _, Extension _, SyncBlock _, BlockCard _, EmbedCard _, UnknownBlock _ -> {
-      }
+      case CodeBlock _,
+          Rule _,
+          Media _,
+          Extension _,
+          SyncBlock _,
+          BlockCard _,
+          EmbedCard _,
+          UnknownBlock _ -> {}
     }
   }
 

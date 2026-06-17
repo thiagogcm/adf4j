@@ -1,10 +1,10 @@
 package dev.nthings.adf4j.spec;
 
-import java.util.List;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.nthings.adf4j.AdfToMarkdown;
 import dev.nthings.adf4j.options.MarkdownOptions;
-
+import java.util.List;
 import org.commonmark.ext.gfm.alerts.AlertsExtension;
 import org.commonmark.ext.gfm.strikethrough.StrikethroughExtension;
 import org.commonmark.ext.gfm.tables.TablesExtension;
@@ -16,14 +16,11 @@ import org.commonmark.renderer.html.HtmlRenderer;
 import org.jsoup.Jsoup;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-/**
- * Independent structural oracle: rather than re-comparing against a converter-produced snapshot,
- * each case parses the converter's Markdown with {@code org.commonmark} (production's extension
- * list), renders to HTML, and asserts structural invariants — catching output that looks plausible
- * but parses into the wrong tree (a stray heading, a list escaping a paragraph, a leaked HTML tag).
- */
+/// Independent structural oracle: rather than re-comparing against a converter-produced snapshot,
+/// each case parses the converter's Markdown with `commonmark` (production's extension
+/// list), renders to HTML, and asserts structural invariants — catching output that looks plausible
+/// but parses into the wrong tree (a stray heading, a list escaping a paragraph, a leaked HTML
+/// tag).
 class CommonMarkOracleTests {
 
   private static final AdfToMarkdown CONVERTER = AdfToMarkdown.create();
@@ -31,13 +28,14 @@ class CommonMarkOracleTests {
       AdfToMarkdown.with(MarkdownOptions.defaults().withHtmlVisualMarks(true));
 
   // Same extension list as AdfRenderer.commonmarkExtensions().
-  private static final List<org.commonmark.Extension> EXTENSIONS = List.of(
-      TablesExtension.create(),
-      StrikethroughExtension.create(),
-      TaskListItemsExtension.create(),
-      HeadingAnchorExtension.create(),
-      ImageAttributesExtension.create(),
-      AlertsExtension.create());
+  private static final List<org.commonmark.Extension> EXTENSIONS =
+      List.of(
+          TablesExtension.create(),
+          StrikethroughExtension.create(),
+          TaskListItemsExtension.create(),
+          HeadingAnchorExtension.create(),
+          ImageAttributesExtension.create(),
+          AlertsExtension.create());
 
   private static final Parser PARSER = Parser.builder().extensions(EXTENSIONS).build();
   private static final HtmlRenderer HTML_RENDERER =
@@ -54,7 +52,8 @@ class CommonMarkOracleTests {
 
   @Test
   void level_two_heading_parses_to_an_h2_with_matching_text() {
-    var adf = """
+    var adf =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -76,7 +75,8 @@ class CommonMarkOracleTests {
   void indented_paragraph_stays_a_paragraph_and_does_not_promote_to_a_code_block() {
     // The nbsp indent run is plain text, so a deeply-indented paragraph must stay a <p>, never a
     // 4-space indented <pre><code> block.
-    var adf = """
+    var adf =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -98,7 +98,8 @@ class CommonMarkOracleTests {
   @Test
   void indented_heading_stays_a_heading() {
     // The nbsp run sits after the "# " marker, so the block is still parsed as an ATX heading.
-    var adf = """
+    var adf =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -119,7 +120,8 @@ class CommonMarkOracleTests {
   @Test
   void paragraph_that_merely_starts_with_text_does_not_produce_a_stray_heading() {
     // "# notes" inside a paragraph's text must render as a paragraph, never an ATX heading.
-    var adf = """
+    var adf =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -140,7 +142,8 @@ class CommonMarkOracleTests {
   @Test
   void expand_title_with_inline_html_does_not_introduce_a_live_b_element() {
     // The title "A <b>B</b> & C" must be HTML-escaped, so no live <b> appears in the summary.
-    var adf = """
+    var adf =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -163,7 +166,8 @@ class CommonMarkOracleTests {
   @Test
   void single_text_node_with_embedded_markers_stays_one_paragraph() {
     // A single text node "intro\n# heading\n- item" stays one paragraph, no heading/list.
-    var adf = """
+    var adf =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -187,7 +191,8 @@ class CommonMarkOracleTests {
   @Test
   void inline_card_from_json_ld_data_keeps_both_url_and_name() {
     // An inlineCard carrying only JSON-LD data{name,url} must linkify with the name as the text.
-    var adf = """
+    var adf =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -211,7 +216,8 @@ class CommonMarkOracleTests {
   @Test
   void link_on_whitespace_with_bracket_in_href_stays_a_real_anchor() {
     // A link mark on whitespace-only text whose href contains ']' must remain a parseable anchor.
-    var adf = """
+    var adf =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -234,7 +240,8 @@ class CommonMarkOracleTests {
   @Test
   void placeholder_with_link_and_emphasis_metacharacters_stays_inert_text() {
     // A placeholder carrying "[label](http://evil) *x*" must not parse into an anchor or emphasis.
-    var adf = """
+    var adf =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -257,7 +264,8 @@ class CommonMarkOracleTests {
   @Test
   void placeholder_as_first_inline_starting_with_hash_does_not_become_a_heading() {
     // A placeholder is a block's first inline; its "# ..." text must stay a paragraph.
-    var adf = """
+    var adf =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -279,7 +287,8 @@ class CommonMarkOracleTests {
   @Test
   void mention_as_first_inline_starting_with_dash_does_not_become_a_list() {
     // A mention's "- ..." text at line start must not promote to a bullet list item.
-    var adf = """
+    var adf =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -301,7 +310,8 @@ class CommonMarkOracleTests {
   @Test
   void non_numeric_date_as_first_inline_starting_with_gt_does_not_become_a_blockquote() {
     // A non-numeric date timestamp passes through verbatim; a leading ">" must not start a quote.
-    var adf = """
+    var adf =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -323,7 +333,8 @@ class CommonMarkOracleTests {
   @Test
   void status_then_placeholder_with_leading_paren_does_not_inject_a_link() {
     // "[Done]" (status) glued to "(see ref)" (placeholder) must not parse into an inline link.
-    var adf = """
+    var adf =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -344,7 +355,8 @@ class CommonMarkOracleTests {
 
   @Test
   void gfm_table_with_header_row_parses_to_a_table_with_a_header_cell() {
-    var adf = """
+    var adf =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -377,9 +389,12 @@ class CommonMarkOracleTests {
 
   @Test
   void toc_referenced_heading_emits_an_anchor_that_matches_its_toc_link() {
-    // A duplicate heading name slugs to "dup" / "dup-1"; the injected <a id> for each must equal the
-    // toc link target so the link resolves on any consumer, not just a commonmark-compatible slugger.
-    var adf = """
+    // A duplicate heading name slugs to "dup" / "dup-1"; the injected <a id> for each must equal
+    // the
+    // toc link target so the link resolves on any consumer, not just a commonmark-compatible
+    // slugger.
+    var adf =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -405,9 +420,11 @@ class CommonMarkOracleTests {
 
   @Test
   void header_column_table_keeps_the_header_cells_in_the_left_column_of_both_rows() {
-    // A header COLUMN (first cell of each row is a tableHeader) must not be promoted to a GFM header
+    // A header COLUMN (first cell of each row is a tableHeader) must not be promoted to a GFM
+    // header
     // row: the fallback routes to raw HTML, so the <th> stay in the left column of both rows.
-    var adf = """
+    var adf =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -443,7 +460,8 @@ class CommonMarkOracleTests {
   @Test
   void header_row_that_is_not_first_keeps_its_cells_as_th_outside_the_first_row() {
     // A header row in second position must stay <th> and must not move to the first row.
-    var adf = """
+    var adf =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -477,7 +495,8 @@ class CommonMarkOracleTests {
 
   @Test
   void info_panel_parses_to_a_gfm_alert_container_keeping_its_body_text() {
-    var adf = """
+    var adf =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -497,7 +516,8 @@ class CommonMarkOracleTests {
 
   @Test
   void expand_block_parses_to_a_details_summary_disclosure() {
-    var adf = """
+    var adf =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -518,7 +538,8 @@ class CommonMarkOracleTests {
 
   @Test
   void nested_bullet_list_keeps_its_nesting() {
-    var adf = """
+    var adf =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -539,14 +560,17 @@ class CommonMarkOracleTests {
 
     var document = Jsoup.parse(toHtml(adf));
 
-    assertThat(document.select("ul ul li")).as("the nested item survives as a nested li").hasSize(1);
+    assertThat(document.select("ul ul li"))
+        .as("the nested item survives as a nested li")
+        .hasSize(1);
     assertThat(document.selectFirst("ul ul li").text()).isEqualTo("Inner");
   }
 
   @Test
   void bang_before_a_linked_text_node_does_not_form_an_image() {
     // "Heads up!" glued to a link "the runbook" must not let the "!"+"[" parse into an image.
-    var adf = """
+    var adf =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -571,7 +595,8 @@ class CommonMarkOracleTests {
   void inline_card_label_with_metacharacters_stays_inert_link_text() {
     // An inlineCard whose data.name carries '*', backtick and '!' must escape into the link text
     // without spawning emphasis, code, or an image.
-    var adf = """
+    var adf =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -599,7 +624,8 @@ class CommonMarkOracleTests {
   void aligned_block_wraps_in_a_div_whose_markdown_still_renders() {
     // Under htmlVisualMarks an aligned heading + bold text must sit inside <div align> AND keep
     // being parsed as markdown — i.e. the div must not swallow it as a raw-HTML block.
-    var adf = """
+    var adf =
+        """
         {
           "type": "doc",
           "version": 1,

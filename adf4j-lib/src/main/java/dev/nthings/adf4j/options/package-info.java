@@ -1,4 +1,5 @@
-/** Conversion options and resolver SPIs ({@code MarkdownOptions} and friends). {@link org.jspecify.annotations.NullMarked}. */
+/// Conversion options and resolver SPIs (`MarkdownOptions` and friends).
+/// {@link NullMarked}.
 @NullMarked
 package dev.nthings.adf4j.options;
 

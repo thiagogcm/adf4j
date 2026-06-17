@@ -1,4 +1,5 @@
-/** Conversion outputs: {@code ParseResult}, {@code MarkdownResult}, {@code Diagnostic}, {@code UnresolvedReferences}. {@link org.jspecify.annotations.NullMarked}. */
+/// Conversion outputs: `ParseResult`, `MarkdownResult`, `Diagnostic`, `UnresolvedReferences`.
+/// {@link NullMarked}.
 @NullMarked
 package dev.nthings.adf4j.result;
 

@@ -1,27 +1,21 @@
 package dev.nthings.adf4j.internal.analyze;
 
-import java.util.List;
-
 import dev.nthings.adf4j.ast.AdfInline;
 import dev.nthings.adf4j.ast.HardBreak;
 import dev.nthings.adf4j.ast.InlineExtension;
 import dev.nthings.adf4j.internal.ConfluenceSupport;
-
+import java.util.List;
 import org.jspecify.annotations.Nullable;
 
-/**
- * Interpretation of a heading's inline content, shared by the analyze phase (slugging) and the render
- * phase (emission), so both agree on which nodes a heading "is" and what explicit anchor it carries.
- */
+/// Interpretation of a heading's inline content, shared by the analyze phase (slugging) and the
+/// render phase (emission), so both agree on which nodes a heading "is" and what explicit anchor
+/// it carries.
 public final class HeadingContent {
 
-  private HeadingContent() {
-  }
+  private HeadingContent() {}
 
-  /**
-   * The heading's significant inline nodes: leading and trailing {@link HardBreak}s trimmed and any
-   * Confluence {@code anchor} macro removed (its id is read separately via {@link #extractAnchorId}).
-   */
+  /// The heading's significant inline nodes: leading/trailing {@link HardBreak}s trimmed and any
+  /// Confluence `anchor` macro removed (its id is read separately via {@link #extractAnchorId}).
   public static List<AdfInline> normalizedHeadingNodes(@Nullable List<AdfInline> content) {
     if (content == null || content.isEmpty()) {
       return List.of();
@@ -39,18 +33,16 @@ public final class HeadingContent {
       return List.of();
     }
 
-    return content.subList(start, end).stream()
-        .filter(node -> !isAnchorExtension(node))
-        .toList();
+    return content.subList(start, end).stream().filter(node -> !isAnchorExtension(node)).toList();
   }
 
-  /** True iff the heading carries an explicit Confluence {@code anchor} macro with a non-blank id. */
+  /// True iff the heading carries an explicit Confluence `anchor` macro with a non-blank id.
   public static boolean hasExplicitAnchor(@Nullable List<AdfInline> content) {
     var anchorId = extractAnchorId(content);
     return anchorId != null && !anchorId.isBlank();
   }
 
-  /** The id of the heading's explicit Confluence {@code anchor} macro, or {@code null} if none. */
+  /// The id of the heading's explicit Confluence `anchor` macro, or `null` if none.
   public static @Nullable String extractAnchorId(@Nullable List<AdfInline> content) {
     if (content == null || content.isEmpty()) {
       return null;

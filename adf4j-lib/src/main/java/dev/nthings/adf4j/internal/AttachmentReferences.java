@@ -1,40 +1,38 @@
 package dev.nthings.adf4j.internal;
 
+import dev.nthings.adf4j.ast.MacroParams;
+import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
+import dev.nthings.adf4j.metadata.AttachmentReference;
 import java.net.URLConnection;
 import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Stream;
-
 import org.jspecify.annotations.Nullable;
-
-import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
-import dev.nthings.adf4j.metadata.AttachmentReference;
-import dev.nthings.adf4j.ast.MacroParams;
 
 public final class AttachmentReferences {
 
-  private static final Map<String, String> MEDIA_TYPES_BY_EXTENSION = Map.ofEntries(
-      Map.entry("bmp", "image/bmp"),
-      Map.entry("csv", "text/csv"),
-      Map.entry("gif", "image/gif"),
-      Map.entry("htm", "text/html"),
-      Map.entry("html", "text/html"),
-      Map.entry("jpeg", "image/jpeg"),
-      Map.entry("jpg", "image/jpeg"),
-      Map.entry("json", "application/json"),
-      Map.entry("md", "text/markdown"),
-      Map.entry("pdf", "application/pdf"),
-      Map.entry("png", "image/png"),
-      Map.entry("svg", "image/svg+xml"),
-      Map.entry("txt", "text/plain"),
-      Map.entry("webp", "image/webp"),
-      Map.entry("xml", "application/xml"),
-      Map.entry("zip", "application/zip"));
+  private static final Map<String, String> MEDIA_TYPES_BY_EXTENSION =
+      Map.ofEntries(
+          Map.entry("bmp", "image/bmp"),
+          Map.entry("csv", "text/csv"),
+          Map.entry("gif", "image/gif"),
+          Map.entry("htm", "text/html"),
+          Map.entry("html", "text/html"),
+          Map.entry("jpeg", "image/jpeg"),
+          Map.entry("jpg", "image/jpeg"),
+          Map.entry("json", "application/json"),
+          Map.entry("md", "text/markdown"),
+          Map.entry("pdf", "application/pdf"),
+          Map.entry("png", "image/png"),
+          Map.entry("svg", "image/svg+xml"),
+          Map.entry("txt", "text/plain"),
+          Map.entry("webp", "image/webp"),
+          Map.entry("xml", "application/xml"),
+          Map.entry("zip", "application/zip"));
 
-  private AttachmentReferences() {
-  }
+  private AttachmentReferences() {}
 
-  /** Classifies media by MIME/type, falling back to each name/URL extension; unknown is non-image. */
+  /// Classifies media by MIME/type, falling back to each name/URL extension; unknown is non-image.
   public static boolean isImage(@Nullable String mimeOrType, @Nullable String... fileNames) {
     var classification = classify(mimeOrType);
     for (var fileName : fileNames) {
@@ -71,13 +69,14 @@ public final class AttachmentReferences {
       }
     }
 
-    var fileId = Stream.of(
-        macroParams.value("fileId"),
-        macroParams.value("id"),
-        macroParams.value("attachmentId"))
-        .filter(s -> s != null && !s.isBlank())
-        .findFirst()
-        .orElse(null);
+    var fileId =
+        Stream.of(
+                macroParams.value("fileId"),
+                macroParams.value("id"),
+                macroParams.value("attachmentId"))
+            .filter(s -> s != null && !s.isBlank())
+            .findFirst()
+            .orElse(null);
     if (fileId == null) {
       return null;
     }
@@ -85,7 +84,7 @@ public final class AttachmentReferences {
     return new AttachmentReference(fileId, name, inferMediaType(name));
   }
 
-  /** The file name a URL or path carries: its last path segment, or null when none is present. */
+  /// The file name a URL or path carries: its last path segment, or null when none is present.
   public static @Nullable String fileName(@Nullable String urlOrPath) {
     if (urlOrPath == null) {
       return null;

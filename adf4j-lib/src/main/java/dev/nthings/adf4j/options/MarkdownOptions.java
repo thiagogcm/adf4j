@@ -4,37 +4,37 @@ import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
-/**
- * Immutable configuration for an ADF-to-Markdown conversion. Construct via {@link #defaults()} plus
- * the {@code withX(...)} withers, or via {@link #builder()}; an existing instance can be varied
- * with {@link #toBuilder()}.
- *
- * <p>{@code imageSizeAttributes} emits the non-GFM {@code {width= height=}} image suffix (off by
- * default; the library targets GFM). {@code tableFallback} selects how a GFM-safe table without an
- * all-header first row is rendered (first row promoted to a native pipe-table header by default).
- * {@code mediaResolver} is an optional hook that turns file media (which carries ids, not a URL)
- * into a concrete link; {@code null} keeps the {@code media:} placeholder. {@code htmlVisualMarks}
- * preserves visual-only marks (textColor/backgroundColor/border/fontSize) as an inline {@code <span
- * style>} instead of dropping them (off by default). {@code extensionRenderers} are optional hooks
- * for rendering custom extensions (macros), consulted before the built-in Confluence macros (empty
- * by default). {@code attachmentResolver} turns a resolved Confluence {@code attachment:} reference
- * into a concrete link; {@code null} keeps the {@code attachment:<fileId>} placeholder. {@code
- * pageLinkResolver} rewrites inter-page links/cards to caller-supplied destinations by page node
- * id; {@code null} keeps the original href. {@code pageTreeResolver} expands a {@code pagetree}
- * macro into an indented list of its descendant pages; an empty (non-null) list renders as nothing,
- * while {@code null} (or no resolver) keeps the {@code {{pagetree}}} placeholder token. {@code
- * excerptResolver} expands an {@code excerpt-include} macro into caller-supplied Markdown; {@code
- * null} (or a declined lookup) keeps the macro's placeholder and records the reference on {@code
- * MarkdownResult.unresolved()}. {@code collapseHardBreaks} renders a hard break (Shift+Enter) as a
- * soft break (a plain newline) instead of the two-trailing-space GFM hard break, so the output has
- * no trailing whitespace and segments reflow into one paragraph (off by default). {@code
- * documentTitle}, when set, prepends the value as a level-1 ({@code # }) heading above the body
- * ({@code null}/blank emits nothing); it is emitted even when the body is empty, blank, or fails to
- * parse — a titled-but-empty document needs no synthetic ADF input — and is render-only (not
- * reflected in {@code ContentMetadata}), not de-duplicated against an existing leading heading.
- * {@code escapeParentheses} backslash-escapes literal {@code (} and {@code )} in rendered text and
- * image alt text; off by default, since the escapes are inert noise outside a link destination.
- */
+/// Immutable configuration for an ADF-to-Markdown conversion. Construct via {@link #defaults()}
+/// plus
+/// the `withX(...)` withers, or via {@link #builder()}; an existing instance can be varied
+/// with {@link #toBuilder()}.
+///
+/// `imageSizeAttributes` emits the non-GFM `{width= height=}` image suffix (off by
+/// default; the library targets GFM). `tableFallback` selects how a GFM-safe table without an
+/// all-header first row is rendered (first row promoted to a native pipe-table header by default).
+/// `mediaResolver` is an optional hook that turns file media (which carries ids, not a URL)
+/// into a concrete link; `null` keeps the `media:` placeholder. `htmlVisualMarks`
+/// preserves visual-only marks (textColor/backgroundColor/border/fontSize) as an inline `<span
+/// style>` instead of dropping them (off by default). `extensionRenderers` are optional hooks
+/// for rendering custom extensions (macros), consulted before the built-in Confluence macros (empty
+/// by default). `attachmentResolver` turns a resolved Confluence `attachment:` reference
+/// into a concrete link; `null` keeps the `attachment:<fileId>` placeholder.
+/// `pageLinkResolver` rewrites inter-page links/cards to caller-supplied destinations by page node
+/// id; `null` keeps the original href. `pageTreeResolver` expands a `pagetree`
+/// macro into an indented list of its descendant pages; an empty (non-null) list renders as
+/// nothing,
+/// while `null` (or no resolver) keeps the `{{pagetree}}` placeholder token.
+/// `excerptResolver` expands an `excerpt-include` macro into caller-supplied Markdown;
+/// `null` (or a declined lookup) keeps the macro's placeholder and records the reference on
+/// `MarkdownResult.unresolved()`. `collapseHardBreaks` renders a hard break (Shift+Enter) as a
+/// soft break (a plain newline) instead of the two-trailing-space GFM hard break, so the output has
+/// no trailing whitespace and segments reflow into one paragraph (off by default).
+/// `documentTitle`, when set, prepends the value as a level-1 (`# `) heading above the body
+/// (`null`/blank emits nothing); it is emitted even when the body is empty, blank, or fails to
+/// parse (a titled-but-empty document needs no synthetic ADF input), and is render-only (not
+/// reflected in `ContentMetadata`), not de-duplicated against an existing leading heading.
+/// `escapeParentheses` backslash-escapes literal `(` and `)` in rendered text and
+/// image alt text; off by default, since the escapes are inert noise outside a link destination.
 public final class MarkdownOptions {
 
   private final UnknownNodePolicy unknownNodePolicy;
@@ -89,16 +89,17 @@ public final class MarkdownOptions {
     return List.copyOf(renderers);
   }
 
+  /// GFM-targeting options with every hook unset and every toggle off (the safe baseline).
   public static MarkdownOptions defaults() {
     return builder().build();
   }
 
-  /** A new {@link Builder} whose unset fields take the same defaults as {@link #defaults()}. */
+  /// A new {@link Builder} whose unset fields take the same defaults as {@link #defaults()}.
   public static Builder builder() {
     return new Builder();
   }
 
-  /** A {@link Builder} pre-populated with this instance's values. */
+  /// A {@link Builder} pre-populated with this instance's values.
   public Builder toBuilder() {
     var builder = new Builder();
     builder.unknownNodePolicy = unknownNodePolicy;
@@ -174,13 +175,12 @@ public final class MarkdownOptions {
     return escapeParentheses;
   }
 
+  /// Sets the unknown-node policy; `null` resets to {@link UnknownNodePolicy#PLACEHOLDER}.
   public MarkdownOptions withUnknownNodePolicy(@Nullable UnknownNodePolicy policy) {
     return toBuilder().unknownNodePolicy(policy).build();
   }
 
-  /**
-   * Sets the Confluence context; {@code null} resets to {@link ConfluenceRenderContext#empty()}.
-   */
+  /// Sets the Confluence context; `null` resets to {@link ConfluenceRenderContext#empty()}.
   public MarkdownOptions withConfluenceContext(@Nullable ConfluenceRenderContext context) {
     return toBuilder().confluenceContext(context).build();
   }
@@ -189,13 +189,12 @@ public final class MarkdownOptions {
     return toBuilder().imageSizeAttributes(enabled).build();
   }
 
+  /// Sets the table fallback; `null` resets to {@link TableFallback#GFM_PROMOTE_FIRST_ROW}.
   public MarkdownOptions withTableFallback(@Nullable TableFallback fallback) {
     return toBuilder().tableFallback(fallback).build();
   }
 
-  /**
-   * Sets the media resolver; {@code null} clears it (the default {@code media:} placeholder path).
-   */
+  /// Sets the media resolver; `null` clears it (the default `media:` placeholder path).
   public MarkdownOptions withMediaResolver(@Nullable MediaResolver resolver) {
     return toBuilder().mediaResolver(resolver).build();
   }
@@ -204,59 +203,49 @@ public final class MarkdownOptions {
     return toBuilder().htmlVisualMarks(enabled).build();
   }
 
+  /// Sets the ordered extension renderers (defensively copied); `null`/empty registers none. The
+  /// list must not contain `null` elements.
   public MarkdownOptions withExtensionRenderers(@Nullable List<ExtensionRenderer> renderers) {
     return toBuilder().extensionRenderers(renderers).build();
   }
 
-  /**
-   * Sets the attachment resolver; {@code null} clears it (the default {@code attachment:} path).
-   */
+  /// Sets the attachment resolver; `null` clears it (the default `attachment:` path).
   public MarkdownOptions withAttachmentResolver(@Nullable AttachmentResolver resolver) {
     return toBuilder().attachmentResolver(resolver).build();
   }
 
-  /** Sets the page-link resolver; {@code null} clears it (links keep their original href). */
+  /// Sets the page-link resolver; `null` clears it (links keep their original href).
   public MarkdownOptions withPageLinkResolver(@Nullable PageLinkResolver resolver) {
     return toBuilder().pageLinkResolver(resolver).build();
   }
 
-  /**
-   * Sets the page-tree resolver; {@code null} clears it (pagetree macros keep the {@code
-   * {{pagetree}}} token).
-   */
+  /// Sets the page-tree resolver; `null` clears it (pagetree macros keep the `{{pagetree}}` token).
   public MarkdownOptions withPageTreeResolver(@Nullable PageTreeResolver resolver) {
     return toBuilder().pageTreeResolver(resolver).build();
   }
 
-  /**
-   * Sets the excerpt resolver; {@code null} clears it (excerpt-include macros keep their
-   * placeholder).
-   */
+  /// Sets the excerpt resolver; `null` clears it (excerpt-include macros keep their placeholder).
   public MarkdownOptions withExcerptResolver(@Nullable ExcerptResolver resolver) {
     return toBuilder().excerptResolver(resolver).build();
   }
 
-  /**
-   * Renders hard breaks as soft breaks (a plain newline), dropping the two-space GFM hard break.
-   */
+  /// Renders hard breaks as soft breaks (a plain newline), dropping the two-space GFM hard break.
   public MarkdownOptions withCollapseHardBreaks(boolean enabled) {
     return toBuilder().collapseHardBreaks(enabled).build();
   }
 
-  /** Sets a level-1 title heading prepended to the output; {@code null}/blank emits no title. */
+  /// Sets a level-1 title heading prepended to the output; `null`/blank emits no title.
   public MarkdownOptions withDocumentTitle(@Nullable String title) {
     return toBuilder().documentTitle(title).build();
   }
 
-  /** Backslash-escapes literal {@code (} and {@code )} in rendered text and image alt text. */
+  /// Backslash-escapes literal `(` and `)` in rendered text and image alt text.
   public MarkdownOptions withEscapeParentheses(boolean enabled) {
     return toBuilder().escapeParentheses(enabled).build();
   }
 
-  /**
-   * Fluent builder for {@link MarkdownOptions}. Unset fields take the {@link #defaults()} values;
-   * passing {@code null} to a setter resets that field to its default.
-   */
+  /// Fluent builder for {@link MarkdownOptions}. Unset fields take the {@link #defaults()} values;
+  /// passing `null` to a setter resets that field to its default.
   public static final class Builder {
 
     private @Nullable UnknownNodePolicy unknownNodePolicy;
@@ -336,13 +325,13 @@ public final class MarkdownOptions {
       return this;
     }
 
-    /** Sets a level-1 title heading prepended to the output; {@code null}/blank emits no title. */
+    /// Sets a level-1 title heading prepended to the output; `null`/blank emits no title.
     public Builder documentTitle(@Nullable String title) {
       this.documentTitle = title;
       return this;
     }
 
-    /** Backslash-escapes literal {@code (} and {@code )} in rendered text and image alt text. */
+    /// Backslash-escapes literal `(` and `)` in rendered text and image alt text.
     public Builder escapeParentheses(boolean enabled) {
       this.escapeParentheses = enabled;
       return this;

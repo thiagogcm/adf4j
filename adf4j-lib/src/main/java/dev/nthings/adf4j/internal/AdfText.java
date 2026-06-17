@@ -3,14 +3,13 @@ package dev.nthings.adf4j.internal;
 import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.ZoneOffset;
-
 import org.jspecify.annotations.Nullable;
 
-/** Phase-neutral helpers interpreting raw ADF scalar values, shared by the analyze and render phases. */
+/// Phase-neutral helpers interpreting raw ADF scalar values, shared by the analyze and render
+/// phases.
 public final class AdfText {
 
-  private AdfText() {
-  }
+  private AdfText() {}
 
   public static int clampHeadingLevel(int level) {
     return Math.clamp(level, 1, 6);
@@ -26,9 +25,10 @@ public final class AdfText {
     try {
       var value = Long.parseLong(timestamp);
       // Guard Long.MIN_VALUE before the split: Math.abs would stay negative and steer it wrong.
-      var instant = value != Long.MIN_VALUE && Math.abs(value) < 100_000_000_000L
-          ? Instant.ofEpochSecond(value)
-          : Instant.ofEpochMilli(value);
+      var instant =
+          value != Long.MIN_VALUE && Math.abs(value) < 100_000_000_000L
+              ? Instant.ofEpochSecond(value)
+              : Instant.ofEpochMilli(value);
       return instant.atZone(ZoneOffset.UTC).toLocalDate().toString();
     } catch (NumberFormatException | DateTimeException _) {
       return timestamp;

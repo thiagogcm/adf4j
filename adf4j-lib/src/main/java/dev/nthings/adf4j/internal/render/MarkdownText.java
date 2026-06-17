@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
-
 import org.jspecify.annotations.Nullable;
 
 final class MarkdownText {
@@ -21,8 +20,7 @@ final class MarkdownText {
   private static final Set<String> SAFE_URL_SCHEMES =
       Set.of("http", "https", "mailto", "tel", "ftp", "ftps", "media", "attachment");
 
-  private MarkdownText() {
-  }
+  private MarkdownText() {}
 
   public static List<String> splitLines(@Nullable String value) {
     if (value == null) {
@@ -31,45 +29,49 @@ final class MarkdownText {
     return Arrays.asList(LINE_BREAK_PATTERN.split(value, -1));
   }
 
-  /** Replaces every line break with a single space, reusing the shared precompiled pattern. */
+  /// Replaces every line break with a single space, reusing the shared precompiled pattern.
   public static String collapseLineBreaks(String value) {
     return LINE_BREAK_PATTERN.matcher(value).replaceAll(" ");
   }
 
-  /** A literal {@code [inner]} label token, fully inline-escaped so it can't parse as a link. */
+  /// A literal `[inner]` label token, fully inline-escaped so it can't parse as a link.
   public static String labelToken(@Nullable String inner, boolean escapeParentheses) {
-    return escapeInlineText("[" + Objects.requireNonNullElse(inner, "") + "]", false, escapeParentheses);
+    return escapeInlineText(
+        "[" + Objects.requireNonNullElse(inner, "") + "]", false, escapeParentheses);
   }
 
-  /**
-   * A Markdown inline link {@code [label](url)} from raw operands: the label is inline-escaped and
-   * the destination is scheme-sanitized and escaped.
-   */
-  public static String link(@Nullable String label, @Nullable String url, boolean escapeParentheses) {
-    return "[" + escapeInlineText(label, false, escapeParentheses) + "](" + escapeUrlDestination(url) + ")";
+  /// A Markdown inline link `[label](url)` from raw operands: the label is inline-escaped and
+  /// the destination is scheme-sanitized and escaped.
+  public static String link(
+      @Nullable String label, @Nullable String url, boolean escapeParentheses) {
+    return "["
+        + escapeInlineText(label, false, escapeParentheses)
+        + "]("
+        + escapeUrlDestination(url)
+        + ")";
   }
 
-  /** Like {@link #link} but the label is already-rendered Markdown, emitted verbatim. */
+  /// Like {@link #link} but the label is already-rendered Markdown, emitted verbatim.
   public static String linkRendered(String label, @Nullable String url) {
     return "[" + label + "](" + escapeUrlDestination(url) + ")";
   }
 
-  /** Like {@link #linkRendered} with a sanitized, one-line, quote-escaped link title. */
+  /// Like {@link #linkRendered} with a sanitized, one-line, quote-escaped link title.
   public static String linkRendered(String label, @Nullable String url, @Nullable String title) {
     return "[" + label + "](" + escapeUrlDestination(url) + " \"" + escapeLinkTitle(title) + "\")";
   }
 
-  // A newline inside (... "title") would split the line and break the parse, so collapse breaks first.
+  // A newline inside (... "title") would split the line and break the parse, so collapse breaks
+  // first.
   private static String escapeLinkTitle(@Nullable String title) {
     return collapseLineBreaks(Objects.requireNonNullElse(title, ""))
-        .replace("\\", "\\\\").replace("\"", "\\\"");
+        .replace("\\", "\\\\")
+        .replace("\"", "\\\"");
   }
 
-  /**
-   * A fenced code block whose fence is long enough to survive any backtick run in {@code content}
-   * (minimum three), with {@code language} as the info string when non-blank. Null content is treated
-   * as empty.
-   */
+  /// A fenced code block whose fence is long enough to survive any backtick run in `content`
+  /// (minimum three), with `language` as the info string when non-blank. Null content is treated
+  /// as empty.
   public static String fencedCodeBlock(@Nullable String content, @Nullable String language) {
     var body = Objects.requireNonNullElse(content, "");
     var ticks = "`".repeat(Math.max(3, longestBacktickRun(body) + 1));
@@ -79,20 +81,18 @@ final class MarkdownText {
     return "%s\n%s\n%s".formatted(openingFence, body, ticks).stripTrailing();
   }
 
-  /**
-   * An inline code span whose fence exceeds the longest backtick run in {@code content}, padding a
-   * space each side when the content borders a backtick (CommonMark strips one space per side). Null
-   * content is treated as empty.
-   */
+  /// An inline code span whose fence exceeds the longest backtick run in `content`, padding a
+  /// space each side when the content borders a backtick (CommonMark strips one space per side).
+  /// Null content is treated as empty.
   public static String inlineCodeSpan(@Nullable String content) {
     var value = Objects.requireNonNullElse(content, "");
     var fence = "`".repeat(longestBacktickRun(value) + 1);
-    var needsPadding = !value.isEmpty()
-        && (value.charAt(0) == '`' || value.charAt(value.length() - 1) == '`');
+    var needsPadding =
+        !value.isEmpty() && (value.charAt(0) == '`' || value.charAt(value.length() - 1) == '`');
     return needsPadding ? fence + " " + value + " " + fence : fence + value + fence;
   }
 
-  /** Length of the longest run of consecutive backticks in {@code value} (0 for null/empty). */
+  /// Length of the longest run of consecutive backticks in `value` (0 for null/empty).
   public static int longestBacktickRun(@Nullable String value) {
     if (value == null || value.isEmpty()) {
       return 0;
@@ -110,16 +110,15 @@ final class MarkdownText {
     return longest;
   }
 
-  /**
-   * Backslash-escapes CommonMark inline punctuation ({@code \ ` * _ [ ] ( ) ~ < &}) in literal text,
-   * and neutralises a leading block marker (#, &gt;, -, +, ordered "1." or "1)", indented-code run) on
-   * each line — the first line only when {@code atLineStart}, every later line unconditionally. An
-   * intra-word {@code _} (one flanked by word characters on both sides) is left literal, since
-   * CommonMark never treats it as emphasis there. {@code (} and {@code )} are escaped only when
-   * {@code escapeParentheses} is true (a leading "1)" marker is neutralised regardless). Null is
-   * treated as empty.
-   */
-  public static String escapeInlineText(@Nullable String text, boolean atLineStart, boolean escapeParentheses) {
+  /// Backslash-escapes CommonMark inline punctuation (`\`, `` ` ``, `*`, `_`, `[`, `]`, `(`, `)`,
+  /// `~`, `<`, `&`, `!`) in literal text, and neutralises a leading block marker
+  /// (#, >, -, +, ordered "1." or "1)", indented-code run) on each line: the first line only when
+  /// `atLineStart`, every later line unconditionally. An intra-word `_` (one flanked by word
+  /// characters on both sides) is left literal, since CommonMark never treats it as emphasis there.
+  /// `(` and `)` are escaped only when `escapeParentheses` is true (a leading "1)" marker is
+  /// neutralised regardless). Null is treated as empty.
+  public static String escapeInlineText(
+      @Nullable String text, boolean atLineStart, boolean escapeParentheses) {
     var value = Objects.requireNonNullElse(text, "");
     if (value.isEmpty()) {
       return value;
@@ -150,9 +149,8 @@ final class MarkdownText {
     StringBuilder escaped = null;
     for (var i = 0; i < value.length(); i++) {
       var c = value.charAt(i);
-      var escape = c == '_'
-          ? !isIntraWordUnderscore(value, i)
-          : isInlinePunctuation(c, escapeParentheses);
+      var escape =
+          c == '_' ? !isIntraWordUnderscore(value, i) : isInlinePunctuation(c, escapeParentheses);
       if (escape) {
         if (escaped == null) {
           escaped = new StringBuilder(value.length() + 8).append(value, 0, i);
@@ -168,8 +166,10 @@ final class MarkdownText {
 
   // An '_' with a word character on each side can neither open nor close emphasis.
   private static boolean isIntraWordUnderscore(String value, int i) {
-    return i > 0 && isWordChar(value.charAt(i - 1))
-        && i + 1 < value.length() && isWordChar(value.charAt(i + 1));
+    return i > 0
+        && isWordChar(value.charAt(i - 1))
+        && i + 1 < value.length()
+        && isWordChar(value.charAt(i + 1));
   }
 
   private static boolean isWordChar(char c) {
@@ -200,7 +200,8 @@ final class MarkdownText {
       return "&#32;" + s.substring(1);
     }
 
-    // Up to 3 leading spaces still permit a block marker, so neutralise at the first non-space char.
+    // Up to 3 leading spaces still permit a block marker, so neutralise at the first non-space
+    // char.
     var prefix = s.substring(0, lead);
     var rest = s.substring(lead);
     if (rest.isEmpty()) {
@@ -212,7 +213,8 @@ final class MarkdownText {
     if (first == '#' || first == '>' || first == '-' || first == '+') {
       return prefix + "\\" + rest;
     }
-    // Ordered marker: escape whichever delimiter matched ("." or ")") so the digits can't open a list.
+    // Ordered marker: escape whichever delimiter matched ("." or ")") so the digits can't open a
+    // list.
     var ordered = LEADING_ORDERED_MARKER.matcher(rest);
     if (ordered.find()) {
       var digits = ordered.group(1);
@@ -231,22 +233,18 @@ final class MarkdownText {
     return count;
   }
 
-  /**
-   * Backslash-escapes {@code [ ]} in image alt text, and {@code ( )} too when
-   * {@code escapeParentheses} is set. Null is treated as empty.
-   */
+  /// Backslash-escapes `[` `]` in image alt text, and `(` `)` too when
+  /// `escapeParentheses` is set. Null is treated as empty.
   public static String escapeAltText(@Nullable String alt, boolean escapeParentheses) {
     var escaped = Objects.requireNonNullElse(alt, "").replace("[", "\\[").replace("]", "\\]");
     return escapeParentheses ? escaped.replace("(", "\\(").replace(")", "\\)") : escaped;
   }
 
-  /**
-   * Makes a URL safe inside a markdown {@code (...)} destination: a dangerous scheme
-   * (javascript:, data:, …) is first defused, then the result is returned unchanged when clean,
-   * wrapped as {@code <url>} when it holds a space/control char or unbalanced parentheses, or with
-   * space/parens percent-encoded when angle-wrapping is unavailable. Null/blank is returned
-   * unchanged.
-   */
+  /// Makes a URL safe inside a markdown `(...)` destination: a dangerous scheme
+  /// (javascript:, data:, …) is first defused, then the result is returned unchanged when clean,
+  /// wrapped as `<url>` when it holds a space/control char or unbalanced parentheses, or with
+  /// space/parens percent-encoded when angle-wrapping is unavailable. Null/blank is returned
+  /// unchanged.
   public static @Nullable String escapeUrlDestination(@Nullable String url) {
     if (url == null || url.isBlank()) {
       return url;
@@ -254,8 +252,11 @@ final class MarkdownText {
 
     url = sanitizeScheme(url);
 
-    var hasAngleOrNewline = url.indexOf('<') >= 0 || url.indexOf('>') >= 0 || url.indexOf('\n') >= 0
-        || url.indexOf('\r') >= 0;
+    var hasAngleOrNewline =
+        url.indexOf('<') >= 0
+            || url.indexOf('>') >= 0
+            || url.indexOf('\n') >= 0
+            || url.indexOf('\r') >= 0;
 
     if (!hasAngleOrNewline) {
       if (hasSpaceOrControl(url) || hasUnbalancedParens(url)) {
@@ -266,11 +267,17 @@ final class MarkdownText {
 
     // Angle-wrapping is unavailable (the URL holds '<'/'>'/newline), so percent-encode the
     // characters that would otherwise break the bare CommonMark destination.
-    return url.replace(" ", "%20").replace("(", "%28").replace(")", "%29")
-        .replace("<", "%3C").replace(">", "%3E").replace("\n", "%0A").replace("\r", "%0D");
+    return url.replace(" ", "%20")
+        .replace("(", "%28")
+        .replace(")", "%29")
+        .replace("<", "%3C")
+        .replace(">", "%3E")
+        .replace("\n", "%0A")
+        .replace("\r", "%0D");
   }
 
-  // Defuse a non-safe scheme (javascript:, data:, …) by percent-encoding its colon; safe and relative
+  // Defuse a non-safe scheme (javascript:, data:, …) by percent-encoding its colon; safe and
+  // relative
   // URLs pass through. Allocates only on the rare neutralise path.
   private static String sanitizeScheme(String url) {
     if (hasSafeOrNoScheme(url)) {
