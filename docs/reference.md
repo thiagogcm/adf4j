@@ -1,263 +1,264 @@
 # Reference
 
-Lookup tables for the adf4j conversion options, the ADF→Markdown mapping, diagnostics, URL safety, and the CLI. For the mental model and task recipes that put these to work, see the [guide](./guide.md); for internals, the [architecture](./architecture.md).
+Lookup tables for options, ADF to Markdown rendering, diagnostics, URL safety, CLI flags, and exit codes. For task recipes, see the [guide](./guide.md). For internals, see the [architecture](./architecture.md).
 
 ## Options (MarkdownOptions)
 
-`MarkdownOptions` is an immutable value with no public constructor — build it via `MarkdownOptions.defaults()` plus `withX(...)` withers, `MarkdownOptions.builder()`, or `toBuilder()` on an existing instance. Bind it with `AdfToMarkdown.with(options)`, or pass it to a per-call `convert`/`analyze`/`toMarkdown` overload to override the bound options for that call only. All fourteen options:
+`MarkdownOptions` is immutable. Build it with `MarkdownOptions.defaults()` plus `withX(...)`, `MarkdownOptions.builder()`, or `toBuilder()`. Bind options with `AdfToMarkdown.with(options)`, or pass them to a per-call `convert`, `analyze`, or `toMarkdown` overload.
 
-| Option                | Default                 | Effect                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| --------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `unknownNodePolicy`   | `PLACEHOLDER`           | How an unknown ADF node renders: `PLACEHOLDER` emits a `[Unsupported: <type>]` token; `SKIP` drops it (logged); `PRESERVE_RAW` emits its raw JSON (fenced for blocks, inline code for inlines) round-trippably; `FAIL` throws `IllegalStateException`. Unknown *marks* are always dropped with a `WARNING`, regardless of policy.                                                                                                                                                                        |
-| `confluenceContext`   | empty                   | A `ConfluenceRenderContext` supplying the page's attachment inventory. Used to resolve `viewpdf`/*view file* macros by title and to expand the `attachments` macro. Supplying an inventory is authoritative even when empty (an empty list renders the macro as nothing); only a context that never supplied one keeps the macro's placeholder.                                                                                                                                                          |
-| `imageSizeAttributes` | `false`                 | When `true`, emits the non-GFM `{width= height=}` suffix after an image. Off because the target is plain GFM.                                                                                                                                                                                                                                                                                                                                                                                            |
-| `tableFallback`       | `GFM_PROMOTE_FIRST_ROW` | How a header-less table renders as GFM. `GFM_PROMOTE_FIRST_ROW` promotes the first row to a header; `GFM_EMPTY_HEADER` keeps all rows as data under a synthesized empty header; `HTML` always emits an HTML `<table>`. Tables GFM cannot express (colspan/rowspan, number column, block-level cell content, non-canonical header) fall back to HTML regardless. **Caveat:** the default demotes the only row of a single-data-row table to a heading — use `GFM_EMPTY_HEADER` to keep every row as data. |
-| `mediaResolver`       | `null`                  | `MediaAttrs -> String`. Turns a file media node (which carries ids, not a URL) into a concrete URL/path. `null`/blank keeps the `media:<collection>/<id>` placeholder.                                                                                                                                                                                                                                                                                                                                   |
-| `htmlVisualMarks`     | `false`                 | When `true`, preserves visual-only marks (`textColor`, `backgroundColor`, `border`, `fontSize`, block `alignment`) as inline `<span style>` / `<div align>` HTML instead of dropping them. **Security caveat:** the colour/size values are emitted into the `style` attribute without CSS sanitization — only HTML-attribute breakout is blocked. See [URL handling and safety](#url-handling-and-safety).                                                                                               |
-| `extensionRenderers`  | empty                   | `List<ExtensionRenderer>` (`ExtensionContext -> String`). Consulted in order before the built-in Confluence macros; first non-null wins (empty string suppresses). Output is emitted **verbatim** — not sanitized.                                                                                                                                                                                                                                                                                       |
-| `attachmentResolver`  | `null`                  | `AttachmentReference -> String`. Turns a resolved Confluence `attachment:` reference into a URL/path. `null`/blank keeps the `attachment:<fileId>` placeholder.                                                                                                                                                                                                                                                                                                                                          |
-| `pageLinkResolver`    | `null`                  | `String pageNodeId -> String`. Rewrites inter-page links, page smart-cards, and page-tree entries by page node id. `null`/blank keeps the original href (or renders a tree entry as plain text).                                                                                                                                                                                                                                                                                                         |
-| `pageTreeResolver`    | `null`                  | `PageTreeReference -> List<PageTreeEntry>`. Expands a `pagetree`/`children` macro into an indented bullet list (`PageTreeReference.macro()` discriminates the two); each entry's page node id routes through `pageLinkResolver`. A non-null result is authoritative — an empty list means "no descendants" and renders nothing. `null` or a throw keeps the `{{pagetree}}`/`{{children}}` token.                                                                                                         |
-| `excerptResolver`     | `null`                  | `ExcerptIncludeReference -> String`. Expands an `excerpt-include` into caller-supplied Markdown, emitted **verbatim** in place (empty string suppresses). `null` or a throw keeps the `[Excerpt include: <page>]` placeholder and records the reference on `MarkdownResult.unresolved()`.                                                                                                                                                                                                                |
-| `collapseHardBreaks`  | `false`                 | When `true`, renders a hard break (Shift+Enter) as a soft break (plain newline) instead of the two-trailing-space GFM hard break.                                                                                                                                                                                                                                                                                                                                                                        |
-| `documentTitle`       | `null`                  | When set, prepends the value as a level-1 (`# `) heading above the body. Newlines collapse to spaces and CommonMark punctuation is escaped; `null`/blank emits nothing. Emitted even when the body is empty or fails to parse. Render-only (not in `ContentMetadata`) and not de-duplicated against an existing leading heading.                                                                                                                                                                         |
-| `escapeParentheses`   | `false`                 | When `true`, backslash-escapes literal `(` and `)` in rendered text and image alt text. Off because parentheses are inert outside a link destination; link safety comes from escaping `[`/`]`, not parentheses.                                                                                                                                                                                                                                                                                          |
+| Option                | Default                 | Effect                                                                                                                                  |
+| --------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `unknownNodePolicy`   | `PLACEHOLDER`           | Renders unknown nodes as a placeholder, skips them, preserves raw JSON, or fails. Unknown marks always drop with a `WARNING`.           |
+| `confluenceContext`   | empty                   | Supplies the page attachment inventory for attachment macros and the `attachments` macro. An empty supplied inventory is authoritative. |
+| `imageSizeAttributes` | `false`                 | Emits non-GFM `{width= height=}` image attributes.                                                                                      |
+| `tableFallback`       | `GFM_PROMOTE_FIRST_ROW` | Controls headerless GFM tables: promote first row, synthesize an empty header, or force HTML. Complex tables always use HTML.           |
+| `mediaResolver`       | `null`                  | Turns media IDs into URLs. `null` or blank keeps the `media:<collection>/<id>` placeholder.                                             |
+| `htmlVisualMarks`     | `false`                 | Preserves visual marks as inline HTML. CSS values are not sanitized.                                                                    |
+| `extensionRenderers`  | empty                   | Custom renderers consulted before built-ins. First non-null result wins. Output is inserted verbatim.                                   |
+| `attachmentResolver`  | `null`                  | Turns resolved `attachment:<fileId>` references into URLs. `null` or blank keeps the placeholder.                                       |
+| `pageLinkResolver`    | `null`                  | Rewrites Confluence page node IDs. `null` or blank keeps the original href or plain page-tree text.                                     |
+| `pageTreeResolver`    | `null`                  | Expands `pagetree` and `children` macros. An empty list means no descendants. `null` keeps the token.                                   |
+| `excerptResolver`     | `null`                  | Expands `excerpt-include` macros. Output is inserted verbatim. Empty string suppresses output. `null` keeps the placeholder.            |
+| `collapseHardBreaks`  | `false`                 | Renders hard breaks as plain newlines instead of two-space GFM hard breaks.                                                             |
+| `documentTitle`       | `null`                  | Prepends a level-1 heading. Newlines collapse to spaces and Markdown punctuation is escaped.                                            |
+| `escapeParentheses`   | `false`                 | Backslash-escapes literal `(` and `)` in text and image alt text.                                                                       |
 
-A `RuntimeException` thrown from any resolver or extension renderer is caught, logged, and the engine falls back to its default behaviour rather than aborting the conversion.
+A `RuntimeException` from any resolver or extension renderer is caught, logged, and treated as a declined lookup.
 
-## ADF → Markdown mapping
+## ADF to Markdown mapping
 
-How each ADF construct renders with default options. Anchors, autolinks, and Markdown escaping are applied automatically. This matrix is the canonical mapping; behaviours flagged lossy are catalogued under [Lossy and by-design behaviours](#lossy-and-by-design-behaviours).
+Default rendering behavior. Markdown escaping, anchors, autolinks, and URL sanitization are applied automatically.
 
 ### Blocks
 
-| ADF construct                          | Rendered as                                                                                                        |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `heading` (levels 1–6)                 | `#` … `######` (levels > 6 clamped to 6); gains an `<a id>` anchor when a `toc` macro references its level         |
-| `paragraph`                            | a text block                                                                                                       |
-| `bulletList` / `orderedList`           | `-` / `1.` items (nesting indented; `order`/`start` honoured)                                                      |
-| `taskList`                             | `- [x]` (DONE) / `- [ ]` (TODO)                                                                                    |
-| `decisionList`                         | `- \[decision:DECIDED\] …` / `- \[decision:UNDECIDED\] …`                                                          |
-| `blockquote`                           | `>` quote (blank `>` lines between paragraphs)                                                                     |
-| `codeBlock`                            | fenced ` ```lang ` block (fence widened to avoid collisions)                                                       |
-| `panel`                                | GFM alert: info/note → `> [!NOTE]`, warning → `> [!WARNING]`, error → `> [!CAUTION]`, success/tip → `> [!TIP]`     |
-| `rule`                                 | `---` thematic break                                                                                               |
-| `table`                                | native GFM pipe table, or an HTML `<table>` fallback (see [tableFallback](#options-markdownoptions))               |
-| `expand` / `nestedExpand`              | `<details><summary>…</summary>…</details>`                                                                         |
-| `layoutSection` / `layoutColumn`       | columns flattened into sequential blocks                                                                           |
-| `mediaSingle` / `mediaGroup` / `media` | image `![alt](url)` or file link `[label](url)`; a `media:<collection>/<id>` placeholder without a `mediaResolver` |
+| ADF construct                          | Rendered as                                                                          |
+| -------------------------------------- | ------------------------------------------------------------------------------------ |
+| `heading` levels 1 to 6                | `#` through `######`; higher levels clamp to 6. TOC-referenced headings get anchors. |
+| `paragraph`                            | Text block.                                                                          |
+| `bulletList` / `orderedList`           | `-` / `1.` items, with nesting and `order` honored.                                  |
+| `taskList`                             | `- [x]` or `- [ ]`.                                                                  |
+| `decisionList`                         | Escaped decision labels, such as `\[decision:DECIDED\]`.                             |
+| `blockquote`                           | `>` quote blocks.                                                                    |
+| `codeBlock`                            | Fenced code block with a widened fence when needed.                                  |
+| `panel`                                | GFM alert: note, warning, caution, or tip.                                           |
+| `rule`                                 | `---`.                                                                               |
+| `table`                                | GFM pipe table or HTML fallback.                                                     |
+| `expand` / `nestedExpand`              | `<details><summary>...</summary>...</details>`.                                      |
+| `layoutSection` / `layoutColumn`       | Columns flattened into sequential blocks.                                            |
+| `mediaSingle` / `mediaGroup` / `media` | Image or file link through `mediaResolver`, else a `media:` placeholder.             |
 
 ### Inlines and marks
 
-| ADF construct                                                                    | Rendered as                                                                                                                                                                |
-| -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `text`                                                                           | plain text, Markdown punctuation escaped (literal `(`/`)` left unescaped unless `escapeParentheses`)                                                                       |
-| `strong` / `em` / `strike` / `code`                                              | `**bold**` / `*italic*` / `~~strike~~` / `` `code` ``                                                                                                                      |
-| `underline` / `subsup`                                                           | HTML `<u>…</u>` / `<sub>…</sub>`, `<sup>…</sup>` (an unknown `subsup` subtype is left unwrapped)                                                                           |
-| `link`                                                                           | `[text](url)`, URL scheme-sanitized                                                                                                                                        |
-| visual marks (`textColor`, `backgroundColor`, `border`, `fontSize`, `alignment`) | dropped by default; HTML `<span style>` / `<div align>` with `htmlVisualMarks`                                                                                             |
-| `hardBreak`                                                                      | two-space GFM hard break (soft newline with `collapseHardBreaks`)                                                                                                          |
-| `mention`                                                                        | `@DisplayName` text                                                                                                                                                        |
-| `emoji`                                                                          | the Unicode glyph (or its shortname)                                                                                                                                       |
-| `date`                                                                           | ISO `YYYY-MM-DD`                                                                                                                                                           |
-| `status`                                                                         | a bracketed text label, e.g. `\[Blocked\]`                                                                                                                                 |
-| `placeholder`                                                                    | its plain placeholder text (escaped) — no brackets                                                                                                                         |
-| `inlineCard` / `blockCard` / `embedCard`                                         | autolink `<url>` or `[text](url)`; a title-only card renders as plain text, a card with neither url nor title as a `\[Card\]` / `\[Inline card\]` / `\[Embed card\]` token |
-| `mediaInline`                                                                    | inline image `![alt](url)` or file link via `mediaResolver`, else the `media:` placeholder                                                                                 |
+| ADF construct                            | Rendered as                                                                         |
+| ---------------------------------------- | ----------------------------------------------------------------------------------- |
+| `text`                                   | Escaped Markdown text. Parentheses escape only when `escapeParentheses` is enabled. |
+| `strong` / `em` / `strike` / `code`      | `**bold**`, `*italic*`, `~~strike~~`, or backtick code.                             |
+| `underline` / `subsup`                   | HTML `<u>`, `<sub>`, or `<sup>`.                                                    |
+| `link`                                   | `[text](url)` with URL scheme sanitization.                                         |
+| Visual marks                             | Dropped by default, or inline HTML when `htmlVisualMarks` is enabled.               |
+| `hardBreak`                              | Two-space GFM hard break, or soft newline with `collapseHardBreaks`.                |
+| `mention`                                | `@DisplayName`.                                                                     |
+| `emoji`                                  | Unicode glyph, or shortname when no glyph exists.                                   |
+| `date`                                   | ISO `YYYY-MM-DD`.                                                                   |
+| `status`                                 | Escaped bracket label, such as `\[Blocked\]`.                                       |
+| `placeholder`                            | Escaped plain placeholder text.                                                     |
+| `inlineCard` / `blockCard` / `embedCard` | Autolink, link, title text, or escaped card token.                                  |
+| `mediaInline`                            | Inline image or file link through `mediaResolver`, else a `media:` placeholder.     |
 
 ### Confluence macros and extensions
 
-| Macro / extension                       | Rendered as                                                                                                                                                                 |
-| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `toc`                                   | a nested bullet list of heading links, with anchors injected on the referenced headings                                                                                     |
-| `anchor`                                | an `<a id="…"></a>` fragment                                                                                                                                                |
-| `pagetree` / `children`                 | an indented page list via `pageTreeResolver`, else a `{{pagetree}}` / `{{children}}` token                                                                                  |
-| `excerpt`                               | its body, rendered transparently (the region is also exposed as `ContentMetadata.excerpts()`)                                                                               |
-| `excerpt-include`                       | the `excerptResolver`'s Markdown, else an `\[Excerpt include: page\]` token                                                                                                 |
-| `attachments`                           | a bullet list of links to the supplied attachment inventory (destinations via `attachmentResolver`), else the `\[Extension: …\]` placeholder when no inventory was supplied |
-| `viewpdf` / *view file*                 | `[PDF: name](attachment:…)` once the title resolves against a `ConfluenceRenderContext` (destination via `attachmentResolver`), else a `\[PDF: name\]` token                |
-| `iframe`                                | a labelled link `[Embedded content](url)`                                                                                                                                   |
-| `chart` (bodied)                        | an italic `*Chart: title*` caption followed by the body's data table                                                                                                        |
-| `chart` (modern, `com.atlassian.chart`) | an italic `*Chart: title*` caption — its data table is a separate node that renders at its own position                                                                     |
-| `chart` (legacy, bodyless)              | a `\[Chart: title\]` token (no recoverable data)                                                                                                                            |
-| `inline-media-image` (migration)        | the standard media rendering: `![alt](url)` via `mediaResolver`, else the `media:` placeholder                                                                              |
-| `syncBlock` / `bodiedSyncBlock`         | a `\[Sync block\]` / `\[Sync block: <resourceId>\]` token (the bodied variant also renders its body)                                                                        |
-| custom extension                        | your `ExtensionRenderer` output, else an `\[Extension: type/key\]` placeholder + a `WARNING` diagnostic                                                                     |
-| unrecognized node                       | governed by [`unknownNodePolicy`](#options-markdownoptions)                                                                                                                 |
+| Macro / extension               | Rendered as                                                                                              |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `toc`                           | Nested bullet list of heading links.                                                                     |
+| `anchor`                        | `<a id="..."></a>`.                                                                                      |
+| `pagetree` / `children`         | Resolver-supplied page list, else `{{pagetree}}` or `{{children}}`.                                      |
+| `excerpt`                       | Its body, also exposed as `ContentMetadata.excerpts()`.                                                  |
+| `excerpt-include`               | `excerptResolver` Markdown, else an escaped placeholder.                                                 |
+| `attachments`                   | Links from the supplied attachment inventory, else extension placeholder when no inventory was supplied. |
+| `viewpdf` / view file           | PDF/file link once its title resolves against `ConfluenceRenderContext`, else an escaped token.          |
+| `iframe`                        | `[Embedded content](url)`.                                                                               |
+| Bodied `chart`                  | Italic caption plus the body data table.                                                                 |
+| Modern `com.atlassian.chart`    | Italic caption; the data table renders wherever its own node appears.                                    |
+| Legacy bodyless `chart`         | Escaped chart placeholder.                                                                               |
+| `inline-media-image`            | Standard media rendering.                                                                                |
+| `syncBlock` / `bodiedSyncBlock` | Escaped sync-block token; bodied sync blocks also render their body.                                     |
+| Custom extension                | `ExtensionRenderer` output, else extension placeholder plus `WARNING`.                                   |
+| Unknown node                    | Controlled by `unknownNodePolicy`.                                                                       |
 
 ## Diagnostics
 
-A `Diagnostic` is `(String code, String message, @Nullable Throwable cause, Severity severity)` where `Severity` is `INFO | WARNING | ERROR`. The parse, analyze, and render phases each contribute diagnostics; they are concatenated in that order into `MarkdownResult.diagnostics()` (parse-only diagnostics also appear as `ParseResult.issues()`). `MarkdownResult.wasLossy()` is `true` iff any diagnostic is `WARNING` or `ERROR`; it deliberately ignores options-driven by-design loss (see [the catalogue below](#lossy-and-by-design-behaviours)).
+`Diagnostic` contains `code`, `message`, optional `cause`, and `severity`. `MarkdownResult.diagnostics()` concatenates parse, analyze, and render diagnostics. `MarkdownResult.wasLossy()` is true when any diagnostic is `WARNING` or `ERROR`.
 
-| Severity  | Meaning                                      | Example                                                                      |
-| --------- | -------------------------------------------- | ---------------------------------------------------------------------------- |
-| `INFO`    | Non-lossy note                               | An unknown node preserved as raw JSON under `PRESERVE_RAW`                   |
-| `WARNING` | Content converted but altered or dropped     | Unsupported macro placeholdered; unknown mark dropped; `UNSUPPORTED_VERSION` |
-| `ERROR`   | Conversion aborted or produced an empty body | `INVALID_JSON`; a structural validation failure                              |
+| Severity  | Meaning                                      | Example                             |
+| --------- | -------------------------------------------- | ----------------------------------- |
+| `INFO`    | Non-lossy note.                              | Unknown node preserved as raw JSON. |
+| `WARNING` | Content converted but changed or dropped.    | Unsupported macro placeholdered.    |
+| `ERROR`   | Conversion failed or produced an empty body. | Invalid JSON.                       |
 
-Notable parse codes (from `RootValidator` and the parser):
+Parse codes:
 
-| Code                  | Severity  | Raised when                                                         |
-| --------------------- | --------- | ------------------------------------------------------------------- |
-| `INVALID_JSON`        | `ERROR`   | The payload is not valid JSON, or exceeds the depth-100 nesting cap |
-| `MISSING_DOCUMENT`    | `ERROR`   | The parsed document is `null`                                       |
-| `INVALID_ROOT_TYPE`   | `ERROR`   | The root is not a JSON object                                       |
-| `INVALID_ROOT_NODE`   | `ERROR`   | The root `type` is not `"doc"`                                      |
-| `INVALID_VERSION`     | `ERROR`   | The root has no integer `version`                                   |
-| `INVALID_CONTENT`     | `ERROR`   | The root `content` field is not an array                            |
-| `UNSUPPORTED_VERSION` | `WARNING` | The root `version` is not `1` (parse proceeds best-effort)          |
+| Code                  | Severity  | Raised when                                                     |
+| --------------------- | --------- | --------------------------------------------------------------- |
+| `INVALID_JSON`        | `ERROR`   | Payload is not valid JSON or exceeds the depth-100 nesting cap. |
+| `MISSING_DOCUMENT`    | `ERROR`   | Parsed document is `null`.                                      |
+| `INVALID_ROOT_TYPE`   | `ERROR`   | Root is not a JSON object.                                      |
+| `INVALID_ROOT_NODE`   | `ERROR`   | Root `type` is not `"doc"`.                                     |
+| `INVALID_VERSION`     | `ERROR`   | Root has no integer `version`.                                  |
+| `INVALID_CONTENT`     | `ERROR`   | Root `content` is not an array.                                 |
+| `UNSUPPORTED_VERSION` | `WARNING` | Root `version` is not `1`; parsing continues best effort.       |
 
 ## Lossy and by-design behaviours
 
-These outcomes are expected results of the chosen options or of GFM's expressive limits. None set `wasLossy()` *unless* noted as raising a `WARNING`/`ERROR` diagnostic.
+These outcomes are expected for the selected options or for GFM limits. They do not set `wasLossy()` unless the row says they raise a `WARNING` or `ERROR`.
 
-| Behaviour                            | Detail                                                                                                                                                                                                                                                                                                                                                       |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Visual marks dropped                 | Colour, background, border, font size, and block alignment have no GFM equivalent and are dropped unless `htmlVisualMarks` is enabled.                                                                                                                                                                                                                       |
-| Table HTML fallback                  | Tables with colspan/rowspan, a number column, block-level cell content, or a non-canonical header are emitted as raw HTML `<table>`. Empty rows are silently dropped and short rows padded to a rectangle.                                                                                                                                                   |
-| `GFM_PROMOTE_FIRST_ROW` row demotion | The default `tableFallback` promotes a header-less table's first row to a header, so a single-data-row table loses its only row to a heading. Use `GFM_EMPTY_HEADER` to keep all rows as data.                                                                                                                                                               |
-| Media/attachment placeholders        | Without a resolver, file media and attachment macros render to inert `media:<collection>/<id>` / `attachment:<fileId>` destinations.                                                                                                                                                                                                                         |
-| Unsupported macros                   | A macro with no built-in or custom renderer becomes a labelled placeholder and a `WARNING` diagnostic (**lossy**). The placeholder is logged at WARN once per extension type/key per converter, then at DEBUG.                                                                                                                                               |
-| Dynamic page-list macros             | `pagetree`/`children` list pages Confluence assembles server-side; the ADF carries only the reference. They emit a `{{pagetree}}`/`{{children}}` token (**not** lossy) unless a `pageTreeResolver` expands them. Fallbacks are reported in `MarkdownResult.unresolved().pageTreeRefs()`.                                                                     |
-| Excerpts                             | `excerpt` renders its body transparently and exposes the region as `ContentMetadata.excerpts()`. `excerpt-include` composes content server-side; without an `excerptResolver` it emits an `[Excerpt include: <page>]` placeholder (**not** lossy) and is reported in `unresolved().excerptRefs()`. The reference carries the source page *title*, not an id. |
-| Charts                               | Legacy bodied `chart` renders an italic caption plus its body data table (numbers survive). The modern chart app draws from a table elsewhere in the document — the node contributes only the caption, never a placeholder. Only a legacy bodyless `chart:default` keeps a `[Chart: <title>]` placeholder.                                                   |
-| Migration macros                     | `inline-media-image` is a media node in disguise; it renders through the standard media path and its file id appears in `ContentMetadata.referencedFileIds()`.                                                                                                                                                                                               |
+| Behaviour                             | Detail                                                                                                                                                            |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Visual marks dropped                  | Color, background, border, font size, and alignment have no GFM equivalent unless `htmlVisualMarks` is enabled.                                                   |
+| Table HTML fallback                   | Tables with spans, number columns, block-level cell content, or non-canonical headers use raw HTML.                                                               |
+| `GFM_PROMOTE_FIRST_ROW` row promotion | The default table fallback promotes the first row of a headerless table to the header. Use `GFM_EMPTY_HEADER` to keep all rows as data.                           |
+| Media and attachment placeholders     | Without resolvers, media and attachments render to inert `media:` or `attachment:` destinations.                                                                  |
+| Unsupported macros                    | No built-in or custom renderer means placeholder plus `WARNING`.                                                                                                  |
+| Dynamic page-list macros              | `pagetree` and `children` need caller-supplied hierarchy. Without it they emit tokens and are recorded in `unresolved()`, but are not lossy.                      |
+| Excerpts                              | `excerpt` renders its body. `excerpt-include` needs `excerptResolver`; without it, the placeholder is recorded in `unresolved()` but is not lossy.                |
+| Charts                                | Bodied charts keep caption and body data. Modern charts keep caption only because their data table is a separate node. Legacy bodyless charts keep a placeholder. |
+| Migration macros                      | `inline-media-image` follows normal media rendering and contributes its file ID to metadata.                                                                      |
 
 ## URL handling and safety
 
-ADF input is untrusted. Link, card, media, and macro **destinations are scheme-sanitized** against a safe allow-list:
+ADF input is untrusted. Link, card, media, and macro destinations are scheme-sanitized against this allow-list:
 
 ```text
 http  https  mailto  tel  ftp  ftps  media  attachment
 ```
 
-(`media` and `attachment` are the library's own inert placeholder schemes.) A destination whose scheme is not on the list — `javascript:`, `data:`, `vbscript:`, `file:` — has its scheme colon percent-encoded so it can no longer execute. Control-character obfuscation (tabs/newlines smuggled inside the scheme) is stripped first, and the HTML table-fallback renderer sanitizes URLs as defence in depth.
+Unsafe schemes such as `javascript:`, `data:`, `vbscript:`, and `file:` have the scheme colon percent-encoded after control-character cleanup. The HTML table fallback also sanitizes URLs.
 
-Two exceptions are emitted **verbatim** and are the caller's responsibility to escape:
+Caller-provided Markdown from `ExtensionRenderer` and `ExcerptResolver` is inserted verbatim. Escape or sanitize untrusted values before returning them.
 
-- **`ExtensionRenderer` output** — a custom renderer's string is inserted as-is.
-- **`ExcerptResolver` output** — the resolved excerpt Markdown is inserted as-is.
-
-Separately, **`htmlVisualMarks` does not sanitize CSS.** Attacker-controlled `textColor`/`fontSize`/etc. values flow into a `<span style="…">` with only HTML-attribute breakout blocked; the CSS itself is not validated. Leave it off when rendering untrusted input, or sanitize the output.
+`htmlVisualMarks` does not sanitize CSS. Leave it off for untrusted input unless the final output is sanitized elsewhere.
 
 ## CLI
-
-The `adf4j` binary exposes three subcommands, each mapping onto one library method:
-
-| Command    | Library method | Output                                                       |
-| ---------- | -------------- | ------------------------------------------------------------ |
-| `convert`  | `convert(...)` | Markdown body on stdout (or full result JSON with `-f json`) |
-| `analyze`  | `analyze(...)` | references, attachments, and outline as JSON (or `-f text`)  |
-| `validate` | `parse(...)`   | parse diagnostics; exit code reflects validity               |
 
 ```text
 adf4j <command> [options] [<input-file>]
 ```
 
-Input comes from `<input-file>` or, when no path is given, stdin. Stdout carries only the deliverable; diagnostics and warnings go to stderr. `-o` writes atomically (temp file + rename). A bare `adf4j` (or `-h`) prints help.
+Input comes from `<input-file>` or stdin. Stdout contains only the requested output. Diagnostics and warnings go to stderr. `-o` writes atomically.
 
-**Global flags** (after the command):
+| Command    | Library method | Output                                          |
+| ---------- | -------------- | ----------------------------------------------- |
+| `convert`  | `convert(...)` | Markdown body, or full JSON with `-f json`.     |
+| `analyze`  | `analyze(...)` | Metadata JSON, or text with `-f text`.          |
+| `validate` | `parse(...)`   | Parse diagnostics; exit code reflects validity. |
 
-| Flag                | Effect                                               |
-| ------------------- | ---------------------------------------------------- |
-| `-h, --help`        | Show help (per subcommand too)                       |
-| `-V, --version`     | Show the version                                     |
-| `-v, --verbose`     | Show stack traces on error                           |
-| `-q, --quiet`       | Suppress the stderr diagnostics summary and warnings |
-| `-o, --output FILE` | Write to FILE (atomically) instead of stdout         |
+Global flags after the command:
+
+| Flag                | Effect                                            |
+| ------------------- | ------------------------------------------------- |
+| `-h, --help`        | Show help.                                        |
+| `-V, --version`     | Show version.                                     |
+| `-v, --verbose`     | Show stack traces on error.                       |
+| `-q, --quiet`       | Suppress stderr diagnostics summary and warnings. |
+| `-o, --output FILE` | Write output to `FILE` instead of stdout.         |
 
 ### convert
 
-| Flag                         | Effect                                                                                              |
-| ---------------------------- | --------------------------------------------------------------------------------------------------- |
-| `-f, --format md\|json`      | `md` (default) prints the body; `json` prints `{body, wasLossy, diagnostics, metadata, unresolved}` |
-| `--compact`                  | Single-line JSON instead of pretty                                                                  |
-| `--fail-on-lossy`            | Exit 4 when the result is lossy (any WARNING/ERROR diagnostic)                                      |
-| `-t, --title TITLE`          | Prepend TITLE as a level-1 (`#`) heading (`documentTitle`)                                          |
-| `-c, --collapse-hard-breaks` | Render hard breaks as soft breaks (`collapseHardBreaks`)                                            |
-| `-p, --escape-parentheses`   | Backslash-escape literal `(` and `)` (`escapeParentheses`)                                          |
-| `--image-size`               | Emit non-GFM image `{width= height=}` attributes (`imageSizeAttributes`)                            |
-| `--html-visual-marks`        | Keep visual-only marks as inline `<span style>` (`htmlVisualMarks`)                                 |
-| `--unknown-nodes V`          | `placeholder` (default) \| `skip` \| `fail` \| `preserve-raw` (`unknownNodePolicy`)                 |
-| `--table-fallback V`         | `gfm-promote-first-row` (default) \| `gfm-empty-header` \| `html` (`tableFallback`)                 |
+| Flag                         | Effect                                                                                                  |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `-f, --format md\|json`      | `md` prints the body. `json` prints body, `wasLossy`, diagnostics, metadata, and unresolved references. |
+| `--compact`                  | Single-line JSON.                                                                                       |
+| `--fail-on-lossy`            | Exit 4 when the result is lossy.                                                                        |
+| `-t, --title TITLE`          | Prepend a level-1 heading.                                                                              |
+| `-c, --collapse-hard-breaks` | Render hard breaks as soft breaks.                                                                      |
+| `-p, --escape-parentheses`   | Escape literal `(` and `)`.                                                                             |
+| `--image-size`               | Emit non-GFM image size attributes.                                                                     |
+| `--html-visual-marks`        | Keep visual marks as inline HTML.                                                                       |
+| `--unknown-nodes V`          | `placeholder`, `skip`, `fail`, or `preserve-raw`.                                                       |
+| `--table-fallback V`         | `gfm-promote-first-row`, `gfm-empty-header`, or `html`.                                                 |
 
 ### analyze
 
-| Flag                      | Effect                                                                                                                                                                                                                 |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `-f, --format json\|text` | `json` (default) \| human-readable `text`                                                                                                                                                                              |
-| `--compact`               | Single-line JSON                                                                                                                                                                                                       |
-| `--select SECTIONS`       | Comma-separated subset of: `pageRefs`, `externalRefs`, `mentionRefs`, `attachmentRefs`, `referencedFileIds`, `pageTreeRefs`, `excerptRefs`, `excerpts`, `outline` (default: all). `excerpts` are rendered to Markdown. |
-| `--attachments-map FILE`  | Supply the attachment inventory so macro-based attachment file ids appear in `referencedFileIds` — without it they are silently absent.                                                                                |
+| Flag                      | Effect                                                                                                                                                            |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-f, --format json\|text` | Output format.                                                                                                                                                    |
+| `--compact`               | Single-line JSON.                                                                                                                                                 |
+| `--select SECTIONS`       | Comma-separated subset of `pageRefs`, `externalRefs`, `mentionRefs`, `attachmentRefs`, `referencedFileIds`, `pageTreeRefs`, `excerptRefs`, `excerpts`, `outline`. |
+| `--attachments-map FILE`  | Supplies attachment inventory so attachment macros can contribute file IDs.                                                                                       |
 
-The convert rendering/resolver flags are also accepted (they affect excerpt rendering).
+`analyze` also accepts the convert resolver flags when they affect metadata or excerpt rendering.
 
 ### validate
 
-| Flag                      | Effect                                                    |
-| ------------------------- | --------------------------------------------------------- |
-| `-f, --format text\|json` | `text` (default) \| `json` (`{validAdfRoot, issues}`)     |
-| `--compact`               | Single-line JSON                                          |
-| `--fail-on-warning`       | Exit 4 when a WARNING is present (else 0 on a valid root) |
+| Flag                      | Effect                            |
+| ------------------------- | --------------------------------- |
+| `-f, --format text\|json` | Output format.                    |
+| `--compact`               | Single-line JSON.                 |
+| `--fail-on-warning`       | Exit 4 when a warning is present. |
 
 ### Resolver flags
 
-Data-driven hooks, accepted by `convert` and `analyze`. A `*-url` template substitutes its `{placeholder}`s (each substituted value is percent-encoded, then the library scheme-sanitizes the whole URL); a `*-map` file is a JSON lookup. Where both are given, **the map wins on a hit** and the template is the fallback. An unknown `{placeholder}` in a template is a usage error (exit 1), raised before any conversion runs. Map values are absolute, trusted URLs — they are passed through with scheme sanitization only (a scheme-relative or relative value is emitted as-is).
+Resolver flags are accepted by `convert` and `analyze`. A `*-url` template substitutes placeholders after percent-encoding substituted values. A `*-map` file is a JSON lookup. If both are supplied, a map hit wins and the template is fallback. Unknown template placeholders are usage errors.
 
-| Flag                     | Maps to                   | Schema                                                   |
-| ------------------------ | ------------------------- | -------------------------------------------------------- |
-| `--media-url TPL`        | `MediaResolver`           | template; placeholders `{id}` `{collection}` `{localId}` |
-| `--media-map FILE`       | `MediaResolver`           | `{ "<fileId>": "https://…" }`                            |
-| `--attachment-url TPL`   | `AttachmentResolver`      | template; placeholders `{fileId}` `{title}`              |
-| `--attachment-map FILE`  | `AttachmentResolver`      | `{ "<fileId>": "https://…" }`                            |
-| `--page-url TPL`         | `PageLinkResolver`        | template; placeholder `{pageId}`                         |
-| `--page-map FILE`        | `PageLinkResolver`        | `{ "<pageNodeId>": "https://…" }`                        |
-| `--page-tree-map FILE`   | `PageTreeResolver`        | see below                                                |
-| `--excerpt-map FILE`     | `ExcerptResolver`         | see below (**verbatim**)                                 |
-| `--attachments-map FILE` | `ConfluenceRenderContext` | `[ { "fileId": "…", "title": "…", "mediaType": "…" } ]`  |
-| `--extension-map FILE`   | `ExtensionRenderer`       | see below (**verbatim**)                                 |
+| Flag                     | Maps to                   | Schema                                                        |
+| ------------------------ | ------------------------- | ------------------------------------------------------------- |
+| `--media-url TPL`        | `MediaResolver`           | Template with `{id}`, `{collection}`, `{localId}`.            |
+| `--media-map FILE`       | `MediaResolver`           | `{ "<fileId>": "https://example.com/file" }`                  |
+| `--attachment-url TPL`   | `AttachmentResolver`      | Template with `{fileId}`, `{title}`.                          |
+| `--attachment-map FILE`  | `AttachmentResolver`      | `{ "<fileId>": "https://example.com/file" }`                  |
+| `--page-url TPL`         | `PageLinkResolver`        | Template with `{pageId}`.                                     |
+| `--page-map FILE`        | `PageLinkResolver`        | `{ "<pageNodeId>": "https://example.com/page" }`              |
+| `--page-tree-map FILE`   | `PageTreeResolver`        | See below.                                                    |
+| `--excerpt-map FILE`     | `ExcerptResolver`         | See below; values are verbatim.                               |
+| `--attachments-map FILE` | `ConfluenceRenderContext` | `[ { "fileId": "...", "title": "...", "mediaType": "..." } ]` |
+| `--extension-map FILE`   | `ExtensionRenderer`       | See below; values are verbatim.                               |
 
-An **absent** key/entry declines the lookup (placeholder kept, recorded on `unresolved()`); a **present** entry is an answer — including the empty answers an empty `markdown` string (suppresses the excerpt) and an empty page-tree array (renders nothing) express. A **blank** value in a URL map (`--media-map`, `--attachment-map`, `--page-map`) is itself a decline — it falls through to the template, or to the placeholder, per the null/blank decline convention.
+Absent entries decline the lookup. Present entries are answers, including empty page-tree arrays and empty excerpt Markdown. Blank values in URL maps decline and fall through to the template or placeholder.
 
-`--page-tree-map` is keyed by macro kind, then root page id (`""` for a rootless `@self`-style macro); each entry carries `depth`/`title`/`pageNodeId`:
-
-```json
-{ "pagetree": { "<root>": [ { "depth": 0, "title": "Overview", "pageNodeId": "123" } ] },
-  "children": { "<root>": [] } }
-```
-
-`--excerpt-map` is an array; `name` is the excerpt selector (`null` = the page's unnamed excerpt), and `page` keeps any `SPACEKEY:` prefix verbatim:
+`--page-tree-map`:
 
 ```json
-[ { "page": "DOCS:Onboarding", "name": "summary", "markdown": "…" },
-  { "page": "Roadmap", "name": null, "markdown": "…" } ]
+{
+  "pagetree": { "<root>": [ { "depth": 0, "title": "Overview", "pageNodeId": "123" } ] },
+  "children": { "<root>": [] }
+}
 ```
 
-`--extension-map` is an array matched by `key` (and optional `type`); `template` interpolates `ExtensionContext` parameters via `{param}`:
+`--excerpt-map`:
 
 ```json
-[ { "type": "com.example", "key": "chart", "template": "![chart]({src})" } ]
+[
+  { "page": "DOCS:Onboarding", "name": "summary", "markdown": "..." },
+  { "page": "Roadmap", "name": null, "markdown": "..." }
+]
 ```
 
-`--excerpt-map` and `--extension-map` values are emitted **verbatim and not HTML-sanitized**; use only trusted files (the CLI prints a stderr warning when either is used).
+`--extension-map`:
+
+```json
+[
+  { "type": "com.example", "key": "chart", "template": "![chart]({src})" }
+]
+```
+
+The CLI warns on stderr when `--excerpt-map` or `--extension-map` is used because their Markdown is not sanitized.
 
 ## Exit codes
 
-| Code | Meaning                                                                                               |
-| ---- | ----------------------------------------------------------------------------------------------------- |
-| `0`  | success                                                                                               |
-| `1`  | usage error (unknown flag/subcommand, unknown `{placeholder}`, malformed/invalid map file)            |
-| `2`  | I/O error (input or map file not found/unreadable, output write failure)                              |
-| `3`  | content failure (`validate` invalid root or ERROR diagnostic; `convert --unknown-nodes fail` aborted) |
-| `4`  | quality gate (`convert --fail-on-lossy` on a lossy result, or `validate --fail-on-warning`)           |
-| `70` | unexpected internal error (a bug)                                                                     |
+| Code | Meaning                                                              |
+| ---- | -------------------------------------------------------------------- |
+| `0`  | Success.                                                             |
+| `1`  | Usage error, unknown flag, unknown placeholder, or invalid map file. |
+| `2`  | I/O error.                                                           |
+| `3`  | Content failure, such as invalid root or `--unknown-nodes fail`.     |
+| `4`  | Quality gate, such as `--fail-on-lossy` or `--fail-on-warning`.      |
+| `70` | Unexpected internal error.                                           |
 
-Malformed ADF alone does **not** cause a non-zero exit from `convert`: it never throws on bad input, so it prints an empty body and exits `0`. Use `-f json` to surface the `INVALID_JSON` diagnostic, or `--fail-on-lossy` / `validate` to gate on it.
+`convert` exits 0 on malformed ADF unless you add `--fail-on-lossy`. It prints an empty body for invalid input. Use `-f json`, `--fail-on-lossy`, or `validate` when you need diagnostics to affect control flow.
 
 ## Distribution
 
-adf4j ships as GraalVM **native executables** (Linux, macOS, Windows) plus a **WebAssembly** build, attached to each GitHub release. The CLI is reflection-free and uses Jackson in tree mode only, so it adds no native-image metadata.
+Releases include GraalVM native executables for Linux, macOS, and Windows, plus a WebAssembly build.
 
-The CLI jar is **not** a standalone fat jar. To run it on the JVM, put adf4j and its dependencies — Jackson, CommonMark, jsoup, SLF4J — on the class/module path yourself.
+The CLI jar is not a standalone fat jar. To run it on the JVM, put adf4j and its dependencies on the class or module path.
 
-The WASM build (a separate `adf4j-wasm` module, built under `-Pwasm` with an Oracle GraalVM JDK 25) exposes string→string functions to a JS host via a `globalThis` bridge — no JVM, no stdin, no host filesystem. From Node, `loadAdf4j()` yields `{ version(), convert(json) -> md, convertJson(json) -> { ok, lossy, warnings, errors, body } }`.
+The WASM build is produced by the `adf4j-wasm` module under `-Pwasm` with Oracle GraalVM JDK 25. It exposes string-to-string functions to a JavaScript host through a `globalThis` bridge: `version()`, `convert(json)`, and `convertJson(json)`.

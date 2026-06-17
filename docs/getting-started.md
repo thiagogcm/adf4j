@@ -1,10 +1,10 @@
 # Getting started
 
-This is the shortest path from an ADF JSON document to GitHub-Flavored Markdown. It covers the one-liner, a worked example, how to read a conversion result, and the CLI. Once you have a first conversion working, the [guide](./guide.md) teaches the concepts and recipes (resolvers, page links, custom macros), and the [reference](./reference.md) lists every option, the full mapping matrix, and the complete CLI.
+This page gets one ADF JSON document converted to GitHub-Flavored Markdown. For resolver recipes and deeper concepts, use the [guide](./guide.md). For complete tables of options, mappings, diagnostics, and CLI flags, use the [reference](./reference.md).
 
 ## Requirements
 
-`adf4j` requires **JDK 25**. The library is a Java Platform Module System (JPMS) module named `dev.nthings.adf4j`.
+adf4j requires **JDK 25**. The library is a JPMS module named `dev.nthings.adf4j`.
 
 ```xml
 <dependency>
@@ -14,33 +14,30 @@ This is the shortest path from an ADF JSON document to GitHub-Flavored Markdown.
 </dependency>
 ```
 
-If you consume it as a module, require it in your `module-info.java`:
+If your application uses modules:
 
 ```java
 requires dev.nthings.adf4j;
 ```
 
-The public API is in six packages — `dev.nthings.adf4j` (the entry point) plus `.options`, `.result`, `.metadata`, `.confluence`, and `.ast`. Everything under `.internal` is encapsulated by JPMS and not part of the contract.
+The supported API is in `dev.nthings.adf4j` plus `.options`, `.result`, `.metadata`, `.confluence`, and `.ast`. Packages under `.internal` are not API.
 
-> **Where ADF comes from.** Confluence Cloud returns a page's ADF as `body.atlas_doc_format.value` from its content REST API (request `body-format=atlas_doc_format`), and Jira issue rich-text fields are ADF too. Confluence Server/Data Center stores storage-format XHTML, not ADF.
+Confluence Cloud exposes ADF at `body.atlas_doc_format.value` when the REST API request uses `body-format=atlas_doc_format`. Jira rich-text fields also use ADF. Confluence Server and Data Center use storage-format XHTML instead.
 
-## Quick start
-
-One line converts a document with default options:
+## Convert a document
 
 ```java
 import dev.nthings.adf4j.AdfToMarkdown;
 
-String markdown = AdfToMarkdown.create().toMarkdown(adfJson);
+AdfToMarkdown converter = AdfToMarkdown.create();
+String markdown = converter.toMarkdown(adfJson);
 ```
 
-`AdfToMarkdown` is immutable and thread-safe. It compiles its pipeline once per instance, so **build one converter and reuse it** across documents and threads — keep it as a singleton or injected bean rather than calling `create()` per call. When options must vary per document, reuse the same converter and pass options per call (see the [guide](./guide.md#per-call-options-vs-bound-options)); do not construct a new converter each time.
+`AdfToMarkdown` is immutable and thread-safe. Create one converter and reuse it. When resolver state differs by document, pass per-call `MarkdownOptions` instead of creating a new converter.
 
-## A worked example
+## Example
 
-Here is a small ADF document and the Markdown it produces with default options (the output below is the library's actual output):
-
-**Input (ADF JSON):**
+**Input ADF**
 
 ```json
 {
@@ -69,7 +66,7 @@ Here is a small ADF document and the Markdown it produces with default options (
 }
 ```
 
-**Output (GitHub-Flavored Markdown):**
+**Output Markdown**
 
 ```markdown
 # Release Notes
@@ -83,22 +80,20 @@ See the [migration guide](https://example.com/guide) before upgrading.
 - New `analyze()` API
 ```
 
-Note the GFM-idiomatic choices: the Confluence *warning* panel becomes a GFM alert (`> [!WARNING]`), the link renders inline, and the `code` mark becomes a backtick span. The [reference mapping matrix](./reference.md#adf--markdown-mapping) shows how every construct maps.
+The warning panel becomes a GFM alert, the link renders inline, and the code mark becomes a backtick span. The full mapping table is in the [reference](./reference.md#adf-to-markdown-mapping).
 
-## Inspect the result
+## Inspect diagnostics and metadata
 
-`toMarkdown(...)` returns just the body string. To see whether the conversion lost anything, call `convert(...)`, which returns a `MarkdownResult` carrying the body, extracted metadata, and a list of diagnostics:
+`toMarkdown(...)` returns only the body string. Use `convert(...)` when you need diagnostics, metadata, or unresolved references:
 
 ```java
 import dev.nthings.adf4j.result.Diagnostic;
 import dev.nthings.adf4j.result.MarkdownResult;
 
-AdfToMarkdown converter = AdfToMarkdown.create();
 MarkdownResult result = converter.convert(adfJson);
-
 String body = result.body();
 
-if (result.wasLossy()) {                       // log is your own SLF4J logger
+if (result.wasLossy()) {
     for (Diagnostic diagnostic : result.diagnostics()) {
         if (diagnostic.severity() != Diagnostic.Severity.INFO) {
             log.warn("Conversion issue [{}]: {}", diagnostic.code(), diagnostic.message());
@@ -107,32 +102,30 @@ if (result.wasLossy()) {                       // log is your own SLF4J logger
 }
 ```
 
-`wasLossy()` is `true` only when a diagnostic is `WARNING` or `ERROR` — content dropped or altered, or a structural parse failure. It deliberately ignores *by-design, options-driven* outcomes (placeholders when you set no resolver, dropped visual marks, the table HTML fallback). Gate real loss on `wasLossy()`, not on "any diagnostic present" — some are informational.
+`wasLossy()` is true when a diagnostic is `WARNING` or `ERROR`. Informational diagnostics do not make a result lossy, and expected option-driven behavior such as unresolved media placeholders is not counted as lossy.
 
-`MarkdownResult` also exposes `metadata()` (the document's references, attachments, and outline) and `unresolved()` (lookups a configured resolver declined). The [guide](./guide.md#results-diagnostics-and-lossiness) covers the full result and diagnostics model; the [reference](./reference.md#diagnostics) lists the diagnostic codes.
+`result.metadata()` exposes references, attachments, excerpts, and the heading outline. `result.unresolved()` lists resolver lookups that stayed unresolved during this render.
 
 ## Use the CLI
 
-The `adf4j` CLI ships as a native executable per platform. Download the archive for your OS from the [latest GitHub release](https://github.com/thiagogcm/adf4j/releases/latest), extract it, and run the `adf4j-cli` binary. The three subcommands each map onto one library method:
+Download the native executable for your OS from the [latest GitHub release](https://github.com/thiagogcm/adf4j/releases/latest), extract it, and run `adf4j-cli`.
 
 ```bash
-adf4j convert doc.adf.json                                   # Markdown body on stdout
-adf4j analyze --select referencedFileIds,outline doc.adf.json  # references/outline as JSON
-adf4j validate --fail-on-warning doc.adf.json                # diagnostics; exit code reflects validity
+adf4j convert doc.adf.json
+adf4j analyze --select referencedFileIds,outline doc.adf.json
+adf4j validate --fail-on-warning doc.adf.json
 ```
 
-Input comes from the `<input-file>` argument or, when none is given, stdin — so the CLI composes in a pipeline:
+Input comes from `<input-file>` or stdin:
 
 ```bash
 cat doc.adf.json | adf4j convert -t "My Page" -o out.md
 ```
 
-Stdout carries only the deliverable (the Markdown body, or JSON); diagnostics and warnings go to stderr, so `adf4j convert doc.adf.json > out.md` stays clean. The `-o` flag writes the output file atomically.
+Stdout contains only the requested output. Diagnostics and warnings go to stderr, so shell redirection stays clean. The `-o` flag writes output atomically.
 
-The [reference CLI section](./reference.md#cli) documents every flag, the resolver-flag schemas, and the exit codes.
+## Next
 
-## Where to go next
-
-- **[Guide](./guide.md)** — the mental model and task recipes: resolving media and attachments to real URLs, rewriting inter-page links, expanding page-tree/excerpt macros, rendering custom macros, and tuning tables and formatting.
-- **[Reference](./reference.md)** — the lookup tables: the full `MarkdownOptions`, the complete ADF-to-Markdown mapping matrix, diagnostics, the lossy/by-design catalogue, URL safety, and the full CLI.
-- **[Architecture](./architecture.md)** — the internals for contributors: module layout, the parse/analyze/render pipeline, the AST type model, and the extensibility design.
+- [Guide](./guide.md): resolver patterns, macros, attachments, options, and AST usage.
+- [Reference](./reference.md): complete option, mapping, diagnostic, safety, CLI, and exit-code tables.
+- [Architecture](./architecture.md): internals for contributors and advanced integrators.

@@ -1,13 +1,16 @@
 # adf4j
 
-Atlassian Document Format (ADF) processing for Java. Convert ADF JSON — the rich-content format Confluence and Jira store — to GitHub-Flavored Markdown, extract its references/attachments/outline, and validate it. Use it as a Java library or a standalone CLI.
+Java tools for Atlassian Document Format (ADF). adf4j converts Confluence and Jira rich-text JSON to GitHub-Flavored Markdown, extracts document metadata, and validates ADF structure.
 
-- **Library** (`dev.nthings:adf4j`) — published to Maven Central. Immutable, thread-safe, dependency-light, and I/O-free: it never reaches out to Confluence or a CDN, delegating every URL/page lookup back to you.
-- **CLI** — distributed as GraalVM native executables (Linux, macOS, Windows) plus a WASM build, attached to each [GitHub release](https://github.com/thiagogcm/adf4j/releases).
+- **Library:** `dev.nthings:adf4j`, published to Maven Central.
+- **CLI:** native executables for Linux, macOS, and Windows, plus a WebAssembly build, attached to each [GitHub release](https://github.com/thiagogcm/adf4j/releases).
 
-Requires **Java 25**.
+adf4j is immutable, thread-safe, dependency-light, and I/O-free. It never calls Confluence, a CDN, or a database. Page, media, attachment, and macro lookups stay in your application through resolver callbacks.
 
-## Library
+> [!WARNING]
+> This project was built with assistance from AI agents. While the output was reviewed and validated against a Confluence wiki containing roughly 2,000 pages, edge cases and unforeseen scenarios may remain. Please report any issues.
+
+## Install
 
 ```xml
 <dependency>
@@ -17,62 +20,52 @@ Requires **Java 25**.
 </dependency>
 ```
 
-One line converts a document with default options:
+## Build
+
+```bash
+./mvnw verify
+./mvnw package -Pnative -pl adf4j-cli -am -DskipTests
+./mvnw package -Pwasm -pl adf4j-wasm -am -DskipTests
+```
+
+## Convert ADF
 
 ```java
 import dev.nthings.adf4j.AdfToMarkdown;
 
-String markdown = AdfToMarkdown.create().toMarkdown(adfJson);
+AdfToMarkdown converter = AdfToMarkdown.create();
+String markdown = converter.toMarkdown(adfJson);
 ```
 
-A Confluence *warning* panel becomes a GFM alert and a `link` mark renders inline:
-
-```markdown
-# Release Notes
-
-See the [migration guide](https://example.com/guide) before upgrading.
-
-> [!WARNING]
-> This release drops Java 21.
-```
-
-`AdfToMarkdown` is immutable and thread-safe — build one converter, reuse it across documents and threads. For metadata and diagnostics, use `convert(json)` (returns a `MarkdownResult`); to plan attachment fetches without rendering, use `analyze(json)`.
+Build one `AdfToMarkdown` and reuse it across documents and threads.
 
 ## CLI
 
-Download the archive for your platform from the [latest release](https://github.com/thiagogcm/adf4j/releases/latest), extract it, and run the `adf4j-cli` binary. Three subcommands, each mapping to one library method; input from a file argument or stdin:
+Download the archive for your platform from the [latest release](https://github.com/thiagogcm/adf4j/releases/latest), extract it, and run `adf4j-cli`.
 
 ```bash
-adf4j convert doc.adf.json                        # ADF → Markdown body on stdout
+adf4j convert doc.adf.json
 cat doc.adf.json | adf4j convert -t "My Page" -o out.md
-adf4j analyze --select referencedFileIds,outline doc.adf.json   # references/outline as JSON
-adf4j validate --fail-on-warning doc.adf.json     # parse-check; exit code reflects validity
+adf4j analyze --select referencedFileIds,outline doc.adf.json
+adf4j validate --fail-on-warning doc.adf.json
 ```
 
-Run `adf4j <command> --help` for the full options. The WASM build (`adf4j-wasm-<version>.zip`) runs the converter on a JavaScript host (e.g. Node) with no JVM.
+Input comes from a file argument or stdin. Stdout contains only the requested output, while diagnostics go to stderr. Run `adf4j <command> --help` for command-specific flags.
 
 ## Documentation
 
-| Doc                                            | What it covers                                                                                                                                                                                                      |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **[Getting started](docs/getting-started.md)** | The shortest path: install, your first conversion, reading the result, and the CLI.                                                                                                                                 |
-| **[Guide](docs/guide.md)**                     | The mental model (the parse → analyze → render pipeline, results & lossiness, the resolver model) and the task recipes — resolving media and links, expanding macros, custom extensions, the analyze-first pattern. |
-| **[Reference](docs/reference.md)**             | The lookup tables: every `MarkdownOptions`, the full ADF → Markdown mapping, diagnostics, URL safety, and the complete CLI (flags, resolver schemas, exit codes).                                                   |
-| **[Architecture](docs/architecture.md)**       | The internals for contributors: module layout, the conversion pipeline, the AST type model, and the extensibility and error-handling designs.                                                                       |
+| Doc                                        | Use it for                                                               |
+| ------------------------------------------ | ------------------------------------------------------------------------ |
+| [Getting started](docs/getting-started.md) | Install, convert a first document, inspect results, and run the CLI.     |
+| [Guide](docs/guide.md)                     | Resolver patterns, macros, attachments, options, and AST usage.          |
+| [Reference](docs/reference.md)             | Complete option, mapping, diagnostic, safety, CLI, and exit-code tables. |
+| [Architecture](docs/architecture.md)       | Internal design for contributors and advanced integrators.               |
 
-The local [ADF spec snapshot](docs/spec/README.md) mirrors the upstream Atlassian format for offline reference.
+The local [ADF spec snapshot](docs/spec/README.md) mirrors Atlassian's format for offline reference.
 
-## Building from source
+## Release
 
-```bash
-./mvnw verify                                           # build + test + coverage gate
-./mvnw package -Pnative -pl adf4j-cli -am -DskipTests   # native CLI for the current OS
-./mvnw package -Pwasm -pl adf4j-wasm -am -DskipTests    # WASM build
-```
-
-## Releasing
-
-Releases are automated with JReleaser and GitHub Actions. See [RELEASE.md](RELEASE.md).
+Releases use JReleaser and GitHub Actions. See [RELEASE.md](RELEASE.md).
 
 ## License
 
