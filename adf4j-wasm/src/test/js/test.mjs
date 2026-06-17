@@ -10,6 +10,7 @@ import { loadAdf4j } from './adf4j-wasm.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const adf4j = await loadAdf4j();
+const expectedVersion = await readExpectedVersion();
 
 let passed = 0;
 function check(name, fn) {
@@ -29,7 +30,11 @@ const para = (text) => ({ type: 'paragraph', content: [{ type: 'text', text }] }
 console.log(`adf4j wasm v${adf4j.version()}\n`);
 
 check('version is reported', () => {
-  assert.equal(adf4j.version(), '1.0.0-SNAPSHOT');
+  const version = adf4j.version();
+  assert.match(version, /^\d+\.\d+\.\d+(?:-[0-9A-Za-z][0-9A-Za-z.-]*)?$/);
+  if (expectedVersion) {
+    assert.equal(version, expectedVersion);
+  }
 });
 
 check('heading renders as ATX', () => {
@@ -105,3 +110,27 @@ async function checkSampleFile() {
 }
 
 console.log(`\n${passed} checks passed${process.exitCode ? ', with failures' : ''}.`);
+
+async function readExpectedVersion() {
+  try {
+    const properties = await readFile(
+      resolve(
+        here,
+        '..',
+        '..',
+        '..',
+        'target',
+        'classes',
+        'dev',
+        'nthings',
+        'adf4j',
+        'wasm',
+        'adf4j-wasm.properties',
+      ),
+      'utf8',
+    );
+    return properties.match(/^version=(.+)$/m)?.[1];
+  } catch {
+    return undefined;
+  }
+}
