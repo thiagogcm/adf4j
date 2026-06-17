@@ -3,3 +3,8 @@ include:
   project: true
 exclude:
   - "spec/**"
+pageOrder:
+  - getting-started.md
+  - guide.md
+  - architecture.md
+  - reference.md
