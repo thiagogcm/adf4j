@@ -54,6 +54,11 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           cache: "maven"
 
+      - name: Install just
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        with:
+          just-version: "1.53.0"
+
       - name: Compute versions
         id: versions
         shell: bash
@@ -83,8 +88,7 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          ./mvnw -B -ntp versions:set -DnewVersion="$REL" -DprocessAllModules -DgenerateBackupPoms=false
-          npm version "$REL" --prefix adf4j-wasm/src/npm --no-git-tag-version --allow-same-version
+          just set-version "$REL"
           # Tolerate a no-op (recovery re-run already at $REL): commit fails on an empty commit.
           git diff --quiet || {
             git add pom.xml adf4j-lib/pom.xml adf4j-cli/pom.xml adf4j-wasm/pom.xml adf4j-wasm/src/npm/package.json
@@ -125,15 +129,20 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           cache: "maven"
 
+      - name: Install just
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        with:
+          just-version: "1.53.0"
+
       # Dry runs skip the commit, so set the version ephemerally here.
       - name: Set release version (dry run)
         if: inputs.dryRun
         shell: bash
-        run: ./mvnw -B -ntp versions:set -DnewVersion=${{ needs.prepare.outputs.releaseVersion }} -DprocessAllModules -DgenerateBackupPoms=false
+        run: just set-version ${{ needs.prepare.outputs.releaseVersion }}
 
       - name: Build native CLI
         shell: bash
-        run: ./mvnw -B -ntp package -Pnative -pl adf4j-cli -am -DskipTests
+        run: just native
 
       - name: Package archive (tar.gz)
         if: matrix.archive == 'tar.gz'
@@ -189,9 +198,14 @@ jobs:
           cache: "maven"
           native-image-job-reports: "true"
 
+      - name: Install just
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        with:
+          just-version: "1.53.0"
+
       - name: Set release version (dry run)
         if: inputs.dryRun
-        run: ./mvnw -B -ntp versions:set -DnewVersion=${{ needs.prepare.outputs.releaseVersion }} -DprocessAllModules -DgenerateBackupPoms=false
+        run: just set-version ${{ needs.prepare.outputs.releaseVersion }}
 
       # GraalVM's WASM backend needs `wasm-as` from Binaryen >= 119; Ubuntu's apt build is older.
       - name: Install Binaryen (wasm-as)
@@ -205,18 +219,17 @@ jobs:
           /tmp/binaryen-${BINARYEN}/bin/wasm-as --version
 
       - name: Build WASM (web image)
-        run: ./mvnw -B -ntp package -Pwasm -pl adf4j-wasm -am -DskipTests
+        run: just wasm
 
       - name: Smoke-test the wasm from Node
-        run: node adf4j-wasm/src/test/js/test.mjs
+        run: just wasm-smoke
 
       - name: Package npm library
         shell: bash
         run: |
           VERSION="${{ needs.prepare.outputs.releaseVersion }}"
           PKG="dist/npm/adf4j-wasm"
-          node adf4j-wasm/scripts/prepare-npm-package.mjs "$VERSION" "$PKG"
-          node adf4j-wasm/scripts/verify-npm-package.mjs "$PKG"
+          just wasm-npm "$VERSION"
           TARBALL=$(npm pack "$PKG" --pack-destination dist --json | node -e "let s=''; process.stdin.on('data', d => s += d); process.stdin.on('end', () => process.stdout.write(JSON.parse(s)[0].filename));")
           mv "dist/${TARBALL}" "dist/adf4j-wasm-npm-${VERSION}.tgz"
 
@@ -268,12 +281,17 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           cache: "maven"
 
+      - name: Install just
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        with:
+          just-version: "1.53.0"
+
       - name: Set release version (dry run)
         if: inputs.dryRun
-        run: ./mvnw -B -ntp versions:set -DnewVersion=${{ needs.prepare.outputs.releaseVersion }} -DprocessAllModules -DgenerateBackupPoms=false
+        run: just set-version ${{ needs.prepare.outputs.releaseVersion }}
 
       - name: Stage library for Maven Central
-        run: ./mvnw -B -ntp -Ppublication -pl adf4j-lib -DskipTests clean deploy
+        run: just stage
 
       - name: Download CLI artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -370,14 +388,18 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           cache: "maven"
 
+      - name: Install just
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        with:
+          just-version: "1.53.0"
+
       - name: Bump POM to next development version and commit
         shell: bash
         run: |
           NEXT="${{ needs.prepare.outputs.nextVersion }}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          ./mvnw -B -ntp versions:set -DnewVersion="$NEXT" -DprocessAllModules -DgenerateBackupPoms=false
-          npm version "$NEXT" --prefix adf4j-wasm/src/npm --no-git-tag-version --allow-same-version
+          just set-version "$NEXT"
           # Tolerate a no-op (re-run already at $NEXT): commit fails on an empty commit.
           git diff --quiet || {
             git add pom.xml adf4j-lib/pom.xml adf4j-cli/pom.xml adf4j-wasm/pom.xml adf4j-wasm/src/npm/package.json

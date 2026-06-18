@@ -30,15 +30,19 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           cache: "maven"
 
-      - name: Build and Test with Maven
-        shell: bash
-        # `verify` runs the tests, produces the JaCoCo report, and enforces the coverage gate
-        # (jacoco:check); `test` stops short of all three.
-        run: ./mvnw clean verify
+      - name: Install just
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        with:
+          just-version: "1.53.0"
 
-      - name: Build Native CLI Executable
+      - name: Build and test
         shell: bash
-        run: ./mvnw package -Pnative -pl adf4j-cli -am -DskipTests
+        # `just verify` runs the tests, produces the JaCoCo report, and enforces the coverage gate.
+        run: just verify
+
+      - name: Build native CLI executable
+        shell: bash
+        run: just native
 
       - name: Prepare native executable artifact
         shell: bash
@@ -81,6 +85,11 @@ jobs:
           cache: "maven"
           native-image-job-reports: "true"
 
+      - name: Install just
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        with:
+          just-version: "1.53.0"
+
       - name: Verify Native Image installation
         run: native-image --version
 
@@ -96,24 +105,20 @@ jobs:
           /tmp/binaryen-${BINARYEN}/bin/wasm-as --version
 
       - name: Build WASM (web image)
-        run: ./mvnw package -Pwasm -pl adf4j-wasm -am -DskipTests
+        run: just wasm
 
       # Prove the wasm actually converts: load it from Node and run the smoke test.
       # ubuntu-latest ships a current Node; the harness needs only ESM + top-level await.
       - name: Smoke-test the wasm from Node
-        run: node adf4j-wasm/src/test/js/test.mjs
+        run: just wasm-smoke
 
-      - name: Package npm library
+      # Assemble the npm package (resolving the Maven version) and verify the cross-runtime/bundler
+      # contract: exports map, declared files, Vite plugin, conversion.
+      - name: Assemble and verify npm package
         shell: bash
         run: |
-          VERSION=$(./mvnw -q -ntp -pl adf4j-wasm help:evaluate -Dexpression=project.version -DforceStdout)
-          PKG="dist/npm/adf4j-wasm"
-          node adf4j-wasm/scripts/prepare-npm-package.mjs "$VERSION" "$PKG"
-          npm pack "$PKG" --dry-run
-
-      # Guards the cross-runtime/bundler contract: exports map, declared files, Vite plugin, conversion.
-      - name: Verify npm package layout and conversion
-        run: node adf4j-wasm/scripts/verify-npm-package.mjs dist/npm/adf4j-wasm
+          just wasm-npm
+          npm pack dist/npm/adf4j-wasm --dry-run
 
       - name: Prepare WASM artifact
         run: |

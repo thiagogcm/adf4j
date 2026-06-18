@@ -39,11 +39,16 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           cache: "maven"
 
+      - name: Install just
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        with:
+          just-version: "1.53.0"
+
       - name: Resolve version
         id: v
         shell: bash
         run: |
-          VERSION=$(./mvnw -q -ntp -pl adf4j-lib help:evaluate -Dexpression=project.version -DforceStdout)
+          VERSION=$(just version)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           case "$VERSION" in
             *-SNAPSHOT) echo "is_snapshot=true"  >> "$GITHUB_OUTPUT"; echo "Publishing snapshot $VERSION" ;;
@@ -52,7 +57,7 @@ jobs:
 
       - name: Stage library
         if: steps.v.outputs.is_snapshot == 'true'
-        run: ./mvnw -B -ntp -Ppublication -pl adf4j-lib -DskipTests clean deploy
+        run: just stage
 
       - name: Run JReleaser (deploy snapshot)
         if: steps.v.outputs.is_snapshot == 'true'

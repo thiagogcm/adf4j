@@ -38,6 +38,11 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           cache: "maven"
 
+      - name: Install just
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        with:
+          just-version: "1.53.0"
+
       - name: Initialize CodeQL
         uses: github/codeql-action/init@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4.36.2
         with:
@@ -47,7 +52,7 @@ jobs:
       # Build only the library + CLI (the default reactor); the wasm profile needs extra tooling.
       - name: Build for analysis
         shell: bash
-        run: ./mvnw -B -ntp -DskipTests clean compile
+        run: just compile
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4.36.2

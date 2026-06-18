@@ -23,11 +23,16 @@ adf4j is immutable, thread-safe, dependency-light, and I/O-free. It never calls 
 
 ## Build
 
+This repo uses [`just`](https://just.systems) as its task runner. Run `just` to list recipes; the
+same recipes back both local development and CI.
+
 ```bash
-./mvnw verify
-./mvnw package -Pnative -pl adf4j-cli -am -DskipTests
-./mvnw package -Pwasm -pl adf4j-wasm -am -DskipTests
+just verify   # compile, test, coverage gate, and format checks
+just native   # GraalVM native CLI executable
+just wasm     # GraalVM WASM web image
 ```
+
+Each recipe wraps the Maven wrapper, so `./mvnw verify` and friends still work directly.
 
 ## Convert ADF
 
