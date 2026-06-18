@@ -23,11 +23,16 @@ adf4j is immutable, thread-safe, dependency-light, and I/O-free. It never calls 
 
 ## Build
 
+This repo uses [`just`](https://just.systems) as its task runner. Run `just` to list recipes; the
+same recipes back both local development and CI.
+
 ```bash
-./mvnw verify
-./mvnw package -Pnative -pl adf4j-cli -am -DskipTests
-./mvnw package -Pwasm -pl adf4j-wasm -am -DskipTests
+just verify   # compile, test, coverage gate, and format checks
+just native   # GraalVM native CLI executable
+just wasm     # GraalVM WASM web image
 ```
+
+Each recipe wraps the Maven wrapper, so `./mvnw verify` and friends still work directly.
 
 ## Convert ADF
 
@@ -67,8 +72,10 @@ const markdown = adf4j.convert(adfJsonString);
 const result = adf4j.convertJson(adfJsonString);
 ```
 
-The npm package includes the GraalVM Web Image loader and compiled `.wasm` module for Node.js and
-browser bundlers.
+One entry point runs in Node.js, Bun, Deno, and the browser. The npm package bundles the GraalVM Web
+Image loader and the compiled `.wasm`. In Vite, add the shipped plugin (`import adf4jWasm from
+'@nthings.dev/adf4j-wasm/vite'`) or set `optimizeDeps.exclude: ['@nthings.dev/adf4j-wasm']`. See the
+[package README](adf4j-wasm/src/npm/README.md) for bundler, runtime, and self-hosting details.
 
 ## Documentation
 

@@ -9,7 +9,13 @@ import assert from 'node:assert/strict';
 import { loadAdf4j } from '../../npm/adf4j-wasm.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const adf4j = await loadAdf4j();
+// Running from the source tree: point the loader at the freshly built image under target/.
+// A published install instead resolves the assets sitting next to adf4j-wasm.mjs.
+const targetDir = new URL('../../../target/', import.meta.url);
+const adf4j = await loadAdf4j({
+  imageUrl: new URL('adf4j-wasm.js', targetDir),
+  wasmUrl: new URL('adf4j-wasm.js.wasm', targetDir),
+});
 const expectedVersion = await readExpectedVersion();
 
 let passed = 0;

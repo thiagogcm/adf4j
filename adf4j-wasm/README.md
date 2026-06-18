@@ -30,28 +30,34 @@ target/adf4j-wasm.js.wasm   # the compiled module (~16 MB)
 npm install @nthings.dev/adf4j-wasm
 ```
 
-Node.js:
+One entry point covers Node.js, Bun, Deno, and the browser; `loadAdf4j()` detects the runtime.
 
 ```js
 import { loadAdf4j } from '@nthings.dev/adf4j-wasm';
 
 const adf4j = await loadAdf4j();
-adf4j.version();                                // "1.0.0"
+adf4j.version();                                // adf4j version string
 adf4j.convert(adfJsonString);                   // -> Markdown string
 adf4j.convertJson(adfJsonString);
 // -> { ok, lossy, warnings, errors, body }
 ```
 
-Browser bundlers:
+In Vite, add the shipped plugin (or set `optimizeDeps.exclude: ['@nthings.dev/adf4j-wasm']`) so the
+`.wasm` survives dependency pre-bundling:
 
 ```js
-import { loadAdf4j } from '@nthings.dev/adf4j-wasm';
-
-const adf4j = await loadAdf4j();
-console.log(adf4j.convert(adfJsonString));
+import adf4jWasm from '@nthings.dev/adf4j-wasm/vite';
+export default defineConfig({ plugins: [adf4jWasm()] });
 ```
 
-The package uses static `new URL(..., import.meta.url)` asset references so bundlers can emit the generated JavaScript and WebAssembly files. When running from this source tree, use `src/npm/adf4j-wasm.mjs`; it resolves `target/adf4j-wasm.js` by default. Override with `loadAdf4j({ imageUrl, wasmUrl })`, `loadAdf4j({ imagePath, wasmPath })`, or the `ADF4J_WASM_JS` environment variable in Node.js.
+Consumption details (Vite, other bundlers, Bun, Deno, CommonJS, self-hosting assets) live in the
+published package README at [src/npm/README.md](src/npm/README.md).
+
+The package uses static `new URL(..., import.meta.url)` asset references so bundlers emit the generated
+JavaScript and WebAssembly files. Override the asset locations with `loadAdf4j({ imageUrl, wasmUrl })`,
+`loadAdf4j({ imagePath, wasmPath })`, or the `ADF4J_WASM_JS` / `ADF4J_WASM` environment variables in
+Node.js. When running from this source tree, the smoke tests under `src/test/js/` point the loader at
+the freshly built `target/adf4j-wasm.js`.
 
 ## Smoke test / example consumer
 

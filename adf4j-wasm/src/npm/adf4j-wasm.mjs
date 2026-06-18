@@ -1,12 +1,13 @@
 // Loads the adf4j GraalVM Web Image (WebAssembly) and returns a small JS-native API. The generated
 // image script runs Java `main`, publishes `globalThis.adf4j = { convert, convertJson, version }`,
 // then calls `globalThis.__adf4jOnReady()`. This wrapper installs that callback first and evaluates
-// the generated image from Node.js or a browser.
+// the generated image, which self-detects its host (Node.js, Bun, Deno, or a browser).
 
+// Static, bundler-visible asset references: Vite/webpack/Rollup emit and rewrite these to hashed
+// output assets; Node/Bun/Deno resolve them as file URLs next to this module. Keep them the only
+// built-in candidates so the loader never names a path absent from a consumer's bundler build.
 const localImageUrl = new URL('./adf4j-wasm.js', import.meta.url);
 const localWasmUrl = new URL('./adf4j-wasm.js.wasm', import.meta.url);
-const sourceTreeImageUrl = new URL('../../target/adf4j-wasm.js', import.meta.url);
-const sourceTreeWasmUrl = new URL('../../target/adf4j-wasm.js.wasm', import.meta.url);
 
 let cached;
 
@@ -58,12 +59,12 @@ export function loadAdf4j(opts = {}) {
 }
 
 function resolveImageCandidates(opts) {
+  const env = globalThis.process?.env ?? {};
   return [
     imageCandidate(opts.imageUrl, opts.wasmUrl),
     imageCandidate(opts.imagePath, opts.wasmPath),
-    imageCandidate(globalThis.process?.env?.ADF4J_WASM_JS),
+    imageCandidate(env.ADF4J_WASM_JS, env.ADF4J_WASM),
     imageCandidate(localImageUrl, localWasmUrl),
-    imageCandidate(sourceTreeImageUrl, sourceTreeWasmUrl),
   ].filter(Boolean);
 }
 

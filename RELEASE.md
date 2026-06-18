@@ -52,6 +52,7 @@ The Release workflow pushes version commits with `GITHUB_TOKEN`, so branch prote
 
 Relevant files:
 
+- [`justfile`](justfile) - build, test, and release recipes shared by local runs and CI.
 - [`pom.xml`](pom.xml) - version and reactor.
 - [`adf4j-lib/pom.xml`](adf4j-lib/pom.xml) - Central `publication` staging.
 - [`adf4j-cli/pom.xml`](adf4j-cli/pom.xml) - native CLI build.
@@ -70,25 +71,26 @@ Confirm:
 - docs and examples match the released behavior.
 - conversion, CLI, WASM, parser, URL, macro, and HTML-rendering changes have focused tests.
 
-Useful local checks:
+Useful local checks (recipes from the [`justfile`](justfile), the same ones CI runs):
 
 ```bash
-./mvnw -B -ntp verify
-./mvnw -B -ntp -Ppublication -pl adf4j-lib -DskipTests clean deploy
+just verify
+just stage
 find target/staging-deploy -type f | sort
 ```
 
 Optional CLI/WASM checks:
 
 ```bash
-./mvnw -B -ntp package -Pnative -pl adf4j-cli -am -DskipTests
-./mvnw -B -ntp package -Pwasm -pl adf4j-wasm -am -DskipTests
-node adf4j-wasm/src/test/js/test.mjs
+just native
+just wasm
+just wasm-smoke
 ```
 
 ## Cut release
 
-Run **Actions** -> **Release** -> **Run workflow** on `main`.
+Run **Actions** -> **Release** -> **Run workflow** on `main`, or dispatch it from a checkout with
+`just release <releaseVersion> [nextVersion] [dryRun]` (for example `just release 1.0.2 1.1.0-SNAPSHOT`).
 
 Inputs:
 
