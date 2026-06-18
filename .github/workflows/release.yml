@@ -216,18 +216,7 @@ jobs:
           VERSION="${{ needs.prepare.outputs.releaseVersion }}"
           PKG="dist/npm/adf4j-wasm"
           node adf4j-wasm/scripts/prepare-npm-package.mjs "$VERSION" "$PKG"
-          node --input-type=module <<'JS'
-          import assert from 'node:assert/strict';
-          import { loadAdf4j } from './dist/npm/adf4j-wasm/adf4j-wasm.mjs';
-
-          const adf4j = await loadAdf4j();
-          const doc = JSON.stringify({
-            version: 1,
-            type: 'doc',
-            content: [{ type: 'paragraph', content: [{ type: 'text', text: 'npm package' }] }],
-          });
-          assert.equal(adf4j.convert(doc).trim(), 'npm package');
-          JS
+          node adf4j-wasm/scripts/verify-npm-package.mjs "$PKG"
           TARBALL=$(npm pack "$PKG" --pack-destination dist --json | node -e "let s=''; process.stdin.on('data', d => s += d); process.stdin.on('end', () => process.stdout.write(JSON.parse(s)[0].filename));")
           mv "dist/${TARBALL}" "dist/adf4j-wasm-npm-${VERSION}.tgz"
 

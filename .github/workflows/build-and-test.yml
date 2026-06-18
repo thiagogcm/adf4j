@@ -111,21 +111,9 @@ jobs:
           node adf4j-wasm/scripts/prepare-npm-package.mjs "$VERSION" "$PKG"
           npm pack "$PKG" --dry-run
 
-      - name: Smoke-test npm package layout
-        shell: bash
-        run: |
-          node --input-type=module <<'JS'
-          import assert from 'node:assert/strict';
-          import { loadAdf4j } from './dist/npm/adf4j-wasm/adf4j-wasm.mjs';
-
-          const adf4j = await loadAdf4j();
-          const doc = JSON.stringify({
-            version: 1,
-            type: 'doc',
-            content: [{ type: 'paragraph', content: [{ type: 'text', text: 'npm package' }] }],
-          });
-          assert.equal(adf4j.convert(doc).trim(), 'npm package');
-          JS
+      # Guards the cross-runtime/bundler contract: exports map, declared files, Vite plugin, conversion.
+      - name: Verify npm package layout and conversion
+        run: node adf4j-wasm/scripts/verify-npm-package.mjs dist/npm/adf4j-wasm
 
       - name: Prepare WASM artifact
         run: |

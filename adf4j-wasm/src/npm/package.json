@@ -19,23 +19,40 @@
     "confluence",
     "jira",
     "markdown",
-    "wasm"
+    "wasm",
+    "webassembly",
+    "vite",
+    "bun",
+    "deno"
   ],
   "main": "./adf4j-wasm.mjs",
   "types": "./adf4j-wasm.d.ts",
   "browser": "./adf4j-wasm.mjs",
   "exports": {
     ".": {
-      "browser": "./adf4j-wasm.mjs",
       "types": "./adf4j-wasm.d.ts",
-      "import": "./adf4j-wasm.mjs"
-    }
+      "browser": "./adf4j-wasm.mjs",
+      "import": "./adf4j-wasm.mjs",
+      "require": "./adf4j-wasm.mjs",
+      "default": "./adf4j-wasm.mjs"
+    },
+    "./vite": {
+      "types": "./vite.d.ts",
+      "import": "./vite.mjs",
+      "require": "./vite.mjs",
+      "default": "./vite.mjs"
+    },
+    "./adf4j-wasm.js": "./adf4j-wasm.js",
+    "./adf4j-wasm.js.wasm": "./adf4j-wasm.js.wasm",
+    "./package.json": "./package.json"
   },
   "files": [
     "adf4j-wasm.d.ts",
     "adf4j-wasm.js",
     "adf4j-wasm.js.wasm",
     "adf4j-wasm.mjs",
+    "vite.d.ts",
+    "vite.mjs",
     "LICENSE",
     "README.md"
   ],

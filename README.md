@@ -67,8 +67,10 @@ const markdown = adf4j.convert(adfJsonString);
 const result = adf4j.convertJson(adfJsonString);
 ```
 
-The npm package includes the GraalVM Web Image loader and compiled `.wasm` module for Node.js and
-browser bundlers.
+One entry point runs in Node.js, Bun, Deno, and the browser. The npm package bundles the GraalVM Web
+Image loader and the compiled `.wasm`. In Vite, add the shipped plugin (`import adf4jWasm from
+'@nthings.dev/adf4j-wasm/vite'`) or set `optimizeDeps.exclude: ['@nthings.dev/adf4j-wasm']`. See the
+[package README](adf4j-wasm/src/npm/README.md) for bundler, runtime, and self-hosting details.
 
 ## Documentation
 

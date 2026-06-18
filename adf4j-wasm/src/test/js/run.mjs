@@ -22,7 +22,12 @@ try {
   process.exit(2);
 }
 
-const adf4j = await loadAdf4j();
+// Running from the source tree: load the freshly built image under target/.
+const targetDir = new URL('../../../target/', import.meta.url);
+const adf4j = await loadAdf4j({
+  imageUrl: new URL('adf4j-wasm.js', targetDir),
+  wasmUrl: new URL('adf4j-wasm.js.wasm', targetDir),
+});
 
 console.error(`adf4j wasm v${adf4j.version()} — converting ${inputPath}`);
 const result = adf4j.convertJson(adfJson);
