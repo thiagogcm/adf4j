@@ -92,6 +92,19 @@ wasm-npm version="":
     node adf4j-wasm/scripts/prepare-npm-package.mjs "$version" dist/npm/adf4j-wasm
     node adf4j-wasm/scripts/verify-npm-package.mjs dist/npm/adf4j-wasm
 
+# Build the unpacked Chrome extension in adf4j-chrome-ext/dist.
+[group('package')]
+chrome-ext:
+    just wasm
+    just wasm-npm
+    just chrome-ext-from-dist
+
+# Build the unpacked Chrome extension from an existing dist/npm/adf4j-wasm package.
+[group('package')]
+chrome-ext-from-dist:
+    node --run chrome-ext:test
+    node --run chrome-ext:build
+
 # --- Release ------------------------------------------------------------------
 
 # Print the current Maven project version (consumed by CI and the recipes above).

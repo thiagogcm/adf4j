@@ -24,12 +24,14 @@ adf4j is immutable, thread-safe, dependency-light, and I/O-free. It never calls 
 ## Build
 
 This repo uses [`just`](https://just.systems) as its task runner. Run `just` to list recipes; the
-same recipes back both local development and CI.
+same recipes back both local development and CI. Repository-level Node tasks require Node 24 or
+newer.
 
 ```bash
 just verify   # compile, test, coverage gate, and format checks
 just native   # GraalVM native CLI executable
 just wasm     # GraalVM WASM web image
+just chrome-ext # unpacked Confluence Cloud Chrome extension
 ```
 
 Each recipe wraps the Maven wrapper, so `./mvnw verify` and friends still work directly.
@@ -76,6 +78,15 @@ One entry point runs in Node.js, Bun, Deno, and the browser. The npm package bun
 Image loader and the compiled `.wasm`. In Vite, add the shipped plugin (`import adf4jWasm from
 '@nthings.dev/adf4j-wasm/vite'`) or set `optimizeDeps.exclude: ['@nthings.dev/adf4j-wasm']`. See the
 [package README](adf4j-wasm/src/npm/README.md) for bundler, runtime, and self-hosting details.
+
+## Chrome extension
+
+`adf4j-chrome-ext` is a local Manifest V3 extension for Confluence Cloud. It adds a floating
+`Copy as markdown` button to detected Confluence pages, fetches the published page body as
+`atlas_doc_format`, converts it with `adf4j-wasm`, and writes Markdown to the clipboard.
+
+Build the unpacked extension with `just chrome-ext`, then load `adf4j-chrome-ext/dist` from
+`chrome://extensions`.
 
 ## Documentation
 

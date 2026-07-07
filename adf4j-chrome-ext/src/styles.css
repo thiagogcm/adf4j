@@ -1,0 +1,51 @@
+#adf4j-copy-markdown-button {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 2147483647;
+  box-sizing: border-box;
+  min-width: 144px;
+  min-height: 40px;
+  border: 1px solid #0c66e4;
+  border-radius: 6px;
+  padding: 0 14px;
+  background: #0c66e4;
+  color: #ffffff;
+  box-shadow: 0 8px 24px rgba(9, 30, 66, 0.25);
+  cursor: pointer;
+  font: 600 14px/40px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  letter-spacing: 0;
+}
+
+#adf4j-copy-markdown-button:hover {
+  background: #0055cc;
+}
+
+#adf4j-copy-markdown-button:focus-visible {
+  outline: 3px solid #579dff;
+  outline-offset: 2px;
+}
+
+#adf4j-copy-markdown-button:disabled {
+  cursor: wait;
+  opacity: 0.82;
+}
+
+#adf4j-copy-markdown-button[data-state="copied"] {
+  border-color: #1f845a;
+  background: #1f845a;
+}
+
+#adf4j-copy-markdown-button[data-state="failed"] {
+  border-color: #c9372c;
+  background: #c9372c;
+}
+
+@media (max-width: 560px) {
+  #adf4j-copy-markdown-button {
+    right: 12px;
+    bottom: 12px;
+    min-width: 132px;
+    max-width: calc(100vw - 24px);
+  }
+}

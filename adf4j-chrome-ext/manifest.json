@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "adf4j Copy as Markdown",
+  "description": "Copy Confluence Cloud pages as Markdown using adf4j.",
+  "version": "1.1.0",
+  "permissions": ["clipboardWrite"],
+  "host_permissions": ["https://*.atlassian.net/wiki/*"],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://*.atlassian.net/wiki/*"],
+      "js": ["confluence.js", "content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}
