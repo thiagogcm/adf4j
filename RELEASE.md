@@ -39,13 +39,13 @@ Treat these as release-significant surfaces:
 
 Repository secrets:
 
-| Secret                            | Purpose                               |
-| --------------------------------- | ------------------------------------- |
-| `JRELEASER_GPG_PUBLIC_KEY`        | Armored public signing key            |
-| `JRELEASER_GPG_SECRET_KEY`        | Armored private signing key           |
-| `JRELEASER_GPG_PASSPHRASE`        | Signing key passphrase                |
-| `JRELEASER_MAVENCENTRAL_USERNAME` | Maven Central Portal token username   |
-| `JRELEASER_MAVENCENTRAL_PASSWORD` | Maven Central Portal token password   |
+| Secret                            | Purpose                                            |
+| --------------------------------- | -------------------------------------------------- |
+| `JRELEASER_GPG_PUBLIC_KEY`        | Armored public signing key                         |
+| `JRELEASER_GPG_SECRET_KEY`        | Armored private signing key                        |
+| `JRELEASER_GPG_PASSPHRASE`        | Signing key passphrase                             |
+| `JRELEASER_MAVENCENTRAL_USERNAME` | Maven Central Portal token username                |
+| `JRELEASER_MAVENCENTRAL_PASSWORD` | Maven Central Portal token password                |
 | `NPM_TOKEN`                       | npm automation token for `@nthings.dev/adf4j-wasm` |
 
 The Release workflow pushes version commits with `GITHUB_TOKEN`, so branch protection must allow that path or the version commits need to be done manually.

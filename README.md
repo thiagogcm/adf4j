@@ -9,7 +9,8 @@ Java tools for Atlassian Document Format (ADF). adf4j converts Confluence and Ji
 adf4j is immutable, thread-safe, dependency-light, and I/O-free. It never calls Confluence, a CDN, or a database. Page, media, attachment, and macro lookups stay in your application through resolver callbacks.
 
 > [!WARNING]
-> This project was built with assistance from AI agents. While the output was reviewed and validated against a Confluence wiki containing roughly 2,000 pages, edge cases and unforeseen scenarios may remain. Please report any issues.
+>
+> This project is maintained **WITH** AI agents assistance. While the output was reviewed and validated against a Confluence wiki containing roughly 2,000 pages, edge cases and unforeseen scenarios may remain. Please report any issues.
 
 ## Install
 
@@ -23,9 +24,7 @@ adf4j is immutable, thread-safe, dependency-light, and I/O-free. It never calls 
 
 ## Build
 
-This repo uses [`just`](https://just.systems) as its task runner. Run `just` to list recipes; the
-same recipes back both local development and CI. Repository-level Node tasks require Node 24 or
-newer.
+This repo uses [`just`](https://just.systems) as its task runner. Run `just` to list recipes; the same recipes back both local development and CI. Repository-level Node tasks require Node 24 or newer.
 
 ```bash
 just verify   # compile, test, coverage gate, and format checks
@@ -67,26 +66,20 @@ npm install @nthings.dev/adf4j-wasm
 ```
 
 ```js
-import { loadAdf4j } from '@nthings.dev/adf4j-wasm';
+import { loadAdf4j } from "@nthings.dev/adf4j-wasm";
 
 const adf4j = await loadAdf4j();
 const markdown = adf4j.convert(adfJsonString);
 const result = adf4j.convertJson(adfJsonString);
 ```
 
-One entry point runs in Node.js, Bun, Deno, and the browser. The npm package bundles the GraalVM Web
-Image loader and the compiled `.wasm`. In Vite, add the shipped plugin (`import adf4jWasm from
-'@nthings.dev/adf4j-wasm/vite'`) or set `optimizeDeps.exclude: ['@nthings.dev/adf4j-wasm']`. See the
-[package README](adf4j-wasm/src/npm/README.md) for bundler, runtime, and self-hosting details.
+One entry point runs in Node.js, Bun, Deno, and the browser. The npm package bundles the GraalVM Web Image loader and the compiled `.wasm`. In Vite, add the shipped plugin (`import adf4jWasm from '@nthings.dev/adf4j-wasm/vite'`) or set `optimizeDeps.exclude: ['@nthings.dev/adf4j-wasm']`. See the [package README](adf4j-wasm/src/npm/README.md) for bundler, runtime, and self-hosting details.
 
 ## Chrome extension
 
-`adf4j-chrome-ext` is a local Manifest V3 extension for Confluence Cloud. It adds a floating
-`Copy as markdown` button to detected Confluence pages, fetches the published page body as
-`atlas_doc_format`, converts it with `adf4j-wasm`, and writes Markdown to the clipboard.
+`adf4j-chrome-ext` is a local Manifest V3 extension for Confluence Cloud. It adds a floating `Copy as markdown` button to detected Confluence pages, fetches the published page body as `atlas_doc_format`, converts it with `adf4j-wasm`, and writes Markdown to the clipboard.
 
-Build the unpacked extension with `just chrome-ext`, then load `adf4j-chrome-ext/dist` from
-`chrome://extensions`.
+Build the unpacked extension with `just chrome-ext`, then load `adf4j-chrome-ext/dist` from `chrome://extensions`.
 
 ## Documentation
 

@@ -37,7 +37,7 @@ String markdown = converter.toMarkdown(adfJson);
 
 ## Example
 
-**Input ADF**
+**Input ADF:**
 
 ```json
 {
@@ -66,7 +66,7 @@ String markdown = converter.toMarkdown(adfJson);
 }
 ```
 
-**Output Markdown**
+**Output Markdown:**
 
 ```markdown
 # Release Notes
@@ -94,11 +94,11 @@ MarkdownResult result = converter.convert(adfJson);
 String body = result.body();
 
 if (result.wasLossy()) {
-    for (Diagnostic diagnostic : result.diagnostics()) {
-        if (diagnostic.severity() != Diagnostic.Severity.INFO) {
-            log.warn("Conversion issue [{}]: {}", diagnostic.code(), diagnostic.message());
-        }
+  for (Diagnostic diagnostic : result.diagnostics()) {
+    if (diagnostic.severity() != Diagnostic.Severity.INFO) {
+      log.warn("Conversion issue [{}]: {}", diagnostic.code(), diagnostic.message());
     }
+  }
 }
 ```
 

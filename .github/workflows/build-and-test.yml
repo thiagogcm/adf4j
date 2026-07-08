@@ -127,6 +127,13 @@ jobs:
       - name: Build Chrome extension
         run: just chrome-ext-from-dist
 
+      - name: Upload Chrome Extension Artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: adf4j-chrome-extension
+          path: adf4j-chrome-ext/adf4j-copy-as-markdown.zip
+          if-no-files-found: error
+
       - name: Prepare WASM artifact
         run: |
           mkdir -p dist

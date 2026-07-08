@@ -68,8 +68,10 @@
     const button = document.createElement('button');
     button.id = BUTTON_ID;
     button.type = 'button';
-    button.textContent = 'Copy as markdown';
+    button.setAttribute('aria-live', 'polite');
+    button.setAttribute('aria-atomic', 'true');
     button.addEventListener('click', () => copyCurrentPage(button));
+    setButtonState(button, 'idle');
     document.documentElement.append(button);
     return button;
   }
@@ -172,24 +174,29 @@
   function setButtonState(button, state, error) {
     button.dataset.state = state;
     button.disabled = state === 'copying';
+    button.setAttribute('aria-busy', state === 'copying' ? 'true' : 'false');
     switch (state) {
       case 'copying':
         button.textContent = 'Copying...';
         button.title = 'Fetching and converting the Confluence page';
+        button.setAttribute('aria-label', 'Fetching and converting this Confluence page');
         break;
       case 'copied':
         button.textContent = 'Copied';
         button.title = 'Markdown copied to clipboard';
+        button.setAttribute('aria-label', 'Markdown copied to clipboard');
         resetButtonSoon(button);
         break;
       case 'failed':
         button.textContent = 'Failed';
-        button.title = error?.message || 'Copy failed';
+        button.title = `Copy failed: ${error?.message || 'unknown error'}`;
+        button.setAttribute('aria-label', button.title);
         resetButtonSoon(button);
         break;
       default:
         button.textContent = 'Copy as markdown';
         button.title = 'Copy this Confluence page as Markdown';
+        button.setAttribute('aria-label', 'Copy this Confluence page as Markdown');
         break;
     }
   }
