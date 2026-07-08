@@ -3,7 +3,6 @@
   "version": "1.1.0-SNAPSHOT",
   "private": true,
   "description": "Repository-level Node tooling for adf4j.",
-  "type": "module",
   "scripts": {
     "chrome-ext:build": "node adf4j-chrome-ext/scripts/build.mjs",
     "chrome-ext:test": "node --test adf4j-chrome-ext/test/*.test.mjs",
