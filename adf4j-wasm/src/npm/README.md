@@ -90,11 +90,30 @@ In Node.js you can also pass `imagePath`/`wasmPath` (filesystem paths) or set th
 
 ## API
 
-| Call                | Returns                                                                    |
-| ------------------- | -------------------------------------------------------------------------- |
-| `convert(json)`     | Markdown string.                                                           |
-| `convertJson(json)` | `{ ok, lossy, warnings, errors, body }`, or `{ ok: false, error }` on a hard failure. |
-| `version()`         | The adf4j version string.                                                  |
+| Call                          | Returns                                                                    |
+| ----------------------------- | -------------------------------------------------------------------------- |
+| `convert(json, context?)`     | Markdown string.                                                           |
+| `convertJson(json, context?)` | `{ ok, lossy, warnings, errors, body }`, or `{ ok: false, error }` on a hard failure. |
+| `version()`                   | The adf4j version string.                                                  |
 
 `json` is the ADF document as a JSON **string**. Invalid input does not throw; `convertJson` reports
 it through `errors` and an empty `body`.
+
+`context` is optional caller-supplied Confluence knowledge, as an object or JSON string. Its
+`attachments` array is the page's attachment inventory (from the Confluence REST API, e.g.
+`GET /wiki/api/v2/pages/{id}/attachments`); when supplied, attachment macros and `media` /
+`mediaInline` file nodes link to each attachment's real `downloadUrl` instead of a synthetic
+`media:`/`attachment:` placeholder:
+
+```js
+const markdown = adf4j.convert(adfJsonString, {
+  attachments: [
+    {
+      fileId: 'cd01b020-40c6-4e88-acf8-ddc6dcce835c', // the media file UUID ("fileId" in the REST API)
+      title: 'report.xlsx',
+      mediaType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      downloadUrl: 'https://your-site.atlassian.net/wiki/rest/api/content/123/child/attachment/att9/download',
+    },
+  ],
+});
+```

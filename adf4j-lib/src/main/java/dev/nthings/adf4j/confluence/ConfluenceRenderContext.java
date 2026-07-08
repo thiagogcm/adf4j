@@ -50,6 +50,21 @@ public record ConfluenceRenderContext(
     return normalizedTitle == null ? null : attachmentReferencesByTitle.get(normalizedTitle);
   }
 
+  /// The attachment whose `fileId` matches (trimmed, case-insensitively), or `null`. This is how
+  /// a `media`/`mediaInline` node's `id` (the media services file UUID) meets the inventory.
+  public @Nullable AttachmentReference attachmentByFileId(@Nullable String fileId) {
+    if (fileId == null || fileId.isBlank()) {
+      return null;
+    }
+    var normalizedFileId = fileId.strip();
+    for (var reference : attachmentReferencesByTitle.values()) {
+      if (reference.fileId().strip().equalsIgnoreCase(normalizedFileId)) {
+        return reference;
+      }
+    }
+    return null;
+  }
+
   // Re-keys by normalized title, so every constructed instance upholds the lookup invariant
   // regardless of how the caller keyed the map.
   private static Map<String, AttachmentReference> normalized(

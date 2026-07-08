@@ -256,12 +256,13 @@ final class RenderConfig {
     for (var item : array) {
       var object = CliJson.requireObject(item, "--attachments-map entry");
       CliJson.rejectUnknownKeys(
-          object, Set.of("fileId", "title", "mediaType"), "--attachments-map entry");
+          object, Set.of("fileId", "title", "mediaType", "downloadUrl"), "--attachments-map entry");
       references.add(
           new AttachmentReference(
               CliJson.requireString(object, "fileId", "--attachments-map entry"),
               CliJson.string(object, "title"),
-              CliJson.string(object, "mediaType")));
+              CliJson.string(object, "mediaType"),
+              CliJson.string(object, "downloadUrl")));
     }
     // A supplied inventory (even empty) is authoritative: attachmentsSupplied becomes true.
     return ConfluenceRenderContext.empty().withAttachmentReferences(references);

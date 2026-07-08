@@ -407,16 +407,21 @@ final class MacroRenderer {
     return MarkdownText.link(label, destination, context.escapeParentheses());
   }
 
-  // The caller-resolved link for an attachment, or the synthetic attachment:<fileId> placeholder
-  // when
-  // there is no AttachmentResolver or it declines.
+  // Resolver, then the reference's own downloadUrl, else the attachment:<fileId> placeholder.
   private String resolveAttachment(AttachmentReference reference, RendererState context) {
     var resolver = context.attachmentResolver();
     var resolved =
         resolver == null
             ? null
             : CallbackGuards.guardNonBlank("AttachmentResolver", () -> resolver.resolve(reference));
-    return resolved != null ? resolved : "attachment:" + reference.fileId();
+    if (resolved != null) {
+      return resolved;
+    }
+    var downloadUrl = reference.downloadUrl();
+    if (downloadUrl != null && !downloadUrl.isBlank()) {
+      return downloadUrl;
+    }
+    return "attachment:" + reference.fileId();
   }
 
   // The bodyless legacy chart macro: nothing recoverable in the document, so a labelled

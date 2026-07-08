@@ -77,6 +77,60 @@
     return apiUrl.href;
   }
 
+  function buildAttachmentsApiUrl(pageId, baseUrl) {
+    const parsed = parseUrl(baseUrl);
+    if (!parsed) {
+      throw new Error(`Invalid Confluence URL: ${baseUrl}`);
+    }
+    const apiUrl = new URL(
+      `/wiki/api/v2/pages/${encodeURIComponent(pageId)}/attachments`,
+      parsed.origin,
+    );
+    apiUrl.searchParams.set('limit', '250');
+    return apiUrl.href;
+  }
+
+  function extractAttachments(attachmentsResponse, baseUrl) {
+    const origin = parseUrl(baseUrl)?.origin ?? '';
+    const results = Array.isArray(attachmentsResponse?.results) ? attachmentsResponse.results : [];
+    const attachments = [];
+    for (const item of results) {
+      const fileId = typeof item?.fileId === 'string' ? item.fileId.trim() : '';
+      if (!fileId) {
+        continue;
+      }
+      attachments.push({
+        fileId,
+        title: typeof item.title === 'string' ? item.title : '',
+        mediaType: typeof item.mediaType === 'string' ? item.mediaType : '',
+        downloadUrl: absoluteDownloadUrl(item.downloadLink, origin),
+      });
+    }
+    return attachments;
+  }
+
+  function nextAttachmentsPageUrl(attachmentsResponse, baseUrl) {
+    const next = attachmentsResponse?._links?.next;
+    const origin = parseUrl(baseUrl)?.origin;
+    if (typeof next !== 'string' || !next.trim() || !origin) {
+      return '';
+    }
+    return new URL(next, origin).href;
+  }
+
+  // The v2 downloadLink is relative to the /wiki context path (unlike _links.next).
+  function absoluteDownloadUrl(downloadLink, origin) {
+    const link = typeof downloadLink === 'string' ? downloadLink.trim() : '';
+    if (!link || !origin) {
+      return '';
+    }
+    if (/^https?:/i.test(link)) {
+      return link;
+    }
+    const path = link.startsWith('/wiki/') ? link : `/wiki${link.startsWith('/') ? '' : '/'}${link}`;
+    return new URL(path, origin).href;
+  }
+
   function extractAdfBody(pageResponse) {
     const adf = pageResponse?.body?.atlas_doc_format;
     const value = typeof adf === 'string' ? adf : adf?.value;
@@ -149,13 +203,16 @@
   }
 
   global.Adf4jChromeExt = Object.freeze({
+    buildAttachmentsApiUrl,
     buildPageApiUrl,
     extractAdfBody,
+    extractAttachments,
     extractPageIdFromDocument,
     extractPageIdFromUrl,
     extractPageTitle,
     formatMarkdownWithTitle,
     isConfluenceCloudUrl,
     isConfluencePageContext,
+    nextAttachmentsPageUrl,
   });
 })(globalThis);

@@ -1,15 +1,14 @@
 package dev.nthings.adf4j.internal.render;
 
-import java.util.ArrayList;
-
-import dev.nthings.adf4j.internal.AttachmentReferences;
 import dev.nthings.adf4j.ast.Caption;
 import dev.nthings.adf4j.ast.Media;
 import dev.nthings.adf4j.ast.MediaAttrs;
 import dev.nthings.adf4j.ast.MediaGroup;
 import dev.nthings.adf4j.ast.MediaInline;
 import dev.nthings.adf4j.ast.MediaSingle;
-
+import dev.nthings.adf4j.internal.AttachmentReferences;
+import dev.nthings.adf4j.metadata.AttachmentReference;
+import java.util.ArrayList;
 import org.jspecify.annotations.Nullable;
 
 final class MediaRenderer {
@@ -74,46 +73,86 @@ final class MediaRenderer {
   }
 
   String renderMediaBlock(MediaAttrs attrs, RendererState context) {
-    var resolvedSource = resolveMediaSource(attrs, context);
+    var attachment = context.confluenceContext().attachmentByFileId(attrs.id());
+    var resolvedSource = resolveMediaSource(attrs, attachment, context);
     var destination = resolvedSource != null ? resolvedSource : placeholder(attrs);
 
     // Non-image attachments (PDF, video, archive, …) render as a link; an image embed would break.
-    if (!isImage(attrs, resolvedSource)) {
+    if (!isImage(attrs, attachment, resolvedSource)) {
+      // Prefer the inventory title: a downloadUrl's last segment may be a route word ("download").
+      var destinationFileName =
+          attachment != null && notBlank(attachment.title())
+              ? attachment.title()
+              : AttachmentReferences.fileName(resolvedSource);
       return MarkdownText.link(
-          attrs.fileLabel(AttachmentReferences.fileName(resolvedSource)), destination,
-          context.escapeParentheses());
+          attrs.fileLabel(destinationFileName), destination, context.escapeParentheses());
     }
 
     // The {width= height=} suffix is non-GFM; emit only when opted in.
     var source = MarkdownText.escapeUrlDestination(destination);
     var attributeSuffix =
         context.imageSizeAttributes()
-            ? renderImageAttributeSuffix(positiveInteger(attrs.width()), positiveInteger(attrs.height()))
+            ? renderImageAttributeSuffix(
+                positiveInteger(attrs.width()), positiveInteger(attrs.height()))
             : "";
-    return "![%s](%s)%s".formatted(
-        MarkdownText.escapeAltText(attrs.imageAlt(), context.escapeParentheses()), source,
-        attributeSuffix);
+    return "![%s](%s)%s"
+        .formatted(
+            MarkdownText.escapeAltText(imageAlt(attrs, attachment), context.escapeParentheses()),
+            source,
+            attributeSuffix);
   }
 
-  // The resolved destination (a MediaResolver path or URL) carries the real filename, so its extension
-  // classifies a file node whose own attrs omit the type — as Confluence's do, supplying it via the resolver.
-  private boolean isImage(MediaAttrs attrs, @Nullable String resolvedSource) {
+  private String imageAlt(MediaAttrs attrs, @Nullable AttachmentReference attachment) {
+    var alt = attrs.imageAlt();
+    if (!"media".equals(alt) || attachment == null) {
+      return alt;
+    }
+    var title = attachment.title();
+    return title == null || title.isBlank() ? alt : title;
+  }
+
+  // Classifies a file node whose own attrs omit the type — as Confluence's do — via the
+  // attachment inventory's mediaType/title or the resolved destination's filename extension.
+  private boolean isImage(
+      MediaAttrs attrs, @Nullable AttachmentReference attachment, @Nullable String resolvedSource) {
+    var mimeOrType = attrs.mimeOrType();
+    if ((mimeOrType == null || mimeOrType.isBlank()) && attachment != null) {
+      mimeOrType = attachment.mediaType();
+    }
+    var attachmentTitle = attachment == null ? null : attachment.title();
     return AttachmentReferences.isImage(
-        attrs.mimeOrType(), attrs.fileName(), attrs.name(), attrs.alt(), attrs.url(), resolvedSource);
+        mimeOrType,
+        attrs.fileName(),
+        attrs.name(),
+        attrs.alt(),
+        attachmentTitle,
+        attrs.url(),
+        resolvedSource);
   }
 
-  // A url attr or media resolver, never the synthetic placeholder; null so the label and image-ness
-  // are decided only by genuine filenames.
-  private @Nullable String resolveMediaSource(MediaAttrs attrs, RendererState context) {
+  // A url attr, media resolver, or inventory downloadUrl, never the synthetic placeholder: null
+  // so the label and image-ness are decided only by genuine filenames.
+  private @Nullable String resolveMediaSource(
+      MediaAttrs attrs, @Nullable AttachmentReference attachment, RendererState context) {
     var url = attrs.url();
     if (url != null && !url.isBlank()) {
       return url;
     }
 
     var resolver = context.mediaResolver();
-    return resolver == null
-        ? null
-        : CallbackGuards.guardNonBlank("MediaResolver", () -> resolver.resolve(attrs));
+    if (resolver != null) {
+      var resolved = CallbackGuards.guardNonBlank("MediaResolver", () -> resolver.resolve(attrs));
+      if (resolved != null) {
+        return resolved;
+      }
+    }
+
+    var downloadUrl = attachment == null ? null : attachment.downloadUrl();
+    return downloadUrl == null || downloadUrl.isBlank() ? null : downloadUrl;
+  }
+
+  private static boolean notBlank(@Nullable String value) {
+    return value != null && !value.isBlank();
   }
 
   // The synthetic media:collection/id reference, or "media" when even the id is absent.

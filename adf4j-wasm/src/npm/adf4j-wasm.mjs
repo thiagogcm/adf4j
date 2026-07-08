@@ -17,8 +17,8 @@ let cached;
  *           imageUrl?: string | URL,
  *           wasmPath?: string,
  *           wasmUrl?: string | URL }} [opts]
- * @returns {Promise<{ convert(json: string): string,
- *                     convertJson(json: string): object,
+ * @returns {Promise<{ convert(json: string, context?: object | string): string,
+ *                     convertJson(json: string, context?: object | string): object,
  *                     version(): string }>}
  */
 export function loadAdf4j(opts = {}) {

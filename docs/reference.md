@@ -9,7 +9,7 @@ Lookup tables for options, ADF to Markdown rendering, diagnostics, URL safety, C
 | Option                | Default                 | Effect                                                                                                                                  |
 | --------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | `unknownNodePolicy`   | `PLACEHOLDER`           | Renders unknown nodes as a placeholder, skips them, preserves raw JSON, or fails. Unknown marks always drop with a `WARNING`.           |
-| `confluenceContext`   | empty                   | Supplies the page attachment inventory for attachment macros and the `attachments` macro. An empty supplied inventory is authoritative. |
+| `confluenceContext`   | empty                   | Supplies the page attachment inventory for attachment macros, media file nodes, and the `attachments` macro. Entries with a `downloadUrl` become the default link destination. An empty supplied inventory is authoritative. |
 | `imageSizeAttributes` | `false`                 | Emits non-GFM `{width= height=}` image attributes.                                                                                      |
 | `tableFallback`       | `GFM_PROMOTE_FIRST_ROW` | Controls headerless GFM tables: promote first row, synthesize an empty header, or force HTML. Complex tables always use HTML.           |
 | `mediaResolver`       | `null`                  | Turns media IDs into URLs. `null` or blank keeps the `media:<collection>/<id>` placeholder.                                             |
@@ -116,7 +116,7 @@ These outcomes are expected for the selected options or for GFM limits. They do 
 | Visual marks dropped                  | Color, background, border, font size, and alignment have no GFM equivalent unless `htmlVisualMarks` is enabled.                                                   |
 | Table HTML fallback                   | Tables with spans, number columns, block-level cell content, or non-canonical headers use raw HTML.                                                               |
 | `GFM_PROMOTE_FIRST_ROW` row promotion | The default table fallback promotes the first row of a headerless table to the header. Use `GFM_EMPTY_HEADER` to keep all rows as data.                           |
-| Media and attachment placeholders     | Without resolvers, media and attachments render to inert `media:` or `attachment:` destinations.                                                                  |
+| Media and attachment placeholders     | Without an attachment inventory carrying `downloadUrl`s or resolvers, media and attachments render to inert `media:` or `attachment:` destinations.               |
 | Unsupported macros                    | No built-in or custom renderer means placeholder plus `WARNING`.                                                                                                  |
 | Dynamic page-list macros              | `pagetree` and `children` need caller-supplied hierarchy. Without it they emit tokens and are recorded in `unresolved()`, but are not lossy.                      |
 | Excerpts                              | `excerpt` renders its body. `excerpt-include` needs `excerptResolver`; without it, the placeholder is recorded in `unresolved()` but is not lossy.                |
@@ -209,7 +209,7 @@ Resolver flags are accepted by `convert` and `analyze`. A `*-url` template subst
 | `--page-map FILE`        | `PageLinkResolver`        | `{ "<pageNodeId>": "https://example.com/page" }`              |
 | `--page-tree-map FILE`   | `PageTreeResolver`        | See below.                                                    |
 | `--excerpt-map FILE`     | `ExcerptResolver`         | See below; values are verbatim.                               |
-| `--attachments-map FILE` | `ConfluenceRenderContext` | `[ { "fileId": "...", "title": "...", "mediaType": "..." } ]` |
+| `--attachments-map FILE` | `ConfluenceRenderContext` | `[ { "fileId": "...", "title": "...", "mediaType": "...", "downloadUrl": "..." } ]` |
 | `--extension-map FILE`   | `ExtensionRenderer`       | See below; values are verbatim.                               |
 
 Absent entries decline the lookup. Present entries are answers, including empty page-tree arrays and empty excerpt Markdown. Blank values in URL maps decline and fall through to the template or placeholder.

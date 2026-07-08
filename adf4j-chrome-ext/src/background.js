@@ -36,19 +36,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return false;
   }
 
-  convert(message.adfJson).then(sendResponse, (error) => {
+  convert(message.adfJson, message.context).then(sendResponse, (error) => {
     sendResponse({ ok: false, error: error?.message || String(error) });
   });
   return true;
 });
 
-async function convert(adfJson) {
+async function convert(adfJson, context) {
   if (typeof adfJson !== 'string' || !adfJson.trim()) {
     return { ok: false, error: 'Missing ADF JSON payload.' };
   }
 
   const adf4j = await loadAdf4j();
-  const result = adf4j.convertJson(adfJson);
+  const result = adf4j.convertJson(adfJson, typeof context === 'object' ? context : undefined);
   if (!result?.ok) {
     return { ok: false, error: result?.error || 'adf4j conversion failed.' };
   }

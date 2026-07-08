@@ -95,6 +95,48 @@ check('convertJson preserves quoted text in the body', () => {
   assert.equal(r.body.trim(), 'say "hi"');
 });
 
+check('attachment context turns media file nodes into real links', () => {
+  const adf = doc([
+    {
+      type: 'paragraph', content: [
+        { type: 'mediaInline', attrs: { id: 'file-uuid-1', collection: 'contentId-1' } },
+      ]
+    },
+  ]);
+  const context = {
+    attachments: [{
+      fileId: 'file-uuid-1',
+      title: 'report.xlsx',
+      mediaType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      downloadUrl: 'https://example.atlassian.net/wiki/rest/api/content/1/child/attachment/att9/download',
+    }],
+  };
+  const md = adf4j.convert(adf, context);
+  assert.equal(
+    md.trim(),
+    '[report.xlsx](https://example.atlassian.net/wiki/rest/api/content/1/child/attachment/att9/download)',
+  );
+  // The same context as a pre-encoded JSON string behaves identically.
+  assert.equal(adf4j.convert(adf, JSON.stringify(context)).trim(), md.trim());
+  // Without context the synthetic placeholder remains.
+  assert.equal(adf4j.convert(adf).trim(), '[file](media:contentId-1/file-uuid-1)');
+});
+
+check('convertJson accepts the attachment context too', () => {
+  const adf = doc([
+    {
+      type: 'paragraph', content: [
+        { type: 'mediaInline', attrs: { id: 'file-uuid-2', collection: 'contentId-1' } },
+      ]
+    },
+  ]);
+  const r = adf4j.convertJson(adf, {
+    attachments: [{ fileId: 'file-uuid-2', title: 'notes.pdf', mediaType: 'application/pdf', downloadUrl: '/wiki/download/notes.pdf' }],
+  });
+  assert.equal(r.ok, true);
+  assert.equal(r.body.trim(), '[notes.pdf](/wiki/download/notes.pdf)');
+});
+
 check('invalid JSON degrades gracefully (diagnostics, no crash)', () => {
   // The library does not throw on bad input; it returns an empty body plus error diagnostics.
   const r = adf4j.convertJson('{not valid json');

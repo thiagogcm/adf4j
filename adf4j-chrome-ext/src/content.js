@@ -95,17 +95,20 @@
         throw new Error('Could not identify a Confluence page id.');
       }
 
-      const response = await fetch(helpers.buildPageApiUrl(pageId, location.href), {
-        credentials: 'include',
-        headers: { Accept: 'application/json' },
-        signal: activeController.signal,
-      });
-      if (!response.ok) {
-        throw new Error(`Confluence returned ${response.status} ${response.statusText}`);
-      }
-
-      const page = await response.json();
-      const conversion = await sendConvertMessage(helpers.extractAdfBody(page));
+      // The attachment inventory is best-effort: without it, links fall back to placeholders.
+      const [page, attachments] = await Promise.all([
+        fetchJson(helpers.buildPageApiUrl(pageId, location.href), activeController.signal),
+        fetchAttachments(pageId, activeController.signal).catch((error) => {
+          if (error?.name === 'AbortError') {
+            throw error;
+          }
+          return undefined;
+        }),
+      ]);
+      const conversion = await sendConvertMessage(
+        helpers.extractAdfBody(page),
+        attachments && { attachments },
+      );
       if (!conversion?.ok) {
         throw new Error(conversion?.error || 'adf4j conversion failed.');
       }
@@ -129,9 +132,33 @@
     }
   }
 
-  function sendConvertMessage(adfJson) {
+  async function fetchJson(url, signal) {
+    const response = await fetch(url, {
+      credentials: 'include',
+      headers: { Accept: 'application/json' },
+      signal,
+    });
+    if (!response.ok) {
+      throw new Error(`Confluence returned ${response.status} ${response.statusText}`);
+    }
+    return response.json();
+  }
+
+  async function fetchAttachments(pageId, signal) {
+    const attachments = [];
+    let url = helpers.buildAttachmentsApiUrl(pageId, location.href);
+    // The cap only guards against a pathological pagination loop.
+    for (let fetched = 0; url && fetched < 20; fetched++) {
+      const inventoryPage = await fetchJson(url, signal);
+      attachments.push(...helpers.extractAttachments(inventoryPage, location.href));
+      url = helpers.nextAttachmentsPageUrl(inventoryPage, location.href);
+    }
+    return attachments;
+  }
+
+  function sendConvertMessage(adfJson, context) {
     return new Promise((resolve, reject) => {
-      chrome.runtime.sendMessage({ type: MESSAGE_TYPE, adfJson }, (response) => {
+      chrome.runtime.sendMessage({ type: MESSAGE_TYPE, adfJson, context }, (response) => {
         const runtimeError = chrome.runtime.lastError;
         if (runtimeError) {
           reject(new Error(runtimeError.message));

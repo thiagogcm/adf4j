@@ -151,7 +151,7 @@ MarkdownOptions options = MarkdownOptions.defaults()
     });
 ```
 
-Confluence attachment macros such as `viewpdf` first need a page attachment inventory. The `ConfluenceRenderContext` resolves the macro title to a file ID, then `AttachmentResolver` turns the file ID into a URL.
+The simplest way to get real attachment links is to supply the page's attachment inventory with each entry's `downloadUrl` (Confluence's REST API returns all four fields, e.g. `GET /wiki/api/v2/pages/{id}/attachments`). Attachment macros such as `viewpdf` and `media`/`mediaInline` file nodes then link to the original URL by default, with no resolver:
 
 ```java
 import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
@@ -160,14 +160,22 @@ import java.util.List;
 
 ConfluenceRenderContext context = ConfluenceRenderContext.empty()
     .withAttachmentReferences(List.of(
-        new AttachmentReference("file-123", "Q3 Report.pdf", "application/pdf")));
+        new AttachmentReference(
+            "file-123", "Q3 Report.pdf", "application/pdf",
+            "https://example.atlassian.net/wiki/rest/api/content/42/child/attachment/att9/download")));
 
+MarkdownOptions options = MarkdownOptions.defaults().withConfluenceContext(context);
+```
+
+Media file nodes match the inventory by `fileId` (the media file UUID, `fileId` in the REST API), and macros match by title. An `AttachmentResolver` overrides the `downloadUrl` when you need to rewrite destinations (for example to local paths):
+
+```java
 MarkdownOptions options = MarkdownOptions.defaults()
     .withConfluenceContext(context)
     .withAttachmentResolver(ref -> "https://cdn.example.com/files/" + ref.fileId());
 ```
 
-Without the context, a title-based attachment macro cannot resolve. Without the `AttachmentResolver`, the destination stays `attachment:<fileId>`.
+Without the context, a title-based attachment macro cannot resolve. Without a `downloadUrl` or an `AttachmentResolver`, the destination stays `attachment:<fileId>`.
 
 ## Rewriting inter-page links
 

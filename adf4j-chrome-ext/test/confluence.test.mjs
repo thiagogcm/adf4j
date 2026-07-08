@@ -74,6 +74,82 @@ test('builds the Confluence REST v2 ADF URL', () => {
   );
 });
 
+test('builds the Confluence REST v2 attachments URL', () => {
+  assert.equal(
+    helpers.buildAttachmentsApiUrl('123', 'https://example.atlassian.net/wiki/spaces/ABC/pages/123/Page'),
+    'https://example.atlassian.net/wiki/api/v2/pages/123/attachments?limit=250',
+  );
+});
+
+test('extracts attachments with absolute download URLs', () => {
+  const baseUrl = 'https://example.atlassian.net/wiki/spaces/ABC/pages/123/Page';
+  // vm-context objects carry a foreign prototype; a JSON round-trip normalizes them for deepEqual.
+  const plain = (value) => JSON.parse(JSON.stringify(value));
+  assert.deepEqual(
+    plain(helpers.extractAttachments(
+      {
+        results: [
+          {
+            fileId: 'uuid-1',
+            title: 'report.xlsx',
+            mediaType: 'application/vnd.ms-excel',
+            downloadLink: '/rest/api/content/123/child/attachment/att9/download',
+          },
+          {
+            fileId: 'uuid-2',
+            title: 'prefixed.pdf',
+            mediaType: 'application/pdf',
+            downloadLink: '/wiki/download/attachments/123/prefixed.pdf',
+          },
+          {
+            fileId: 'uuid-3',
+            title: 'absolute.png',
+            mediaType: 'image/png',
+            downloadLink: 'https://cdn.example.com/absolute.png',
+          },
+          { title: 'no file id, skipped', downloadLink: '/rest/whatever' },
+        ],
+      },
+      baseUrl,
+    )),
+    [
+      {
+        fileId: 'uuid-1',
+        title: 'report.xlsx',
+        mediaType: 'application/vnd.ms-excel',
+        downloadUrl:
+          'https://example.atlassian.net/wiki/rest/api/content/123/child/attachment/att9/download',
+      },
+      {
+        fileId: 'uuid-2',
+        title: 'prefixed.pdf',
+        mediaType: 'application/pdf',
+        downloadUrl: 'https://example.atlassian.net/wiki/download/attachments/123/prefixed.pdf',
+      },
+      {
+        fileId: 'uuid-3',
+        title: 'absolute.png',
+        mediaType: 'image/png',
+        downloadUrl: 'https://cdn.example.com/absolute.png',
+      },
+    ],
+  );
+  assert.deepEqual(plain(helpers.extractAttachments({}, baseUrl)), []);
+});
+
+test('resolves the next attachments page URL against the site origin', () => {
+  const baseUrl = 'https://example.atlassian.net/wiki/spaces/ABC/pages/123/Page';
+  assert.equal(
+    helpers.nextAttachmentsPageUrl(
+      { _links: { next: '/wiki/api/v2/pages/123/attachments?limit=250&cursor=abc' } },
+      baseUrl,
+    ),
+    'https://example.atlassian.net/wiki/api/v2/pages/123/attachments?limit=250&cursor=abc',
+  );
+  assert.equal(helpers.nextAttachmentsPageUrl({ _links: {} }, baseUrl), '');
+  assert.equal(helpers.nextAttachmentsPageUrl({}, baseUrl), '');
+});
+
 test('extracts ADF JSON body from Confluence responses', () => {
   assert.equal(
     helpers.extractAdfBody({ body: { atlas_doc_format: { value: '{"type":"doc"}' } } }),
