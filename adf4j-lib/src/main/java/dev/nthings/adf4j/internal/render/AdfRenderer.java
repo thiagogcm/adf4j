@@ -62,14 +62,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.stream.Stream;
-import org.commonmark.ext.gfm.alerts.AlertsExtension;
-import org.commonmark.ext.gfm.strikethrough.StrikethroughExtension;
-import org.commonmark.ext.gfm.tables.TablesExtension;
-import org.commonmark.ext.heading.anchor.HeadingAnchorExtension;
-import org.commonmark.ext.image.attributes.ImageAttributesExtension;
-import org.commonmark.ext.task.list.items.TaskListItemsExtension;
-import org.commonmark.parser.Parser;
-import org.commonmark.renderer.html.HtmlRenderer;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -107,29 +99,10 @@ public final class AdfRenderer implements BlockRecursion {
     return new AdfRenderer(
         new TextMarkRenderer(),
         new ListRenderer(),
-        new TableRenderer(markdownRenderingSupport()),
+        new TableRenderer(CommonMarkSupport.markdownRenderingSupport()),
         mediaRenderer,
         new MacroRenderer(mediaRenderer),
         new CardRenderer());
-  }
-
-  private static MarkdownRenderingSupport markdownRenderingSupport() {
-    var extensions = commonmarkExtensions();
-    var parser = Parser.builder().extensions(extensions).build();
-    // Defence-in-depth for the HTML-table fallback (destinations are already scheme-sanitized
-    // upstream).
-    var htmlRenderer = HtmlRenderer.builder().extensions(extensions).sanitizeUrls(true).build();
-    return new MarkdownRenderingSupport(parser, htmlRenderer);
-  }
-
-  private static List<org.commonmark.Extension> commonmarkExtensions() {
-    return List.of(
-        TablesExtension.create(),
-        StrikethroughExtension.create(),
-        TaskListItemsExtension.create(),
-        HeadingAnchorExtension.create(),
-        ImageAttributesExtension.create(),
-        AlertsExtension.builder().allowNestedAlerts(true).build());
   }
 
   public RenderOutput render(
