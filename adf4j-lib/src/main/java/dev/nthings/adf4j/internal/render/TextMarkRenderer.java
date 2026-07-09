@@ -25,7 +25,6 @@ import dev.nthings.adf4j.internal.ConfluenceSupport;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.function.Function;
 import org.jspecify.annotations.Nullable;
 
 final class TextMarkRenderer {
@@ -33,19 +32,12 @@ final class TextMarkRenderer {
   private static final Comparator<AdfMark> INLINE_MARK_ORDER =
       Comparator.comparingInt(TextMarkRenderer::canonicalRank);
 
+  // Inside-out: format marks (canonical order), then a combined visual <span>, then the link
+  // outermost. A code mark makes the text literal, superseding the format/visual layers.
   String applyMarks(String value, @Nullable List<AdfMark> marks, RenderContext context) {
     if (marks == null || marks.isEmpty()) {
       return value;
     }
-    return markDecorator(marks, context).apply(value);
-  }
-
-  // Inside-out decorator chain: format marks (canonical order) innermost, then an optional combined
-  // visual <span>, then the link outermost. A code mark makes the text literal, superseding the
-  // format/visual layers. identity().andThen(...) nests so the first decorator added wraps
-  // innermost.
-  private Function<String, String> markDecorator(List<AdfMark> marks, RenderContext context) {
-    var htmlVisualMarks = context.options().htmlVisualMarks();
     Link link = null;
     var hasCode = false;
     var formatMarks = new ArrayList<AdfMark>();
@@ -58,28 +50,26 @@ final class TextMarkRenderer {
       }
     }
 
-    Function<String, String> decorator = Function.identity();
+    var rendered = value;
     if (hasCode) {
-      decorator = decorator.andThen(this::wrapCodeSpan);
+      rendered = wrapCodeSpan(rendered);
     } else {
       formatMarks.sort(INLINE_MARK_ORDER);
       for (var mark : formatMarks) {
-        decorator = decorator.andThen(text -> applyInlineMark(text, mark));
+        rendered = applyInlineMark(rendered, mark);
       }
       // Opt-in: preserve visual-only marks as one combined <span style> instead of dropping them.
-      if (htmlVisualMarks) {
+      if (context.options().htmlVisualMarks()) {
         var style = visualStyle(formatMarks);
         if (!style.isEmpty()) {
-          var open = "<span style=\"" + style + "\">";
-          decorator = decorator.andThen(text -> wrap(text, open, "</span>"));
+          rendered = wrap(rendered, "<span style=\"" + style + "\">", "</span>");
         }
       }
     }
     if (link != null) {
-      var linkMark = link;
-      decorator = decorator.andThen(text -> applyLink(text, linkMark, context));
+      rendered = applyLink(rendered, link, context);
     }
-    return decorator;
+    return rendered;
   }
 
   // Wraps formatted text in a Markdown link, or returns it unchanged when the link has no href. A

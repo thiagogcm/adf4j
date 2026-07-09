@@ -88,7 +88,7 @@ final class MacroRenderer {
     }
 
     var rendered =
-        switch (extensionKey != null ? extensionKey : "") {
+        switch (extensionKey) {
           case "children", "pagetree" -> {
             var reference = ConfluenceSupport.pageTreeReference(extensionKey, macroParams);
             yield reference == null ? null : renderPageTreeMacro(reference, context);
@@ -102,7 +102,7 @@ final class MacroRenderer {
               renderExcerptInclude(
                   ConfluenceSupport.excerptIncludeReference(extensionKey, macroParams), context);
           case "attachments" -> renderAttachmentsMacro(context);
-          default -> null;
+          case null, default -> null;
         };
     return rendered != null
         ? rendered

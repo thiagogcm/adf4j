@@ -103,15 +103,9 @@ public final class AdfAstParser {
         JsonFields.integer(root, "version", 1), parseBlocks(root.get("content")));
   }
 
-  // Maps every object element of a JSON array through fn; non-object elements are skipped. The
-  // single
-  // place array traversal lives.
-  private <T> List<T> mapObjects(@Nullable JsonNode arrayNode, Function<JsonNode, T> fn) {
-    return mapTyped(arrayNode, fn);
-  }
-
   // Maps the array's object elements through fn, keeping only those whose "type" is one of `types`
-  // (or all object elements when no type is given); others are skipped.
+  // (or all object elements when no type is given); others are skipped. The single place array
+  // traversal lives.
   private <T> List<T> mapTyped(
       @Nullable JsonNode arrayNode, Function<JsonNode, T> fn, String... types) {
     if (arrayNode == null || !arrayNode.isArray() || arrayNode.isEmpty()) {
@@ -138,7 +132,7 @@ public final class AdfAstParser {
   }
 
   List<AdfBlock> parseBlocks(@Nullable JsonNode arrayNode) {
-    return mapObjects(arrayNode, this::parseBlock);
+    return mapTyped(arrayNode, this::parseBlock);
   }
 
   AdfBlock parseBlock(JsonNode node) {
@@ -200,7 +194,7 @@ public final class AdfAstParser {
   }
 
   public List<AdfInline> parseInlines(@Nullable JsonNode arrayNode) {
-    return mapObjects(arrayNode, this::parseInline);
+    return mapTyped(arrayNode, this::parseInline);
   }
 
   AdfInline parseInline(JsonNode node) {
@@ -242,7 +236,7 @@ public final class AdfAstParser {
   }
 
   List<AdfMark> parseMarks(@Nullable JsonNode arrayNode) {
-    return mapObjects(arrayNode, this::parseMark);
+    return mapTyped(arrayNode, this::parseMark);
   }
 
   AdfMark parseMark(JsonNode node) {
@@ -507,7 +501,8 @@ public final class AdfAstParser {
           map.put(entry.getKey(), value);
         }
       }
-      return Map.copyOf(map);
+      // Not Map.copyOf: its salted iteration order would lose the document's attribute order.
+      return Collections.unmodifiableMap(map);
     }
     if (node.isArray()) {
       // Keep null elements so array indices are preserved (List.copyOf would reject the nulls).

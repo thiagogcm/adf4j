@@ -8,7 +8,6 @@ import dev.nthings.adf4j.metadata.ExcerptIncludeReference;
 import dev.nthings.adf4j.metadata.PageTreeMacro;
 import dev.nthings.adf4j.metadata.PageTreeReference;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
 
 public final class ConfluenceSupport {
@@ -60,11 +59,7 @@ public final class ConfluenceSupport {
                 .object("titlesField")
                 .string("chartTitle");
     var generic = parameters == null ? null : parameters.string("extensionTitle");
-    return Stream.of(fromParams, nested, generic)
-        .map(s -> s == null ? null : s.strip())
-        .filter(s -> s != null && !s.isEmpty())
-        .findFirst()
-        .orElse(null);
+    return firstNonBlank(fromParams, nested, generic);
   }
 
   /// Whether the extension is the editor-migration `inline-media-image` macro.
@@ -144,6 +139,17 @@ public final class ConfluenceSupport {
     return stripped.isEmpty() ? null : stripped;
   }
 
+  /// The first non-blank candidate, stripped, or `null` when every candidate is blank.
+  public static @Nullable String firstNonBlank(@Nullable String... candidates) {
+    for (var candidate : candidates) {
+      var stripped = trimToNull(candidate);
+      if (stripped != null) {
+        return stripped;
+      }
+    }
+    return null;
+  }
+
   public static @Nullable String pageId(@Nullable String rawUrl) {
     if (rawUrl == null) {
       return null;
@@ -173,11 +179,7 @@ public final class ConfluenceSupport {
     var metadataNodeId =
         metadata == null
             ? null
-            : Stream.of(metadata.pageId(), metadata.contentId(), metadata.id())
-                .filter(value -> value != null && !value.isBlank())
-                .map(String::strip)
-                .findFirst()
-                .orElse(null);
+            : firstNonBlank(metadata.pageId(), metadata.contentId(), metadata.id());
     var linkType =
         metadata == null || metadata.linkType() == null ? null : metadata.linkType().strip();
     if (!"page".equalsIgnoreCase(linkType) && inferredNodeId == null && metadataNodeId == null) {
@@ -192,12 +194,12 @@ public final class ConfluenceSupport {
   public static @Nullable PageTreeReference pageTreeReference(
       @Nullable String extensionKey, @Nullable MacroParams macroParams) {
     var params = macroParams == null ? MacroParams.empty() : macroParams;
-    return switch (extensionKey != null ? extensionKey : "") {
+    return switch (extensionKey) {
       case "pagetree" ->
           new PageTreeReference(PageTreeMacro.PAGETREE, rootParam(params, "root"), params.values());
       case "children" ->
           new PageTreeReference(PageTreeMacro.CHILDREN, rootParam(params, "page"), params.values());
-      default -> null;
+      case null, default -> null;
     };
   }
 
@@ -215,10 +217,6 @@ public final class ConfluenceSupport {
     if (macroParams == null) {
       return null;
     }
-    return Stream.of(macroParams.value(""), macroParams.value("legacyAnchorId"))
-        .map(s -> s == null ? null : s.strip())
-        .filter(s -> s != null && !s.isEmpty())
-        .findFirst()
-        .orElse(null);
+    return firstNonBlank(macroParams.value(""), macroParams.value("legacyAnchorId"));
   }
 }

@@ -73,7 +73,7 @@ final class MediaRenderer {
   }
 
   String renderMediaBlock(MediaAttrs attrs, RendererState context) {
-    var attachment = context.confluenceContext().attachmentByFileId(attrs.id());
+    var attachment = context.context().attachmentByFileId(attrs.id());
     var resolvedSource = resolveMediaSource(attrs, attachment, context);
     var destination = resolvedSource != null ? resolvedSource : placeholder(attrs);
 

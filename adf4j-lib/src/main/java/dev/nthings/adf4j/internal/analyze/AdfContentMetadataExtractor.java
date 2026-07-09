@@ -36,8 +36,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Objects;
-import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
 
 /// Harvests a document's references (page, external, mention, attachment, page-tree, excerpt) and
@@ -132,7 +130,7 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
   }
 
   private void collectMention(Mention mention) {
-    var id = firstNonBlank(mention.id(), mention.localId());
+    var id = ConfluenceSupport.firstNonBlank(mention.id(), mention.localId());
     mentionRefs.add(new MentionReference(id, mention.text()));
   }
 
@@ -169,7 +167,7 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
       return;
     }
 
-    var fileId = firstNonBlank(attrs.id(), attrs.localId());
+    var fileId = ConfluenceSupport.firstNonBlank(attrs.id(), attrs.localId());
     if (fileId != null) {
       upsertAttachmentRef(fileId, attrs);
     }
@@ -185,9 +183,9 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
   private void upsertAttachmentRef(String fileId, MediaAttrs attrs) {
     var builder = attachmentRefs.computeIfAbsent(fileId, AttachmentRefBuilder::new);
 
-    var title = firstNonBlank(attrs.fileName(), attrs.name(), attrs.alt());
+    var title = ConfluenceSupport.firstNonBlank(attrs.fileName(), attrs.name(), attrs.alt());
     var mediaType =
-        firstNonBlank(
+        ConfluenceSupport.firstNonBlank(
             attrs.fileMimeType(),
             attrs.mediaType(),
             AttachmentReferences.inferMediaType(title),
@@ -278,15 +276,6 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
     if (attachmentReference.mediaType() != null && !attachmentReference.mediaType().isBlank()) {
       builder.mediaType = attachmentReference.mediaType();
     }
-  }
-
-  // First non-blank candidate, stripped, or null when all are blank.
-  private static @Nullable String firstNonBlank(@Nullable String... candidates) {
-    return Stream.of(candidates)
-        .map(ConfluenceSupport::trimToNull)
-        .filter(Objects::nonNull)
-        .findFirst()
-        .orElse(null);
   }
 
   private static final class AttachmentRefBuilder {

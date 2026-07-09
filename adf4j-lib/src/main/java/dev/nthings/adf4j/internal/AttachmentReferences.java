@@ -103,21 +103,20 @@ public final class AttachmentReferences {
       return null;
     }
 
-    var guessed = URLConnection.guessContentTypeFromName(name);
-    if (guessed != null && !guessed.isBlank()) {
-      return guessed;
-    }
-
+    // Curated map first: URLConnection's answer varies with the JVM's content-types.properties.
     var dotIdx = name.lastIndexOf('.');
-    if (dotIdx < 0) {
-      return null;
-    }
-    var extension = name.substring(dotIdx + 1);
-    if (extension.isBlank()) {
-      return null;
+    if (dotIdx >= 0) {
+      var extension = name.substring(dotIdx + 1);
+      if (!extension.isBlank()) {
+        var known = MEDIA_TYPES_BY_EXTENSION.get(extension.toLowerCase(Locale.ROOT));
+        if (known != null) {
+          return known;
+        }
+      }
     }
 
-    return MEDIA_TYPES_BY_EXTENSION.get(extension.toLowerCase(Locale.ROOT));
+    var guessed = URLConnection.guessContentTypeFromName(name);
+    return guessed == null || guessed.isBlank() ? null : guessed;
   }
 
   private static String lastPathSegment(String value) {

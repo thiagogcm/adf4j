@@ -38,8 +38,8 @@ public final class HeadingContent {
 
   /// True iff the heading carries an explicit Confluence `anchor` macro with a non-blank id.
   public static boolean hasExplicitAnchor(@Nullable List<AdfInline> content) {
-    var anchorId = extractAnchorId(content);
-    return anchorId != null && !anchorId.isBlank();
+    // extractAnchorId only ever returns null or a non-blank id.
+    return extractAnchorId(content) != null;
   }
 
   /// The id of the heading's explicit Confluence `anchor` macro, or `null` if none.

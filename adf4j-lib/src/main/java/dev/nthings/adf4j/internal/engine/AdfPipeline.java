@@ -17,8 +17,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /// Assembles and runs the `parse → analyze → render` pipeline behind
-/// {@link AdfToMarkdown}. Stateless and thread-safe once built; each phase owns its
-/// own construction via `createDefault()`.
+/// {@link AdfToMarkdown}. Thread-safe once built (the analyzer memoizes its last walk); each
+/// phase owns its own construction via `createDefault()`.
 public final class AdfPipeline {
 
   private static final Logger log = LoggerFactory.getLogger(AdfPipeline.class);

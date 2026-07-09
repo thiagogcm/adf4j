@@ -35,6 +35,7 @@ public final class HeadingOutline {
     return EMPTY;
   }
 
+  // Takes ownership of headingsByNode; the sole caller builds it fresh and never touches it again.
   static HeadingOutline of(
       @Nullable List<HeadingReference> headings,
       @Nullable IdentityHashMap<Heading, HeadingReference> headingsByNode,
@@ -43,7 +44,7 @@ public final class HeadingOutline {
         && (headingsByNode == null || headingsByNode.isEmpty())) {
       return EMPTY;
     }
-    return new HeadingOutline(headings, new IdentityHashMap<>(headingsByNode), tocReferencedLevels);
+    return new HeadingOutline(headings, headingsByNode, tocReferencedLevels);
   }
 
   public List<HeadingReference> headings() {
