@@ -38,35 +38,34 @@ final class RenderConfig {
 
   private RenderConfig() {}
 
-  static MarkdownOptions build(Args args, CliJson json) {
+  static MarkdownOptions build(
+      RenderingOptions rendering, ResolverOptions resolvers, CliJson json) {
     var builder = MarkdownOptions.builder();
 
-    if (args.value("title") != null) {
-      builder.documentTitle(args.value("title"));
+    if (rendering.title != null) {
+      builder.documentTitle(rendering.title);
     }
-    builder.collapseHardBreaks(args.has("collapse-hard-breaks"));
-    builder.escapeParentheses(args.has("escape-parentheses"));
-    builder.imageSizeAttributes(args.has("image-size"));
-    builder.htmlVisualMarks(args.has("html-visual-marks"));
-    if (args.value("unknown-nodes") != null) {
-      builder.unknownNodePolicy(
-          enumOption(UnknownNodePolicy.values(), args.value("unknown-nodes"), "--unknown-nodes"));
+    builder.collapseHardBreaks(rendering.collapseHardBreaks);
+    builder.escapeParentheses(rendering.escapeParentheses);
+    builder.imageSizeAttributes(rendering.imageSize);
+    builder.htmlVisualMarks(rendering.htmlVisualMarks);
+    if (rendering.unknownNodes != null) {
+      builder.unknownNodePolicy(enumOption(UnknownNodePolicy.values(), rendering.unknownNodes));
     }
-    if (args.value("table-fallback") != null) {
-      builder.tableFallback(
-          enumOption(TableFallback.values(), args.value("table-fallback"), "--table-fallback"));
+    if (rendering.tableFallback != null) {
+      builder.tableFallback(enumOption(TableFallback.values(), rendering.tableFallback));
     }
 
-    builder.mediaResolver(mediaResolver(args, json));
-    builder.attachmentResolver(attachmentResolver(args, json));
-    builder.pageLinkResolver(pageLinkResolver(args, json));
-    builder.pageTreeResolver(pageTreeResolver(args, json));
-    builder.excerptResolver(excerptResolver(args, json));
-    var extension = extensionRenderer(args, json);
+    builder.mediaResolver(mediaResolver(resolvers, json));
+    builder.attachmentResolver(attachmentResolver(resolvers, json));
+    builder.pageLinkResolver(pageLinkResolver(resolvers, json));
+    builder.pageTreeResolver(pageTreeResolver(resolvers, json));
+    builder.excerptResolver(excerptResolver(resolvers, json));
+    var extension = extensionRenderer(resolvers, json);
     if (extension != null) {
       builder.extensionRenderers(List.of(extension));
     }
-    builder.confluenceContext(confluenceContext(args, json));
+    builder.confluenceContext(confluenceContext(resolvers, json));
 
     return builder.build();
   }
@@ -74,23 +73,33 @@ final class RenderConfig {
   // ---- enum options -------------------------------------------------------
 
   // The CLI spelling of an enum option is the kebab-case of its constant name. Takes the
-  // constants (not the Class) so the native/wasm images stay reflection-free.
-  private static <E extends Enum<E>> E enumOption(E[] constants, String value, String flag) {
-    var allowed = new ArrayList<String>();
+  // constants (not the Class) so the native/wasm images stay reflection-free. The parser already
+  // validated the value against the option's allowedValues, so a miss here is a bug (the
+  // annotation list drifted from the enum; OptionContractTest pins them together).
+  private static <E extends Enum<E>> E enumOption(E[] constants, String value) {
     for (var constant : constants) {
-      var name = constant.name().toLowerCase(Locale.ROOT).replace('_', '-');
-      if (name.equals(value)) {
+      if (kebabCase(constant).equals(value)) {
         return constant;
       }
-      allowed.add(name);
     }
-    throw CliException.usage(flag + " must be one of: " + String.join(", ", allowed));
+    throw new IllegalStateException("option value '" + value + "' missing from the enum");
+  }
+
+  static String kebabCase(Enum<?> constant) {
+    return constant.name().toLowerCase(Locale.ROOT).replace('_', '-');
   }
 
   // ---- URL-rewriting resolvers (template + map, map wins) -----------------
 
-  private static @Nullable MediaResolver mediaResolver(Args args, CliJson json) {
-    var lookup = urlResolver(args, json, "media-map", "media-url", MEDIA_PLACEHOLDERS);
+  private static @Nullable MediaResolver mediaResolver(ResolverOptions resolvers, CliJson json) {
+    var lookup =
+        urlResolver(
+            resolvers.mediaMap,
+            resolvers.mediaUrl,
+            json,
+            "--media-map",
+            "--media-url",
+            MEDIA_PLACEHOLDERS);
     return lookup == null
         ? null
         : attrs ->
@@ -102,9 +111,16 @@ final class RenderConfig {
                     "localId", requireNonNullElse(attrs.localId(), "")));
   }
 
-  private static @Nullable AttachmentResolver attachmentResolver(Args args, CliJson json) {
+  private static @Nullable AttachmentResolver attachmentResolver(
+      ResolverOptions resolvers, CliJson json) {
     var lookup =
-        urlResolver(args, json, "attachment-map", "attachment-url", ATTACHMENT_PLACEHOLDERS);
+        urlResolver(
+            resolvers.attachmentMap,
+            resolvers.attachmentUrl,
+            json,
+            "--attachment-map",
+            "--attachment-url",
+            ATTACHMENT_PLACEHOLDERS);
     return lookup == null
         ? null
         : reference ->
@@ -115,8 +131,16 @@ final class RenderConfig {
                     "title", requireNonNullElse(reference.title(), "")));
   }
 
-  private static @Nullable PageLinkResolver pageLinkResolver(Args args, CliJson json) {
-    var lookup = urlResolver(args, json, "page-map", "page-url", PAGE_PLACEHOLDERS);
+  private static @Nullable PageLinkResolver pageLinkResolver(
+      ResolverOptions resolvers, CliJson json) {
+    var lookup =
+        urlResolver(
+            resolvers.pageMap,
+            resolvers.pageUrl,
+            json,
+            "--page-map",
+            "--page-url",
+            PAGE_PLACEHOLDERS);
     return lookup == null
         ? null
         : pageNodeId ->
@@ -124,13 +148,17 @@ final class RenderConfig {
   }
 
   // (key, placeholders) -> URL: the map wins on a non-blank hit, else the template expands; null
-  // when
-  // neither flag was given (so the resolver stays unset and the library keeps its default
+  // when neither flag was given (so the resolver stays unset and the library keeps its default
   // behavior).
   private static @Nullable BiFunction<String, Map<String, String>, @Nullable String> urlResolver(
-      Args args, CliJson json, String mapFlag, String urlFlag, Set<String> placeholders) {
-    var map = readStringMap(args.value(mapFlag), json, "--" + mapFlag);
-    var template = template(args.value(urlFlag), placeholders, "--" + urlFlag);
+      @Nullable String mapPath,
+      @Nullable String urlTemplate,
+      CliJson json,
+      String mapFlag,
+      String urlFlag,
+      Set<String> placeholders) {
+    var map = readStringMap(mapPath, json, mapFlag);
+    var template = template(urlTemplate, placeholders, urlFlag);
     if (map.isEmpty() && template == null) {
       return null;
     }
@@ -145,8 +173,9 @@ final class RenderConfig {
 
   // ---- structured-data resolvers ------------------------------------------
 
-  private static @Nullable PageTreeResolver pageTreeResolver(Args args, CliJson json) {
-    var path = args.value("page-tree-map");
+  private static @Nullable PageTreeResolver pageTreeResolver(
+      ResolverOptions resolvers, CliJson json) {
+    var path = resolvers.pageTreeMap;
     if (path == null) {
       return null;
     }
@@ -188,8 +217,9 @@ final class RenderConfig {
     return bucket;
   }
 
-  private static @Nullable ExcerptResolver excerptResolver(Args args, CliJson json) {
-    var path = args.value("excerpt-map");
+  private static @Nullable ExcerptResolver excerptResolver(
+      ResolverOptions resolvers, CliJson json) {
+    var path = resolvers.excerptMap;
     if (path == null) {
       return null;
     }
@@ -208,8 +238,9 @@ final class RenderConfig {
     return reference -> byKey.get(new ExcerptKey(reference.page(), reference.excerptName()));
   }
 
-  private static @Nullable ExtensionRenderer extensionRenderer(Args args, CliJson json) {
-    var path = args.value("extension-map");
+  private static @Nullable ExtensionRenderer extensionRenderer(
+      ResolverOptions resolvers, CliJson json) {
+    var path = resolvers.extensionMap;
     if (path == null) {
       return null;
     }
@@ -238,8 +269,9 @@ final class RenderConfig {
     };
   }
 
-  private static ConfluenceRenderContext confluenceContext(Args args, CliJson json) {
-    var path = args.value("attachments-map");
+  private static ConfluenceRenderContext confluenceContext(
+      ResolverOptions resolvers, CliJson json) {
+    var path = resolvers.attachmentsMap;
     if (path == null) {
       return ConfluenceRenderContext.empty();
     }

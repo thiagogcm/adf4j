@@ -64,7 +64,7 @@ final class CliJson {
   }
 
   /// Reads and parses a map/data file supplied via `flag`. A missing/unreadable file is an I/O
-  /// error (exit 2); malformed JSON is a usage error (exit 1). Neither leaks a stack trace to
+  /// error (exit 1); malformed JSON is a usage error (exit 2). Neither leaks a stack trace to
   /// stdout.
   JsonNode readFile(Path path, String flag) {
     String raw;
@@ -101,7 +101,7 @@ final class CliJson {
     throw CliException.usage(flag + " file must be a JSON array");
   }
 
-  /// Rejects unknown keys on a CLI-owned schema object so a typo'd key fails loudly (exit 1).
+  /// Rejects unknown keys on a CLI-owned schema object so a typo'd key fails loudly (exit 2).
   static void rejectUnknownKeys(ObjectNode object, Set<String> allowed, String context) {
     for (var entry : object.properties()) {
       if (!allowed.contains(entry.getKey())) {

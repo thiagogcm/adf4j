@@ -8,7 +8,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -106,7 +105,8 @@ class ConvertCommandTest {
   void invalidEnumValueIsAUsageError() {
     var result = convert(SIMPLE_DOC, "--unknown-nodes", "bogus");
     assertThat(result.exitCode()).isEqualTo(ExitCodes.USAGE);
-    assertThat(result.err()).contains("--unknown-nodes must be one of");
+    assertThat(result.err()).contains("--unknown-nodes").contains("Allowed values");
+    assertThat(result.out()).isEmpty();
   }
 
   @Test

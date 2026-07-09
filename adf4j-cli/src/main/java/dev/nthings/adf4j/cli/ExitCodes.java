@@ -1,16 +1,18 @@
 package dev.nthings.adf4j.cli;
 
-/// The CLI's exit-code contract; codes are stable and scriptable.
+/// The CLI's exit-code contract; codes are stable and scriptable. Usage errors follow the aesh
+/// runtime convention (2), so the CLI's own usage failures and the parser's agree.
 final class ExitCodes {
 
   /// Normal completion.
   static final int OK = 0;
 
-  /// Unknown flag/subcommand, an unknown `{placeholder}` token, or a malformed/invalid map file.
-  static final int USAGE = 1;
-
   /// Input path or map file not found/unreadable, or an output write failure.
-  static final int IO = 2;
+  static final int IO = 1;
+
+  /// Unknown flag/subcommand, an invalid option value, an unknown `{placeholder}` token, or a
+  /// malformed/invalid map file. Matches the aesh runtime's own parse-error exit code.
+  static final int USAGE = 2;
 
   /// `validate`: not a valid ADF root or an ERROR diagnostic; `convert --unknown-nodes fail`
   /// aborted.

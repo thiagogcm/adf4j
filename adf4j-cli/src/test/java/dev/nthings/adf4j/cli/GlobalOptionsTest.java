@@ -12,15 +12,9 @@ class GlobalOptionsTest {
 
   @Test
   void versionLongAndShortPrintTheVersion() {
-    assertThat(Cli.VERSION).isNotBlank().isNotEqualTo("unknown");
-    assertThat(runNoInput("--version").out()).isEqualTo("adf4j " + Cli.VERSION + "\n");
-    assertThat(runNoInput("-V").out()).isEqualTo("adf4j " + Cli.VERSION + "\n");
-  }
-
-  @Test
-  void versionWorksPerSubcommand() {
-    assertThat(runNoInput("convert", "-V").out()).isEqualTo("adf4j " + Cli.VERSION + "\n");
-    assertThat(runNoInput("analyze", "--version").out()).isEqualTo("adf4j " + Cli.VERSION + "\n");
+    assertThat(Adf4jCommand.VERSION).isNotBlank().isNotEqualTo("unknown");
+    assertThat(runNoInput("--version").out()).isEqualTo("adf4j " + Adf4jCommand.VERSION + "\n");
+    assertThat(runNoInput("-V").out()).isEqualTo("adf4j " + Adf4jCommand.VERSION + "\n");
   }
 
   @Test
@@ -42,27 +36,29 @@ class GlobalOptionsTest {
   void noArgsPrintsGlobalHelp() {
     var result = runNoInput();
     assertThat(result.exitCode()).isZero();
-    assertThat(result.out()).contains("Commands:");
+    assertThat(result.out()).contains("convert").contains("analyze").contains("validate");
   }
 
   @Test
   void helpLongAndShortPrintGlobalUsage() {
-    assertThat(runNoInput("--help").out()).contains("adf4j <command>").contains("Commands:");
-    assertThat(runNoInput("-h").out()).contains("Commands:");
+    assertThat(runNoInput("--help").out()).contains("adf4j").contains("convert");
+    assertThat(runNoInput("-h").out()).contains("convert");
   }
 
   @Test
   void perCommandHelp() {
-    assertThat(runNoInput("convert", "--help").out()).contains("adf4j convert");
-    assertThat(runNoInput("analyze", "--help").out()).contains("adf4j analyze");
-    assertThat(runNoInput("validate", "--help").out()).contains("adf4j validate");
+    assertThat(runNoInput("convert", "--help").out()).contains("convert").contains("--format");
+    assertThat(runNoInput("analyze", "--help").out()).contains("analyze").contains("--select");
+    assertThat(runNoInput("validate", "--help").out())
+        .contains("validate")
+        .contains("--fail-on-warning");
   }
 
   @Test
   void unknownCommandIsAUsageError() {
     var result = run(SIMPLE_DOC, "frobnicate");
     assertThat(result.exitCode()).isEqualTo(ExitCodes.USAGE);
-    assertThat(result.err()).contains("unknown command 'frobnicate'");
+    assertThat(result.err()).contains("frobnicate");
     assertThat(result.out()).isEmpty();
   }
 
@@ -70,7 +66,7 @@ class GlobalOptionsTest {
   void unknownOptionIsAUsageError() {
     var result = convert(SIMPLE_DOC, "--bogus");
     assertThat(result.exitCode()).isEqualTo(ExitCodes.USAGE);
-    assertThat(result.err()).contains("unknown option '--bogus'");
+    assertThat(result.err()).contains("--bogus");
     assertThat(result.out()).isEmpty();
   }
 

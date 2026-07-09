@@ -7,7 +7,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-/// Drives {@link Main#run} with explicit streams so tests can assert exit code, stdout, and stderr.
+/// Drives {@link Main#run} with swapped system streams so tests can assert exit code, stdout, and
+/// stderr. The aesh runtime and the commands both resolve `System.in/out/err` at call time, so a
+/// swap around the run captures everything.
 final class CliTestSupport {
 
   /// The captured outcome of one CLI invocation.
@@ -39,16 +41,23 @@ final class CliTestSupport {
           {"type":"media","attrs":{"type":"file","id":"FILE_ID","collection":"col"}}]}
       ]}""";
 
-  static Result run(String stdin, String... args) {
-    var in = new ByteArrayInputStream(stdin.getBytes(StandardCharsets.UTF_8));
+  static synchronized Result run(String stdin, String... args) {
+    var originalIn = System.in;
+    var originalOut = System.out;
+    var originalErr = System.err;
     var out = new ByteArrayOutputStream();
     var err = new ByteArrayOutputStream();
-    var exit =
-        Main.run(
-            args,
-            in,
-            new PrintStream(out, true, StandardCharsets.UTF_8),
-            new PrintStream(err, true, StandardCharsets.UTF_8));
+    int exit;
+    try {
+      System.setIn(new ByteArrayInputStream(stdin.getBytes(StandardCharsets.UTF_8)));
+      System.setOut(new PrintStream(out, true, StandardCharsets.UTF_8));
+      System.setErr(new PrintStream(err, true, StandardCharsets.UTF_8));
+      exit = Main.run(args);
+    } finally {
+      System.setIn(originalIn);
+      System.setOut(originalOut);
+      System.setErr(originalErr);
+    }
     return new Result(
         exit, out.toString(StandardCharsets.UTF_8), err.toString(StandardCharsets.UTF_8));
   }

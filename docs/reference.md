@@ -143,7 +143,7 @@ Caller-provided Markdown from `ExtensionRenderer` and `ExcerptResolver` is inser
 adf4j <command> [options] [<input-file>]
 ```
 
-Input comes from `<input-file>` or stdin. Stdout contains only the requested output. Diagnostics and warnings go to stderr. `-o` writes atomically.
+Input comes from `<input-file>` or stdin (also when the file is `-`). Stdout contains only the requested output. Diagnostics and warnings go to stderr. `-o` writes atomically. Help output honors the `NO_COLOR` environment variable.
 
 | Command    | Library method | Output                                          |
 | ---------- | -------------- | ----------------------------------------------- |
@@ -151,22 +151,25 @@ Input comes from `<input-file>` or stdin. Stdout contains only the requested out
 | `analyze`  | `analyze(...)` | Metadata JSON, or text with `-f text`.          |
 | `validate` | `parse(...)`   | Parse diagnostics; exit code reflects validity. |
 
-Global flags after the command:
+Root flags (before any command): `-h, --help` and `-V, --version`.
+
+Flags shared by every command:
 
 | Flag                | Effect                                            |
 | ------------------- | ------------------------------------------------- |
-| `-h, --help`        | Show help.                                        |
-| `-V, --version`     | Show version.                                     |
+| `-h, --help`        | Show the command's help.                          |
 | `-v, --verbose`     | Show stack traces on error.                       |
 | `-q, --quiet`       | Suppress stderr diagnostics summary and warnings. |
 | `-o, --output FILE` | Write output to `FILE` instead of stdout.         |
+| `--compact`         | Single-line JSON instead of pretty.               |
+
+The CLI is built on [aesh](https://aeshell.github.io/), which also provides shell completion and generated docs: `adf4j --aesh-completion bash|zsh|fish|pwsh` prints a completion script (`--aesh-completion-install` installs it), and `adf4j --aesh-doc markdown|asciidoc` prints full CLI documentation.
 
 ### convert
 
 | Flag                         | Effect                                                                                                  |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------- |
 | `-f, --format md\|json`      | `md` prints the body. `json` prints body, `wasLossy`, diagnostics, metadata, and unresolved references. |
-| `--compact`                  | Single-line JSON.                                                                                       |
 | `--fail-on-lossy`            | Exit 4 when the result is lossy.                                                                        |
 | `-t, --title TITLE`          | Prepend a level-1 heading.                                                                              |
 | `-c, --collapse-hard-breaks` | Render hard breaks as soft breaks.                                                                      |
@@ -181,7 +184,6 @@ Global flags after the command:
 | Flag                      | Effect                                                                                                                                                            |
 | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `-f, --format json\|text` | Output format.                                                                                                                                                    |
-| `--compact`               | Single-line JSON.                                                                                                                                                 |
 | `--select SECTIONS`       | Comma-separated subset of `pageRefs`, `externalRefs`, `mentionRefs`, `attachmentRefs`, `referencedFileIds`, `pageTreeRefs`, `excerptRefs`, `excerpts`, `outline`. |
 | `--attachments-map FILE`  | Supplies attachment inventory so attachment macros can contribute file IDs.                                                                                       |
 
@@ -192,7 +194,6 @@ Global flags after the command:
 | Flag                      | Effect                            |
 | ------------------------- | --------------------------------- |
 | `-f, --format text\|json` | Output format.                    |
-| `--compact`               | Single-line JSON.                 |
 | `--fail-on-warning`       | Exit 4 when a warning is present. |
 
 ### Resolver flags
@@ -247,8 +248,8 @@ The CLI warns on stderr when `--excerpt-map` or `--extension-map` is used becaus
 | Code | Meaning                                                              |
 | ---- | -------------------------------------------------------------------- |
 | `0`  | Success.                                                             |
-| `1`  | Usage error, unknown flag, unknown placeholder, or invalid map file. |
-| `2`  | I/O error.                                                           |
+| `1`  | I/O error.                                                           |
+| `2`  | Usage error, unknown flag, unknown placeholder, or invalid map file. |
 | `3`  | Content failure, such as invalid root or `--unknown-nodes fail`.     |
 | `4`  | Quality gate, such as `--fail-on-lossy` or `--fail-on-warning`.      |
 | `70` | Unexpected internal error.                                           |

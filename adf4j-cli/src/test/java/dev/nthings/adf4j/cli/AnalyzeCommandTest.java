@@ -29,7 +29,8 @@ class AnalyzeCommandTest {
   void unknownSelectSectionIsAUsageError() {
     var result = run(SIMPLE_DOC, "analyze", "--select", "bogus");
     assertThat(result.exitCode()).isEqualTo(ExitCodes.USAGE);
-    assertThat(result.err()).contains("unknown section 'bogus'");
+    assertThat(result.err()).contains("--select").contains("Allowed values");
+    assertThat(result.out()).isEmpty();
   }
 
   @Test

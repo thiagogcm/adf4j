@@ -1,8 +1,6 @@
 package dev.nthings.adf4j.cli;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
@@ -10,24 +8,21 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import org.jspecify.annotations.Nullable;
 
-/// Reads the ADF input (a path argument or stdin) and writes the deliverable; a file output goes
+/// Reads the ADF input (a file argument or stdin) and writes the deliverable; a file output goes
 /// through a temp file + atomic rename so a crash mid-write can't leave a truncated file.
 final class CliIo {
 
   private CliIo() {}
 
-  static String readInput(java.util.List<String> positionals, InputStream stdin) {
-    if (positionals.size() > 1) {
-      throw CliException.usage("expected at most one input file, got " + positionals.size());
-    }
-    if (positionals.isEmpty()) {
+  static String readInput(@Nullable String file) {
+    if (file == null || file.equals("-")) {
       try {
-        return new String(stdin.readAllBytes(), StandardCharsets.UTF_8);
+        return new String(System.in.readAllBytes(), StandardCharsets.UTF_8);
       } catch (IOException exception) {
         throw CliException.io("failed to read stdin: " + exception.getMessage(), exception);
       }
     }
-    var path = Path.of(positionals.getFirst());
+    var path = Path.of(file);
     if (!Files.exists(path)) {
       throw new CliException(ExitCodes.IO, "input file not found: " + path);
     }
@@ -39,10 +34,10 @@ final class CliIo {
     }
   }
 
-  static void writeOutput(@Nullable String outputPath, String content, PrintStream stdout) {
+  static void writeOutput(@Nullable String outputPath, String content) {
     if (outputPath == null) {
-      stdout.print(content);
-      stdout.flush();
+      System.out.print(content);
+      System.out.flush();
       return;
     }
     if (outputPath.isBlank()) {

@@ -239,7 +239,7 @@ The library targets JDK 25 and uses:
 | JSpecify                       | Nullness annotations.                                    |
 | SLF4J                          | Logging, especially callback failures.                   |
 
-`adf4j-cli` is a thin wrapper with a hand-written argument parser. It is reflection-free and uses Jackson in tree mode, so native-image metadata is unnecessary. Release artifacts are native executables plus the optional WASM build. The CLI jar is not a fat jar.
+`adf4j-cli` is a thin wrapper built on [aesh](https://aeshell.github.io/). Commands are annotated classes; the aesh annotation processor generates command metadata and field accessors at compile time (plus the matching `META-INF/native-image` configs), so command parsing stays reflection-free in the native image. Jackson runs in tree mode. Release artifacts are native executables plus the optional WASM build. The CLI jar is not a fat jar.
 
 ## Key design decisions
 
