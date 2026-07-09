@@ -1,5 +1,6 @@
 package dev.nthings.adf4j.ast;
 
+import dev.nthings.adf4j.internal.Strings;
 import org.jspecify.annotations.Nullable;
 
 /// The attributes of a media node. `type` distinguishes `file`/`link` media
@@ -29,28 +30,19 @@ public record MediaAttrs(
 
   /// The explicit MIME type if present, otherwise the coarser media type.
   public @Nullable String mimeOrType() {
-    return firstNonBlank(fileMimeType, mediaType);
+    return Strings.firstNonBlank(fileMimeType, mediaType);
   }
 
   /// Alt text for an image embed: the description if given, else the file name, else `"media"`.
   public String imageAlt() {
-    var label = firstNonBlank(alt, fileName, name);
+    var label = Strings.firstNonBlank(alt, fileName, name);
     return label == null ? "media" : label;
   }
 
   /// Label for a file link: the name, file name, alt, or destination's file name, else `"file"`.
   public String fileLabel(@Nullable String destinationFileName) {
-    var label = firstNonBlank(name, fileName, alt, destinationFileName);
+    var label = Strings.firstNonBlank(name, fileName, alt, destinationFileName);
     return label == null ? "file" : label;
-  }
-
-  private static @Nullable String firstNonBlank(@Nullable String... values) {
-    for (var value : values) {
-      if (value != null && !value.isBlank()) {
-        return value;
-      }
-    }
-    return null;
   }
 
   public static final class Builder {

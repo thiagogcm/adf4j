@@ -53,6 +53,7 @@ import dev.nthings.adf4j.ast.Text;
 import dev.nthings.adf4j.ast.UnknownBlock;
 import dev.nthings.adf4j.ast.UnknownInline;
 import dev.nthings.adf4j.internal.AdfText;
+import dev.nthings.adf4j.internal.Strings;
 import dev.nthings.adf4j.internal.analyze.HeadingContent;
 import dev.nthings.adf4j.internal.analyze.HeadingOutline;
 import dev.nthings.adf4j.options.MarkdownOptions;
@@ -61,7 +62,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
-import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -520,12 +520,7 @@ public final class AdfRenderer implements BlockRecursion {
   }
 
   private String renderEmoji(Emoji emoji) {
-    var text =
-        Stream.of(emoji.text(), emoji.shortName())
-            .filter(s -> s != null && !s.isBlank())
-            .findFirst()
-            .orElse(null);
-    return text != null ? text : "";
+    return Objects.requireNonNullElse(Strings.firstNonBlank(emoji.text(), emoji.shortName()), "");
   }
 
   private String renderMention(Mention mention) {
@@ -534,11 +529,7 @@ public final class AdfRenderer implements BlockRecursion {
       return text;
     }
     // Fall back to the account id (or localId) so the mention isn't reduced to an opaque marker.
-    var id =
-        Stream.of(mention.id(), mention.localId())
-            .filter(s -> s != null && !s.isBlank())
-            .findFirst()
-            .orElse(null);
+    var id = Strings.firstNonBlank(mention.id(), mention.localId());
     return id != null ? "@" + id : "@unknown";
   }
 

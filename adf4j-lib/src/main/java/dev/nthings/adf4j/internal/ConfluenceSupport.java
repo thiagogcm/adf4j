@@ -59,7 +59,7 @@ public final class ConfluenceSupport {
                 .object("titlesField")
                 .string("chartTitle");
     var generic = parameters == null ? null : parameters.string("extensionTitle");
-    return firstNonBlank(fromParams, nested, generic);
+    return Strings.firstNonBlankStripped(fromParams, nested, generic);
   }
 
   /// Whether the extension is the editor-migration `inline-media-image` macro.
@@ -118,36 +118,17 @@ public final class ConfluenceSupport {
       return null;
     }
     var params = macroParams == null ? MacroParams.empty() : macroParams;
-    var page = trimToNull(params.value(""));
+    var page = Strings.trimToNull(params.value(""));
     if (page == null) {
       return null;
     }
-    return new ExcerptIncludeReference(page, trimToNull(params.value("name")), params.values());
+    return new ExcerptIncludeReference(
+        page, Strings.trimToNull(params.value("name")), params.values());
   }
 
   /// The `excerpt` macro's named-excerpt identifier, or `null` for the unnamed excerpt.
   public static @Nullable String excerptName(@Nullable MacroParams macroParams) {
-    return macroParams == null ? null : trimToNull(macroParams.value("name"));
-  }
-
-  /// The stripped value, or `null` when it is null or blank.
-  public static @Nullable String trimToNull(@Nullable String value) {
-    if (value == null) {
-      return null;
-    }
-    var stripped = value.strip();
-    return stripped.isEmpty() ? null : stripped;
-  }
-
-  /// The first non-blank candidate, stripped, or `null` when every candidate is blank.
-  public static @Nullable String firstNonBlank(@Nullable String... candidates) {
-    for (var candidate : candidates) {
-      var stripped = trimToNull(candidate);
-      if (stripped != null) {
-        return stripped;
-      }
-    }
-    return null;
+    return macroParams == null ? null : Strings.trimToNull(macroParams.value("name"));
   }
 
   public static @Nullable String pageId(@Nullable String rawUrl) {
@@ -179,7 +160,7 @@ public final class ConfluenceSupport {
     var metadataNodeId =
         metadata == null
             ? null
-            : firstNonBlank(metadata.pageId(), metadata.contentId(), metadata.id());
+            : Strings.firstNonBlankStripped(metadata.pageId(), metadata.contentId(), metadata.id());
     var linkType =
         metadata == null || metadata.linkType() == null ? null : metadata.linkType().strip();
     if (!"page".equalsIgnoreCase(linkType) && inferredNodeId == null && metadataNodeId == null) {
@@ -217,6 +198,7 @@ public final class ConfluenceSupport {
     if (macroParams == null) {
       return null;
     }
-    return firstNonBlank(macroParams.value(""), macroParams.value("legacyAnchorId"));
+    return Strings.firstNonBlankStripped(
+        macroParams.value(""), macroParams.value("legacyAnchorId"));
   }
 }

@@ -1,7 +1,7 @@
 package dev.nthings.adf4j.internal.render;
 
 import dev.nthings.adf4j.ast.CardAttrs;
-import java.util.stream.Stream;
+import dev.nthings.adf4j.internal.Strings;
 import org.jspecify.annotations.Nullable;
 
 /// Renders smart-link nodes (block/inline/embed cards) to Markdown links.
@@ -13,11 +13,7 @@ final class CardRenderer {
       return link;
     }
 
-    var identifier =
-        Stream.of(attrs.datasourceId(), attrs.localId())
-            .filter(s -> s != null && !s.isBlank())
-            .findFirst()
-            .orElse(null);
+    var identifier = Strings.firstNonBlank(attrs.datasourceId(), attrs.localId());
     if (identifier == null) {
       return MarkdownText.labelToken("Card", context.options().escapeParentheses());
     }

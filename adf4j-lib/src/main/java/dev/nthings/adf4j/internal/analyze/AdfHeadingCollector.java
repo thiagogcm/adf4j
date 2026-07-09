@@ -18,13 +18,14 @@ import dev.nthings.adf4j.ast.Status;
 import dev.nthings.adf4j.ast.Text;
 import dev.nthings.adf4j.internal.AdfText;
 import dev.nthings.adf4j.internal.ConfluenceSupport;
+import dev.nthings.adf4j.internal.Strings;
 import dev.nthings.adf4j.metadata.HeadingReference;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Stream;
 import org.commonmark.ext.heading.anchor.IdGenerator;
 import org.jspecify.annotations.Nullable;
 
@@ -119,10 +120,8 @@ final class AdfHeadingCollector implements NodeVisitor {
         case Emoji emoji ->
             appendPlainText(
                 builder,
-                Stream.of(emoji.text(), emoji.shortName())
-                    .filter(s -> s != null && !s.isBlank())
-                    .findFirst()
-                    .orElse(""));
+                Objects.requireNonNullElse(
+                    Strings.firstNonBlank(emoji.text(), emoji.shortName()), ""));
         case Mention mention -> appendPlainText(builder, mention.text());
         case Status status -> {
           if (status.text() != null && !status.text().isBlank()) {

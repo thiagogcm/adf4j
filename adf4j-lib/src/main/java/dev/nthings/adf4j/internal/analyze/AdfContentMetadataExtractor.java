@@ -23,6 +23,7 @@ import dev.nthings.adf4j.confluence.ConfluenceMetadata;
 import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
 import dev.nthings.adf4j.internal.AttachmentReferences;
 import dev.nthings.adf4j.internal.ConfluenceSupport;
+import dev.nthings.adf4j.internal.Strings;
 import dev.nthings.adf4j.metadata.AttachmentReference;
 import dev.nthings.adf4j.metadata.ContentMetadata;
 import dev.nthings.adf4j.metadata.ExcerptDefinition;
@@ -130,7 +131,7 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
   }
 
   private void collectMention(Mention mention) {
-    var id = ConfluenceSupport.firstNonBlank(mention.id(), mention.localId());
+    var id = Strings.firstNonBlankStripped(mention.id(), mention.localId());
     mentionRefs.add(new MentionReference(id, mention.text()));
   }
 
@@ -150,7 +151,7 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
   }
 
   private void collectLink(@Nullable String rawUrl, Attributes attrs) {
-    var normalized = ConfluenceSupport.trimToNull(rawUrl);
+    var normalized = Strings.trimToNull(rawUrl);
     if (normalized == null || "#".equals(normalized)) {
       return;
     }
@@ -167,13 +168,13 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
       return;
     }
 
-    var fileId = ConfluenceSupport.firstNonBlank(attrs.id(), attrs.localId());
+    var fileId = Strings.firstNonBlankStripped(attrs.id(), attrs.localId());
     if (fileId != null) {
       upsertAttachmentRef(fileId, attrs);
     }
 
-    if ("external".equalsIgnoreCase(ConfluenceSupport.trimToNull(attrs.type()))) {
-      var url = ConfluenceSupport.trimToNull(attrs.url());
+    if ("external".equalsIgnoreCase(Strings.trimToNull(attrs.type()))) {
+      var url = Strings.trimToNull(attrs.url());
       if (url != null) {
         externalRefs.add(url);
       }
@@ -183,9 +184,9 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
   private void upsertAttachmentRef(String fileId, MediaAttrs attrs) {
     var builder = attachmentRefs.computeIfAbsent(fileId, AttachmentRefBuilder::new);
 
-    var title = ConfluenceSupport.firstNonBlank(attrs.fileName(), attrs.name(), attrs.alt());
+    var title = Strings.firstNonBlankStripped(attrs.fileName(), attrs.name(), attrs.alt());
     var mediaType =
-        ConfluenceSupport.firstNonBlank(
+        Strings.firstNonBlankStripped(
             attrs.fileMimeType(),
             attrs.mediaType(),
             AttachmentReferences.inferMediaType(title),

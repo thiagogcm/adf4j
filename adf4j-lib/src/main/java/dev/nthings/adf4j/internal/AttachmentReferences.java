@@ -6,7 +6,6 @@ import dev.nthings.adf4j.metadata.AttachmentReference;
 import java.net.URLConnection;
 import java.util.Locale;
 import java.util.Map;
-import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
 
 public final class AttachmentReferences {
@@ -70,13 +69,10 @@ public final class AttachmentReferences {
     }
 
     var fileId =
-        Stream.of(
-                macroParams.value("fileId"),
-                macroParams.value("id"),
-                macroParams.value("attachmentId"))
-            .filter(s -> s != null && !s.isBlank())
-            .findFirst()
-            .orElse(null);
+        Strings.firstNonBlank(
+            macroParams.value("fileId"),
+            macroParams.value("id"),
+            macroParams.value("attachmentId"));
     if (fileId == null) {
       return null;
     }

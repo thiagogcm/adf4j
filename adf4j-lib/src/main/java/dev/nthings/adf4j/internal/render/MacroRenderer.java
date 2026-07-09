@@ -11,6 +11,7 @@ import dev.nthings.adf4j.ast.MultiBodiedExtension;
 import dev.nthings.adf4j.ast.SyncBlock;
 import dev.nthings.adf4j.internal.AttachmentReferences;
 import dev.nthings.adf4j.internal.ConfluenceSupport;
+import dev.nthings.adf4j.internal.Strings;
 import dev.nthings.adf4j.internal.analyze.TocLevelRange;
 import dev.nthings.adf4j.metadata.AttachmentReference;
 import dev.nthings.adf4j.metadata.ExcerptIncludeReference;
@@ -288,7 +289,7 @@ final class MacroRenderer {
   // renders.
   private @Nullable String pageTreeLabel(PageTreeEntry entry, RendererState context) {
     var title = entry.title();
-    var label = title == null ? "" : title.replaceAll("\\s+", " ").strip();
+    var label = title == null ? "" : Strings.collapseWhitespace(title).strip();
     var href = TextMarkRenderer.resolvePageId(entry.pageNodeId(), context.context());
     if (href != null) {
       return MarkdownText.link(label.isEmpty() ? href : label, href, context.escapeParentheses());
@@ -304,7 +305,7 @@ final class MacroRenderer {
     if (root == null) {
       return null;
     }
-    var flattened = root.replaceAll("\\s+", " ").replace("{", "").replace("}", "").strip();
+    var flattened = Strings.collapseWhitespace(root).replace("{", "").replace("}", "").strip();
     return flattened.isEmpty() ? null : flattened;
   }
 
