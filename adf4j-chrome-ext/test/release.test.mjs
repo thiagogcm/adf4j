@@ -9,6 +9,8 @@ const manifest = JSON.parse(
 test('manifest keeps first-release metadata and scoped permissions', () => {
   assert.equal(manifest.manifest_version, 3);
   assert.equal(manifest.version, '1.1.0');
+  assert.equal(manifest.minimum_chrome_version, '99');
+  assert.equal(manifest.background.type, 'module');
   assert.ok(manifest.description.length <= 132);
   assert.deepEqual(manifest.permissions, ['clipboardWrite']);
   assert.deepEqual(manifest.host_permissions, ['https://*.atlassian.net/wiki/*']);

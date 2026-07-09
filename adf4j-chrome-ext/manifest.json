@@ -3,6 +3,7 @@
   "name": "adf4j Copy as Markdown",
   "description": "Copy Confluence Cloud pages as Markdown using adf4j.",
   "version": "1.1.0",
+  "minimum_chrome_version": "99",
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
@@ -15,7 +16,8 @@
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
   },
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   "content_scripts": [
     {

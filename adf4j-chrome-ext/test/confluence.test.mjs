@@ -1,9 +1,8 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import vm from 'node:vm';
+import '../src/confluence.js';
 
-const helpers = await loadHelpers();
+const helpers = globalThis.Adf4jChromeExt;
 
 test('detects Confluence Cloud wiki URLs only', () => {
   assert.equal(
@@ -83,10 +82,8 @@ test('builds the Confluence REST v2 attachments URL', () => {
 
 test('extracts attachments with absolute download URLs', () => {
   const baseUrl = 'https://example.atlassian.net/wiki/spaces/ABC/pages/123/Page';
-  // vm-context objects carry a foreign prototype; a JSON round-trip normalizes them for deepEqual.
-  const plain = (value) => JSON.parse(JSON.stringify(value));
   assert.deepEqual(
-    plain(helpers.extractAttachments(
+    helpers.extractAttachments(
       {
         results: [
           {
@@ -111,7 +108,7 @@ test('extracts attachments with absolute download URLs', () => {
         ],
       },
       baseUrl,
-    )),
+    ),
     [
       {
         fileId: 'uuid-1',
@@ -134,7 +131,7 @@ test('extracts attachments with absolute download URLs', () => {
       },
     ],
   );
-  assert.deepEqual(plain(helpers.extractAttachments({}, baseUrl)), []);
+  assert.deepEqual(helpers.extractAttachments({}, baseUrl), []);
 });
 
 test('resolves the next attachments page URL against the site origin', () => {
@@ -179,13 +176,6 @@ test('extracts title from response, metadata, or document title', () => {
   );
   assert.equal(helpers.extractPageTitle(fakeDocument({}, 'Doc Title - Confluence'), {}), 'Doc Title');
 });
-
-async function loadHelpers() {
-  const source = await readFile(new URL('../src/confluence.js', import.meta.url), 'utf8');
-  const context = vm.createContext({ URL });
-  vm.runInContext(source, context, { filename: 'confluence.js' });
-  return context.Adf4jChromeExt;
-}
 
 function fakeDocument(selectors, title = '') {
   return {

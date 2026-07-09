@@ -1,14 +1,15 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import vm from 'node:vm';
-
-const background = await loadBackground();
+import {
+  MESSAGE_TYPE,
+  createListener,
+  validateConversionRequest,
+} from '../src/messaging.js';
 
 test('accepts well-formed conversion requests from Confluence Cloud wiki pages', () => {
-  const request = background.validateConversionRequest(
+  const request = validateConversionRequest(
     {
-      type: background.MESSAGE_TYPE,
+      type: MESSAGE_TYPE,
       adfJson: '{"type":"doc","content":[]}',
       context: {
         attachments: [
@@ -30,8 +31,8 @@ test('accepts well-formed conversion requests from Confluence Cloud wiki pages',
 });
 
 test('rejects conversion requests from non-Confluence sender tab URLs', () => {
-  const request = background.validateConversionRequest(
-    { type: background.MESSAGE_TYPE, adfJson: '{"type":"doc"}' },
+  const request = validateConversionRequest(
+    { type: MESSAGE_TYPE, adfJson: '{"type":"doc"}' },
     { tab: { url: 'https://example.com/wiki/spaces/ABC/pages/123/Page' } },
   );
 
@@ -41,22 +42,22 @@ test('rejects conversion requests from non-Confluence sender tab URLs', () => {
 });
 
 test('rejects malformed conversion payloads', () => {
-  const missingAdf = background.validateConversionRequest(
-    { type: background.MESSAGE_TYPE, adfJson: '' },
+  const missingAdf = validateConversionRequest(
+    { type: MESSAGE_TYPE, adfJson: '' },
     confluenceSender(),
   );
   assert.equal(missingAdf.ok, false);
   assert.match(missingAdf.error, /Missing ADF JSON/);
 
-  const badContext = background.validateConversionRequest(
-    { type: background.MESSAGE_TYPE, adfJson: '{"type":"doc"}', context: { unexpected: true } },
+  const badContext = validateConversionRequest(
+    { type: MESSAGE_TYPE, adfJson: '{"type":"doc"}', context: { unexpected: true } },
     confluenceSender(),
   );
   assert.equal(badContext.ok, false);
   assert.match(badContext.error, /Invalid conversion context/);
 
-  const badAttachment = background.validateConversionRequest(
-    { type: background.MESSAGE_TYPE, adfJson: '{"type":"doc"}', context: { attachments: [{}] } },
+  const badAttachment = validateConversionRequest(
+    { type: MESSAGE_TYPE, adfJson: '{"type":"doc"}', context: { attachments: [{}] } },
     confluenceSender(),
   );
   assert.equal(badAttachment.ok, false);
@@ -64,15 +65,15 @@ test('rejects malformed conversion payloads', () => {
 });
 
 test('ignores unsupported message types', () => {
-  const request = background.validateConversionRequest({ type: 'unknown' }, confluenceSender());
+  const request = validateConversionRequest({ type: 'unknown' }, confluenceSender());
 
   assert.equal(request.handled, false);
 });
 
 test('listener responds synchronously to invalid handled requests', () => {
   let response;
-  const keepChannelOpen = background.listener(
-    { type: background.MESSAGE_TYPE, adfJson: '{"type":"doc"}' },
+  const keepChannelOpen = createListener(async () => ({ ok: true }))(
+    { type: MESSAGE_TYPE, adfJson: '{"type":"doc"}' },
     { tab: { url: 'https://example.com/' } },
     (payload) => {
       response = payload;
@@ -84,35 +85,30 @@ test('listener responds synchronously to invalid handled requests', () => {
   assert.match(response.error, /Confluence Cloud wiki page/);
 });
 
-async function loadBackground() {
-  const source = await readFile(new URL('../src/background.js', import.meta.url), 'utf8');
-  let listener;
-  const context = vm.createContext({
-    URL,
-    console,
-    globalThis: {},
-    importScripts() {},
-    setTimeout() {
-      return 1;
-    },
-    clearTimeout() {},
-    chrome: {
-      runtime: {
-        getURL(path) {
-          return `chrome-extension://adf4j/${path}`;
-        },
-        onMessage: {
-          addListener(callback) {
-            listener = callback;
-          },
-        },
-      },
-    },
-  });
-  context.globalThis = context;
-  vm.runInContext(source, context, { filename: 'background.js' });
-  return { ...context.Adf4jChromeExtBackground, listener };
-}
+test('listener keeps the channel open and forwards conversion results', async () => {
+  const responded = Promise.withResolvers();
+  const keepChannelOpen = createListener(async (adfJson) => ({ ok: true, markdown: adfJson }))(
+    { type: MESSAGE_TYPE, adfJson: '{"type":"doc"}' },
+    confluenceSender(),
+    responded.resolve,
+  );
+
+  assert.equal(keepChannelOpen, true);
+  assert.deepEqual(await responded.promise, { ok: true, markdown: '{"type":"doc"}' });
+});
+
+test('listener reports a rejected conversion in-band', async () => {
+  const responded = Promise.withResolvers();
+  createListener(async () => {
+    throw new Error('wasm not ready');
+  })(
+    { type: MESSAGE_TYPE, adfJson: '{"type":"doc"}' },
+    confluenceSender(),
+    responded.resolve,
+  );
+
+  assert.deepEqual(await responded.promise, { ok: false, error: 'wasm not ready' });
+});
 
 function confluenceSender() {
   return {

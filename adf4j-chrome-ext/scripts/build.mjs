@@ -16,9 +16,11 @@ const iconSizes = ['16', '32', '48', '128'];
 
 const extensionFiles = [
   [resolve(projectRoot, 'manifest.json'), 'manifest.json'],
+  [resolve(projectRoot, 'src/adf4j-loader.js'), 'adf4j-loader.js'],
   [resolve(projectRoot, 'src/background.js'), 'background.js'],
   [resolve(projectRoot, 'src/confluence.js'), 'confluence.js'],
   [resolve(projectRoot, 'src/content.js'), 'content.js'],
+  [resolve(projectRoot, 'src/messaging.js'), 'messaging.js'],
   [resolve(projectRoot, 'src/styles.css'), 'styles.css'],
   [resolve(repoRoot, 'LICENSE'), 'LICENSE'],
 ];
@@ -80,6 +82,11 @@ async function verifyManifest() {
   assert(!JSON.stringify(manifest).includes('*://*/*'), 'manifest must not request all hosts');
 
   assert(manifest.background?.service_worker === 'background.js', 'unexpected service worker path');
+  assert(manifest.background?.type === 'module', 'service worker must be an ES module');
+  assert(
+    manifest.minimum_chrome_version === '99',
+    'minimum_chrome_version must be 99 (module service worker, promise-form sendMessage)',
+  );
   assertPackageTarget(manifest.background.service_worker, 'background service worker');
 
   const contentScripts = manifest.content_scripts ?? [];
