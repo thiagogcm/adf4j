@@ -7,7 +7,6 @@ import static dev.nthings.adf4j.cli.CliTestSupport.write;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.file.Path;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -22,16 +21,21 @@ class ResolverOptionsTest {
   @Test
   void mediaMapWinsOverTemplate(@TempDir Path dir) {
     var map = write(dir, "media.json", "{\"FILE_ID\":\"https://map.example/win\"}");
-    var result = convert(MEDIA_DOC,
-        "--media-map", map.toString(),
-        "--media-url", "https://cdn.example/{collection}/{id}");
+    var result =
+        convert(
+            MEDIA_DOC,
+            "--media-map",
+            map.toString(),
+            "--media-url",
+            "https://cdn.example/{collection}/{id}");
     assertThat(result.out()).contains("https://map.example/win");
     assertThat(result.out()).doesNotContain("cdn.example");
   }
 
   @Test
   void unknownPlaceholderForFlagIsAUsageError() {
-    var result = convert(MEDIA_DOC, "--media-url", "https://cdn/{pageId}"); // pageId invalid for media
+    var result =
+        convert(MEDIA_DOC, "--media-url", "https://cdn/{pageId}"); // pageId invalid for media
     assertThat(result.exitCode()).isEqualTo(ExitCodes.USAGE);
     assertThat(result.err()).contains("unknown placeholder '{pageId}'");
   }
@@ -42,6 +46,14 @@ class ResolverOptionsTest {
     var result = convert(doc, "--media-url", "https://cdn/{collection}/{id}");
     assertThat(result.out()).contains("col/..%2Fescape"); // the '/' in the id is encoded
     assertThat(result.out()).doesNotContain("col/../escape"); // no live traversal segment
+  }
+
+  @Test
+  void templateValueEncodesSupplementaryCharactersAsUtf8() {
+    var doc = MEDIA_DOC.replace("\"FILE_ID\"", "\"\\uD83D\\uDE00\""); // 😀 (U+1F600)
+    var result = convert(doc, "--media-url", "https://cdn/{collection}/{id}");
+    assertThat(result.out()).contains("col/%F0%9F%98%80"); // the code point's UTF-8 bytes
+    assertThat(result.out()).doesNotContain("%3F"); // not two replacement '?' bytes
   }
 
   @Test

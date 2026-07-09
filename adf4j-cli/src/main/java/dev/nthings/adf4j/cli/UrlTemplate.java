@@ -1,5 +1,6 @@
 package dev.nthings.adf4j.cli;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -52,17 +53,16 @@ final class UrlTemplate {
 
   // Encode everything outside the RFC 3986 unreserved set (uppercase hex), so
   // traversal/query/fragment
-  // metacharacters in an untrusted value can't change the URL's structure.
+  // metacharacters in an untrusted value can't change the URL's structure. Works on the UTF-8
+  // bytes of the whole string (the unreserved set is pure ASCII), so surrogate pairs encode as
+  // their real code point instead of two replacement bytes.
   private static String encode(String value) {
     var out = new StringBuilder(value.length());
-    for (var i = 0; i < value.length(); i++) {
-      var ch = value.charAt(i);
-      if (isUnreserved(ch)) {
-        out.append(ch);
+    for (var b : value.getBytes(StandardCharsets.UTF_8)) {
+      if (isUnreserved((char) (b & 0xFF))) {
+        out.append((char) b);
       } else {
-        for (var b : String.valueOf(ch).getBytes(java.nio.charset.StandardCharsets.UTF_8)) {
-          out.append('%').append(HEX[(b >> 4) & 0xF]).append(HEX[b & 0xF]);
-        }
+        out.append('%').append(HEX[(b >> 4) & 0xF]).append(HEX[b & 0xF]);
       }
     }
     return out.toString();

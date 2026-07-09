@@ -47,18 +47,9 @@ await rm(outputDir, { force: true, recursive: true });
 await rm(zipPath, { force: true });
 await mkdir(outputDir, { recursive: true });
 
-for (const [source, target] of extensionFiles) {
-  await mkdir(dirname(resolve(outputDir, target)), { recursive: true });
-  await cp(source, resolve(outputDir, target), { recursive: true });
-}
-
-for (const [source, target] of [...wasmFiles, ...iconFiles]) {
+for (const [source, target] of packageFiles) {
   await mkdir(dirname(resolve(outputDir, target)), { recursive: true });
   await cp(source, resolve(outputDir, target));
-}
-
-if (existsSync(optionalNotice)) {
-  await cp(optionalNotice, resolve(outputDir, 'NOTICE'));
 }
 
 await validatePackageContents(outputDir);

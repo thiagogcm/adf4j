@@ -128,9 +128,7 @@
       }
       setButtonState(button, 'failed', error);
     } finally {
-      if (activeController?.signal.aborted || activeController) {
-        activeController = undefined;
-      }
+      activeController = undefined;
     }
   }
 
@@ -159,16 +157,8 @@
   }
 
   function sendConvertMessage(adfJson, context) {
-    return new Promise((resolve, reject) => {
-      chrome.runtime.sendMessage({ type: MESSAGE_TYPE, adfJson, context }, (response) => {
-        const runtimeError = chrome.runtime.lastError;
-        if (runtimeError) {
-          reject(new Error(runtimeError.message));
-          return;
-        }
-        resolve(response);
-      });
-    });
+    // Promise-form sendMessage rejects where the callback form would set chrome.runtime.lastError.
+    return chrome.runtime.sendMessage({ type: MESSAGE_TYPE, adfJson, context });
   }
 
   function setButtonState(button, state, error) {

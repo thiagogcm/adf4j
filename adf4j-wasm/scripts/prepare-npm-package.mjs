@@ -13,12 +13,18 @@ if (!version) {
 
 await mkdir(output, { recursive: true });
 
-await copyFile(resolve(root, 'adf4j-wasm/src/npm/package.json'), resolve(output, 'package.json'));
-await copyFile(resolve(root, 'adf4j-wasm/src/npm/README.md'), resolve(output, 'README.md'));
-await copyFile(resolve(root, 'adf4j-wasm/src/npm/adf4j-wasm.mjs'), resolve(output, 'adf4j-wasm.mjs'));
-await copyFile(resolve(root, 'adf4j-wasm/src/npm/adf4j-wasm.d.ts'), resolve(output, 'adf4j-wasm.d.ts'));
-await copyFile(resolve(root, 'adf4j-wasm/src/npm/vite.mjs'), resolve(output, 'vite.mjs'));
-await copyFile(resolve(root, 'adf4j-wasm/src/npm/vite.d.ts'), resolve(output, 'vite.d.ts'));
+const npmSourceDir = resolve(root, 'adf4j-wasm/src/npm');
+const npmSourceFiles = [
+  'package.json',
+  'README.md',
+  'adf4j-wasm.mjs',
+  'adf4j-wasm.d.ts',
+  'vite.mjs',
+  'vite.d.ts',
+];
+for (const file of npmSourceFiles) {
+  await copyFile(resolve(npmSourceDir, file), resolve(output, file));
+}
 await copyFile(resolve(root, 'adf4j-wasm/target/adf4j-wasm.js.wasm'), resolve(output, 'adf4j-wasm.js.wasm'));
 await copyFile(resolve(root, 'LICENSE'), resolve(output, 'LICENSE'));
 

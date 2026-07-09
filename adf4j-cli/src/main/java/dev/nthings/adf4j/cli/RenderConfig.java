@@ -19,6 +19,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
@@ -48,10 +49,12 @@ final class RenderConfig {
     builder.imageSizeAttributes(args.has("image-size"));
     builder.htmlVisualMarks(args.has("html-visual-marks"));
     if (args.value("unknown-nodes") != null) {
-      builder.unknownNodePolicy(unknownNodePolicy(args.value("unknown-nodes")));
+      builder.unknownNodePolicy(
+          enumOption(UnknownNodePolicy.values(), args.value("unknown-nodes"), "--unknown-nodes"));
     }
     if (args.value("table-fallback") != null) {
-      builder.tableFallback(tableFallback(args.value("table-fallback")));
+      builder.tableFallback(
+          enumOption(TableFallback.values(), args.value("table-fallback"), "--table-fallback"));
     }
 
     builder.mediaResolver(mediaResolver(args, json));
@@ -70,27 +73,18 @@ final class RenderConfig {
 
   // ---- enum options -------------------------------------------------------
 
-  private static UnknownNodePolicy unknownNodePolicy(String value) {
-    return switch (value) {
-      case "placeholder" -> UnknownNodePolicy.PLACEHOLDER;
-      case "skip" -> UnknownNodePolicy.SKIP;
-      case "fail" -> UnknownNodePolicy.FAIL;
-      case "preserve-raw" -> UnknownNodePolicy.PRESERVE_RAW;
-      default ->
-          throw CliException.usage(
-              "--unknown-nodes must be one of: placeholder, skip, fail, preserve-raw");
-    };
-  }
-
-  private static TableFallback tableFallback(String value) {
-    return switch (value) {
-      case "gfm-promote-first-row" -> TableFallback.GFM_PROMOTE_FIRST_ROW;
-      case "gfm-empty-header" -> TableFallback.GFM_EMPTY_HEADER;
-      case "html" -> TableFallback.HTML;
-      default ->
-          throw CliException.usage(
-              "--table-fallback must be one of: gfm-promote-first-row, gfm-empty-header, html");
-    };
+  // The CLI spelling of an enum option is the kebab-case of its constant name. Takes the
+  // constants (not the Class) so the native/wasm images stay reflection-free.
+  private static <E extends Enum<E>> E enumOption(E[] constants, String value, String flag) {
+    var allowed = new ArrayList<String>();
+    for (var constant : constants) {
+      var name = constant.name().toLowerCase(Locale.ROOT).replace('_', '-');
+      if (name.equals(value)) {
+        return constant;
+      }
+      allowed.add(name);
+    }
+    throw CliException.usage(flag + " must be one of: " + String.join(", ", allowed));
   }
 
   // ---- URL-rewriting resolvers (template + map, map wins) -----------------
