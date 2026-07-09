@@ -4,15 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.nthings.adf4j.AdfToMarkdown;
 import dev.nthings.adf4j.options.MarkdownOptions;
-import java.util.List;
-import org.commonmark.ext.gfm.alerts.AlertsExtension;
-import org.commonmark.ext.gfm.strikethrough.StrikethroughExtension;
-import org.commonmark.ext.gfm.tables.TablesExtension;
-import org.commonmark.ext.heading.anchor.HeadingAnchorExtension;
-import org.commonmark.ext.image.attributes.ImageAttributesExtension;
-import org.commonmark.ext.task.list.items.TaskListItemsExtension;
-import org.commonmark.parser.Parser;
-import org.commonmark.renderer.html.HtmlRenderer;
 import org.jsoup.Jsoup;
 import org.junit.jupiter.api.Test;
 
@@ -27,27 +18,20 @@ class CommonMarkOracleTests {
   private static final AdfToMarkdown VISUAL_CONVERTER =
       AdfToMarkdown.with(MarkdownOptions.defaults().withHtmlVisualMarks(true));
 
-  // Same extension list as AdfRenderer.commonmarkExtensions().
-  private static final List<org.commonmark.Extension> EXTENSIONS =
-      List.of(
-          TablesExtension.create(),
-          StrikethroughExtension.create(),
-          TaskListItemsExtension.create(),
-          HeadingAnchorExtension.create(),
-          ImageAttributesExtension.create(),
-          AlertsExtension.create());
-
-  private static final Parser PARSER = Parser.builder().extensions(EXTENSIONS).build();
-  private static final HtmlRenderer HTML_RENDERER =
-      HtmlRenderer.builder().extensions(EXTENSIONS).sanitizeUrls(false).build();
-
   private static String toHtml(String adfJson) {
-    var markdown = CONVERTER.toMarkdown(adfJson);
-    return HTML_RENDERER.render(PARSER.parse(markdown));
+    return CommonMarkTestSupport.toHtml(CONVERTER.toMarkdown(adfJson));
   }
 
   private static String toHtmlVisual(String adfJson) {
-    return HTML_RENDERER.render(PARSER.parse(VISUAL_CONVERTER.toMarkdown(adfJson)));
+    return CommonMarkTestSupport.toHtml(VISUAL_CONVERTER.toMarkdown(adfJson));
+  }
+
+  private static String roundTripMarkdown(String adfJson) {
+    return CommonMarkTestSupport.roundTripMarkdown(CONVERTER.toMarkdown(adfJson));
+  }
+
+  private static String roundTripToHtml(String adfJson) {
+    return CommonMarkTestSupport.roundTripToHtml(CONVERTER.toMarkdown(adfJson));
   }
 
   @Test
@@ -512,6 +496,103 @@ class CommonMarkOracleTests {
 
     assertThat(document.select("div.markdown-alert")).as("the alert container exists").hasSize(1);
     assertThat(document.selectFirst("div.markdown-alert").text()).contains("Heads up.");
+  }
+
+  @Test
+  void panel_with_nested_list_round_trips_through_commonmark_markdown_renderer() {
+    var adf =
+        """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {"type": "panel", "attrs": {"panelType": "info"},
+             "content": [{"type": "bulletList", "content": [
+               {"type": "listItem", "content": [
+                 {"type": "paragraph", "content": [{"type": "text", "text": "Alpha"}]}
+               ]},
+               {"type": "listItem", "content": [
+                 {"type": "paragraph", "content": [{"type": "text", "text": "Beta"}]}
+               ]}
+             ]}]}
+          ]
+        }
+        """;
+
+    var markdown = roundTripMarkdown(adf);
+    var document = Jsoup.parse(roundTripToHtml(adf));
+
+    assertThat(markdown).contains("> [!NOTE]").contains("> - Alpha").contains("> - Beta");
+    assertThat(document.select("div.markdown-alert")).hasSize(1);
+    assertThat(document.select("div.markdown-alert li").eachText())
+        .containsExactly("Alpha", "Beta");
+  }
+
+  @Test
+  void task_list_round_trips_through_commonmark_markdown_renderer() {
+    var adf =
+        """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {"type": "taskList", "attrs": {"localId": "list-1"}, "content": [
+              {"type": "taskItem", "attrs": {"localId": "item-1", "state": "DONE"},
+               "content": [{"type": "text", "text": "Parent"}]},
+              {"type": "taskList", "attrs": {"localId": "list-2"}, "content": [
+                {"type": "taskItem", "attrs": {"localId": "item-2", "state": "TODO"},
+                 "content": [{"type": "text", "text": "Child"}]}
+              ]}
+            ]}
+          ]
+        }
+        """;
+
+    var markdown = roundTripMarkdown(adf);
+    var document = Jsoup.parse(roundTripToHtml(adf));
+
+    assertThat(markdown).contains("- [x] Parent").contains("  - [ ] Child");
+    assertThat(document.select("li").eachText()).containsExactly("Parent Child", "Child");
+    assertThat(document.select("input[type=checkbox]")).hasSize(2);
+    assertThat(document.select("input[checked]")).hasSize(1);
+  }
+
+  @Test
+  void html_table_fallback_cell_keeps_task_list_and_alert_after_round_trip() {
+    var adf =
+        """
+        {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {"type": "table", "content": [
+              {"type": "tableRow", "content": [
+                {"type": "tableCell", "attrs": {"colspan": 2}, "content": [
+                  {"type": "taskList", "attrs": {"localId": "tasks"}, "content": [
+                    {"type": "taskItem", "attrs": {"localId": "task-1", "state": "DONE"},
+                     "content": [{"type": "text", "text": "Checked in table"}]},
+                    {"type": "taskItem", "attrs": {"localId": "task-2", "state": "TODO"},
+                     "content": [{"type": "text", "text": "Open in table"}]}
+                  ]},
+                  {"type": "panel", "attrs": {"panelType": "warning"},
+                   "content": [{"type": "paragraph",
+                     "content": [{"type": "text", "text": "Alert in table"}]}]}
+                ]}
+              ]}
+            ]}
+          ]
+        }
+        """;
+
+    var document = Jsoup.parse(roundTripToHtml(adf));
+
+    assertThat(document.select("table")).hasSize(1);
+    assertThat(document.select("td[colspan=2]")).hasSize(1);
+    assertThat(document.select("td li").eachText())
+        .containsExactly("Checked in table", "Open in table");
+    assertThat(document.select("td input[type=checkbox]")).hasSize(2);
+    assertThat(document.select("td div.markdown-alert")).hasSize(1);
+    assertThat(document.selectFirst("td div.markdown-alert").text()).contains("Alert in table");
   }
 
   @Test

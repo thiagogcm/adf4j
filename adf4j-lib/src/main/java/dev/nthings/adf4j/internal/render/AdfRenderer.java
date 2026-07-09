@@ -129,7 +129,7 @@ public final class AdfRenderer implements BlockRecursion {
         TaskListItemsExtension.create(),
         HeadingAnchorExtension.create(),
         ImageAttributesExtension.create(),
-        AlertsExtension.create());
+        AlertsExtension.builder().allowNestedAlerts(true).build());
   }
 
   public RenderOutput render(
