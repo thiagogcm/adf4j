@@ -47,7 +47,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up GraalVM JDK 25
-        uses: graalvm/setup-graalvm@8c5543b71f44568342e106336639979e94a8f6de # v1.6.1
+        uses: graalvm/setup-graalvm@186d0493a2df5eb62df5ecc498883d18fd58c303 # v1.6.2
         with:
           java-version: "25"
           distribution: "graalvm"
@@ -122,7 +122,7 @@ jobs:
           ref: ${{ needs.prepare.outputs.sha }}
 
       - name: Set up GraalVM JDK 25
-        uses: graalvm/setup-graalvm@8c5543b71f44568342e106336639979e94a8f6de # v1.6.1
+        uses: graalvm/setup-graalvm@186d0493a2df5eb62df5ecc498883d18fd58c303 # v1.6.2
         with:
           java-version: "25"
           distribution: "graalvm"
@@ -190,7 +190,7 @@ jobs:
           ref: ${{ needs.prepare.outputs.sha }}
 
       - name: Set up GraalVM JDK 25
-        uses: graalvm/setup-graalvm@8c5543b71f44568342e106336639979e94a8f6de # v1.6.1
+        uses: graalvm/setup-graalvm@186d0493a2df5eb62df5ecc498883d18fd58c303 # v1.6.2
         with:
           java-version: "25"
           distribution: "graalvm"
@@ -274,7 +274,7 @@ jobs:
           fetch-depth: 0 # JReleaser needs full history for the changelog
 
       - name: Set up GraalVM JDK 25
-        uses: graalvm/setup-graalvm@8c5543b71f44568342e106336639979e94a8f6de # v1.6.1
+        uses: graalvm/setup-graalvm@186d0493a2df5eb62df5ecc498883d18fd58c303 # v1.6.2
         with:
           java-version: "25"
           distribution: "graalvm"
@@ -381,7 +381,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up GraalVM JDK 25
-        uses: graalvm/setup-graalvm@8c5543b71f44568342e106336639979e94a8f6de # v1.6.1
+        uses: graalvm/setup-graalvm@186d0493a2df5eb62df5ecc498883d18fd58c303 # v1.6.2
         with:
           java-version: "25"
           distribution: "graalvm"
