@@ -168,6 +168,8 @@ Focused renderers handle tables, lists, cards, macros, media, and marks. They re
 
 List subtrees render relative to their own starting column. Each parent list item indents its child blocks once by the width of its marker and following space, including lists inside panels, blockquotes, and expand containers. Task checkboxes are paragraph content, so their continuation indent comes from the two-character bullet prefix. HTML table lists preserve ordered-list starting numbers and render nested Markdown without inherited list indentation.
 
+Adjacent lists of the same Markdown kind are separated by an invisible HTML comment, because blank lines alone merge them into one loose list. Empty list items are retained in HTML tables so their numbering and structure survive conversion.
+
 ### GFM fallback strategy
 
 The renderer prefers native GFM and falls back only when needed:

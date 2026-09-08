@@ -9,6 +9,7 @@
   let lastHref = location.href;
   let scheduled = false;
   let activeController;
+  let resetTimer;
 
   patchHistory('pushState');
   patchHistory('replaceState');
@@ -50,8 +51,9 @@
     }
 
     const button = ensureButton();
+    const pageChanged = button.dataset.pageId !== pageId;
     button.dataset.pageId = pageId;
-    if (href !== lastHref) {
+    if (href !== lastHref || pageChanged) {
       activeController?.abort();
       activeController = undefined;
       setButtonState(button, 'idle');
@@ -88,29 +90,38 @@
     }
 
     activeController?.abort();
-    activeController = new AbortController();
+    const controller = new AbortController();
+    activeController = controller;
+    const href = location.href;
+    const pageId = helpers.extractPageIdFromDocument(document, href);
+    const isCurrent = () => activeController === controller
+      && !controller.signal.aborted
+      && button.isConnected
+      && location.href === href
+      && helpers.extractPageIdFromDocument(document, href) === pageId;
     setButtonState(button, 'copying');
 
     try {
-      const pageId = button.dataset.pageId || helpers.extractPageIdFromDocument(document, location.href);
       if (!pageId) {
         throw new Error('Could not identify a Confluence page id.');
       }
 
       // The attachment inventory is best-effort: without it, links fall back to placeholders.
       const [page, attachments] = await Promise.all([
-        fetchJson(helpers.buildPageApiUrl(pageId, location.href), activeController.signal),
-        fetchAttachments(pageId, activeController.signal).catch((error) => {
+        fetchJson(helpers.buildPageApiUrl(pageId, href), controller.signal),
+        fetchAttachments(pageId, href, controller.signal).catch((error) => {
           if (error?.name === 'AbortError') {
             throw error;
           }
           return undefined;
         }),
       ]);
+      if (!isCurrent()) return;
       const conversion = await sendConvertMessage(
         helpers.extractAdfBody(page),
         attachments && { attachments },
       );
+      if (!isCurrent()) return;
       if (!conversion?.ok) {
         throw new Error(conversion?.error || 'adf4j conversion failed.');
       }
@@ -120,15 +131,16 @@
         conversion.markdown,
       );
       await navigator.clipboard.writeText(markdown);
-      setButtonState(button, 'copied');
+      if (isCurrent()) setButtonState(button, 'copied');
     } catch (error) {
+      if (!isCurrent()) return;
       if (error?.name === 'AbortError') {
         setButtonState(button, 'idle');
         return;
       }
       setButtonState(button, 'failed', error);
     } finally {
-      activeController = undefined;
+      if (activeController === controller) activeController = undefined;
     }
   }
 
@@ -144,14 +156,14 @@
     return response.json();
   }
 
-  async function fetchAttachments(pageId, signal) {
+  async function fetchAttachments(pageId, href, signal) {
     const attachments = [];
-    let url = helpers.buildAttachmentsApiUrl(pageId, location.href);
+    let url = helpers.buildAttachmentsApiUrl(pageId, href);
     // The cap only guards against a pathological pagination loop.
     for (let fetched = 0; url && fetched < 20; fetched++) {
       const inventoryPage = await fetchJson(url, signal);
-      attachments.push(...helpers.extractAttachments(inventoryPage, location.href));
-      url = helpers.nextAttachmentsPageUrl(inventoryPage, location.href);
+      attachments.push(...helpers.extractAttachments(inventoryPage, href));
+      url = helpers.nextAttachmentsPageUrl(inventoryPage, href);
     }
     return attachments;
   }
@@ -162,6 +174,7 @@
   }
 
   function setButtonState(button, state, error) {
+    window.clearTimeout(resetTimer);
     button.dataset.state = state;
     button.disabled = state === 'copying';
     button.setAttribute('aria-busy', state === 'copying' ? 'true' : 'false');
@@ -192,7 +205,7 @@
   }
 
   function resetButtonSoon(button) {
-    window.setTimeout(() => {
+    resetTimer = window.setTimeout(() => {
       if (button.isConnected && button.dataset.state !== 'copying') {
         setButtonState(button, 'idle');
       }

@@ -10,7 +10,6 @@ import java.util.ArrayList;
 import java.util.List;
 import org.jsoup.nodes.Element;
 import org.jsoup.parser.Tag;
-import org.jspecify.annotations.Nullable;
 
 /// The HTML table-fallback renderer: builds a jsoup `<table>` for ADF tables GFM pipe syntax can't
 /// express (colspan/rowspan, a number column, non-paragraph cell content, non-canonical header
@@ -122,9 +121,7 @@ final class HtmlTableRenderer {
     }
     for (var item : items) {
       var rendered = renderHtmlListItem(item, context, recursion);
-      if (rendered != null) {
-        list.appendChild(rendered);
-      }
+      list.appendChild(rendered);
     }
     if (list.children().isEmpty()) {
       return "";
@@ -132,7 +129,7 @@ final class HtmlTableRenderer {
     return HtmlFragments.outerHtml(list);
   }
 
-  private @Nullable Element renderHtmlListItem(
+  private Element renderHtmlListItem(
       ListItem item, RendererState context, BlockRecursion recursion) {
     var fragments = new ArrayList<String>();
     for (var block : item.content()) {
@@ -141,9 +138,6 @@ final class HtmlTableRenderer {
       if (rendered != null && !rendered.isBlank()) {
         fragments.add(rendered);
       }
-    }
-    if (fragments.isEmpty()) {
-      return null;
     }
     var element = new Element(Tag.valueOf("li"), "");
     element.html(String.join("<br>", fragments));

@@ -6,9 +6,44 @@ import static dev.nthings.adf4j.cli.CliTestSupport.run;
 import static dev.nthings.adf4j.cli.CliTestSupport.runNoInput;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 class GlobalOptionsTest {
+
+  @ParameterizedTest
+  @CsvSource({
+    "convert,write",
+    "convert,flush",
+    "analyze,write",
+    "analyze,flush",
+    "validate,write",
+    "validate,flush"
+  })
+  void stdout_failures_are_io_errors(String command, String failure) {
+    var output =
+        new OutputStream() {
+          @Override
+          public void write(int value) throws IOException {
+            if (failure.equals("write")) {
+              throw new IOException("broken output");
+            }
+          }
+
+          @Override
+          public void flush() throws IOException {
+            if (failure.equals("flush")) {
+              throw new IOException("broken flush");
+            }
+          }
+        };
+    var result = run(SIMPLE_DOC, output, command);
+    assertThat(result.exitCode()).isEqualTo(ExitCodes.IO);
+    assertThat(result.err()).contains("failed to write stdout").doesNotContain("internal error");
+  }
 
   @Test
   void versionLongAndShortPrintTheVersion() {

@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.function.Consumer;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -34,6 +35,96 @@ import org.junit.jupiter.params.provider.ValueSource;
 class ListStructureOracleTests {
 
   private static final AdfToMarkdown CONVERTER = AdfToMarkdown.create();
+
+  @ParameterizedTest
+  @ValueSource(strings = {"document", "panel", "listItem", "blockTask"})
+  void adjacent_lists_keep_their_boundaries_and_numbering(String container) {
+    var content =
+        List.<AdfBlock>of(
+            new OrderedList(1, List.of(new ListItem(List.of(paragraph("Alpha"))))),
+            paragraph(""),
+            new OrderedList(10, List.of(new ListItem(List.of(paragraph("Beta"))))));
+    var document =
+        new AdfDocument(
+            1,
+            switch (container) {
+              case "panel" -> List.of(new Panel("info", content));
+              case "listItem" -> List.of(new BulletList(List.of(new ListItem(content))));
+              case "blockTask" ->
+                  List.of(new TaskList(List.of(new BlockTaskItem("TODO", content))));
+              default -> content;
+            });
+    assertHtml(
+        document,
+        html -> {
+          var lists = html.select("ol");
+          assertThat(lists).hasSize(2);
+          assertThat(lists.get(0).select("li").eachText()).containsExactly("Alpha");
+          assertThat(lists.get(1).attr("start")).isEqualTo("10");
+          assertThat(lists.get(1).select("li").eachText()).containsExactly("Beta");
+        });
+  }
+
+  @Test
+  void html_table_keeps_empty_ordered_items_including_an_entirely_empty_list() {
+    var empty = new ListItem(List.of(paragraph("")));
+    var cell =
+        new TableCell(
+            false,
+            1,
+            1,
+            null,
+            List.of(
+                new OrderedList(3, List.of(empty, new ListItem(List.of(paragraph("Beta"))), empty)),
+                new OrderedList(8, List.of(empty))));
+    assertHtml(
+        new Table(false, List.of(new TableRow(List.of(cell)))),
+        html -> {
+          var lists = html.select("td > ol");
+          assertThat(lists.eachAttr("start")).containsExactly("3", "8");
+          assertThat(lists.get(0).select("li"))
+              .extracting(Element::text)
+              .containsExactly("", "Beta", "");
+          assertThat(lists.get(1).select("li")).extracting(Element::text).containsExactly("");
+        });
+  }
+
+  @Test
+  void adjacent_bullets_tasks_and_decisions_remain_separate_lists() {
+    var document =
+        new AdfDocument(
+            1,
+            List.of(
+                new BulletList(List.of(new ListItem(List.of(paragraph("Bullet"))))),
+                new TaskList(List.of(task("DONE", "Task"))),
+                new DecisionList(List.of(new DecisionItem("DECIDED", List.of(text("Decision")))))));
+    assertHtml(
+        document,
+        html -> {
+          var lists = html.select("body > ul");
+          assertThat(lists).hasSize(3);
+          assertThat(lists.eachText())
+              .containsExactly("Bullet", "Task", "[decision:DECIDED] Decision");
+          assertThat(lists.get(1).select("input[checked]")).hasSize(1);
+        });
+  }
+
+  @Test
+  void sibling_nested_task_lists_remain_separate_under_the_same_parent() {
+    var root =
+        new TaskList(
+            List.of(
+                task("DONE", "Parent"),
+                new TaskList(List.of(task("TODO", "First"))),
+                new TaskList(List.of(task("TODO", "Second")))));
+    assertHtml(
+        root,
+        html -> {
+          assertThat(html.select("body > ul > li > ul").eachText())
+              .containsExactly("First", "Second");
+          assertThat(html.select("input[type=checkbox]")).hasSize(3);
+        });
+  }
 
   @ParameterizedTest
   @ValueSource(strings = {"panel", "blockquote", "expand"})
@@ -212,7 +303,11 @@ class ListStructureOracleTests {
   }
 
   private static void assertHtml(AdfBlock block, Consumer<Document> assertions) {
-    var markdown = CONVERTER.convert(new AdfDocument(1, List.of(block))).body();
+    assertHtml(new AdfDocument(1, List.of(block)), assertions);
+  }
+
+  private static void assertHtml(AdfDocument document, Consumer<Document> assertions) {
+    var markdown = CONVERTER.convert(document).body();
     assertions.accept(Jsoup.parse(CommonMarkTestSupport.toHtml(markdown)));
     assertions.accept(Jsoup.parse(CommonMarkTestSupport.roundTripToHtml(markdown)));
   }

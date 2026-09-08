@@ -2,6 +2,7 @@ package dev.nthings.adf4j.cli;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.OutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -42,10 +43,13 @@ final class CliTestSupport {
       ]}""";
 
   static synchronized Result run(String stdin, String... args) {
+    return run(stdin, new ByteArrayOutputStream(), args);
+  }
+
+  static synchronized Result run(String stdin, OutputStream out, String... args) {
     var originalIn = System.in;
     var originalOut = System.out;
     var originalErr = System.err;
-    var out = new ByteArrayOutputStream();
     var err = new ByteArrayOutputStream();
     int exit;
     try {
@@ -59,7 +63,11 @@ final class CliTestSupport {
       System.setErr(originalErr);
     }
     return new Result(
-        exit, out.toString(StandardCharsets.UTF_8), err.toString(StandardCharsets.UTF_8));
+        exit,
+        out instanceof ByteArrayOutputStream captured
+            ? captured.toString(StandardCharsets.UTF_8)
+            : "",
+        err.toString(StandardCharsets.UTF_8));
   }
 
   /// Runs the `convert` subcommand with the given stdin and extra args.

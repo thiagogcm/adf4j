@@ -24,15 +24,27 @@ final class ListRenderer {
     }
 
     var lines = new ArrayList<String>();
+    var previousWasNested = false;
     for (var item : node.content()) {
       if (item instanceof TaskItem taskItem) {
         lines.add(renderTaskItem(taskItem, context, recursion));
+        previousWasNested = false;
       } else if (item instanceof BlockTaskItem blockTaskItem) {
         lines.addAll(renderBlockTaskItemLines(blockTaskItem, context, recursion));
+        previousWasNested = false;
       } else if (item instanceof TaskList nested) {
-        lines.addAll(
+        var rendered =
             RenderBuffer.indentLines(
-                renderTaskList(nested, context, recursion), RenderBuffer.LIST_INDENT));
+                renderTaskList(nested, context, recursion), RenderBuffer.LIST_INDENT);
+        if (!rendered.isEmpty()) {
+          if (previousWasNested) {
+            lines.add("");
+            lines.add(RenderBuffer.LIST_INDENT + "<!-- -->");
+            lines.add("");
+          }
+          lines.addAll(rendered);
+          previousWasNested = true;
+        }
       }
     }
 
@@ -76,9 +88,20 @@ final class ListRenderer {
       lines.addAll(indentedBlock(first, context, recursion, RenderBuffer.LIST_INDENT));
     }
 
+    var previous = first;
     for (var index = 1; index < blocks.size(); index++) {
+      var block = blocks.get(index);
+      var rendered = indentedBlock(block, context, recursion, RenderBuffer.LIST_INDENT);
+      if (rendered.isEmpty()) {
+        continue;
+      }
       lines.add("");
-      lines.addAll(indentedBlock(blocks.get(index), context, recursion, RenderBuffer.LIST_INDENT));
+      if (needsListSeparator(previous, block)) {
+        lines.add(RenderBuffer.LIST_INDENT + "<!-- -->");
+        lines.add("");
+      }
+      lines.addAll(rendered);
+      previous = block;
     }
 
     return lines;
@@ -141,14 +164,24 @@ final class ListRenderer {
       lines.addAll(indentedBlock(first, context, recursion, childIndent));
     }
 
+    var previous = first;
     for (var index = 1; index < children.size(); index++) {
       var block = children.get(index);
+      var rendered = indentedBlock(block, context, recursion, childIndent);
+      if (rendered.isEmpty()) {
+        continue;
+      }
       // Nested sublists stay tight; any other continuation block needs a blank line so it isn't
       // soft-wrapped into the previous paragraph.
-      if (!isNestedListBlock(block)) {
+      if (needsListSeparator(previous, block)) {
+        lines.add("");
+        lines.add(childIndent + "<!-- -->");
+        lines.add("");
+      } else if (!isNestedListBlock(block)) {
         lines.add("");
       }
-      lines.addAll(indentedBlock(block, context, recursion, childIndent));
+      lines.addAll(rendered);
+      previous = block;
     }
 
     return lines;
@@ -164,6 +197,20 @@ final class ListRenderer {
         || (block instanceof OrderedList orderedList && orderedList.order() == 1)
         || block instanceof TaskList
         || block instanceof DecisionList;
+  }
+
+  // Blank lines make a Markdown list loose; they do not start a separate list of the same kind.
+  static boolean needsListSeparator(@Nullable AdfBlock previous, AdfBlock next) {
+    var kind = listKind(previous);
+    return kind != 0 && kind == listKind(next);
+  }
+
+  private static int listKind(@Nullable AdfBlock block) {
+    return switch (block) {
+      case OrderedList _ -> 1;
+      case BulletList _, TaskList _, DecisionList _ -> 2;
+      case null, default -> 0;
+    };
   }
 
   private List<String> indentedBlock(

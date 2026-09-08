@@ -38,6 +38,9 @@ final class CliIo {
     if (outputPath == null) {
       System.out.print(content);
       System.out.flush();
+      if (System.out.checkError()) {
+        throw new CliException(ExitCodes.IO, "failed to write stdout");
+      }
       return;
     }
     if (outputPath.isBlank()) {

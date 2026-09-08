@@ -204,9 +204,20 @@ public final class AdfRenderer implements BlockRecursion {
     if (blocks == null || blocks.isEmpty()) {
       return List.of();
     }
-    return blocks.stream()
-        .<String>mapMulti((child, downstream) -> renderBlock(child, context).forEach(downstream))
-        .toList();
+    var result = new ArrayList<String>();
+    @Nullable AdfBlock previous = null;
+    for (var block : blocks) {
+      var rendered = renderBlock(block, context);
+      if (rendered.stream().allMatch(String::isBlank)) {
+        continue;
+      }
+      if (ListRenderer.needsListSeparator(previous, block)) {
+        result.add("<!-- -->");
+      }
+      result.addAll(rendered);
+      previous = block;
+    }
+    return List.copyOf(result);
   }
 
   // startAtLineStart enables leading-block escaping for inlines at output column 0 (paragraphs, a
