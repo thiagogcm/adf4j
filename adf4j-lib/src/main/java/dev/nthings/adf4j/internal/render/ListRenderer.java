@@ -1,10 +1,5 @@
 package dev.nthings.adf4j.internal.render;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.BlockTaskItem;
 import dev.nthings.adf4j.ast.BulletList;
@@ -15,7 +10,10 @@ import dev.nthings.adf4j.ast.OrderedList;
 import dev.nthings.adf4j.ast.Paragraph;
 import dev.nthings.adf4j.ast.TaskItem;
 import dev.nthings.adf4j.ast.TaskList;
-
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.jspecify.annotations.Nullable;
 
 final class ListRenderer {
@@ -32,12 +30,9 @@ final class ListRenderer {
       } else if (item instanceof BlockTaskItem blockTaskItem) {
         lines.addAll(renderBlockTaskItemLines(blockTaskItem, context, recursion));
       } else if (item instanceof TaskList nested) {
-        // Recurse one level deeper so checklistPrefix indents the nested checkboxes.
-        var rendered =
-            renderTaskList(nested, context.withListDepth(context.listDepth() + 1), recursion);
-        if (!rendered.isBlank()) {
-          lines.add(rendered);
-        }
+        lines.addAll(
+            RenderBuffer.indentLines(
+                renderTaskList(nested, context, recursion), RenderBuffer.LIST_INDENT));
       }
     }
 
@@ -47,11 +42,8 @@ final class ListRenderer {
   String renderTaskItem(TaskItem node, RendererState context, BlockRecursion recursion) {
     var checked = "DONE".equalsIgnoreCase(node.state());
     var content = recursion.renderInlineNodes(node.content(), context, false);
-    var prefix = checklistPrefix(context, checked);
-    if (content.isBlank()) {
-      return prefix.stripTrailing();
-    }
-    return prefix + content;
+    return String.join(
+        "\n", prefixParagraph(checklistPrefix(checked), content, RenderBuffer.LIST_INDENT));
   }
 
   String renderBlockTaskItem(BlockTaskItem node, RendererState context, BlockRecursion recursion) {
@@ -61,7 +53,7 @@ final class ListRenderer {
   List<String> renderBlockTaskItemLines(
       BlockTaskItem node, RendererState context, BlockRecursion recursion) {
     var checked = "DONE".equalsIgnoreCase(node.state());
-    var prefix = checklistPrefix(context, checked);
+    var prefix = checklistPrefix(checked);
     var blocks = node.content();
     if (blocks.isEmpty()) {
       return List.of(prefix.stripTrailing());
@@ -70,51 +62,34 @@ final class ListRenderer {
     var first = blocks.getFirst();
     var lines = new ArrayList<String>();
     if (first instanceof Paragraph paragraph) {
-      // Checkbox markers are 2 wide, so keep the depth-based 2-space continuation indent.
+      // The checkbox belongs to the paragraph; only the bullet determines its content column.
       lines.addAll(
           prefixParagraph(
               prefix,
               recursion.renderInlineNodes(paragraph.content(), context, false),
-              RenderBuffer.LIST_INDENT.repeat(context.listDepth() + 1)));
+              RenderBuffer.LIST_INDENT));
     } else {
       lines.add(prefix.stripTrailing());
-      lines.addAll(indentedBlock(first, context, recursion));
+      if (first instanceof OrderedList orderedList && orderedList.order() != 1) {
+        lines.add("");
+      }
+      lines.addAll(indentedBlock(first, context, recursion, RenderBuffer.LIST_INDENT));
     }
 
     for (var index = 1; index < blocks.size(); index++) {
       lines.add("");
-      lines.addAll(indentedBlock(blocks.get(index), context, recursion));
+      lines.addAll(indentedBlock(blocks.get(index), context, recursion, RenderBuffer.LIST_INDENT));
     }
 
     return lines;
   }
 
-  private List<String> indentedBlock(AdfBlock block, RendererState context, BlockRecursion recursion) {
-    return RenderBuffer.indentLines(
-        RenderBuffer.joinBlocks(
-            recursion.renderBlock(block, context.withListDepth(context.listDepth() + 1))),
-        context.listDepth() + 1,
-        RenderBuffer.LIST_INDENT);
-  }
-
   String renderBulletList(BulletList node, RendererState context, BlockRecursion recursion) {
-    return renderBulletList(node, context, recursion, "");
+    return renderListItems(node.content(), context, recursion, false, 1);
   }
 
   String renderOrderedList(OrderedList node, RendererState context, BlockRecursion recursion) {
-    return renderOrderedList(node, context, recursion, "");
-  }
-
-  // parentIndent: whitespace shared by this list's markers ("" at top level), so nested lists track
-  // the parent's actual marker width rather than a fixed 2 per depth ("10. " is 4 wide).
-  private String renderBulletList(
-      BulletList node, RendererState context, BlockRecursion recursion, String parentIndent) {
-    return renderListItems(node.content(), context, recursion, false, 1, parentIndent);
-  }
-
-  private String renderOrderedList(
-      OrderedList node, RendererState context, BlockRecursion recursion, String parentIndent) {
-    return renderListItems(node.content(), context, recursion, true, node.order(), parentIndent);
+    return renderListItems(node.content(), context, recursion, true, node.order());
   }
 
   private String renderListItems(
@@ -122,21 +97,16 @@ final class ListRenderer {
       RendererState context,
       BlockRecursion recursion,
       boolean ordered,
-      int start,
-      String parentIndent) {
+      int start) {
     if (items.isEmpty()) {
       return "";
     }
 
     return IntStream.range(0, items.size())
         .mapToObj(
-            index -> renderListItem(
-                items.get(index),
-                context,
-                recursion,
-                ordered,
-                ordered ? start + index : null,
-                parentIndent))
+            index ->
+                renderListItem(
+                    items.get(index), context, recursion, ordered, ordered ? start + index : null))
         .flatMap(List::stream)
         .collect(Collectors.joining("\n"));
   }
@@ -146,12 +116,11 @@ final class ListRenderer {
       RendererState context,
       BlockRecursion recursion,
       boolean ordered,
-      @Nullable Integer number,
-      String parentIndent) {
+      @Nullable Integer number) {
     var marker = ordered && number != null ? number + "." : "-";
-    var prefix = parentIndent + marker + " ";
-    // This item's content column: parentIndent + width of "marker + ' '" (so "10. " gives 4).
-    var childIndent = parentIndent + " ".repeat(marker.length() + 1);
+    var prefix = marker + " ";
+    // Each subtree renders locally. Its parent adds the marker's width exactly once.
+    var childIndent = " ".repeat(marker.length() + 1);
 
     var children = node.content();
     if (children.isEmpty()) {
@@ -169,7 +138,7 @@ final class ListRenderer {
               childIndent));
     } else {
       lines.add(prefix.stripTrailing());
-      lines.addAll(renderListItemBlock(first, context, recursion, childIndent));
+      lines.addAll(indentedBlock(first, context, recursion, childIndent));
     }
 
     for (var index = 1; index < children.size(); index++) {
@@ -179,15 +148,17 @@ final class ListRenderer {
       if (!isNestedListBlock(block)) {
         lines.add("");
       }
-      lines.addAll(renderListItemBlock(block, context, recursion, childIndent));
+      lines.addAll(indentedBlock(block, context, recursion, childIndent));
     }
 
     return lines;
   }
 
-  // List blocks nest as tight, marker-aligned sub-lists; other continuation blocks get a blank line.
+  // List blocks nest as tight, marker-aligned sub-lists; other continuation blocks get a blank
+  // line.
   // An ordered list starting != 1 is the exception: CommonMark only lets it interrupt a paragraph
-  // tightly when it starts at 1, so otherwise it needs the blank line or it (and its order) are lost.
+  // tightly when it starts at 1, so otherwise it needs the blank line or it (and its order) are
+  // lost.
   private static boolean isNestedListBlock(AdfBlock block) {
     return block instanceof BulletList
         || (block instanceof OrderedList orderedList && orderedList.order() == 1)
@@ -195,32 +166,9 @@ final class ListRenderer {
         || block instanceof DecisionList;
   }
 
-  private List<String> renderListItemBlock(
+  private List<String> indentedBlock(
       AdfBlock block, RendererState context, BlockRecursion recursion, String childIndent) {
-    // Depth still increments for inner logic; indentation comes from childIndent, not depth.
-    var childContext = context.withListDepth(context.listDepth() + 1);
-
-    if (block instanceof BulletList bulletList) {
-      var nested = renderBulletList(bulletList, childContext, recursion, childIndent);
-      return nested.isBlank() ? List.of() : MarkdownText.splitLines(nested);
-    }
-    if (block instanceof OrderedList orderedList) {
-      var nested = renderOrderedList(orderedList, childContext, recursion, childIndent);
-      return nested.isBlank() ? List.of() : MarkdownText.splitLines(nested);
-    }
-    // childIndent already encodes the content column, so render at depth 0 and indent once.
-    if (block instanceof TaskList taskList) {
-      var nested = renderTaskList(taskList, context.withListDepth(0), recursion);
-      return nested.isBlank() ? List.of() : RenderBuffer.indentLines(nested, childIndent);
-    }
-    if (block instanceof DecisionList decisionList) {
-      var nested = renderDecisionList(decisionList, context.withListDepth(0), recursion);
-      return nested.isBlank() ? List.of() : RenderBuffer.indentLines(nested, childIndent);
-    }
-
-    // Known limitation: a list nested inside a non-list block (e.g. a panel) re-enters via
-    // renderBlock and can't receive childIndent, falling back to depth-based indent.
-    var text = RenderBuffer.joinBlocks(recursion.renderBlock(block, childContext));
+    var text = RenderBuffer.joinBlocks(recursion.renderBlock(block, context));
     return RenderBuffer.indentLines(text, childIndent);
   }
 
@@ -238,23 +186,21 @@ final class ListRenderer {
 
   String renderDecisionItem(DecisionItem node, RendererState context, BlockRecursion recursion) {
     var state = node.state();
-    var label = MarkdownText.labelToken(
-        state == null || state.isBlank() ? "decision" : "decision:" + state,
-        context.escapeParentheses());
+    var label =
+        MarkdownText.labelToken(
+            state == null || state.isBlank() ? "decision" : "decision:" + state,
+            context.escapeParentheses());
     var content = recursion.renderInlineNodes(node.content(), context, false);
-    var prefix = RenderBuffer.LIST_INDENT.repeat(Math.max(0, context.listDepth())) + "- ";
-    if (content.isBlank()) {
-      return prefix + label;
-    }
-    return prefix + label + " " + content;
+    return String.join(
+        "\n", prefixParagraph("- " + label + " ", content, RenderBuffer.LIST_INDENT));
   }
 
-  private String checklistPrefix(RendererState context, boolean checked) {
-    var indent = RenderBuffer.LIST_INDENT.repeat(Math.max(0, context.listDepth()));
-    return indent + "- [" + (checked ? "x" : " ") + "] ";
+  private String checklistPrefix(boolean checked) {
+    return "- [" + (checked ? "x" : " ") + "] ";
   }
 
-  // continuationIndent aligns the wrapped lines of the first paragraph to the item's content column.
+  // continuationIndent aligns the wrapped lines of the first paragraph to the item's content
+  // column.
   private List<String> prefixParagraph(String prefix, String text, String continuationIndent) {
     if (text.isBlank()) {
       return List.of(prefix.stripTrailing());

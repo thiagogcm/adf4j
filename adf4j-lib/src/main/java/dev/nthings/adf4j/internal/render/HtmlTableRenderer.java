@@ -89,10 +89,10 @@ final class HtmlTableRenderer {
   private String renderHtmlTableCellBlock(
       AdfBlock block, RendererState context, BlockRecursion recursion) {
     if (block instanceof BulletList bulletList) {
-      return renderHtmlList(bulletList.content(), context, recursion, false);
+      return renderHtmlList(bulletList.content(), context, recursion, false, 1);
     }
     if (block instanceof OrderedList orderedList) {
-      return renderHtmlList(orderedList.content(), context, recursion, true);
+      return renderHtmlList(orderedList.content(), context, recursion, true, orderedList.order());
     }
     return renderHtmlTableCellLeafBlock(block, context, recursion);
   }
@@ -110,12 +110,18 @@ final class HtmlTableRenderer {
   }
 
   private String renderHtmlList(
-      List<ListItem> items, RendererState context, BlockRecursion recursion, boolean ordered) {
+      List<ListItem> items,
+      RendererState context,
+      BlockRecursion recursion,
+      boolean ordered,
+      int start) {
     var tag = ordered ? "ol" : "ul";
     var list = new Element(Tag.valueOf(tag), "");
+    if (ordered && start != 1) {
+      list.attr("start", Integer.toString(start));
+    }
     for (var item : items) {
-      var rendered =
-          renderHtmlListItem(item, context.withListDepth(context.listDepth() + 1), recursion);
+      var rendered = renderHtmlListItem(item, context, recursion);
       if (rendered != null) {
         list.appendChild(rendered);
       }

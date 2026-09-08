@@ -30,22 +30,22 @@ The host application owns Confluence access, CDN URLs, page hierarchy, and macro
 
 ## Module and package structure
 
-| Artifact                | Module       | Role                                                     |
-| ----------------------- | ------------ | -------------------------------------------------------- |
-| `dev.nthings:adf4j`     | `adf4j-lib`  | JPMS library module `dev.nthings.adf4j`.                 |
-| `dev.nthings:adf4j-cli` | `adf4j-cli`  | Command-line wrapper over the library.                   |
-| `adf4j-wasm`            | `adf4j-wasm` | Optional WebAssembly packaging under the `wasm` profile. |
+| Artifact | Module | Role |
+| --- | --- | --- |
+| `dev.nthings:adf4j` | `adf4j-lib` | JPMS library module `dev.nthings.adf4j`. |
+| `dev.nthings:adf4j-cli` | `adf4j-cli` | Command-line wrapper over the library. |
+| `adf4j-wasm` | `adf4j-wasm` | Optional WebAssembly packaging under the `wasm` profile. |
 
 Exported packages:
 
-| Package                        | Contains                                                  |
-| ------------------------------ | --------------------------------------------------------- |
-| `dev.nthings.adf4j`            | `AdfToMarkdown`.                                          |
-| `dev.nthings.adf4j.ast`        | Public AST records.                                       |
-| `dev.nthings.adf4j.options`    | `MarkdownOptions`, resolver hooks, renderer hooks, enums. |
-| `dev.nthings.adf4j.result`     | `MarkdownResult`, `ParseResult`, `Diagnostic`.            |
-| `dev.nthings.adf4j.metadata`   | `ContentMetadata` and reference records.                  |
-| `dev.nthings.adf4j.confluence` | `ConfluenceRenderContext` and `ConfluenceMetadata`.       |
+| Package | Contains |
+| --- | --- |
+| `dev.nthings.adf4j` | `AdfToMarkdown`. |
+| `dev.nthings.adf4j.ast` | Public AST records. |
+| `dev.nthings.adf4j.options` | `MarkdownOptions`, resolver hooks, renderer hooks, enums. |
+| `dev.nthings.adf4j.result` | `MarkdownResult`, `ParseResult`, `Diagnostic`. |
+| `dev.nthings.adf4j.metadata` | `ContentMetadata` and reference records. |
+| `dev.nthings.adf4j.confluence` | `ConfluenceRenderContext` and `ConfluenceMetadata`. |
 
 Everything under `internal.*` is implementation detail. JPMS enforces that boundary. Integrators should use `AdfToMarkdown` plus the public option, result, metadata, Confluence, and AST types.
 
@@ -73,11 +73,11 @@ flowchart LR
 
 Phases:
 
-| Phase   | Component             | Output                                                     |
-| ------- | --------------------- | ---------------------------------------------------------- |
-| Parse   | `AdfParsingService`   | `AdfDocument` plus parse diagnostics.                      |
+| Phase | Component | Output |
+| --- | --- | --- |
+| Parse | `AdfParsingService` | `AdfDocument` plus parse diagnostics. |
 | Analyze | `AdfDocumentAnalyzer` | Heading outline, `ContentMetadata`, lossiness diagnostics. |
-| Render  | `AdfRenderer`         | Markdown body, unresolved references, macro diagnostics.   |
+| Render | `AdfRenderer` | Markdown body, unresolved references, macro diagnostics. |
 
 Analysis precedes rendering because rendering can depend on global document facts. A table-of-contents macro needs all headings, and heading anchors must be unique before the first rendered line.
 
@@ -137,11 +137,11 @@ Analysis extracts information known before rendering:
 
 `AdfDocumentAnalyzer` performs one pre-order walk with independent visitors:
 
-| Visitor                       | Purpose                                                         |
-| ----------------------------- | --------------------------------------------------------------- |
-| `AdfHeadingCollector`         | Builds heading text, anchors, and TOC level ranges.             |
-| `AdfContentMetadataExtractor` | Builds `ContentMetadata` in document order.                     |
-| `AdfLossinessCollector`       | Converts unknown-node and unknown-mark counts into diagnostics. |
+| Visitor | Purpose |
+| --- | --- |
+| `AdfHeadingCollector` | Builds heading text, anchors, and TOC level ranges. |
+| `AdfContentMetadataExtractor` | Builds `ContentMetadata` in document order. |
+| `AdfLossinessCollector` | Converts unknown-node and unknown-mark counts into diagnostics. |
 
 `ContentMetadata` is a public deliverable. It lets callers build link graphs, search indexes, navigation sidebars, and fetch plans without rendering.
 
@@ -162,9 +162,11 @@ The renderer walks the AST with the precomputed heading outline and active `Mark
 Key state:
 
 - `RenderContext` holds options, resolver hooks, heading outline, `MacroDiagnostics`, and `UnresolvedTracker`.
-- `RendererState` is an immutable cursor for list depth, table-cell context, and heading context.
+- `RendererState` is an immutable cursor for table-cell context and heading context.
 
 Focused renderers handle tables, lists, cards, macros, media, and marks. They recurse through `BlockRecursion` when nested content needs normal block or inline rendering.
+
+List subtrees render relative to their own starting column. Each parent list item indents its child blocks once by the width of its marker and following space, including lists inside panels, blockquotes, and expand containers. Task checkboxes are paragraph content, so their continuation indent comes from the two-character bullet prefix. HTML table lists preserve ordered-list starting numbers and render nested Markdown without inherited list indentation.
 
 ### GFM fallback strategy
 
@@ -231,25 +233,25 @@ Recommended lifecycle:
 
 The library targets JDK 25 and uses:
 
-| Dependency                     | Purpose                                                  |
-| ------------------------------ | -------------------------------------------------------- |
-| Jackson                        | JSON tree reading.                                       |
+| Dependency | Purpose |
+| --- | --- |
+| Jackson | JSON tree reading. |
 | CommonMark plus GFM extensions | Markdown parsing and HTML conversion for table fallback. |
-| jsoup                          | HTML table construction and serialization.               |
-| JSpecify                       | Nullness annotations.                                    |
-| SLF4J                          | Logging, especially callback failures.                   |
+| jsoup | HTML table construction and serialization. |
+| JSpecify | Nullness annotations. |
+| SLF4J | Logging, especially callback failures. |
 
 `adf4j-cli` is a thin wrapper built on [aesh](https://aeshell.github.io/). Commands are annotated classes; the aesh annotation processor generates command metadata and field accessors at compile time (plus the matching `META-INF/native-image` configs), so command parsing stays reflection-free in the native image. Jackson runs in tree mode. Release artifacts are native executables plus the optional WASM build. The CLI jar is not a fat jar.
 
 ## Key design decisions
 
-| Decision                                  | Rationale                                                | Trade-off                                                      |
-| ----------------------------------------- | -------------------------------------------------------- | -------------------------------------------------------------- |
-| Parse, analyze, render pipeline           | Rendering needs global heading and metadata facts.       | One extra tree traversal.                                      |
-| Sealed AST records                        | Compile-time exhaustiveness and immutable data.          | Adding a node type touches exhaustive switches.                |
-| Unknown nodes preserved                   | Forward compatibility with newer ADF.                    | Larger public AST surface.                                     |
-| One analysis walk with visitors           | Metadata, outline, and lossiness share traversal cost.   | Visitors must stay independent.                                |
-| Diagnostics as data                       | Callers can inspect quality without catching exceptions. | Callers must check `wasLossy()` or severity.                   |
-| Guarded resolver callbacks                | I/O and environment state stay in the host application.  | Callers must implement resolvers for real URLs and page trees. |
-| JPMS encapsulation                        | Stable public API over changeable internals.             | Internals are unavailable to integrations.                     |
-| Immutable converter with per-call options | Thread-safe reuse.                                       | Option state must be passed explicitly.                        |
+| Decision | Rationale | Trade-off |
+| --- | --- | --- |
+| Parse, analyze, render pipeline | Rendering needs global heading and metadata facts. | One extra tree traversal. |
+| Sealed AST records | Compile-time exhaustiveness and immutable data. | Adding a node type touches exhaustive switches. |
+| Unknown nodes preserved | Forward compatibility with newer ADF. | Larger public AST surface. |
+| One analysis walk with visitors | Metadata, outline, and lossiness share traversal cost. | Visitors must stay independent. |
+| Diagnostics as data | Callers can inspect quality without catching exceptions. | Callers must check `wasLossy()` or severity. |
+| Guarded resolver callbacks | I/O and environment state stay in the host application. | Callers must implement resolvers for real URLs and page trees. |
+| JPMS encapsulation | Stable public API over changeable internals. | Internals are unavailable to integrations. |
+| Immutable converter with per-call options | Thread-safe reuse. | Option state must be passed explicitly. |

@@ -17,14 +17,13 @@ import java.util.List;
 import org.jspecify.annotations.Nullable;
 
 /// The traversal cursor: a shared immutable {@link RenderContext} plus the position-dependent state
-/// that changes as the renderer descends (list depth, table scope). Transitions copy only the
+/// that changes as the renderer descends (table scope, heading scope). Transitions copy only the
 /// cursor fields and keep the same {@link RenderContext} reference.
-record RendererState(
-    RenderContext context, int listDepth, TableCellKind tableCell, boolean inHeading) {
+record RendererState(RenderContext context, TableCellKind tableCell, boolean inHeading) {
 
   static RendererState root(MarkdownOptions options, HeadingOutline headingOutline) {
     return new RendererState(
-        RenderContext.from(options, headingOutline), 0, TableCellKind.NONE, false);
+        RenderContext.from(options, headingOutline), TableCellKind.NONE, false);
   }
 
   List<HeadingReference> headings() {
@@ -100,15 +99,11 @@ record RendererState(
   }
 
   // Cursor transitions.
-  RendererState withListDepth(int depth) {
-    return new RendererState(context, depth, tableCell, inHeading);
-  }
-
   RendererState withTableCell(TableCellKind cell) {
-    return new RendererState(context, listDepth, cell, inHeading);
+    return new RendererState(context, cell, inHeading);
   }
 
   RendererState withHeading(boolean heading) {
-    return new RendererState(context, listDepth, tableCell, heading);
+    return new RendererState(context, tableCell, heading);
   }
 }
