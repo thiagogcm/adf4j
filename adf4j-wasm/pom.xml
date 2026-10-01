@@ -24,7 +24,7 @@
         <dependency>
             <groupId>org.graalvm.sdk</groupId>
             <artifactId>webimage-preview</artifactId>
-            <version>25.2.4</version>
+            <version>25.4.4.1.1</version>
         </dependency>
         <!-- JSpecify annotations are used by the WASM bridge package metadata. -->
         <dependency>
