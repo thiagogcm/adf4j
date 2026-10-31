@@ -25,7 +25,7 @@ final class TableRenderer {
   }
 
   String renderTable(Table node, RendererState context, BlockRecursion recursion) {
-    var rows = node.content();
+    var rows = node.rows();
     if (rows.isEmpty()) {
       return "";
     }
@@ -132,7 +132,7 @@ final class TableRenderer {
   }
 
   private Row renderTableRowCells(TableRow row, RendererState context, BlockRecursion recursion) {
-    var cells = row.content();
+    var cells = row.cells();
     if (cells.isEmpty()) {
       return new Row(List.of(), false);
     }
@@ -149,7 +149,7 @@ final class TableRenderer {
 
   private boolean hasHeaderCell(List<TableRow> rows) {
     for (var row : rows) {
-      for (var cell : row.content()) {
+      for (var cell : row.cells()) {
         if (cell.header()) {
           return true;
         }
@@ -160,7 +160,7 @@ final class TableRenderer {
 
   private boolean firstRowIsHeader(List<TableRow> rows) {
     for (var row : rows) {
-      var cells = row.content();
+      var cells = row.cells();
       if (cells.isEmpty()) {
         continue;
       }
@@ -176,7 +176,7 @@ final class TableRenderer {
 
   private boolean requiresHtmlTableFallback(List<TableRow> rows) {
     for (var row : rows) {
-      for (var cell : row.content()) {
+      for (var cell : row.cells()) {
         if (cell.colspan() > 1 || cell.rowspan() > 1) {
           return true;
         }

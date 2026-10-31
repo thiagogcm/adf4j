@@ -7,7 +7,8 @@ import org.jspecify.annotations.Nullable;
 /// The outcome of parsing ADF JSON: the parsed `document` (null when the input was blank or not
 /// a valid ADF root), the `issues` raised (never null), and `validAdfRoot`, true when the
 /// root parsed as a usable ADF document, including the best-effort case where the only issue is an
-/// `UNSUPPORTED_VERSION` warning.
+/// `UNSUPPORTED_VERSION` warning. An `UNPRESERVED_JSON` warning means part of the JSON is
+/// malformed in a way the document cannot hold, so writing it back would lose that part.
 public record ParseResult(
     @Nullable AdfDocument document, List<Diagnostic> issues, boolean validAdfRoot) {
 

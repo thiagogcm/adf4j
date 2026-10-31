@@ -35,6 +35,32 @@ public record MacroParams(Map<String, String> values) {
     return EMPTY;
   }
 
+  /// Flattens a raw `macroParams` object: each entry's scalar, or the scalar in its
+  /// `{"value": scalar}` envelope, as text. Non-scalars are dropped.
+  public static MacroParams from(Attributes macroParams) {
+    var values = new LinkedHashMap<String, String>();
+    for (var entry : macroParams.values().entrySet()) {
+      var resolved =
+          switch (entry.getValue()) {
+            case Map<?, ?> envelope -> scalarText(envelope.get("value"));
+            case Object scalar -> scalarText(scalar);
+          };
+      if (resolved != null) {
+        values.put(entry.getKey(), resolved);
+      }
+    }
+    return new MacroParams(values);
+  }
+
+  private static @Nullable String scalarText(@Nullable Object value) {
+    return switch (value) {
+      case String text -> text;
+      case Number number -> number.toString();
+      case Boolean bool -> bool.toString();
+      case null, default -> null;
+    };
+  }
+
   public @Nullable String value(String key) {
     return values.get(key);
   }

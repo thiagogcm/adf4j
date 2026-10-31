@@ -1,0 +1,264 @@
+### number-unknown-node-big-integer
+body: ```json\n{"type":"mystery","attrs":{"x":99999999999999999999999}}\n```
+lossy: false
+diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
+unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+pageRefs: []
+externalRefs: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### number-unknown-node-exponent
+body: ```json\n{"type":"mystery","attrs":{"x":1E+2}}\n```
+lossy: false
+diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
+unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+pageRefs: []
+externalRefs: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### number-unknown-node-huge-exponent
+body: ```json\n{"type":"mystery","attrs":{"x":1E+400}}\n```
+lossy: false
+diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
+unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+pageRefs: []
+externalRefs: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### number-unknown-node-limit-scale
+body: ```json\n{"type":"mystery","attrs":{"x":1.0E+2147483648}}\n```
+lossy: false
+diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
+unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+pageRefs: []
+externalRefs: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### number-unknown-node-limit-scale-digits
+body: ```json\n{"type":"mystery","attrs":{"x":1.230E+2147483650}}\n```
+lossy: false
+diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
+unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+pageRefs: []
+externalRefs: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### number-unknown-node-long-decimal
+body: ```json\n{"type":"mystery","attrs":{"x":1.2345678901234567890123456}}\n```
+lossy: false
+diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
+unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+pageRefs: []
+externalRefs: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### number-unknown-node-negative-zero
+body: ```json\n{"type":"mystery","attrs":{"x":0.0}}\n```
+lossy: false
+diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
+unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+pageRefs: []
+externalRefs: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### number-unknown-node-overflowing-scale
+body: ```json\n{"type":"mystery","attrs":{"x":1.00E+2147483649}}\n```
+lossy: false
+diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
+unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+pageRefs: []
+externalRefs: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### number-unknown-node-tiny-exponent
+body: ```json\n{"type":"mystery","attrs":{"x":1E-400}}\n```
+lossy: false
+diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
+unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+pageRefs: []
+externalRefs: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### number-unknown-node-trailing-zero
+body: ```json\n{"type":"mystery","attrs":{"x":1.10}}\n```
+lossy: false
+diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
+unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+pageRefs: []
+externalRefs: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### pos-extension-in-paragraph
+body: `{"type":"extension","attrs":{"extensionKey":"k"}}`
+lossy: false
+diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
+unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+pageRefs: []
+externalRefs: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### pos-inlinecard-in-doc
+body: ```json\n{"type":"inlineCard","attrs":{"url":"http://a"}}\n```
+lossy: false
+diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
+unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+pageRefs: []
+externalRefs: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### pos-inlineextension-in-doc
+body: ```json\n{"type":"inlineExtension","attrs":{"extensionKey":"k"}}\n```
+lossy: false
+diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
+unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+pageRefs: []
+externalRefs: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### pos-media-in-paragraph
+body: `{"type":"media","attrs":{"type":"external","url":"https://e.example/a.png"}}`
+lossy: false
+diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
+unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+pageRefs: []
+externalRefs: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### pos-paragraph-in-paragraph
+body: `{"type":"paragraph","content":[{"type":"text","text":"x"}]}`
+lossy: false
+diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
+unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+pageRefs: []
+externalRefs: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### pos-text-in-doc
+body: ```json\n{"type":"text","text":"x"}\n```
+lossy: false
+diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
+unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+pageRefs: []
+externalRefs: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### shape-marks-string
+body: ```json\n{"type":"text","marks":"x","text":"x"}\n```
+lossy: false
+diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
+unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+pageRefs: []
+externalRefs: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### shape-type-float
+body: ```json\n{"type":1E+8}\n```
+lossy: false
+diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
+unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+pageRefs: []
+externalRefs: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### shape-type-missing
+body: ```json\n{"content":[]}\n```
+lossy: false
+diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
+unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+pageRefs: []
+externalRefs: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### shape-type-number
+body: ```json\n{"type":5}\n```
+lossy: false
+diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
+unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+pageRefs: []
+externalRefs: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### shape-type-object
+body: ```json\n{"type":{}}\n```
+lossy: false
+diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
+unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+pageRefs: []
+externalRefs: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### unknown-node-policy.json
+body: ```json\n{"type":"mysteryBlock","content":[]}\n```
+lossy: false
+diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
+unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+pageRefs: []
+externalRefs: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []

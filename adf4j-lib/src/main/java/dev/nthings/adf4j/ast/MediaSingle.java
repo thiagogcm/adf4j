@@ -10,16 +10,39 @@ import org.jspecify.annotations.Nullable;
 /// resize hint (e.g. a percentage when `widthType` is `percentage`). These wrapper layout fields
 /// are not reflected in the Markdown output. `marks` on the wrapper decorate the whole embed, most
 /// notably a {@link Link} making the image clickable.
-public record MediaSingle(
-    @Nullable String layout,
-    @Nullable String widthType,
-    @Nullable String width,
-    List<AdfBlock> content,
-    List<AdfMark> marks)
-    implements AdfBlock {
+public record MediaSingle(Attributes attrs, List<AdfBlock> content, List<AdfMark> marks)
+    implements AdfBlock,
+        BlockquoteContent,
+        BodiedExtensionContent,
+        BodiedSyncBlockContent,
+        DocContent,
+        ExpandContent,
+        LayoutColumnContent,
+        ListItemContent,
+        NestedExpandContent,
+        PanelContent,
+        TableCellContent {
 
   public MediaSingle {
+    attrs = attrs == null ? Attributes.empty() : attrs;
     content = content == null ? List.of() : List.copyOf(content);
     marks = marks == null ? List.of() : List.copyOf(marks);
+  }
+
+  @Override
+  public String type() {
+    return "mediaSingle";
+  }
+
+  public @Nullable String layout() {
+    return attrs.text("layout");
+  }
+
+  public @Nullable String widthType() {
+    return attrs.text("widthType");
+  }
+
+  public @Nullable String width() {
+    return attrs.text("width");
   }
 }

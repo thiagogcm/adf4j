@@ -2,6 +2,7 @@ package dev.nthings.adf4j.internal.parser;
 
 import dev.nthings.adf4j.result.Diagnostic;
 import dev.nthings.adf4j.result.ParseResult;
+import java.util.ArrayList;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -9,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.StreamReadConstraints;
 import tools.jackson.core.json.JsonFactory;
+import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.json.JsonMapper;
 
 /// The parse phase: reads ADF JSON, validates the root, and maps it to an {@link AdfDocument}
@@ -39,7 +41,11 @@ public final class AdfParsingService {
             .streamReadConstraints(
                 StreamReadConstraints.builder().maxNestingDepth(MAX_NESTING_DEPTH).build())
             .build();
-    var mapper = JsonMapper.builder(factory).build();
+    // Big decimals keep every digit of a float, which a double would round or overflow.
+    var mapper =
+        JsonMapper.builder(factory)
+            .enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
+            .build();
     return new AdfParsingService(mapper, new AdfAstParser(mapper));
   }
 
@@ -61,13 +67,24 @@ public final class AdfParsingService {
       }
       // Only UNSUPPORTED_VERSION (or nothing): parse best-effort, keeping the warning in
       // diagnostics.
-      return new ParseResult(astParser.parseDocument(jsonRoot), issues, true);
-    } catch (JacksonException exception) {
+      var parsed = astParser.parse(jsonRoot);
+      return new ParseResult(parsed.document(), merged(issues, parsed.issues()), true);
+    } catch (JacksonException | NumberFormatException exception) {
+      // A number beyond what the reader can hold surfaces as NumberFormatException.
       log.error("Failed to parse ADF JSON payload: {}", exception.getMessage(), exception);
       return new ParseResult(
           null,
           List.of(new Diagnostic("INVALID_JSON", "Failed to parse ADF JSON payload.", exception)),
           false);
     }
+  }
+
+  private static List<Diagnostic> merged(List<Diagnostic> first, List<Diagnostic> second) {
+    if (second.isEmpty()) {
+      return first;
+    }
+    var merged = new ArrayList<>(first);
+    merged.addAll(second);
+    return merged;
   }
 }

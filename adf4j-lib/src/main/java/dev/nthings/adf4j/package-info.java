@@ -1,5 +1,5 @@
-/// The library's public entry point: {@link AdfToMarkdown}, which parses Atlassian Document Format
-/// JSON and renders GitHub-Flavored Markdown.
+/// The library's public entry points: {@link AdfJson} reads and writes Atlassian Document Format
+/// JSON, and {@link AdfToMarkdown} renders it as GitHub-Flavored Markdown.
 ///
 /// This package, and every package in the module, is {@link NullMarked}: types are non-null
 /// unless annotated {@link Nullable}.

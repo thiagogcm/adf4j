@@ -38,7 +38,7 @@ final class AdfLossinessCollector implements NodeVisitor {
       case MediaSingle node -> countUnknownMarks(node.marks());
       case Media node -> countUnknownMarks(node.marks());
       default -> {
-        // Other blocks carry no marks of their own.
+        // Other blocks keep their marks in the AST, but rendering ignores them by design.
       }
     }
   }
@@ -50,7 +50,7 @@ final class AdfLossinessCollector implements NodeVisitor {
       case Text node -> countUnknownMarks(node.marks());
       case MediaInline node -> countUnknownMarks(node.marks());
       default -> {
-        // Other inlines carry no marks of their own.
+        // Other inlines keep their marks in the AST, but rendering ignores them by design.
       }
     }
   }

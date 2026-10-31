@@ -19,13 +19,14 @@ import org.jspecify.annotations.Nullable;
 final class ListRenderer {
 
   String renderTaskList(TaskList node, RendererState context, BlockRecursion recursion) {
-    if (node.content().isEmpty()) {
+    var items = node.items();
+    if (items.isEmpty()) {
       return "";
     }
 
     var lines = new ArrayList<String>();
     var previousWasNested = false;
-    for (var item : node.content()) {
+    for (var item : items) {
       if (item instanceof TaskItem taskItem) {
         lines.add(renderTaskItem(taskItem, context, recursion));
         previousWasNested = false;
@@ -108,11 +109,11 @@ final class ListRenderer {
   }
 
   String renderBulletList(BulletList node, RendererState context, BlockRecursion recursion) {
-    return renderListItems(node.content(), context, recursion, false, 1);
+    return renderListItems(node.items(), context, recursion, false, 1);
   }
 
   String renderOrderedList(OrderedList node, RendererState context, BlockRecursion recursion) {
-    return renderListItems(node.content(), context, recursion, true, node.order());
+    return renderListItems(node.items(), context, recursion, true, node.order());
   }
 
   private String renderListItems(
@@ -220,12 +221,13 @@ final class ListRenderer {
   }
 
   String renderDecisionList(DecisionList node, RendererState context, BlockRecursion recursion) {
-    if (node.content().isEmpty()) {
+    var items = node.items();
+    if (items.isEmpty()) {
       return "";
     }
 
     var lines = new ArrayList<String>();
-    for (var item : node.content()) {
+    for (var item : items) {
       lines.add(renderDecisionItem(item, context, recursion));
     }
     return String.join("\n", lines);

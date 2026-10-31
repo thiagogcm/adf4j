@@ -6,10 +6,21 @@ import org.jspecify.annotations.Nullable;
 /// A synced block that carries an inlined copy of its content: the `resourceId` reference of
 /// {@link SyncBlock} plus the synced `content` blocks themselves. `resourceId` is `null` when
 /// the document omitted it.
-public record BodiedSyncBlock(@Nullable String resourceId, List<AdfBlock> content)
-    implements AdfBlock {
+public record BodiedSyncBlock(Attributes attrs, List<AdfBlock> content, List<AdfMark> marks)
+    implements AdfBlock, DocContent {
 
   public BodiedSyncBlock {
+    attrs = attrs == null ? Attributes.empty() : attrs;
     content = content == null ? List.of() : List.copyOf(content);
+    marks = marks == null ? List.of() : List.copyOf(marks);
+  }
+
+  @Override
+  public String type() {
+    return "bodiedSyncBlock";
+  }
+
+  public @Nullable String resourceId() {
+    return attrs.text("resourceId");
   }
 }

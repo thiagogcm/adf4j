@@ -1,9 +1,33 @@
 package dev.nthings.adf4j.ast;
 
+import java.util.List;
 import org.jspecify.annotations.Nullable;
 
 /// An inline emoji. `text` is the rendered glyph (e.g. the Unicode character) and `shortName` its
 /// colon code (e.g. `:smile:`); rendering prefers `text`, falling back to `shortName`. `id` is the
 /// emoji provider's identifier.
-public record Emoji(@Nullable String id, @Nullable String text, @Nullable String shortName)
-    implements AdfInline {}
+public record Emoji(Attributes attrs, List<AdfMark> marks)
+    implements AdfInline, CaptionContent, InlineContent {
+
+  public Emoji {
+    attrs = attrs == null ? Attributes.empty() : attrs;
+    marks = marks == null ? List.of() : List.copyOf(marks);
+  }
+
+  @Override
+  public String type() {
+    return "emoji";
+  }
+
+  public @Nullable String id() {
+    return attrs.text("id");
+  }
+
+  public @Nullable String text() {
+    return attrs.text("text");
+  }
+
+  public @Nullable String shortName() {
+    return attrs.text("shortName");
+  }
+}

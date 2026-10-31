@@ -12,7 +12,7 @@ This document describes adf4j internals for contributors and advanced integrator
 
 ## System context
 
-adf4j is an embeddable transformation library. It accepts an ADF JSON string or parsed `AdfDocument`, then returns Markdown plus metadata and diagnostics. It does not perform network, filesystem, or database I/O.
+adf4j is an embeddable transformation library. It accepts an ADF JSON string or parsed `AdfDocument`, then returns Markdown plus metadata and diagnostics. It also writes an `AdfDocument` back to ADF JSON. It does not perform network, filesystem, or database I/O.
 
 ```mermaid
 flowchart LR
@@ -40,14 +40,14 @@ Exported packages:
 
 | Package | Contains |
 | --- | --- |
-| `dev.nthings.adf4j` | `AdfToMarkdown`. |
+| `dev.nthings.adf4j` | `AdfToMarkdown` and `AdfJson`. |
 | `dev.nthings.adf4j.ast` | Public AST records. |
 | `dev.nthings.adf4j.options` | `MarkdownOptions`, resolver hooks, renderer hooks, enums. |
 | `dev.nthings.adf4j.result` | `MarkdownResult`, `ParseResult`, `Diagnostic`. |
 | `dev.nthings.adf4j.metadata` | `ContentMetadata` and reference records. |
 | `dev.nthings.adf4j.confluence` | `ConfluenceRenderContext` and `ConfluenceMetadata`. |
 
-Everything under `internal.*` is implementation detail. JPMS enforces that boundary. Integrators should use `AdfToMarkdown` plus the public option, result, metadata, Confluence, and AST types.
+Everything under `internal.*` is implementation detail. JPMS enforces that boundary. Integrators should use `AdfToMarkdown` and `AdfJson` plus the public option, result, metadata, Confluence, and AST types.
 
 ## The conversion pipeline
 
@@ -83,7 +83,7 @@ Analysis precedes rendering because rendering can depend on global document fact
 
 Public methods expose the pipeline at different depths:
 
-- `parse()` runs parse only.
+- `AdfJson.parse()` runs parse only.
 - `analyze()` runs parse and analyze.
 - `convert()` and `toMarkdown()` run all three phases.
 
@@ -100,8 +100,10 @@ flowchart TB
     validate --> ast["AdfAstParser"]
     ast --> known["Known type -> typed record"]
     ast --> unknown["Unknown type -> Unknown* record with raw JSON"]
+    ast --> unpreserved["Malformed JSON -> UNPRESERVED_JSON warning"]
     known --> result["ParseResult"]
     unknown --> result
+    unpreserved --> result
 ```
 
 Robustness checks:
@@ -119,12 +121,22 @@ The AST is a sealed hierarchy of immutable records:
 - `AdfBlock` covers paragraphs, headings, lists, tables, media, cards, layout, extensions, and `UnknownBlock`.
 - `AdfInline` covers text-adjacent inline constructs and `UnknownInline`.
 - `AdfMark` is a separate hierarchy for marks that decorate text and media, including `UnknownMark`.
+- `BlockCard` and `EmbedCard` are both blocks and inlines, because they occur inside paragraphs too.
+- Sealed `*Content` interfaces such as `PanelContent` name the node types the schema allows inside each container. They are stricter than the schema in two places it leaves open: `blockTaskItem` children after the second, and `mediaSingle` inside `bodiedSyncBlock`.
 
-Records defensively copy collections and normalize missing values to safe defaults. `Attributes` and `MacroParams` preserve product-specific data without tying the AST to a single Atlassian schema.
+A record mirrors its JSON node. It stores the complete `attrs` as `Attributes`, its `content` in source order, and its `marks`, whether or not the schema allows them there. Typed accessors such as `Heading.level()` and `Table.rows()` are lenient views over that data: they coerce scalars, apply defaults, and hide off-schema children, without changing what is stored. `MediaAttrs` and `CardAttrs` group the fields shared by several node types. Markdown policy stays in the renderer.
+
+Records defensively copy collections and normalize missing values to safe defaults. `Attributes` holds plain JSON values and normalizes numbers, so equal documents compare equal and numbers beyond `long` and `double` keep every digit.
 
 ### Unknown node handling
 
 Unknown block and inline nodes are preserved as raw JSON in `Unknown*` records. Rendering behavior is deferred to `UnknownNodePolicy`. Unknown marks have no standalone rendering form, so they are always dropped with a warning.
+
+### Writing
+
+`AdfJson.write` turns an `AdfDocument` back into ADF JSON with `AdfJsonWriter`, in Jackson tree mode. A parsed document writes back as the same JSON, ignoring key order, null-valued keys, and empty `attrs`, `content`, or `marks`, and comparing numbers by value. Unknown nodes and marks write their raw JSON.
+
+The parser reports anything that guarantee cannot cover as one `UNPRESERVED_JSON` warning: non-object array elements, unknown keys, and values of the wrong JSON type on structural fields. These occur only in malformed input. Duplicate keys are the one silent exception: Jackson keeps the last value before the AST sees the node.
 
 ## Phase 2: Analysis
 
@@ -237,7 +249,7 @@ The library targets JDK 25 and uses:
 
 | Dependency | Purpose |
 | --- | --- |
-| Jackson | JSON tree reading. |
+| Jackson | JSON tree reading and writing. |
 | CommonMark plus GFM extensions | Markdown parsing and HTML conversion for table fallback. |
 | jsoup | HTML table construction and serialization. |
 | JSpecify | Nullness annotations. |
@@ -252,6 +264,9 @@ The library targets JDK 25 and uses:
 | Parse, analyze, render pipeline | Rendering needs global heading and metadata facts. | One extra tree traversal. |
 | Sealed AST records | Compile-time exhaustiveness and immutable data. | Adding a node type touches exhaustive switches. |
 | Unknown nodes preserved | Forward compatibility with newer ADF. | Larger public AST surface. |
+| Records keep raw `attrs` behind typed accessors | Lossless by construction, with one source of truth. | Accessors coerce on each read. |
+| Wide `AdfBlock`/`AdfInline` children | Off-schema input stays renderable. | Record constructors accept any nesting. |
+| Sealed `*Content` interfaces derived from the schema | A construction API can reject invalid nesting at compile time, and `AdfContentModelTests` checks them against the schema. | They cover node types only: marks, position, count, and attributes need runtime checks. |
 | One analysis walk with visitors | Metadata, outline, and lossiness share traversal cost. | Visitors must stay independent. |
 | Diagnostics as data | Callers can inspect quality without catching exceptions. | Callers must check `wasLossy()` or severity. |
 | Guarded resolver callbacks | I/O and environment state stay in the host application. | Callers must implement resolvers for real URLs and page trees. |

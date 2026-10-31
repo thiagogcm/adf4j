@@ -1,5 +1,6 @@
 package dev.nthings.adf4j.cli;
 
+import dev.nthings.adf4j.AdfJson;
 import dev.nthings.adf4j.AdfToMarkdown;
 import dev.nthings.adf4j.options.MarkdownOptions;
 import dev.nthings.adf4j.result.Diagnostic;
@@ -32,7 +33,7 @@ public class ValidateCommand extends Adf4jSubcommand {
   int run() {
     var input = CliIo.readInput(file);
     var converter = AdfToMarkdown.create();
-    var parsed = converter.parse(input);
+    var parsed = AdfJson.parse(input);
     var hasError = false;
     var hasWarning = false;
     for (var issue : parsed.issues()) {

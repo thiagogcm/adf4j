@@ -19,7 +19,7 @@ import org.jspecify.annotations.Nullable;
 /// To render the same document repeatedly (e.g. under different resolvers), parse once and reuse
 /// the immutable result instead of paying the JSON parse per render:
 /// {@snippet :
-/// var parsed = converter.parse(adfJson);
+/// var parsed = AdfJson.parse(adfJson);
 /// var was = converter.convert(parsed, optionsAtT1);
 /// var now = converter.convert(parsed, optionsAtT2);
 /// }
@@ -44,11 +44,6 @@ public final class AdfToMarkdown {
   /// A converter bound to the given options.
   public static AdfToMarkdown with(MarkdownOptions options) {
     return new AdfToMarkdown(options);
-  }
-
-  /// Parses ADF JSON into an {@link AdfDocument} with diagnostics, without rendering.
-  public ParseResult parse(@Nullable String adfJson) {
-    return pipeline.parse(adfJson);
   }
 
   /// Extracts {@link ContentMetadata} (references, attachments, outline) using the bound options,
@@ -83,7 +78,7 @@ public final class AdfToMarkdown {
     return pipeline.convert(adfJson, options);
   }
 
-  /// Converts a previously {@link #parse(String) parsed} document to Markdown using the bound
+  /// Converts a document previously parsed by {@link AdfJson#parse(String)} using the bound
   /// options, carrying the parse issues into the result's diagnostics. Render one
   /// {@link ParseResult} any number of times without re-parsing. A `null`/invalid result yields an
   /// empty body (plus the configured `documentTitle`, if any) with the parse issues preserved.
@@ -98,7 +93,8 @@ public final class AdfToMarkdown {
 
   /// Converts an already-parsed {@link AdfDocument} to Markdown using the bound options. A `null`
   /// document yields an empty-body {@link MarkdownResult}. Prefer {@link #convert(ParseResult)}
-  /// when the document came from {@link #parse(String)}, so its parse issues reach the result.
+  /// when the document came from {@link AdfJson#parse(String)}, so its parse issues reach the
+  /// result.
   public MarkdownResult convert(@Nullable AdfDocument document) {
     return pipeline.convert(document, options);
   }

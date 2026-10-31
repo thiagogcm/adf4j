@@ -1,21 +1,21 @@
 package dev.nthings.adf4j.ast;
 
-import org.jspecify.annotations.Nullable;
+import java.util.List;
 
 /// The inline (in-the-flow-of-text) form of {@link Extension}, with the same identity and
 /// parameter components (`extensionType`/`extensionKey`/`text`/`macroParams`/`parameters`), but
 /// rendered within a line rather than as its own block. Custom rendering goes through the same
 /// `ExtensionRenderer` hook.
-public record InlineExtension(
-    @Nullable String extensionType,
-    @Nullable String extensionKey,
-    @Nullable String text,
-    MacroParams macroParams,
-    Attributes parameters)
-    implements AdfInline {
+public record InlineExtension(Attributes attrs, List<AdfMark> marks)
+    implements AdfInline, AdfExtension, InlineContent {
 
   public InlineExtension {
-    macroParams = macroParams == null ? MacroParams.empty() : macroParams;
-    parameters = parameters == null ? Attributes.empty() : parameters;
+    attrs = attrs == null ? Attributes.empty() : attrs;
+    marks = marks == null ? List.of() : List.copyOf(marks);
+  }
+
+  @Override
+  public String type() {
+    return "inlineExtension";
   }
 }

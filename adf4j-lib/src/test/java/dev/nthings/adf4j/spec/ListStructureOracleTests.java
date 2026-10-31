@@ -1,27 +1,17 @@
 package dev.nthings.adf4j.spec;
 
+import static dev.nthings.adf4j.testing.AdfNodes.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.nthings.adf4j.AdfToMarkdown;
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.ast.AdfInline;
-import dev.nthings.adf4j.ast.BlockTaskItem;
-import dev.nthings.adf4j.ast.Blockquote;
 import dev.nthings.adf4j.ast.BulletList;
-import dev.nthings.adf4j.ast.DecisionItem;
-import dev.nthings.adf4j.ast.DecisionList;
-import dev.nthings.adf4j.ast.Expand;
 import dev.nthings.adf4j.ast.HardBreak;
-import dev.nthings.adf4j.ast.ListItem;
 import dev.nthings.adf4j.ast.OrderedList;
-import dev.nthings.adf4j.ast.Panel;
 import dev.nthings.adf4j.ast.Paragraph;
-import dev.nthings.adf4j.ast.Table;
-import dev.nthings.adf4j.ast.TableCell;
-import dev.nthings.adf4j.ast.TableRow;
 import dev.nthings.adf4j.ast.TaskItem;
-import dev.nthings.adf4j.ast.TaskList;
 import dev.nthings.adf4j.ast.Text;
 import java.util.List;
 import java.util.function.Consumer;
@@ -41,17 +31,16 @@ class ListStructureOracleTests {
   void adjacent_lists_keep_their_boundaries_and_numbering(String container) {
     var content =
         List.<AdfBlock>of(
-            new OrderedList(1, List.of(new ListItem(List.of(paragraph("Alpha"))))),
+            orderedList(1, List.of(listItem(List.of(paragraph("Alpha"))))),
             paragraph(""),
-            new OrderedList(10, List.of(new ListItem(List.of(paragraph("Beta"))))));
+            orderedList(10, List.of(listItem(List.of(paragraph("Beta"))))));
     var document =
         new AdfDocument(
             1,
             switch (container) {
-              case "panel" -> List.of(new Panel("info", content));
-              case "listItem" -> List.of(new BulletList(List.of(new ListItem(content))));
-              case "blockTask" ->
-                  List.of(new TaskList(List.of(new BlockTaskItem("TODO", content))));
+              case "panel" -> List.of(panel("info", content));
+              case "listItem" -> List.of(bulletList(List.of(listItem(content))));
+              case "blockTask" -> List.of(taskList(List.of(blockTaskItem("TODO", content))));
               default -> content;
             });
     assertHtml(
@@ -67,18 +56,17 @@ class ListStructureOracleTests {
 
   @Test
   void html_table_keeps_empty_ordered_items_including_an_entirely_empty_list() {
-    var empty = new ListItem(List.of(paragraph("")));
+    var empty = listItem(List.of(paragraph("")));
     var cell =
-        new TableCell(
+        tableCell(
             false,
             1,
             1,
-            null,
             List.of(
-                new OrderedList(3, List.of(empty, new ListItem(List.of(paragraph("Beta"))), empty)),
-                new OrderedList(8, List.of(empty))));
+                orderedList(3, List.of(empty, listItem(List.of(paragraph("Beta"))), empty)),
+                orderedList(8, List.of(empty))));
     assertHtml(
-        new Table(false, List.of(new TableRow(List.of(cell)))),
+        table(false, List.of(tableRow(List.of(cell)))),
         html -> {
           var lists = html.select("td > ol");
           assertThat(lists.eachAttr("start")).containsExactly("3", "8");
@@ -95,9 +83,9 @@ class ListStructureOracleTests {
         new AdfDocument(
             1,
             List.of(
-                new BulletList(List.of(new ListItem(List.of(paragraph("Bullet"))))),
-                new TaskList(List.of(task("DONE", "Task"))),
-                new DecisionList(List.of(new DecisionItem("DECIDED", List.of(text("Decision")))))));
+                bulletList(List.of(listItem(List.of(paragraph("Bullet"))))),
+                taskList(List.of(task("DONE", "Task"))),
+                decisionList(List.of(decisionItem("DECIDED", List.of(text("Decision")))))));
     assertHtml(
         document,
         html -> {
@@ -112,11 +100,11 @@ class ListStructureOracleTests {
   @Test
   void sibling_nested_task_lists_remain_separate_under_the_same_parent() {
     var root =
-        new TaskList(
+        taskList(
             List.of(
                 task("DONE", "Parent"),
-                new TaskList(List.of(task("TODO", "First"))),
-                new TaskList(List.of(task("TODO", "Second")))));
+                taskList(List.of(task("TODO", "First"))),
+                taskList(List.of(task("TODO", "Second")))));
     assertHtml(
         root,
         html -> {
@@ -131,14 +119,14 @@ class ListStructureOracleTests {
   void containers_inside_two_list_levels_preserve_tasks_and_decisions(String kind) {
     var content =
         List.<AdfBlock>of(
-            new TaskList(List.of(task("DONE", "Checked"), task("TODO", "Open"))),
+            taskList(List.of(task("DONE", "Checked"), task("TODO", "Open"))),
             paragraph("Decisions"),
-            new DecisionList(List.of(new DecisionItem("DECIDED", List.of(text("Choice"))))));
+            decisionList(List.of(decisionItem("DECIDED", List.of(text("Choice"))))));
     AdfBlock container =
         switch (kind) {
-          case "panel" -> new Panel("info", content);
-          case "blockquote" -> new Blockquote(content);
-          case "expand" -> new Expand("Details", content);
+          case "panel" -> panel("info", content);
+          case "blockquote" -> blockquote(content);
+          case "expand" -> expand("Details", content);
           default -> throw new IllegalArgumentException(kind);
         };
     var selector =
@@ -165,16 +153,16 @@ class ListStructureOracleTests {
   @Test
   void nested_block_task_keeps_its_child_list_and_continuation_paragraph() {
     var root =
-        new TaskList(
+        taskList(
             List.of(
                 task("DONE", "Parent"),
-                new TaskList(
+                taskList(
                     List.of(
-                        new BlockTaskItem(
+                        blockTaskItem(
                             "TODO",
                             List.of(
                                 paragraph("Block task"),
-                                new TaskList(List.of(task("TODO", "Child"))),
+                                taskList(List.of(task("TODO", "Child"))),
                                 paragraph("Detail"),
                                 ordered(10, "Numbered", paragraph("Numbered detail"))))))));
 
@@ -197,9 +185,8 @@ class ListStructureOracleTests {
   @ValueSource(ints = {0, 10})
   void block_task_can_start_with_an_ordered_list_above_or_below_one(int start) {
     var root =
-        new TaskList(
-            List.of(
-                new BlockTaskItem("TODO", List.of(ordered(start, "First", paragraph("Detail"))))));
+        taskList(
+            List.of(blockTaskItem("TODO", List.of(ordered(start, "First", paragraph("Detail"))))));
 
     assertHtml(
         root,
@@ -217,18 +204,17 @@ class ListStructureOracleTests {
     var content =
         List.<AdfInline>of(
             text("Before"),
-            new HardBreak(),
-            new HardBreak(),
+            new HardBreak(null, null),
+            new HardBreak(null, null),
             text("# After"),
-            new HardBreak(),
+            new HardBreak(null, null),
             text("- literal"));
     AdfBlock item =
         switch (kind) {
-          case "task" -> new TaskList(List.of(new TaskItem("TODO", content)));
-          case "decision" -> new DecisionList(List.of(new DecisionItem("DECIDED", content)));
+          case "task" -> taskList(List.of(taskItem("TODO", content)));
+          case "decision" -> decisionList(List.of(decisionItem("DECIDED", content)));
           case "blockTask" ->
-              new TaskList(
-                  List.of(new BlockTaskItem("TODO", List.of(new Paragraph(content, List.of())))));
+              taskList(List.of(blockTaskItem("TODO", List.of(paragraphOf(content)))));
           default -> throw new IllegalArgumentException(kind);
         };
 
@@ -247,12 +233,12 @@ class ListStructureOracleTests {
   @ValueSource(ints = {9, 99})
   void ordered_marker_width_changes_keep_children_under_their_own_items(int start) {
     var root =
-        new OrderedList(
+        orderedList(
             start,
             List.of(
-                new ListItem(
+                listItem(
                     List.of(paragraph("First"), bullet("First child", paragraph("First detail")))),
-                new ListItem(
+                listItem(
                     List.of(
                         paragraph("Second"), bullet("Second child", paragraph("Second detail"))))));
 
@@ -281,11 +267,8 @@ class ListStructureOracleTests {
             ordered(
                 start,
                 "Inner",
-                new Panel("info", List.of(new TaskList(List.of(task("DONE", "Checked")))))));
-    var root =
-        new Table(
-            false,
-            List.of(new TableRow(List.of(new TableCell(false, 2, 1, null, List.of(lists))))));
+                panel("info", List.of(taskList(List.of(task("DONE", "Checked")))))));
+    var root = table(false, List.of(tableRow(List.of(tableCell(false, 2, 1, List.of(lists))))));
 
     assertHtml(
         root,
@@ -317,18 +300,18 @@ class ListStructureOracleTests {
   }
 
   private static Paragraph paragraph(String value) {
-    return new Paragraph(List.of(text(value)), List.of());
+    return paragraphOf(List.of(text(value)));
   }
 
   private static TaskItem task(String state, String value) {
-    return new TaskItem(state, List.of(text(value)));
+    return taskItem(state, List.of(text(value)));
   }
 
   private static BulletList bullet(String value, AdfBlock child) {
-    return new BulletList(List.of(new ListItem(List.of(paragraph(value), child))));
+    return bulletList(List.of(listItem(List.of(paragraph(value), child))));
   }
 
   private static OrderedList ordered(int start, String value, AdfBlock child) {
-    return new OrderedList(start, List.of(new ListItem(List.of(paragraph(value), child))));
+    return orderedList(start, List.of(listItem(List.of(paragraph(value), child))));
   }
 }

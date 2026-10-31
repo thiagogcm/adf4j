@@ -16,7 +16,7 @@ Analysis runs before rendering because rendering may need information from the w
 
 | Entry point        | Runs                   | Returns           | Use when                                                                 |
 | ------------------ | ---------------------- | ----------------- | ------------------------------------------------------------------------ |
-| `parse(json)`      | parse                  | `ParseResult`     | You need the typed AST and parse diagnostics.                            |
+| `AdfJson.parse(json)` | parse                  | `ParseResult`     | You need the typed AST and parse diagnostics.                            |
 | `analyze(...)`     | parse, analyze         | `ContentMetadata` | You need references, attachments, excerpts, or outline without Markdown. |
 | `convert(...)`     | parse, analyze, render | `MarkdownResult`  | You need Markdown plus metadata and diagnostics.                         |
 | `toMarkdown(json)` | parse, analyze, render | `String`          | You only need the Markdown body.                                         |
@@ -36,7 +36,8 @@ String markdown = converter.toMarkdown(adfJson);
 
 Method details:
 
-- `parse(String)` returns a `ParseResult` with an `AdfDocument`, parse diagnostics, and `validAdfRoot`.
+- `AdfJson.parse(String)` returns a `ParseResult` with an `AdfDocument`, parse diagnostics, and `validAdfRoot`.
+- `AdfJson.write(AdfDocument)` returns the document as ADF JSON.
 - `analyze(String|AdfDocument)` returns `ContentMetadata`.
 - `convert(String|ParseResult|AdfDocument)` returns `MarkdownResult`.
 - `toMarkdown(String)` is convenience for `convert(json).body()`.
@@ -44,15 +45,16 @@ Method details:
 When rendering the same document with different options, parse once:
 
 ```java
+import dev.nthings.adf4j.AdfJson;
 import dev.nthings.adf4j.result.ParseResult;
 import dev.nthings.adf4j.result.MarkdownResult;
 
-ParseResult parsed = converter.parse(adfJson);
+ParseResult parsed = AdfJson.parse(adfJson);
 MarkdownResult asOfJanuary = converter.convert(parsed, januaryOptions);
 MarkdownResult asOfToday = converter.convert(parsed, todayOptions);
 ```
 
-Prefer `convert(ParseResult, options)` over `convert(AdfDocument, options)` when the input came from `parse(...)`; the `ParseResult` carries parse diagnostics into the final result.
+Prefer `convert(ParseResult, options)` over `convert(AdfDocument, options)` when the input came from `AdfJson.parse(...)`; the `ParseResult` carries parse diagnostics into the final result.
 
 ## Results, diagnostics, and lossiness
 
@@ -324,9 +326,10 @@ Attachment macros contribute to `referencedFileIds()` only when their title reso
 The AST under `dev.nthings.adf4j.ast` is a sealed hierarchy of immutable records. Parse once and inspect the document directly:
 
 ```java
+import dev.nthings.adf4j.AdfJson;
 import dev.nthings.adf4j.ast.*;
 
-ParseResult parsed = converter.parse(adfJson);
+ParseResult parsed = AdfJson.parse(adfJson);
 if (parsed.validAdfRoot()) {
     AdfDocument doc = parsed.document();
     for (AdfBlock block : doc.content()) {
@@ -359,4 +362,4 @@ for (Page page : pages) {
 }
 ```
 
-This is the preferred pattern for per-page attachment tables, media base URLs, and page-link maps. Combine it with `parse()` plus `convert(parsed, perCallOptions)` when you need to render the same document under several option sets.
+This is the preferred pattern for per-page attachment tables, media base URLs, and page-link maps. Combine it with `AdfJson.parse()` plus `convert(parsed, perCallOptions)` when you need to render the same document under several option sets.

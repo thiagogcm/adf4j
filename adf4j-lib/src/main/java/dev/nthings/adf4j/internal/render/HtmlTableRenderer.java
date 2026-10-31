@@ -28,7 +28,7 @@ final class HtmlTableRenderer {
     var dataRowIndex = 0;
 
     for (var row : rows) {
-      var cells = row.content();
+      var cells = row.cells();
       if (cells.isEmpty()) {
         continue;
       }
@@ -88,10 +88,10 @@ final class HtmlTableRenderer {
   private String renderHtmlTableCellBlock(
       AdfBlock block, RendererState context, BlockRecursion recursion) {
     if (block instanceof BulletList bulletList) {
-      return renderHtmlList(bulletList.content(), context, recursion, false, 1);
+      return renderHtmlList(bulletList.items(), context, recursion, false, 1);
     }
     if (block instanceof OrderedList orderedList) {
-      return renderHtmlList(orderedList.content(), context, recursion, true, orderedList.order());
+      return renderHtmlList(orderedList.items(), context, recursion, true, orderedList.order());
     }
     return renderHtmlTableCellLeafBlock(block, context, recursion);
   }

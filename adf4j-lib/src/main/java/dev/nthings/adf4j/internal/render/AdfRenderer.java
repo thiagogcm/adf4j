@@ -1,6 +1,7 @@
 package dev.nthings.adf4j.internal.render;
 
 import dev.nthings.adf4j.ast.AdfBlock;
+import dev.nthings.adf4j.ast.AdfCard;
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.ast.AdfInline;
 import dev.nthings.adf4j.ast.AdfMark;
@@ -25,7 +26,6 @@ import dev.nthings.adf4j.ast.ExtensionFrame;
 import dev.nthings.adf4j.ast.HardBreak;
 import dev.nthings.adf4j.ast.Heading;
 import dev.nthings.adf4j.ast.Indentation;
-import dev.nthings.adf4j.ast.InlineCard;
 import dev.nthings.adf4j.ast.InlineExtension;
 import dev.nthings.adf4j.ast.LayoutColumn;
 import dev.nthings.adf4j.ast.LayoutSection;
@@ -192,9 +192,9 @@ public final class AdfRenderer implements BlockRecursion {
       case SyncBlock sync -> List.of(macroRenderer.renderSyncBlock(sync, context));
       case BodiedSyncBlock sync -> macroRenderer.renderBodiedSyncBlock(sync, context, this);
       case BlockCard blockCard ->
-          List.of(cardRenderer.renderBlockCard(blockCard.attrs(), context.context()));
+          List.of(cardRenderer.renderBlockCard(blockCard.cardAttrs(), context.context()));
       case EmbedCard embedCard ->
-          List.of(cardRenderer.renderEmbedCard(embedCard.attrs(), context.context()));
+          List.of(cardRenderer.renderEmbedCard(embedCard.cardAttrs(), context.context()));
       case UnknownBlock unknown -> renderUnknownBlockByPolicy(unknown, context);
     };
   }
@@ -278,9 +278,14 @@ public final class AdfRenderer implements BlockRecursion {
     return result;
   }
 
-  // Order-insensitive value equality.
+  // Order-insensitive, comparing what renders: an annotation id must not split a bold run.
   private static boolean sameMarkSet(List<AdfMark> left, List<AdfMark> right) {
-    return left.size() == right.size() && left.containsAll(right) && right.containsAll(left);
+    if (left.size() != right.size()) {
+      return false;
+    }
+    var leftKeys = left.stream().map(TextMarkRenderer::renderKey).toList();
+    var rightKeys = right.stream().map(TextMarkRenderer::renderKey).toList();
+    return leftKeys.containsAll(rightKeys) && rightKeys.containsAll(leftKeys);
   }
 
   @Override
@@ -296,7 +301,7 @@ public final class AdfRenderer implements BlockRecursion {
     return switch (node) {
       case Text text -> renderText(text, context, atLineStart);
       case HardBreak _ -> hardBreakMarker(context);
-      case InlineCard card -> cardRenderer.renderInlineCard(card.attrs(), context.context());
+      case AdfCard card -> cardRenderer.renderInlineCard(card.cardAttrs(), context.context());
       case MediaInline media -> mediaRenderer.renderMediaInline(media, context, this);
       // Attribute-derived text is escaped like literal text, honouring atLineStart.
       case Date date ->
@@ -476,7 +481,7 @@ public final class AdfRenderer implements BlockRecursion {
   }
 
   private String renderLayoutSection(LayoutSection layout, RendererState context) {
-    var columns = layout.content();
+    var columns = layout.columns();
     if (columns.isEmpty()) {
       return "";
     }

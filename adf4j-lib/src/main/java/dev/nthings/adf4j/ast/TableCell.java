@@ -8,12 +8,29 @@ import org.jspecify.annotations.Nullable;
 /// background colour (e.g. a `#rrggbb` string), or `null` when none was set. `content` holds the
 /// cell's blocks.
 public record TableCell(
-    boolean header, int colspan, int rowspan, @Nullable String background, List<AdfBlock> content)
+    boolean header, Attributes attrs, List<AdfBlock> content, List<AdfMark> marks)
     implements AdfBlock {
 
   public TableCell {
-    colspan = colspan < 1 ? 1 : colspan;
-    rowspan = rowspan < 1 ? 1 : rowspan;
+    attrs = attrs == null ? Attributes.empty() : attrs;
     content = content == null ? List.of() : List.copyOf(content);
+    marks = marks == null ? List.of() : List.copyOf(marks);
+  }
+
+  @Override
+  public String type() {
+    return header ? "tableHeader" : "tableCell";
+  }
+
+  public int colspan() {
+    return Math.max(1, attrs.integer("colspan", 1));
+  }
+
+  public int rowspan() {
+    return Math.max(1, attrs.integer("rowspan", 1));
+  }
+
+  public @Nullable String background() {
+    return attrs.text("background");
   }
 }

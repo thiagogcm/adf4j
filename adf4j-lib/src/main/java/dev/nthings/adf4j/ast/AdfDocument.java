@@ -10,4 +10,15 @@ public record AdfDocument(int version, List<AdfBlock> content) implements AdfNod
   public AdfDocument {
     content = content == null ? List.of() : List.copyOf(content);
   }
+
+  @Override
+  public String type() {
+    return "doc";
+  }
+
+  /// Always empty: ADF defines no attributes on the root.
+  @Override
+  public Attributes attrs() {
+    return Attributes.empty();
+  }
 }

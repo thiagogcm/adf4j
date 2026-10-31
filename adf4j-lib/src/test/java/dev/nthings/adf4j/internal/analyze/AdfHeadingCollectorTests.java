@@ -1,24 +1,22 @@
 package dev.nthings.adf4j.internal.analyze;
 
-import java.util.ArrayList;
-import java.util.List;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
+import static org.junit.jupiter.params.provider.Arguments.argumentSet;
 
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.ast.AdfInline;
 import dev.nthings.adf4j.ast.Heading;
+import dev.nthings.adf4j.ast.Paragraph;
 import dev.nthings.adf4j.ast.Text;
 import dev.nthings.adf4j.internal.parser.AdfAstParser;
-
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.FieldSource;
-
 import tools.jackson.databind.json.JsonMapper;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.tuple;
-import static org.junit.jupiter.params.provider.Arguments.argumentSet;
 
 class AdfHeadingCollectorTests {
 
@@ -39,7 +37,8 @@ class AdfHeadingCollectorTests {
                     }
                   ]
                   """,
-                  List.of(new ExpectedInlineNode("Code Heading", List.of("strong", "code", "em"))))),
+                  List.of(
+                      new ExpectedInlineNode("Code Heading", List.of("strong", "code", "em"))))),
           argumentSet(
               "plain text nodes pass through without synthetic marks",
               new NormalizedHeadingCase(
@@ -193,7 +192,7 @@ class AdfHeadingCollectorTests {
   @FieldSource("normalized_heading_content")
   void normalized_heading_nodes_keep_only_heading_text_that_affects_rendering(
       NormalizedHeadingCase input) throws Exception {
-    var inlineList = PARSER.parseInlines(MAPPER.readTree(input.contentJson()));
+    var inlineList = inlines(input.contentJson());
     var nodes = HeadingContent.normalizedHeadingNodes(inlineList);
 
     assertThat(nodes)
@@ -206,8 +205,8 @@ class AdfHeadingCollectorTests {
 
   @Test
   void normalized_heading_nodes_preserve_emphasis_marks() throws Exception {
-    var inlineList = PARSER.parseInlines(
-        MAPPER.readTree(
+    var inlineList =
+        inlines(
             """
             [
               {
@@ -216,7 +215,7 @@ class AdfHeadingCollectorTests {
                 "marks": [{"type": "strong"}]
               }
             ]
-            """));
+            """);
 
     var normalized = HeadingContent.normalizedHeadingNodes(inlineList);
 
@@ -231,7 +230,7 @@ class AdfHeadingCollectorTests {
   @FieldSource("heading_outline_documents")
   void collect_builds_heading_outline_from_rendered_heading_text(HeadingOutlineCase input)
       throws Exception {
-    var document = PARSER.parseDocument(MAPPER.readTree(input.adfJson()));
+    var document = PARSER.parse(MAPPER.readTree(input.adfJson())).document();
     var outline = AdfHeadingCollector.collect(document);
 
     assertThat(outline.headings())
@@ -251,7 +250,7 @@ class AdfHeadingCollectorTests {
 
   @Test
   void headings_without_any_toc_macro_are_not_toc_referenced() throws Exception {
-    var document = PARSER.parseDocument(MAPPER.readTree(adfWithHeading(2, "Getting Started")));
+    var document = PARSER.parse(MAPPER.readTree(adfWithHeading(2, "Getting Started"))).document();
     var outline = AdfHeadingCollector.collect(document);
 
     assertThat(tocReferencedFlags(document, outline)).containsExactly(false);
@@ -259,7 +258,7 @@ class AdfHeadingCollectorTests {
 
   @Test
   void a_toc_macro_marks_every_heading_in_its_level_range_as_toc_referenced() throws Exception {
-    var document = PARSER.parseDocument(MAPPER.readTree(TOC_WITH_HEADINGS));
+    var document = PARSER.parse(MAPPER.readTree(TOC_WITH_HEADINGS)).document();
     var outline = AdfHeadingCollector.collect(document);
 
     // The toc covers levels 1..2, so both the level-1 and level-2 headings are referenced.
@@ -268,7 +267,7 @@ class AdfHeadingCollectorTests {
 
   @Test
   void a_toc_macro_does_not_reference_headings_outside_its_level_range() throws Exception {
-    var document = PARSER.parseDocument(MAPPER.readTree(TOC_LEVEL_1_ONLY));
+    var document = PARSER.parse(MAPPER.readTree(TOC_LEVEL_1_ONLY)).document();
     var outline = AdfHeadingCollector.collect(document);
 
     // minLevel=maxLevel=1, so only the level-1 heading is referenced.
@@ -324,8 +323,7 @@ class AdfHeadingCollectorTests {
       """;
 
   private static String adfWithHeading(int level, String text) {
-    return
-        """
+    return """
         {
           "type": "doc",
           "version": 1,
@@ -338,7 +336,7 @@ class AdfHeadingCollectorTests {
           ]
         }
         """
-            .formatted(level, text);
+        .formatted(level, text);
   }
 
   private static String textOf(AdfInline node) {
@@ -352,5 +350,14 @@ class AdfHeadingCollectorTests {
     var types = new ArrayList<String>();
     text.marks().forEach(mark -> types.add(mark.type()));
     return List.copyOf(types);
+  }
+
+  private static List<AdfInline> inlines(String contentJson) {
+    var document =
+        "{\"type\":\"doc\",\"version\":1,\"content\":[{\"type\":\"paragraph\",\"content\":"
+            + contentJson
+            + "}]}";
+    return ((Paragraph) PARSER.parse(MAPPER.readTree(document)).document().content().getFirst())
+        .content();
   }
 }

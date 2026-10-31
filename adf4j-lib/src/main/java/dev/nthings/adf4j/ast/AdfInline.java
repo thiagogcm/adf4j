@@ -7,6 +7,8 @@ public sealed interface AdfInline extends AdfNode
     permits Text,
         HardBreak,
         InlineCard,
+        BlockCard,
+        EmbedCard,
         MediaInline,
         Date,
         Emoji,
@@ -14,4 +16,6 @@ public sealed interface AdfInline extends AdfNode
         Placeholder,
         Status,
         InlineExtension,
-        UnknownInline {}
+        UnknownInline,
+        CaptionContent,
+        InlineContent {}

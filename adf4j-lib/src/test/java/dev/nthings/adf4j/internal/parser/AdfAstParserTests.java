@@ -1,6 +1,6 @@
 package dev.nthings.adf4j.internal.parser;
 
-import java.util.List;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.AdfInline;
@@ -9,8 +9,9 @@ import dev.nthings.adf4j.ast.BlockCard;
 import dev.nthings.adf4j.ast.BodiedExtension;
 import dev.nthings.adf4j.ast.BodiedSyncBlock;
 import dev.nthings.adf4j.ast.Date;
+import dev.nthings.adf4j.ast.EmbedCard;
 import dev.nthings.adf4j.ast.Emoji;
-import dev.nthings.adf4j.ast.InlineCard;
+import dev.nthings.adf4j.ast.Extension;
 import dev.nthings.adf4j.ast.Mention;
 import dev.nthings.adf4j.ast.Paragraph;
 import dev.nthings.adf4j.ast.Status;
@@ -20,12 +21,9 @@ import dev.nthings.adf4j.ast.Text;
 import dev.nthings.adf4j.ast.UnknownBlock;
 import dev.nthings.adf4j.ast.UnknownInline;
 import dev.nthings.adf4j.ast.UnknownMark;
-
+import java.util.List;
 import org.junit.jupiter.api.Test;
-
 import tools.jackson.databind.json.JsonMapper;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 class AdfAstParserTests {
 
@@ -34,7 +32,8 @@ class AdfAstParserTests {
 
   @Test
   void unknown_block_preserves_type_and_raw_subtree() throws Exception {
-    var raw = """
+    var raw =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -43,7 +42,7 @@ class AdfAstParserTests {
           ]
         }
         """;
-    var document = parser.parseDocument(mapper.readTree(raw));
+    var document = parser.parse(mapper.readTree(raw)).document();
 
     assertThat(document.content()).hasSize(1);
     AdfBlock block = document.content().getFirst();
@@ -52,12 +51,15 @@ class AdfAstParserTests {
     assertThat(unknown.type()).isEqualTo("widget");
     assertThat(mapper.readTree(unknown.rawJson()))
         .as("raw JSON round-trip preserves the original subtree")
-        .isEqualTo(mapper.readTree("{\"type\":\"widget\",\"attrs\":{\"flavor\":\"alpha\"},\"content\":[]}"));
+        .isEqualTo(
+            mapper.readTree(
+                "{\"type\":\"widget\",\"attrs\":{\"flavor\":\"alpha\"},\"content\":[]}"));
   }
 
   @Test
   void unknown_inline_preserves_type_and_raw_subtree() throws Exception {
-    var raw = """
+    var raw =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -69,7 +71,7 @@ class AdfAstParserTests {
           ]
         }
         """;
-    var document = parser.parseDocument(mapper.readTree(raw));
+    var document = parser.parse(mapper.readTree(raw)).document();
 
     AdfBlock first = document.content().getFirst();
     assertThat(first).isInstanceOf(Paragraph.class);
@@ -85,7 +87,8 @@ class AdfAstParserTests {
 
   @Test
   void unknown_mark_preserves_type_and_raw_subtree() throws Exception {
-    var raw = """
+    var raw =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -99,7 +102,7 @@ class AdfAstParserTests {
           ]
         }
         """;
-    var document = parser.parseDocument(mapper.readTree(raw));
+    var document = parser.parse(mapper.readTree(raw)).document();
 
     var paragraph = (Paragraph) document.content().getFirst();
     var text = (Text) paragraph.content().getFirst();
@@ -114,7 +117,8 @@ class AdfAstParserTests {
 
   @Test
   void nested_task_list_parses_as_task_list_inside_task_list_content() throws Exception {
-    var raw = """
+    var raw =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -144,19 +148,22 @@ class AdfAstParserTests {
           ]
         }
         """;
-    var document = parser.parseDocument(mapper.readTree(raw));
+    var document = parser.parse(mapper.readTree(raw)).document();
 
     var taskList = (TaskList) document.content().getFirst();
     assertThat(taskList.content()).hasSize(2);
     assertThat(taskList.content().get(0)).isInstanceOf(TaskItem.class);
     AdfBlock nested = taskList.content().get(1);
-    assertThat(nested).as("a taskList nested in a taskList is preserved").isInstanceOf(TaskList.class);
+    assertThat(nested)
+        .as("a taskList nested in a taskList is preserved")
+        .isInstanceOf(TaskList.class);
     assertThat(((TaskList) nested).content()).singleElement().isInstanceOf(TaskItem.class);
   }
 
   @Test
   void parses_emoji_id_and_status_localid_and_mention_user_metadata() throws Exception {
-    var raw = """
+    var raw =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -191,7 +198,7 @@ class AdfAstParserTests {
           ]
         }
         """;
-    var document = parser.parseDocument(mapper.readTree(raw));
+    var document = parser.parse(mapper.readTree(raw)).document();
 
     var paragraph = (Paragraph) document.content().getFirst();
     var mention = (Mention) paragraph.content().get(0);
@@ -215,8 +222,9 @@ class AdfAstParserTests {
 
   @Test
   void macro_params_ignore_object_entries_without_a_scalar_value() throws Exception {
-    var raw = mapper.readTree(
-        """
+    var raw =
+        mapper.readTree(
+            """
         {
           "scalar": "ok",
           "wrapped": {"value": "yes"},
@@ -226,7 +234,16 @@ class AdfAstParserTests {
         }
         """);
 
-    var params = parser.parseMacroParams(raw);
+    var extension =
+        parser
+            .parse(
+                mapper.readTree(
+                    "{\"type\":\"doc\",\"version\":1,\"content\":[{\"type\":\"extension\","
+                        + "\"attrs\":{\"parameters\":{\"macroParams\":"
+                        + raw
+                        + "}}}]}"))
+            .document();
+    var params = ((Extension) extension.content().getFirst()).macroParams();
 
     assertThat(params.value("scalar")).isEqualTo("ok");
     assertThat(params.value("wrapped")).isEqualTo("yes");
@@ -239,7 +256,8 @@ class AdfAstParserTests {
   void attributes_preserve_array_index_positions_including_an_interior_null() throws Exception {
     // A colwidth-style array with a hole in the middle must keep its shape: index 1 stays null so
     // positional readers (e.g. column N's width) don't shift. Integral JSON numbers become Long.
-    var raw = """
+    var raw =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -257,10 +275,10 @@ class AdfAstParserTests {
           ]
         }
         """;
-    var document = parser.parseDocument(mapper.readTree(raw));
+    var document = parser.parse(mapper.readTree(raw)).document();
 
     var card = (BlockCard) document.content().getFirst();
-    var attributes = card.attrs().attrs().object("datasource").object("parameters");
+    var attributes = card.attrs().object("datasource").object("parameters");
 
     assertThat(attributes.values().get("colwidth")).isInstanceOf(List.class);
     var colwidth = (List<?>) attributes.values().get("colwidth");
@@ -272,9 +290,11 @@ class AdfAstParserTests {
 
   @Test
   void parses_bodied_extension_with_macro_params_and_nested_body() throws Exception {
-    // The local schema requires extensionType, extensionKey, and at least one block content item for
+    // The local schema requires extensionType, extensionKey, and at least one block content item
+    // for
     // bodiedExtension nodes.
-    var raw = """
+    var raw =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -300,7 +320,7 @@ class AdfAstParserTests {
         }
         """;
 
-    var document = parser.parseDocument(mapper.readTree(raw));
+    var document = parser.parse(mapper.readTree(raw)).document();
 
     var extension = (BodiedExtension) document.content().getFirst();
     assertThat(extension.extensionType()).isEqualTo("com.example.macros");
@@ -315,9 +335,11 @@ class AdfAstParserTests {
 
   @Test
   void parses_bodied_sync_block_resource_id_and_skips_non_object_content_items() throws Exception {
-    // The schema constrains bodiedSyncBlock content to block nodes. Parser tolerance still skips null
+    // The schema constrains bodiedSyncBlock content to block nodes. Parser tolerance still skips
+    // null
     // and scalar array entries without losing valid block siblings.
-    var raw = """
+    var raw =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -335,7 +357,7 @@ class AdfAstParserTests {
         }
         """;
 
-    var document = parser.parseDocument(mapper.readTree(raw));
+    var document = parser.parse(mapper.readTree(raw)).document();
 
     var syncBlock = (BodiedSyncBlock) document.content().getFirst();
     assertThat(syncBlock.resourceId()).isEqualTo("abc-123");
@@ -348,7 +370,8 @@ class AdfAstParserTests {
   void parses_card_attrs_preferring_top_level_url_over_data_url() throws Exception {
     // The schema documents top-level url/datasource and data-payload card forms; product JSON can
     // combine them, and the explicit top-level url is the render destination.
-    var raw = """
+    var raw =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -374,21 +397,24 @@ class AdfAstParserTests {
         }
         """;
 
-    var document = parser.parseDocument(mapper.readTree(raw));
+    var document = parser.parse(mapper.readTree(raw)).document();
 
     var card = (BlockCard) document.content().getFirst();
-    assertThat(card.attrs().url()).isEqualTo("https://example.com/top-level");
-    assertThat(card.attrs().title()).isEqualTo("Data title");
-    assertThat(card.attrs().localId()).isEqualTo("card-1");
-    assertThat(card.attrs().datasourceId()).isEqualTo("source-1");
-    assertThat(card.attrs().attrs().object("data").string("url")).isEqualTo("https://example.com/data");
+    assertThat(card.cardAttrs().url()).isEqualTo("https://example.com/top-level");
+    assertThat(card.cardAttrs().title()).isEqualTo("Data title");
+    assertThat(card.cardAttrs().localId()).isEqualTo("card-1");
+    assertThat(card.cardAttrs().datasourceId()).isEqualTo("source-1");
+    assertThat(card.attrs().object("data").string("url")).isEqualTo("https://example.com/data");
   }
 
   @Test
   void inline_positioned_embed_and_block_cards_degrade_to_inline_cards() throws Exception {
-    // docs/spec/structure.md lists inlineCard as the card inline node; legacy payloads can still put
-    // embedCard/blockCard inline, and the parser degrades them to InlineCard instead of dropping them.
-    var raw = """
+    // docs/spec/structure.md lists inlineCard as the card inline node; legacy payloads can still
+    // put
+    // embedCard/blockCard inline, and the parser degrades them to InlineCard instead of dropping
+    // them.
+    var raw =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -407,13 +433,14 @@ class AdfAstParserTests {
         }
         """;
 
-    var document = parser.parseDocument(mapper.readTree(raw));
+    var document = parser.parse(mapper.readTree(raw)).document();
 
     var paragraph = (Paragraph) document.content().getFirst();
-    assertThat(paragraph.content())
-        .hasSize(2)
-        .allSatisfy(inline -> assertThat(inline).isInstanceOf(InlineCard.class));
-    assertThat(((InlineCard) paragraph.content().get(0)).attrs().url()).isEqualTo("https://example.com/embed");
-    assertThat(((InlineCard) paragraph.content().get(1)).attrs().url()).isEqualTo("https://example.com/block");
+    assertThat(paragraph.content()).hasSize(2);
+    var embed = (EmbedCard) paragraph.content().get(0);
+    var block = (BlockCard) paragraph.content().get(1);
+    assertThat(embed.cardAttrs().url()).isEqualTo("https://example.com/embed");
+    assertThat(embed.attrs().string("layout")).isEqualTo("center");
+    assertThat(block.cardAttrs().url()).isEqualTo("https://example.com/block");
   }
 }

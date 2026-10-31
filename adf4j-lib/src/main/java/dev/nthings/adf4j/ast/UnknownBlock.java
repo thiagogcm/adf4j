@@ -5,4 +5,11 @@ package dev.nthings.adf4j.ast;
 /// survives parsing without data loss. How the renderer emits it is governed by an
 /// `UnknownNodePolicy`. Consumers matching on {@link AdfBlock} should keep a `default`/handle
 /// this case. See {@link UnknownInline} and {@link UnknownMark} for the inline/mark equivalents.
-public record UnknownBlock(String type, String rawJson) implements AdfBlock {}
+public record UnknownBlock(String type, String rawJson) implements AdfBlock {
+
+  /// Always empty: the node's attributes are inside `rawJson`.
+  @Override
+  public Attributes attrs() {
+    return Attributes.empty();
+  }
+}

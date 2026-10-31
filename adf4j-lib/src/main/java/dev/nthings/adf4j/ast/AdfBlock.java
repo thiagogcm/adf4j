@@ -2,6 +2,8 @@ package dev.nthings.adf4j.ast;
 
 /// A block-level ADF node. A `type` the parser does not recognize parses as {@link UnknownBlock}
 /// with its raw JSON preserved. The permits list grows with ADF (see the {@link AdfNode} note).
+/// {@link BlockCard} and {@link EmbedCard} are also {@link AdfInline}, because they occur inside
+/// paragraphs too.
 public sealed interface AdfBlock extends AdfNode
     permits Paragraph,
         Heading,
@@ -36,4 +38,17 @@ public sealed interface AdfBlock extends AdfNode
         BodiedSyncBlock,
         BlockCard,
         EmbedCard,
-        UnknownBlock {}
+        UnknownBlock,
+        BlockTaskItemContent,
+        BlockquoteContent,
+        BodiedExtensionContent,
+        BodiedSyncBlockContent,
+        DocContent,
+        ExpandContent,
+        LayoutColumnContent,
+        ListItemContent,
+        MediaSingleContent,
+        NestedExpandContent,
+        PanelContent,
+        TableCellContent,
+        TaskListContent {}

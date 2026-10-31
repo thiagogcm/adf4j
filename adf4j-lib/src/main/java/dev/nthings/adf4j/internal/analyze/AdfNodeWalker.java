@@ -75,18 +75,18 @@ final class AdfNodeWalker {
       case Caption node -> inlines(node.content());
       case Blockquote node -> blocks(node.content());
       case Panel node -> blocks(node.content());
-      case BulletList node -> blocks(node.content());
-      case OrderedList node -> blocks(node.content());
+      case BulletList node -> blocks(node.items());
+      case OrderedList node -> blocks(node.items());
       case ListItem node -> blocks(node.content());
-      case TaskList node -> blocks(node.content());
+      case TaskList node -> blocks(node.items());
       case BlockTaskItem node -> blocks(node.content());
-      case DecisionList node -> blocks(node.content());
-      case Table node -> blocks(node.content());
-      case TableRow node -> blocks(node.content());
+      case DecisionList node -> blocks(node.items());
+      case Table node -> blocks(node.rows());
+      case TableRow node -> blocks(node.cells());
       case TableCell node -> blocks(node.content());
       case Expand node -> blocks(node.content());
       case NestedExpand node -> blocks(node.content());
-      case LayoutSection node -> blocks(node.content());
+      case LayoutSection node -> blocks(node.columns());
       case LayoutColumn node -> blocks(node.content());
       case MediaSingle node -> blocks(node.content());
       case MediaGroup node -> blocks(node.content());
@@ -94,7 +94,8 @@ final class AdfNodeWalker {
       case MultiBodiedExtension node -> blocks(node.content());
       case ExtensionFrame node -> blocks(node.content());
       case BodiedSyncBlock node -> blocks(node.content());
-      // Leaf blocks: no children. Exhaustive (no default) so new block types must be triaged here.
+      // Leaf blocks: no children to analyze (a code block's text is literal, so its marks don't
+      // count). Exhaustive (no default) so new block types must be triaged here.
       case CodeBlock _,
           Rule _,
           Media _,

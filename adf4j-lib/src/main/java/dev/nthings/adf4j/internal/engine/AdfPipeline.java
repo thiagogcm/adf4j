@@ -41,10 +41,6 @@ public final class AdfPipeline {
         AdfRenderer.createDefault());
   }
 
-  public ParseResult parse(@Nullable String adfJson) {
-    return parsingService.parse(adfJson);
-  }
-
   public ContentMetadata analyze(@Nullable String adfJson, MarkdownOptions options) {
     if (adfJson == null || adfJson.isBlank()) {
       return ContentMetadata.empty();

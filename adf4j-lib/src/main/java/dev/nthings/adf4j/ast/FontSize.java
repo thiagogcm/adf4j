@@ -5,10 +5,18 @@ import org.jspecify.annotations.Nullable;
 /// Font-size (`fontSize`) mark. `fontSize` is a CSS length used verbatim (e.g. `20px`).
 /// Visual-only and dropped by default; emitted as a `<span style="font-size:…">` only when
 /// `MarkdownOptions.htmlVisualMarks()` is enabled.
-public record FontSize(@Nullable String fontSize) implements AdfMark {
+public record FontSize(Attributes attrs) implements AdfMark {
+
+  public FontSize {
+    attrs = attrs == null ? Attributes.empty() : attrs;
+  }
 
   @Override
   public String type() {
     return "fontSize";
+  }
+
+  public @Nullable String fontSize() {
+    return attrs.text("fontSize");
   }
 }

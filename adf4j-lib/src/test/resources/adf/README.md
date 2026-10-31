@@ -1,6 +1,6 @@
 # ADF Test Resources
 
-Executable ADF test data lives under `spec/`.
+Executable ADF test data lives under `spec/`. `characterization/` pins everything observable about a conversion across those fixtures and the off-spec `corpus.tsv`; see `ConversionCharacterizationTests`.
 
 - Nested `spec/*/` directories contain auto-discovered conversion examples. Each input is a `*.json` file paired with an expected Markdown output using the same basename: `*.md`. `AdfSpecConversionTests` discovers these pairs automatically.
 - Use one canonical JSON input per feature and place its expected `*.md` output next to it.

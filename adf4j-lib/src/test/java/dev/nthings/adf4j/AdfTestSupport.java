@@ -1,12 +1,12 @@
 package dev.nthings.adf4j;
 
-import java.io.IOException;
-
 import dev.nthings.adf4j.ast.AdfDocument;
+import dev.nthings.adf4j.ast.Attributes;
 import dev.nthings.adf4j.ast.MacroParams;
 import dev.nthings.adf4j.internal.parser.AdfAstParser;
 import dev.nthings.adf4j.testing.TestResources;
-
+import java.io.IOException;
+import java.util.Map;
 import tools.jackson.databind.json.JsonMapper;
 
 final class AdfTestSupport {
@@ -17,10 +17,7 @@ final class AdfTestSupport {
   private final AdfAstParser astParser;
   private final AdfToMarkdown processor;
 
-  private AdfTestSupport(
-      JsonMapper mapper,
-      AdfAstParser astParser,
-      AdfToMarkdown processor) {
+  private AdfTestSupport(JsonMapper mapper, AdfAstParser astParser, AdfToMarkdown processor) {
     this.mapper = mapper;
     this.astParser = astParser;
     this.processor = processor;
@@ -44,14 +41,14 @@ final class AdfTestSupport {
   }
 
   AdfDocument caseDocument(String name) throws IOException {
-    return astParser.parseDocument(mapper.readTree(caseInput(name)));
+    return astParser.parse(mapper.readTree(caseInput(name))).document();
   }
 
   MacroParams macroParams(String json) throws IOException {
-    return astParser.parseMacroParams(mapper.readTree(json));
+    return MacroParams.from(new Attributes(mapper.convertValue(mapper.readTree(json), Map.class)));
   }
 
   AdfDocument parseDocument(String json) throws IOException {
-    return astParser.parseDocument(mapper.readTree(json));
+    return astParser.parse(mapper.readTree(json)).document();
   }
 }

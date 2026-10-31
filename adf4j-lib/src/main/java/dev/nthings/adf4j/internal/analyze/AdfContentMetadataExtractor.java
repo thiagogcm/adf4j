@@ -1,6 +1,7 @@
 package dev.nthings.adf4j.internal.analyze;
 
 import dev.nthings.adf4j.ast.AdfBlock;
+import dev.nthings.adf4j.ast.AdfCard;
 import dev.nthings.adf4j.ast.AdfInline;
 import dev.nthings.adf4j.ast.AdfMark;
 import dev.nthings.adf4j.ast.Attributes;
@@ -9,7 +10,6 @@ import dev.nthings.adf4j.ast.BodiedExtension;
 import dev.nthings.adf4j.ast.CardAttrs;
 import dev.nthings.adf4j.ast.EmbedCard;
 import dev.nthings.adf4j.ast.Extension;
-import dev.nthings.adf4j.ast.InlineCard;
 import dev.nthings.adf4j.ast.InlineExtension;
 import dev.nthings.adf4j.ast.Link;
 import dev.nthings.adf4j.ast.MacroParams;
@@ -65,7 +65,7 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
     switch (block) {
       case Media media -> {
         collectLinkMarks(media.marks());
-        collectMediaAttrs(media.attrs());
+        collectMediaAttrs(media.mediaAttrs());
       }
       case Extension extension ->
           collectExtension(
@@ -84,8 +84,8 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
       case MultiBodiedExtension mbe ->
           collectExtension(
               mbe.extensionType(), mbe.extensionKey(), mbe.macroParams(), mbe.parameters());
-      case BlockCard blockCard -> collectCardLink(blockCard.attrs());
-      case EmbedCard embedCard -> collectCardLink(embedCard.attrs());
+      case BlockCard blockCard -> collectCardLink(blockCard.cardAttrs());
+      case EmbedCard embedCard -> collectCardLink(embedCard.cardAttrs());
       default -> {
         // Other blocks' references (inline/child) arrive via the walk.
       }
@@ -96,10 +96,10 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
   public void visitInline(AdfInline inline) {
     switch (inline) {
       case Text text -> collectLinkMarks(text.marks());
-      case InlineCard card -> collectCardLink(card.attrs());
+      case AdfCard card -> collectCardLink(card.cardAttrs());
       case MediaInline media -> {
         collectLinkMarks(media.marks());
-        collectMediaAttrs(media.attrs());
+        collectMediaAttrs(media.mediaAttrs());
       }
       case InlineExtension extension ->
           collectExtension(

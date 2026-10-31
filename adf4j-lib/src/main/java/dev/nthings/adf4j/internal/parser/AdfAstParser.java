@@ -17,7 +17,6 @@ import dev.nthings.adf4j.ast.Border;
 import dev.nthings.adf4j.ast.Breakout;
 import dev.nthings.adf4j.ast.BulletList;
 import dev.nthings.adf4j.ast.Caption;
-import dev.nthings.adf4j.ast.CardAttrs;
 import dev.nthings.adf4j.ast.Code;
 import dev.nthings.adf4j.ast.CodeBlock;
 import dev.nthings.adf4j.ast.DataConsumer;
@@ -41,9 +40,7 @@ import dev.nthings.adf4j.ast.LayoutColumn;
 import dev.nthings.adf4j.ast.LayoutSection;
 import dev.nthings.adf4j.ast.Link;
 import dev.nthings.adf4j.ast.ListItem;
-import dev.nthings.adf4j.ast.MacroParams;
 import dev.nthings.adf4j.ast.Media;
-import dev.nthings.adf4j.ast.MediaAttrs;
 import dev.nthings.adf4j.ast.MediaGroup;
 import dev.nthings.adf4j.ast.MediaInline;
 import dev.nthings.adf4j.ast.MediaSingle;
@@ -71,12 +68,14 @@ import dev.nthings.adf4j.ast.Underline;
 import dev.nthings.adf4j.ast.UnknownBlock;
 import dev.nthings.adf4j.ast.UnknownInline;
 import dev.nthings.adf4j.ast.UnknownMark;
+import dev.nthings.adf4j.result.Diagnostic;
+import dev.nthings.adf4j.result.Diagnostic.Severity;
+import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -85,9 +84,22 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
+/// Maps ADF JSON onto the AST without interpreting it: each record keeps its node's `attrs`,
+/// `content` and `marks`, and an unrecognized `type` keeps its raw JSON. What the AST has no place
+/// for (non-object elements, unknown keys, a non-array `content`, a non-string `text`, ...) is
+/// reported as one `UNPRESERVED_JSON` warning, because writing the document back would drop it.
+/// Stateless and thread-safe; each parse keeps its own report.
 public final class AdfAstParser {
 
+  private static final String UNPRESERVED_JSON = "UNPRESERVED_JSON";
+
   private static final Logger log = LoggerFactory.getLogger(AdfAstParser.class);
+  private static final Set<String> NODE_FIELDS = Set.of("attrs", "content", "marks");
+  private static final Set<String> ROOT_KEYS = Set.of("type", "version", "content");
+  private static final Set<String> LEAF_KEYS = Set.of("type", "attrs", "marks");
+  private static final Set<String> CONTAINER_KEYS = Set.of("type", "attrs", "content", "marks");
+  private static final Set<String> TEXT_KEYS = Set.of("type", "attrs", "text", "marks");
+  private static final Set<String> MARK_KEYS = Set.of("type", "attrs");
 
   private final JsonMapper mapper;
 
@@ -95,438 +107,287 @@ public final class AdfAstParser {
     this.mapper = Objects.requireNonNull(mapper, "mapper");
   }
 
-  public AdfDocument parseDocument(@Nullable JsonNode root) {
-    if (root == null || !root.isObject()) {
-      return new AdfDocument(1, List.of());
-    }
-    return new AdfDocument(
-        JsonFields.integer(root, "version", 1), parseBlocks(root.get("content")));
+  /// A parsed document with what it could not preserve.
+  public record ParsedDocument(AdfDocument document, List<Diagnostic> issues) {}
+
+  public ParsedDocument parse(@Nullable JsonNode root) {
+    var run = new Run();
+    var document = run.document(root);
+    return new ParsedDocument(document, run.issues());
   }
 
-  // Maps the array's object elements through fn, keeping only those whose "type" is one of `types`
-  // (or all object elements when no type is given); others are skipped. The single place array
-  // traversal lives.
-  private <T> List<T> mapTyped(
-      @Nullable JsonNode arrayNode, Function<JsonNode, T> fn, String... types) {
-    if (arrayNode == null || !arrayNode.isArray() || arrayNode.isEmpty()) {
-      return List.of();
-    }
-    var result = new ArrayList<T>(arrayNode.size());
-    for (var child : arrayNode) {
-      if (child != null && child.isObject() && (types.length == 0 || isType(child, types))) {
-        result.add(fn.apply(child));
+  // One document's traversal, so the report never crosses threads or documents.
+  private final class Run {
+
+    private int unpreserved;
+    private @Nullable String firstUnpreserved;
+
+    private void unpreserved(String description) {
+      if (unpreserved++ == 0) {
+        firstUnpreserved = description;
       }
     }
-    return result;
-  }
 
-  // True when node's "type" field equals any of the given values.
-  private static boolean isType(JsonNode node, String... types) {
-    var type = JsonFields.text(node, "type", "");
-    for (var candidate : types) {
-      if (candidate.equals(type)) {
-        return true;
+    List<Diagnostic> issues() {
+      if (unpreserved == 0) {
+        return List.of();
+      }
+      return List.of(
+          new Diagnostic(
+              UNPRESERVED_JSON,
+              unpreserved
+                  + " malformed JSON construct(s) have no place in the AST and would be lost when"
+                  + " writing the document, first: "
+                  + firstUnpreserved,
+              null,
+              Severity.WARNING));
+    }
+
+    AdfDocument document(@Nullable JsonNode root) {
+      if (root == null || !root.isObject()) {
+        return new AdfDocument(1, List.of());
+      }
+      checkKeys(root, "doc", ROOT_KEYS);
+      var version = JsonFields.integer(root, "version", 1);
+      var declared = root.get("version");
+      if (declared != null
+          && !(declared.isNumber()
+              && declared.decimalValue().compareTo(new BigDecimal(version)) == 0)) {
+        unpreserved("version is not an integer");
+      }
+      return new AdfDocument(version, blocks(root, "doc"));
+    }
+
+    private List<AdfBlock> blocks(JsonNode parent, String parentType) {
+      return children(parent.get("content"), parentType + ".content", this::block);
+    }
+
+    private List<AdfInline> inlines(JsonNode parent, String parentType) {
+      return children(parent.get("content"), parentType + ".content", this::inline);
+    }
+
+    private List<AdfMark> marks(JsonNode parent, String parentType) {
+      return children(parent.get("marks"), parentType + ".marks", this::mark);
+    }
+
+    // The array's object elements through fn; the single place array traversal lives.
+    private <T> List<T> children(
+        @Nullable JsonNode arrayNode, String where, Function<JsonNode, T> fn) {
+      if (arrayNode == null || isAbsent(arrayNode)) {
+        return List.of();
+      }
+      if (!arrayNode.isArray()) {
+        unpreserved(where + " is not an array");
+        return List.of();
+      }
+      var result = new ArrayList<T>(arrayNode.size());
+      for (var child : arrayNode) {
+        if (child.isObject()) {
+          result.add(fn.apply(child));
+        } else {
+          unpreserved(where + " has a non-object element");
+        }
+      }
+      return result;
+    }
+
+    AdfBlock block(JsonNode node) {
+      var type = JsonFields.text(node, "type", "");
+      return switch (type) {
+        case "paragraph" ->
+            new Paragraph(attrs(node, type), inlines(node, type), marks(node, type));
+        case "heading" -> new Heading(attrs(node, type), inlines(node, type), marks(node, type));
+        case "blockquote" ->
+            new Blockquote(attrs(node, type), blocks(node, type), marks(node, type));
+        case "codeBlock" ->
+            new CodeBlock(attrs(node, type), inlines(node, type), marks(node, type));
+        case "panel" -> new Panel(attrs(node, type), blocks(node, type), marks(node, type));
+        case "rule" -> new Rule(leafAttrs(node, type), marks(node, type));
+        case "bulletList" ->
+            new BulletList(attrs(node, type), blocks(node, type), marks(node, type));
+        case "orderedList" ->
+            new OrderedList(attrs(node, type), blocks(node, type), marks(node, type));
+        case "listItem" -> new ListItem(attrs(node, type), blocks(node, type), marks(node, type));
+        case "taskList" -> new TaskList(attrs(node, type), blocks(node, type), marks(node, type));
+        case "taskItem" -> new TaskItem(attrs(node, type), inlines(node, type), marks(node, type));
+        case "blockTaskItem" ->
+            new BlockTaskItem(attrs(node, type), blocks(node, type), marks(node, type));
+        case "decisionList" ->
+            new DecisionList(attrs(node, type), blocks(node, type), marks(node, type));
+        case "decisionItem" ->
+            new DecisionItem(attrs(node, type), inlines(node, type), marks(node, type));
+        case "table" -> new Table(attrs(node, type), blocks(node, type), marks(node, type));
+        case "tableRow" -> new TableRow(attrs(node, type), blocks(node, type), marks(node, type));
+        case "tableCell" ->
+            new TableCell(false, attrs(node, type), blocks(node, type), marks(node, type));
+        case "tableHeader" ->
+            new TableCell(true, attrs(node, type), blocks(node, type), marks(node, type));
+        case "mediaSingle" ->
+            new MediaSingle(attrs(node, type), blocks(node, type), marks(node, type));
+        case "mediaGroup" ->
+            new MediaGroup(attrs(node, type), blocks(node, type), marks(node, type));
+        case "media" -> new Media(leafAttrs(node, type), marks(node, type));
+        case "caption" -> new Caption(attrs(node, type), inlines(node, type), marks(node, type));
+        case "expand" -> new Expand(attrs(node, type), blocks(node, type), marks(node, type));
+        case "nestedExpand" ->
+            new NestedExpand(attrs(node, type), blocks(node, type), marks(node, type));
+        case "layoutSection" ->
+            new LayoutSection(attrs(node, type), blocks(node, type), marks(node, type));
+        case "layoutColumn" ->
+            new LayoutColumn(attrs(node, type), blocks(node, type), marks(node, type));
+        case "extension" -> new Extension(leafAttrs(node, type), marks(node, type));
+        case "bodiedExtension" ->
+            new BodiedExtension(attrs(node, type), blocks(node, type), marks(node, type));
+        case "multiBodiedExtension" ->
+            new MultiBodiedExtension(attrs(node, type), blocks(node, type), marks(node, type));
+        case "extensionFrame" ->
+            new ExtensionFrame(attrs(node, type), blocks(node, type), marks(node, type));
+        case "syncBlock" -> new SyncBlock(leafAttrs(node, type), marks(node, type));
+        case "bodiedSyncBlock" ->
+            new BodiedSyncBlock(attrs(node, type), blocks(node, type), marks(node, type));
+        case "blockCard" -> new BlockCard(leafAttrs(node, type), marks(node, type));
+        case "embedCard" -> new EmbedCard(leafAttrs(node, type), marks(node, type));
+        default -> new UnknownBlock(type, rawJson(node));
+      };
+    }
+
+    AdfInline inline(JsonNode node) {
+      var type = JsonFields.text(node, "type", "");
+      return switch (type) {
+        case "text" -> text(node);
+        case "hardBreak" -> new HardBreak(leafAttrs(node, type), marks(node, type));
+        case "inlineCard" -> new InlineCard(leafAttrs(node, type), marks(node, type));
+        case "embedCard" -> new EmbedCard(leafAttrs(node, type), marks(node, type));
+        case "blockCard" -> new BlockCard(leafAttrs(node, type), marks(node, type));
+        case "mediaInline" -> new MediaInline(leafAttrs(node, type), marks(node, type));
+        case "date" -> new Date(leafAttrs(node, type), marks(node, type));
+        case "emoji" -> new Emoji(leafAttrs(node, type), marks(node, type));
+        case "mention" -> new Mention(leafAttrs(node, type), marks(node, type));
+        case "placeholder" -> new Placeholder(leafAttrs(node, type), marks(node, type));
+        case "status" -> new Status(leafAttrs(node, type), marks(node, type));
+        case "inlineExtension" -> new InlineExtension(leafAttrs(node, type), marks(node, type));
+        default -> new UnknownInline(type, rawJson(node));
+      };
+    }
+
+    private Text text(JsonNode node) {
+      checkKeys(node, "text", TEXT_KEYS);
+      var text = JsonFields.field(node, "text");
+      if (text == null || !text.isString()) {
+        unpreserved("text node without a string text");
+      }
+      return new Text(
+          JsonFields.text(node, "text", ""),
+          attributes(node.get("attrs"), "text"),
+          marks(node, "text"));
+    }
+
+    AdfMark mark(JsonNode node) {
+      var type = JsonFields.text(node, "type", "");
+      return switch (type) {
+        case "strong" -> new Strong(markAttrs(node, type));
+        case "em" -> new Em(markAttrs(node, type));
+        case "code" -> new Code(markAttrs(node, type));
+        case "strike" -> new Strike(markAttrs(node, type));
+        case "underline" -> new Underline(markAttrs(node, type));
+        case "subsup" -> new SubSup(markAttrs(node, type));
+        case "link" -> new Link(markAttrs(node, type));
+        case "textColor" -> new TextColor(markAttrs(node, type));
+        case "backgroundColor" -> new BackgroundColor(markAttrs(node, type));
+        case "alignment" -> new Alignment(markAttrs(node, type));
+        case "indentation" -> new Indentation(markAttrs(node, type));
+        case "fontSize" -> new FontSize(markAttrs(node, type));
+        case "border" -> new Border(markAttrs(node, type));
+        case "annotation" -> new Annotation(markAttrs(node, type));
+        case "breakout" -> new Breakout(markAttrs(node, type));
+        case "fragment" -> new Fragment(markAttrs(node, type));
+        case "dataConsumer" -> new DataConsumer(markAttrs(node, type));
+        default -> new UnknownMark(type, rawJson(node));
+      };
+    }
+
+    private Attributes attrs(JsonNode node, String type) {
+      checkKeys(node, type, CONTAINER_KEYS);
+      return attributes(node.get("attrs"), type);
+    }
+
+    private Attributes leafAttrs(JsonNode node, String type) {
+      checkKeys(node, type, LEAF_KEYS);
+      return attributes(node.get("attrs"), type);
+    }
+
+    private Attributes markAttrs(JsonNode node, String type) {
+      checkKeys(node, type, MARK_KEYS);
+      return attributes(node.get("attrs"), type);
+    }
+
+    private void checkKeys(JsonNode node, String type, Set<String> allowed) {
+      for (var property : node.properties()) {
+        var key = property.getKey();
+        var value = property.getValue();
+        var keptOrEquivalent =
+            allowed.contains(key)
+                || value.isNull()
+                || (key.equals("attrs") && hasOnlyNulls(value))
+                || (NODE_FIELDS.contains(key) && isAbsent(value));
+        if (!keptOrEquivalent) {
+          unpreserved(type + " has unexpected key '" + key + "'");
+        }
       }
     }
-    return false;
-  }
 
-  List<AdfBlock> parseBlocks(@Nullable JsonNode arrayNode) {
-    return mapTyped(arrayNode, this::parseBlock);
-  }
-
-  AdfBlock parseBlock(JsonNode node) {
-    var type = JsonFields.text(node, "type", "");
-    return switch (type) {
-      case "paragraph" ->
-          new Paragraph(parseInlines(node.get("content")), parseMarks(node.get("marks")));
-      case "heading" -> parseHeading(node);
-      case "blockquote" -> new Blockquote(parseBlocks(node.get("content")));
-      case "codeBlock" -> parseCodeBlock(node);
-      case "panel" ->
-          new Panel(
-              JsonFields.text(node.path("attrs"), "panelType"), parseBlocks(node.get("content")));
-      case "rule" -> new Rule();
-      case "bulletList" -> new BulletList(parseListItems(node.get("content")));
-      case "orderedList" -> parseOrderedList(node);
-      case "listItem" -> new ListItem(parseBlocks(node.get("content")));
-      case "taskList" -> new TaskList(parseTaskListItems(node.get("content")));
-      case "taskItem" ->
-          new TaskItem(
-              JsonFields.text(node.path("attrs"), "state"), parseInlines(node.get("content")));
-      case "blockTaskItem" ->
-          new BlockTaskItem(
-              JsonFields.text(node.path("attrs"), "state"), parseBlocks(node.get("content")));
-      case "decisionList" -> new DecisionList(parseDecisionItems(node.get("content")));
-      case "decisionItem" ->
-          new DecisionItem(
-              JsonFields.text(node.path("attrs"), "state"), parseInlines(node.get("content")));
-      case "table" -> parseTable(node);
-      case "tableRow" -> new TableRow(parseTableCells(node.get("content")));
-      case "tableCell" -> parseTableCell(node, false);
-      case "tableHeader" -> parseTableCell(node, true);
-      case "mediaSingle" -> parseMediaSingle(node);
-      case "mediaGroup" -> new MediaGroup(parseBlocks(node.get("content")));
-      case "media" -> new Media(parseMediaAttrs(node.path("attrs")), parseMarks(node.get("marks")));
-      case "caption" -> new Caption(parseInlines(node.get("content")));
-      case "expand" ->
-          new Expand(
-              JsonFields.text(node.path("attrs"), "title", ""), parseBlocks(node.get("content")));
-      case "nestedExpand" ->
-          new NestedExpand(
-              JsonFields.text(node.path("attrs"), "title", ""), parseBlocks(node.get("content")));
-      case "layoutSection" -> new LayoutSection(parseLayoutColumns(node.get("content")));
-      case "layoutColumn" ->
-          new LayoutColumn(
-              JsonFields.integer(node.path("attrs"), "width", 0), parseBlocks(node.get("content")));
-      case "extension" -> parseExtension(node);
-      case "bodiedExtension" -> parseBodiedExtension(node);
-      case "multiBodiedExtension" -> parseMultiBodiedExtension(node);
-      case "extensionFrame" -> new ExtensionFrame(parseBlocks(node.get("content")));
-      case "syncBlock" -> new SyncBlock(JsonFields.text(node.path("attrs"), "resourceId"));
-      case "bodiedSyncBlock" ->
-          new BodiedSyncBlock(
-              JsonFields.text(node.path("attrs"), "resourceId"), parseBlocks(node.get("content")));
-      case "blockCard" -> new BlockCard(parseCardAttrs(node.path("attrs")));
-      case "embedCard" -> new EmbedCard(parseCardAttrs(node.path("attrs")));
-      default -> new UnknownBlock(type, rawJson(node));
-    };
-  }
-
-  public List<AdfInline> parseInlines(@Nullable JsonNode arrayNode) {
-    return mapTyped(arrayNode, this::parseInline);
-  }
-
-  AdfInline parseInline(JsonNode node) {
-    var type = JsonFields.text(node, "type", "");
-    return switch (type) {
-      case "text" -> new Text(JsonFields.text(node, "text", ""), parseMarks(node.get("marks")));
-      case "hardBreak" -> new HardBreak();
-      case "inlineCard" -> new InlineCard(parseCardAttrs(node.path("attrs")));
-      case "embedCard" -> new InlineCard(parseCardAttrs(node.path("attrs")));
-      case "blockCard" -> new InlineCard(parseCardAttrs(node.path("attrs")));
-      case "mediaInline" ->
-          new MediaInline(parseMediaAttrs(node.path("attrs")), parseMarks(node.get("marks")));
-      case "date" ->
-          new Date(
-              JsonFields.text(node.path("attrs"), "timestamp"),
-              JsonFields.text(node.path("attrs"), "localId"));
-      case "emoji" ->
-          new Emoji(
-              JsonFields.text(node.path("attrs"), "id"),
-              JsonFields.text(node.path("attrs"), "text"),
-              JsonFields.text(node.path("attrs"), "shortName"));
-      case "mention" ->
-          new Mention(
-              JsonFields.text(node.path("attrs"), "id"),
-              mentionText(node.path("attrs")),
-              JsonFields.text(node.path("attrs"), "userType"),
-              JsonFields.text(node.path("attrs"), "accessLevel"),
-              JsonFields.text(node.path("attrs"), "localId"));
-      case "placeholder" -> new Placeholder(JsonFields.text(node.path("attrs"), "text", ""));
-      case "status" ->
-          new Status(
-              JsonFields.text(node.path("attrs"), "text"),
-              JsonFields.text(node.path("attrs"), "color"),
-              JsonFields.text(node.path("attrs"), "style"),
-              JsonFields.text(node.path("attrs"), "localId"));
-      case "inlineExtension" -> parseInlineExtension(node);
-      default -> new UnknownInline(type, rawJson(node));
-    };
-  }
-
-  List<AdfMark> parseMarks(@Nullable JsonNode arrayNode) {
-    return mapTyped(arrayNode, this::parseMark);
-  }
-
-  AdfMark parseMark(JsonNode node) {
-    var type = JsonFields.text(node, "type", "");
-    var attrs = node.path("attrs");
-    return switch (type) {
-      case "strong" -> new Strong();
-      case "em" -> new Em();
-      case "code" -> new Code();
-      case "strike" -> new Strike();
-      case "underline" -> new Underline();
-      case "subsup" -> new SubSup(JsonFields.text(attrs, "type"));
-      case "link" ->
-          new Link(
-              JsonFields.text(attrs, "href"), JsonFields.text(attrs, "title"), toAttributes(attrs));
-      case "textColor" -> new TextColor(JsonFields.text(attrs, "color"));
-      case "backgroundColor" -> new BackgroundColor(JsonFields.text(attrs, "color"));
-      case "alignment" -> new Alignment(JsonFields.text(attrs, "align"));
-      case "indentation" -> new Indentation(JsonFields.integer(attrs, "level", 0));
-      case "fontSize" -> new FontSize(JsonFields.text(attrs, "fontSize"));
-      case "border" -> new Border(JsonFields.text(attrs, "color"), JsonFields.text(attrs, "size"));
-      case "annotation" -> new Annotation();
-      case "breakout" -> new Breakout();
-      case "fragment" -> new Fragment();
-      case "dataConsumer" -> new DataConsumer();
-      default -> new UnknownMark(type, rawJson(node));
-    };
-  }
-
-  public MacroParams parseMacroParams(@Nullable JsonNode macroParams) {
-    if (macroParams == null || !macroParams.isObject()) {
-      return MacroParams.empty();
-    }
-    return flattenMacroParams(toAttributes(macroParams));
-  }
-
-  // Each entry's scalar (or its envelope object's "value" scalar) as text; non-scalars are dropped.
-  private static MacroParams flattenMacroParams(Attributes macroParams) {
-    var values = new LinkedHashMap<String, String>();
-    for (var entry : macroParams.values().entrySet()) {
-      var resolved =
-          switch (entry.getValue()) {
-            case Map<?, ?> envelope -> scalarText(envelope.get("value"));
-            case Object scalar -> scalarText(scalar);
-          };
-      if (resolved != null) {
-        values.put(entry.getKey(), resolved);
+    private Attributes attributes(@Nullable JsonNode attrs, String type) {
+      if (attrs == null || isAbsent(attrs)) {
+        return Attributes.empty();
       }
-    }
-    return new MacroParams(values);
-  }
-
-  private static @Nullable String scalarText(@Nullable Object value) {
-    return switch (value) {
-      case String text -> text;
-      case Number number -> number.toString();
-      case Boolean bool -> bool.toString();
-      case null, default -> null;
-    };
-  }
-
-  private Heading parseHeading(JsonNode node) {
-    var level = Math.clamp(JsonFields.integer(node.path("attrs"), "level", 1), 1, 6);
-    return new Heading(level, parseInlines(node.get("content")), parseMarks(node.get("marks")));
-  }
-
-  private CodeBlock parseCodeBlock(JsonNode node) {
-    var language = JsonFields.text(node.path("attrs"), "language");
-    var builder = new StringBuilder();
-    var content = node.get("content");
-    if (content != null && content.isArray()) {
-      for (var child : content) {
-        builder.append(JsonFields.text(child, "text", ""));
+      if (!attrs.isObject()) {
+        unpreserved(type + ".attrs is not an object");
+        return Attributes.empty();
       }
+      return new Attributes(plainObject(attrs));
     }
-    return new CodeBlock(language, builder.toString());
   }
 
-  private List<ListItem> parseListItems(@Nullable JsonNode arrayNode) {
-    return mapTyped(
-        arrayNode, child -> new ListItem(parseBlocks(child.get("content"))), "listItem");
+  // Null and an empty container mean the same as a missing attrs, content or marks.
+  private static boolean isAbsent(JsonNode node) {
+    return node.isNull() || node.isMissingNode() || (node.isContainer() && node.isEmpty());
   }
 
-  private OrderedList parseOrderedList(JsonNode node) {
-    var order = JsonFields.integer(node.path("attrs"), "order", 1);
-    return new OrderedList(order, parseListItems(node.get("content")));
+  // Attributes drops null values, so these attrs write back as no attrs at all.
+  private static boolean hasOnlyNulls(JsonNode attrs) {
+    return attrs.isObject() && attrs.valueStream().allMatch(JsonNode::isNull);
   }
 
-  // A nested taskList is schema-valid; parse it as a TaskList block so the renderer can recurse.
-  private List<AdfBlock> parseTaskListItems(@Nullable JsonNode arrayNode) {
-    return mapTyped(arrayNode, this::parseBlock, "taskItem", "blockTaskItem", "taskList");
-  }
-
-  private List<DecisionItem> parseDecisionItems(@Nullable JsonNode arrayNode) {
-    return mapTyped(
-        arrayNode,
-        child ->
-            new DecisionItem(
-                JsonFields.text(child.path("attrs"), "state"), parseInlines(child.get("content"))),
-        "decisionItem");
-  }
-
-  private Table parseTable(JsonNode node) {
-    var numberColumnEnabled = JsonFields.bool(node.path("attrs"), "isNumberColumnEnabled", false);
-    var rows =
-        mapTyped(
-            node.get("content"),
-            rowNode -> new TableRow(parseTableCells(rowNode.get("content"))),
-            "tableRow");
-    return new Table(numberColumnEnabled, rows);
-  }
-
-  private List<TableCell> parseTableCells(@Nullable JsonNode arrayNode) {
-    return mapTyped(
-        arrayNode,
-        cellNode -> parseTableCell(cellNode, isType(cellNode, "tableHeader")),
-        "tableCell",
-        "tableHeader");
-  }
-
-  private TableCell parseTableCell(JsonNode node, boolean header) {
-    var attrs = node.path("attrs");
-    var colspan = JsonFields.integer(attrs, "colspan", 1);
-    var rowspan = JsonFields.integer(attrs, "rowspan", 1);
-    var background = JsonFields.text(attrs, "background");
-    return new TableCell(header, colspan, rowspan, background, parseBlocks(node.get("content")));
-  }
-
-  private MediaSingle parseMediaSingle(JsonNode node) {
-    var attrs = node.path("attrs");
-    var layout = JsonFields.text(attrs, "layout");
-    var widthType = JsonFields.text(attrs, "widthType");
-    var width = JsonFields.text(attrs, "width");
-    return new MediaSingle(
-        layout, widthType, width, parseBlocks(node.get("content")), parseMarks(node.get("marks")));
-  }
-
-  private List<LayoutColumn> parseLayoutColumns(@Nullable JsonNode arrayNode) {
-    return mapTyped(
-        arrayNode,
-        child ->
-            new LayoutColumn(
-                JsonFields.integer(child.path("attrs"), "width", 0),
-                parseBlocks(child.get("content"))),
-        "layoutColumn");
-  }
-
-  private record ExtensionFields(
-      @Nullable String type,
-      @Nullable String key,
-      @Nullable String text,
-      MacroParams macroParams,
-      Attributes parameters) {}
-
-  // One walk of the raw parameters envelope (some extensions carry data outside macroParams);
-  // macroParams is the flattened convenience view derived from it.
-  private ExtensionFields extensionFields(JsonNode attrs) {
-    var parameters = toAttributes(attrs.get("parameters"));
-    return new ExtensionFields(
-        JsonFields.text(attrs, "extensionType"),
-        JsonFields.text(attrs, "extensionKey"),
-        JsonFields.text(attrs, "text"),
-        flattenMacroParams(parameters.object("macroParams")),
-        parameters);
-  }
-
-  private Extension parseExtension(JsonNode node) {
-    var fields = extensionFields(node.path("attrs"));
-    return new Extension(
-        fields.type(), fields.key(), fields.text(), fields.macroParams(), fields.parameters());
-  }
-
-  private BodiedExtension parseBodiedExtension(JsonNode node) {
-    var fields = extensionFields(node.path("attrs"));
-    return new BodiedExtension(
-        fields.type(),
-        fields.key(),
-        fields.text(),
-        fields.macroParams(),
-        fields.parameters(),
-        parseBlocks(node.get("content")));
-  }
-
-  private MultiBodiedExtension parseMultiBodiedExtension(JsonNode node) {
-    var fields = extensionFields(node.path("attrs"));
-    return new MultiBodiedExtension(
-        fields.type(),
-        fields.key(),
-        fields.text(),
-        fields.macroParams(),
-        fields.parameters(),
-        parseBlocks(node.get("content")));
-  }
-
-  private InlineExtension parseInlineExtension(JsonNode node) {
-    var fields = extensionFields(node.path("attrs"));
-    return new InlineExtension(
-        fields.type(), fields.key(), fields.text(), fields.macroParams(), fields.parameters());
-  }
-
-  private CardAttrs parseCardAttrs(@Nullable JsonNode attrs) {
-    if (attrs == null || !attrs.isObject()) {
-      return new CardAttrs(null, null, null, null, Attributes.empty());
-    }
-    var data = attrs.path("data");
-    var url = JsonFields.text(attrs, "url");
-    if (url == null || url.isBlank()) {
-      url = JsonFields.text(data, "url");
-    }
-    var datasourceId = JsonFields.text(attrs.path("datasource"), "id");
-    var localId = JsonFields.text(attrs, "localId");
-    var title = JsonFields.text(data, "name");
-    return new CardAttrs(url, datasourceId, localId, title, toAttributes(attrs));
-  }
-
-  private MediaAttrs parseMediaAttrs(@Nullable JsonNode attrs) {
-    if (attrs == null || !attrs.isObject()) {
-      return MediaAttrs.builder().build();
-    }
-    return MediaAttrs.builder()
-        .type(JsonFields.text(attrs, "type"))
-        .id(JsonFields.text(attrs, "id"))
-        .localId(JsonFields.text(attrs, "localId"))
-        .url(JsonFields.text(attrs, "url"))
-        .collection(JsonFields.text(attrs, "collection"))
-        .alt(JsonFields.text(attrs, "alt"))
-        .width(JsonFields.text(attrs, "width"))
-        .height(JsonFields.text(attrs, "height"))
-        .mediaType(JsonFields.text(attrs, "mediaType"))
-        .fileMimeType(JsonFields.text(attrs, "__fileMimeType"))
-        .fileName(JsonFields.text(attrs, "__fileName"))
-        .name(JsonFields.text(attrs, "name"))
-        .build();
-  }
-
-  /// Converts a node's raw `attrs` into a generic {@link Attributes} view of plain Java
-  /// values. The conversion is product-neutral: every key (including any `__*` extension keys)
-  /// is copied as-is, leaving interpretation of product-specific extras to higher layers.
-  private Attributes toAttributes(@Nullable JsonNode attrs) {
-    if (attrs == null || !attrs.isObject()) {
-      return Attributes.empty();
-    }
-    var values = new LinkedHashMap<String, Object>();
-    for (var entry : attrs.properties()) {
-      var value = toPlainValue(entry.getValue());
+  // JSON nulls drop out of objects, leaving the key absent, but stay in arrays to keep indices.
+  private static LinkedHashMap<String, Object> plainObject(JsonNode object) {
+    var map = new LinkedHashMap<String, Object>();
+    for (var entry : object.properties()) {
+      var value = plainValue(entry.getValue());
       if (value != null) {
-        values.put(entry.getKey(), value);
+        map.put(entry.getKey(), value);
       }
     }
-    return new Attributes(values);
+    return map;
   }
 
-  private @Nullable Object toPlainValue(@Nullable JsonNode node) {
-    if (node == null || node.isNull() || node.isMissingNode()) {
+  private static @Nullable Object plainValue(JsonNode node) {
+    if (node.isNull() || node.isMissingNode()) {
       return null;
     }
     if (node.isObject()) {
-      var map = new LinkedHashMap<String, Object>();
-      for (var entry : node.properties()) {
-        var value = toPlainValue(entry.getValue());
-        if (value != null) {
-          map.put(entry.getKey(), value);
-        }
-      }
-      // Not Map.copyOf: its salted iteration order would lose the document's attribute order.
-      return Collections.unmodifiableMap(map);
+      return plainObject(node);
     }
     if (node.isArray()) {
-      // Keep null elements so array indices are preserved (List.copyOf would reject the nulls).
-      var items = new ArrayList<>(node.size());
+      var items = new ArrayList<@Nullable Object>(node.size());
       for (var child : node) {
-        items.add(toPlainValue(child));
+        items.add(plainValue(child));
       }
-      return Collections.unmodifiableList(items);
+      return items;
     }
     if (node.isBoolean()) {
-      return node.asBoolean();
+      return node.booleanValue();
     }
-    if (node.isIntegralNumber()) {
-      return node.asLong();
-    }
-    if (node.isNumber()) {
-      return node.asDouble();
-    }
-    return node.asString();
-  }
-
-  private String mentionText(JsonNode attrs) {
-    var raw = JsonFields.text(attrs, "text");
-    return raw == null ? "" : raw.strip();
+    return node.isNumber() ? JsonFields.number(node) : node.stringValue();
   }
 
   private String rawJson(JsonNode node) {

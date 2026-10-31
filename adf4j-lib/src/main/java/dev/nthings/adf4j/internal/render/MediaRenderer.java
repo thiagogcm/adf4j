@@ -6,7 +6,9 @@ import dev.nthings.adf4j.ast.MediaAttrs;
 import dev.nthings.adf4j.ast.MediaGroup;
 import dev.nthings.adf4j.ast.MediaInline;
 import dev.nthings.adf4j.ast.MediaSingle;
+import dev.nthings.adf4j.internal.AdfText;
 import dev.nthings.adf4j.internal.AttachmentReferences;
+import dev.nthings.adf4j.internal.Strings;
 import dev.nthings.adf4j.metadata.AttachmentReference;
 import java.util.ArrayList;
 import org.jspecify.annotations.Nullable;
@@ -63,12 +65,12 @@ final class MediaRenderer {
   }
 
   String renderMedia(Media node, RendererState context, BlockRecursion recursion) {
-    var rendered = renderMediaBlock(node.attrs(), context);
+    var rendered = renderMediaBlock(node.mediaAttrs(), context);
     return recursion.applyMarks(rendered, node.marks(), context.context());
   }
 
   String renderMediaInline(MediaInline node, RendererState context, BlockRecursion recursion) {
-    var rendered = renderMediaBlock(node.attrs(), context);
+    var rendered = renderMediaBlock(node.mediaAttrs(), context);
     return recursion.applyMarks(rendered, node.marks(), context.context());
   }
 
@@ -85,7 +87,9 @@ final class MediaRenderer {
               ? attachment.title()
               : AttachmentReferences.fileName(resolvedSource);
       return MarkdownText.link(
-          attrs.fileLabel(destinationFileName), destination, context.escapeParentheses());
+          AdfText.mediaFileLabel(attrs, destinationFileName),
+          destination,
+          context.escapeParentheses());
     }
 
     // The {width= height=} suffix is non-GFM; emit only when opted in.
@@ -103,7 +107,7 @@ final class MediaRenderer {
   }
 
   private String imageAlt(MediaAttrs attrs, @Nullable AttachmentReference attachment) {
-    var alt = attrs.imageAlt();
+    var alt = AdfText.mediaAlt(attrs);
     if (!"media".equals(alt) || attachment == null) {
       return alt;
     }
@@ -115,7 +119,7 @@ final class MediaRenderer {
   // attachment inventory's mediaType/title or the resolved destination's filename extension.
   private boolean isImage(
       MediaAttrs attrs, @Nullable AttachmentReference attachment, @Nullable String resolvedSource) {
-    var mimeOrType = attrs.mimeOrType();
+    var mimeOrType = Strings.firstNonBlank(attrs.fileMimeType(), attrs.mediaType());
     if ((mimeOrType == null || mimeOrType.isBlank()) && attachment != null) {
       mimeOrType = attachment.mediaType();
     }

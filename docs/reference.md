@@ -99,13 +99,14 @@ Parse codes:
 
 | Code                  | Severity  | Raised when                                                     |
 | --------------------- | --------- | --------------------------------------------------------------- |
-| `INVALID_JSON`        | `ERROR`   | Payload is not valid JSON or exceeds the depth-100 nesting cap. |
+| `INVALID_JSON`        | `ERROR`   | Payload is not valid JSON, exceeds the depth-100 nesting cap, or holds a number too large to read. |
 | `MISSING_DOCUMENT`    | `ERROR`   | Parsed document is `null`.                                      |
 | `INVALID_ROOT_TYPE`   | `ERROR`   | Root is not a JSON object.                                      |
 | `INVALID_ROOT_NODE`   | `ERROR`   | Root `type` is not `"doc"`.                                     |
 | `INVALID_VERSION`     | `ERROR`   | Root has no integer `version`.                                  |
 | `INVALID_CONTENT`     | `ERROR`   | Root `content` is not an array.                                 |
 | `UNSUPPORTED_VERSION` | `WARNING` | Root `version` is not `1`; parsing continues best effort.       |
+| `UNPRESERVED_JSON`    | `WARNING` | Malformed JSON has no place in the AST and would be lost on write; rendering is unaffected. |
 
 ## Lossy and by-design behaviours
 
@@ -149,7 +150,7 @@ Input comes from `<input-file>` or stdin (also when the file is `-`). Stdout con
 | ---------- | -------------- | ----------------------------------------------- |
 | `convert`  | `convert(...)` | Markdown body, or full JSON with `-f json`.     |
 | `analyze`  | `analyze(...)` | Metadata JSON, or text with `-f text`.          |
-| `validate` | `parse(...)`   | Parse diagnostics; exit code reflects validity. |
+| `validate` | `AdfJson.parse(...)` | Parse diagnostics; exit code reflects validity. |
 
 Root flags (before any command): `-h, --help` and `-V, --version`.
 

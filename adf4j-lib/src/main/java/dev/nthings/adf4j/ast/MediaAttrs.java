@@ -1,6 +1,5 @@
 package dev.nthings.adf4j.ast;
 
-import dev.nthings.adf4j.internal.Strings;
 import org.jspecify.annotations.Nullable;
 
 /// The attributes of a media node. `type` distinguishes `file`/`link` media
@@ -8,8 +7,8 @@ import org.jspecify.annotations.Nullable;
 /// `MediaResolver`) from `external` media (a direct `url`). `width`/
 /// `height` are pixel dimensions when present; `mediaType` is the coarse kind
 /// (`image`, `file`, ...) while `fileMimeType` is the exact MIME type; `alt`,
-/// `fileName` and `name` are display labels (see {@link #imageAlt()} and
-/// {@link #fileLabel(String)} for the fallback order).
+/// `fileName` and `name` are display labels. A read-only view derived from the node by
+/// {@link #from(Attributes)}, or built directly for a media reference with no node behind it.
 public record MediaAttrs(
     @Nullable String type,
     @Nullable String id,
@@ -28,21 +27,21 @@ public record MediaAttrs(
     return new Builder();
   }
 
-  /// The explicit MIME type if present, otherwise the coarser media type.
-  public @Nullable String mimeOrType() {
-    return Strings.firstNonBlank(fileMimeType, mediaType);
-  }
-
-  /// Alt text for an image embed: the description if given, else the file name, else `"media"`.
-  public String imageAlt() {
-    var label = Strings.firstNonBlank(alt, fileName, name);
-    return label == null ? "media" : label;
-  }
-
-  /// Label for a file link: the name, file name, alt, or destination's file name, else `"file"`.
-  public String fileLabel(@Nullable String destinationFileName) {
-    var label = Strings.firstNonBlank(name, fileName, alt, destinationFileName);
-    return label == null ? "file" : label;
+  /// Reads a `media` or `mediaInline` node's fields.
+  public static MediaAttrs from(Attributes attrs) {
+    return new MediaAttrs(
+        attrs.text("type"),
+        attrs.text("id"),
+        attrs.text("localId"),
+        attrs.text("url"),
+        attrs.text("collection"),
+        attrs.text("alt"),
+        attrs.text("width"),
+        attrs.text("height"),
+        attrs.text("mediaType"),
+        attrs.text("__fileMimeType"),
+        attrs.text("__fileName"),
+        attrs.text("name"));
   }
 
   public static final class Builder {

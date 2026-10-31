@@ -23,6 +23,7 @@ import dev.nthings.adf4j.ast.UnknownMark;
 import dev.nthings.adf4j.confluence.ConfluenceMetadata;
 import dev.nthings.adf4j.internal.ConfluenceSupport;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
@@ -116,6 +117,32 @@ final class TextMarkRenderer {
       context.unresolvedTracker().recordPageId(pageNodeId);
     }
     return resolved;
+  }
+
+  // What a mark contributes to the rendered text. Two text runs merge when their marks' keys match,
+  // so attributes that never render (annotation ids, fragment names, ...) must stay out of the key.
+  static List<@Nullable Object> renderKey(AdfMark mark) {
+    return switch (mark) {
+      case Link link -> Arrays.asList(link.type(), link.attrs());
+      case SubSup subSup -> Arrays.asList(subSup.type(), subSup.subSupType());
+      case TextColor textColor -> Arrays.asList(textColor.type(), textColor.color());
+      case BackgroundColor color -> Arrays.asList(color.type(), color.color());
+      case Alignment alignment -> Arrays.asList(alignment.type(), alignment.align());
+      case Indentation indentation -> Arrays.asList(indentation.type(), indentation.level());
+      case FontSize fontSize -> Arrays.asList(fontSize.type(), fontSize.fontSize());
+      case Border border -> Arrays.asList(border.type(), border.color(), border.size());
+      case UnknownMark unknown -> Arrays.asList(unknown.type(), unknown.rawJson());
+      case Annotation _,
+          Breakout _,
+          Code _,
+          DataConsumer _,
+          Em _,
+          Fragment _,
+          Strike _,
+          Strong _,
+          Underline _ ->
+          Arrays.asList(mark.type());
+    };
   }
 
   private static int canonicalRank(AdfMark mark) {

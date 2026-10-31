@@ -6,8 +6,7 @@ import org.jspecify.annotations.Nullable;
 /// `null`/blank `href` leaves the text unlinked. `title` becomes the link title when present. The
 /// surviving ADF attributes (`attrs`) carry the link metadata (e.g. an internal Confluence page
 /// reference) used to resolve the href; see {@link Attributes}.
-public record Link(@Nullable String href, @Nullable String title, Attributes attrs)
-    implements AdfMark {
+public record Link(Attributes attrs) implements AdfMark {
 
   public Link {
     attrs = attrs == null ? Attributes.empty() : attrs;
@@ -16,5 +15,13 @@ public record Link(@Nullable String href, @Nullable String title, Attributes att
   @Override
   public String type() {
     return "link";
+  }
+
+  public @Nullable String href() {
+    return attrs.text("href");
+  }
+
+  public @Nullable String title() {
+    return attrs.text("title");
   }
 }

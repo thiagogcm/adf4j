@@ -1,6 +1,7 @@
 package dev.nthings.adf4j.internal.analyze;
 
 import dev.nthings.adf4j.ast.AdfBlock;
+import dev.nthings.adf4j.ast.AdfCard;
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.ast.AdfInline;
 import dev.nthings.adf4j.ast.Date;
@@ -8,7 +9,6 @@ import dev.nthings.adf4j.ast.Emoji;
 import dev.nthings.adf4j.ast.Extension;
 import dev.nthings.adf4j.ast.HardBreak;
 import dev.nthings.adf4j.ast.Heading;
-import dev.nthings.adf4j.ast.InlineCard;
 import dev.nthings.adf4j.ast.InlineExtension;
 import dev.nthings.adf4j.ast.MacroParams;
 import dev.nthings.adf4j.ast.MediaInline;
@@ -128,14 +128,15 @@ final class AdfHeadingCollector implements NodeVisitor {
             appendPlainText(builder, "[" + status.text() + "]");
           }
         }
-        case InlineCard card -> {
-          var title = card.attrs().title();
-          var label = title != null && !title.isBlank() ? title : card.attrs().url();
+        case AdfCard card -> {
+          var attrs = card.cardAttrs();
+          var title = attrs.title();
+          var label = title != null && !title.isBlank() ? title : attrs.url();
           if (label != null) {
             appendPlainText(builder, label);
           }
         }
-        case MediaInline media -> appendPlainText(builder, media.attrs().imageAlt());
+        case MediaInline media -> appendPlainText(builder, AdfText.mediaAlt(media.mediaAttrs()));
         case Date date -> appendPlainText(builder, AdfText.dateFromTimestamp(date.timestamp()));
         case Placeholder placeholder -> appendPlainText(builder, placeholder.text());
         default -> {}

@@ -5,10 +5,29 @@ import java.util.List;
 /// A `heading` block. `level` is the ADF heading level (1 to 6); out-of-range values are kept
 /// as-is here and clamped to the 1 to 6 range only when rendered. `content` is the heading's inline
 /// text; `marks` are block-level marks on the whole heading.
-public record Heading(int level, List<AdfInline> content, List<AdfMark> marks) implements AdfBlock {
+public record Heading(Attributes attrs, List<AdfInline> content, List<AdfMark> marks)
+    implements AdfBlock,
+        BodiedExtensionContent,
+        BodiedSyncBlockContent,
+        DocContent,
+        ExpandContent,
+        LayoutColumnContent,
+        NestedExpandContent,
+        PanelContent,
+        TableCellContent {
 
   public Heading {
+    attrs = attrs == null ? Attributes.empty() : attrs;
     content = content == null ? List.of() : List.copyOf(content);
     marks = marks == null ? List.of() : List.copyOf(marks);
+  }
+
+  @Override
+  public String type() {
+    return "heading";
+  }
+
+  public int level() {
+    return attrs.integer("level", 1);
   }
 }

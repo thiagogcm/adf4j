@@ -5,10 +5,18 @@ import org.jspecify.annotations.Nullable;
 /// Text-alignment (`alignment`) mark. `align` is the alignment (e.g. `center`, `end`). Dropped by
 /// default; a `center`/`end` value wraps the block in a `<div align>` only when
 /// `MarkdownOptions.htmlVisualMarks()` is enabled.
-public record Alignment(@Nullable String align) implements AdfMark {
+public record Alignment(Attributes attrs) implements AdfMark {
+
+  public Alignment {
+    attrs = attrs == null ? Attributes.empty() : attrs;
+  }
 
   @Override
   public String type() {
     return "alignment";
+  }
+
+  public @Nullable String align() {
+    return attrs.text("align");
   }
 }

@@ -1,9 +1,9 @@
 package dev.nthings.adf4j;
 
-import org.junit.jupiter.api.Test;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
+
+import org.junit.jupiter.api.Test;
 
 class AdfToMarkdownTests {
 
@@ -11,8 +11,9 @@ class AdfToMarkdownTests {
 
   @Test
   void default_construction_exposes_the_public_parse_and_render_workflow() {
-    var markdown = PROCESSOR.toMarkdown(
-        """
+    var markdown =
+        PROCESSOR.toMarkdown(
+            """
             {
               "type": "doc",
               "version": 1,
@@ -31,7 +32,7 @@ class AdfToMarkdownTests {
             """);
 
     assertThat(markdown).isEqualTo("Hello, ADF");
-    assertThat(PROCESSOR.parse("{\"type\":\"doc\",\"version\":1,\"content\":[]}").validAdfRoot())
+    assertThat(AdfJson.parse("{\"type\":\"doc\",\"version\":1,\"content\":[]}").validAdfRoot())
         .isTrue();
   }
 

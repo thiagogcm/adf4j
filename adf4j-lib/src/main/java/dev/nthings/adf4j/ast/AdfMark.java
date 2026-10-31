@@ -23,5 +23,9 @@ public sealed interface AdfMark
         DataConsumer,
         UnknownMark {
 
+  /// The ADF `type` this mark reads from and writes to.
   String type();
+
+  /// The mark's raw ADF attributes.
+  Attributes attrs();
 }

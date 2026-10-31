@@ -13,7 +13,8 @@ The public entry point is `AdfToMarkdown`:
 - `toMarkdown(json)` returns only the Markdown body.
 - `convert(json)` returns the body, metadata, diagnostics, and unresolved references.
 - `analyze(json)` returns metadata without rendering.
-- `parse(json)` validates the root and returns the typed AST.
+
+`AdfJson` reads and writes ADF itself: `AdfJson.parse(json)` validates the root and returns the typed AST, and `AdfJson.write(document)` turns an AST back into ADF JSON without loss.
 
 ## Design choices
 
@@ -25,7 +26,7 @@ The public entry point is `AdfToMarkdown`:
 
 **Safe defaults:** Input is treated as untrusted. JSON depth is bounded, URL schemes are sanitized, and resolver failures fall back to placeholders instead of aborting the whole document.
 
-**Forward-compatible AST:** Unknown nodes are preserved as raw JSON in the AST. Rendering behavior is controlled by `UnknownNodePolicy`: placeholder, skip, preserve raw, or fail.
+**Forward-compatible AST:** Every record keeps its node's complete attributes, children, and marks, so documents survive a parse and write. Unknown nodes are preserved as raw JSON in the AST. Rendering behavior is controlled by `UnknownNodePolicy`: placeholder, skip, preserve raw, or fail.
 
 ## Example
 

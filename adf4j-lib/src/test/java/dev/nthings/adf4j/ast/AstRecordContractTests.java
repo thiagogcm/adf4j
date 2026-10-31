@@ -1,66 +1,81 @@
 package dev.nthings.adf4j.ast;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 class AstRecordContractTests {
 
   @Test
-  void bodied_extension_defaults_null_macro_params_parameters_and_content() {
-    var node = new BodiedExtension("com.example", "macro", null, null, null, null);
+  void node_defaults_null_attrs_content_and_marks() {
+    var node = new BodiedExtension(null, null, null);
 
+    assertThat(node.attrs()).isEqualTo(Attributes.empty());
+    assertThat(node.content()).isEmpty();
+    assertThat(node.marks()).isEmpty();
     assertThat(node.macroParams()).isEqualTo(MacroParams.empty());
     assertThat(node.parameters()).isEqualTo(Attributes.empty());
-    assertThat(node.content()).isEmpty();
   }
 
   @Test
-  void bodied_extension_defensively_copies_content() {
+  void container_defensively_copies_content_and_marks() {
     var content = new ArrayList<AdfBlock>();
-    content.add(new Paragraph(List.of(new Text("kept", List.of())), List.of()));
+    content.add(new Paragraph(null, List.of(new Text("kept", List.of())), null));
+    var marks = new ArrayList<AdfMark>();
+    marks.add(new Strong(null));
 
-    var node = new BodiedExtension(
-        "com.example", "macro", "Body", new MacroParams(Map.of("k", "v")),
-        new Attributes(Map.of("extensionTitle", "Body")), content);
+    var node = new BodiedSyncBlock(null, content, marks);
     content.clear();
+    marks.clear();
 
     assertThat(node.content()).hasSize(1);
+    assertThat(node.marks()).hasSize(1);
     assertThatExceptionOfType(UnsupportedOperationException.class)
         .isThrownBy(() -> node.content().clear());
   }
 
   @Test
-  void bodied_sync_block_defaults_null_content() {
-    var node = new BodiedSyncBlock("resource-1", null);
-
-    assertThat(node.content()).isEmpty();
-  }
-
-  @Test
-  void bodied_sync_block_defensively_copies_content() {
-    var content = new ArrayList<AdfBlock>();
-    content.add(new Paragraph(List.of(new Text("synced", List.of())), List.of()));
-
-    var node = new BodiedSyncBlock("resource-1", content);
-    content.clear();
-
-    assertThat(node.content()).hasSize(1);
-    assertThatExceptionOfType(UnsupportedOperationException.class)
-        .isThrownBy(() -> node.content().clear());
-  }
-
-  @Test
-  void card_nodes_default_null_attrs_to_empty_card_attrs() {
+  void card_nodes_expose_empty_card_attrs_for_null_attrs() {
     var emptyAttrs = new CardAttrs(null, null, null, null, Attributes.empty());
 
-    assertThat(new InlineCard(null).attrs()).isEqualTo(emptyAttrs);
-    assertThat(new BlockCard(null).attrs()).isEqualTo(emptyAttrs);
-    assertThat(new EmbedCard(null).attrs()).isEqualTo(emptyAttrs);
+    assertThat(new InlineCard(null, null).cardAttrs()).isEqualTo(emptyAttrs);
+    assertThat(new BlockCard(null, null).cardAttrs()).isEqualTo(emptyAttrs);
+    assertThat(new EmbedCard(null, null).cardAttrs()).isEqualTo(emptyAttrs);
+  }
+
+  @Test
+  void each_record_reports_its_json_type() {
+    assertThat(new TableCell(false, null, null, null).type()).isEqualTo("tableCell");
+    assertThat(new TableCell(true, null, null, null).type()).isEqualTo("tableHeader");
+    assertThat(new SubSup(null).type()).isEqualTo("subsup");
+    assertThat(new AdfDocument(1, null).type()).isEqualTo("doc");
+    assertThat(new UnknownBlock("mystery", "{}").type()).isEqualTo("mystery");
+  }
+
+  @Test
+  void accessors_read_attrs_leniently_without_changing_them() {
+    var attrs = new Attributes(Map.of("level", "9", "colspan", 0));
+
+    var heading = new Heading(attrs, null, null);
+    var cell = new TableCell(false, attrs, null, null);
+
+    assertThat(heading.level()).isEqualTo(9);
+    assertThat(cell.colspan()).isEqualTo(1);
+    assertThat(heading.attrs()).isSameAs(attrs);
+  }
+
+  @Test
+  void filtered_accessors_hide_off_schema_children_that_content_keeps() {
+    var stray = new UnknownBlock("mystery", "{}");
+    var item = new ListItem(null, null, null);
+
+    var list = new BulletList(null, List.of(stray, item), null);
+
+    assertThat(list.content()).containsExactly(stray, item);
+    assertThat(list.items()).containsExactly(item);
   }
 }
