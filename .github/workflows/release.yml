@@ -172,12 +172,14 @@ jobs:
           (cd dist && 7z a -tzip "${NAME}.zip" "${NAME}" >/dev/null)
           rm -rf "dist/${NAME}"
 
+      # Hand-off to the publish job only. The GitHub Release keeps the public archives.
       - name: Upload native archive
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: native-${{ matrix.platform }}
           path: dist/adf4j-cli-*
           if-no-files-found: error
+          retention-days: 1
 
   build-wasm:
     name: WASM CLI
@@ -248,6 +250,7 @@ jobs:
           (cd dist && zip -r "${NAME}.zip" "${NAME}" >/dev/null)
           rm -rf "dist/${NAME}"
 
+      # Hand-off to the publish job only. The GitHub Release keeps the public bundle.
       - name: Upload WASM bundle
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -256,6 +259,7 @@ jobs:
             dist/adf4j-wasm-*.zip
             dist/adf4j-wasm-npm-*.tgz
           if-no-files-found: error
+          retention-days: 1
 
   # Stage the library, then run JReleaser once to sign, deploy to Central, tag, and create the release.
   release:
@@ -364,6 +368,7 @@ jobs:
             out/jreleaser/trace.log
             out/jreleaser/output.properties
           if-no-files-found: warn
+          retention-days: 7
 
   # Bump the POM to the next -SNAPSHOT and commit it.
   finalize:

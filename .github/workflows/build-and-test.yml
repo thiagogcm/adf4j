@@ -1,15 +1,22 @@
 name: Build and Test
 
+# Verify on every push and PR. Do not upload build outputs: release.yml rebuilds
+# the native CLI and WASM image and publishes those on the GitHub Release.
 on:
   push:
     branches: ["main"]
   pull_request:
     branches: ["main"]
 
+concurrency:
+  group: build-and-test-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: Build and Test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -42,35 +49,18 @@ jobs:
 
       - name: Build native CLI executable
         shell: bash
-        run: just native
-
-      - name: Prepare native executable artifact
-        shell: bash
         run: |
-          mkdir -p dist
-          if [ -f adf4j-cli/target/adf4j-cli.exe ]; then
-            cp adf4j-cli/target/adf4j-cli.exe dist/adf4j-cli-windows.exe
-          elif [ -f adf4j-cli/target/adf4j-cli ]; then
-            if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
-              cp adf4j-cli/target/adf4j-cli dist/adf4j-cli-macos
-            else
-              cp adf4j-cli/target/adf4j-cli dist/adf4j-cli-linux
-            fi
-          else
-            echo "Executable not found!"
-            exit 1
+          just native
+          if [ -f adf4j-cli/target/adf4j-cli.exe ] || [ -f adf4j-cli/target/adf4j-cli ]; then
+            exit 0
           fi
-
-      - name: Upload Native Executable
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: adf4j-cli-${{ matrix.os }}
-          path: dist/*
-          if-no-files-found: error
+          echo "Executable not found!"
+          exit 1
 
   build-wasm:
     name: Build WASM (Web Image)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout repository
@@ -126,25 +116,3 @@ jobs:
 
       - name: Build Chrome extension
         run: just chrome-ext-from-dist
-
-      - name: Upload Chrome Extension Artifact
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: adf4j-chrome-extension
-          path: adf4j-chrome-ext/adf4j-copy-as-markdown.zip
-          if-no-files-found: error
-
-      - name: Prepare WASM artifact
-        run: |
-          mkdir -p dist
-          cp adf4j-wasm/target/adf4j-wasm.js dist/adf4j-wasm.js
-          cp adf4j-wasm/target/adf4j-wasm.js.wasm dist/adf4j-wasm.js.wasm
-
-      - name: Upload WASM Artifact
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: adf4j-wasm
-          path: |
-            dist/adf4j-wasm.js
-            dist/adf4j-wasm.js.wasm
-          if-no-files-found: error
