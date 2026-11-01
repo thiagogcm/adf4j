@@ -25,6 +25,7 @@ jobs:
   snapshot:
     name: Publish library snapshot
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -73,13 +74,3 @@ jobs:
           JRELEASER_GPG_PASSPHRASE: ${{ secrets.JRELEASER_GPG_PASSPHRASE }}
           JRELEASER_NEXUS2_SNAPSHOTS_USERNAME: ${{ secrets.JRELEASER_MAVENCENTRAL_USERNAME }}
           JRELEASER_NEXUS2_SNAPSHOTS_PASSWORD: ${{ secrets.JRELEASER_MAVENCENTRAL_PASSWORD }}
-
-      - name: Upload JReleaser logs
-        if: always() && steps.v.outputs.is_snapshot == 'true'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: jreleaser-snapshot-logs
-          path: |
-            out/jreleaser/trace.log
-            out/jreleaser/output.properties
-          if-no-files-found: warn
