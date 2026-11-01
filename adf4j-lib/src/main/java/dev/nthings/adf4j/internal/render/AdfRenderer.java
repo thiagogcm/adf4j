@@ -283,6 +283,9 @@ public final class AdfRenderer implements BlockRecursion {
     if (left.size() != right.size()) {
       return false;
     }
+    if (left.equals(right)) {
+      return true;
+    }
     var leftKeys = left.stream().map(TextMarkRenderer::renderKey).toList();
     var rightKeys = right.stream().map(TextMarkRenderer::renderKey).toList();
     return leftKeys.containsAll(rightKeys) && rightKeys.containsAll(leftKeys);
@@ -320,7 +323,7 @@ public final class AdfRenderer implements BlockRecursion {
               placeholder.text(), atLineStart, context.escapeParentheses());
       case Status status ->
           MarkdownText.labelToken(statusLabel(status), context.escapeParentheses());
-      case InlineExtension extension -> macroRenderer.renderInlineExtension(extension, context);
+      case InlineExtension extension -> macroRenderer.renderExtension(extension, context);
       case UnknownInline unknown -> renderUnknownInlineByPolicy(unknown, context);
     };
   }

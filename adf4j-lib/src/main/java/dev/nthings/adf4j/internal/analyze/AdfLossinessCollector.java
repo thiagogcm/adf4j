@@ -33,10 +33,7 @@ final class AdfLossinessCollector implements NodeVisitor {
   public void visitBlock(AdfBlock block) {
     switch (block) {
       case UnknownBlock _ -> unknownNodes++;
-      case Paragraph node -> countUnknownMarks(node.marks());
-      case Heading node -> countUnknownMarks(node.marks());
-      case MediaSingle node -> countUnknownMarks(node.marks());
-      case Media node -> countUnknownMarks(node.marks());
+      case Paragraph _, Heading _, MediaSingle _, Media _ -> countUnknownMarks(block.marks());
       default -> {
         // Other blocks keep their marks in the AST, but rendering ignores them by design.
       }
@@ -47,8 +44,7 @@ final class AdfLossinessCollector implements NodeVisitor {
   public void visitInline(AdfInline inline) {
     switch (inline) {
       case UnknownInline _ -> unknownNodes++;
-      case Text node -> countUnknownMarks(node.marks());
-      case MediaInline node -> countUnknownMarks(node.marks());
+      case Text _, MediaInline _ -> countUnknownMarks(inline.marks());
       default -> {
         // Other inlines keep their marks in the AST, but rendering ignores them by design.
       }

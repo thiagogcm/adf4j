@@ -76,6 +76,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -148,8 +149,8 @@ public final class AdfAstParser {
         return new AdfDocument(1, List.of());
       }
       checkKeys(root, "doc", ROOT_KEYS);
-      var version = JsonFields.integer(root, "version", 1);
       var declared = root.get("version");
+      var version = declared == null ? 1 : declared.asInt(1);
       if (declared != null
           && !(declared.isNumber()
               && declared.decimalValue().compareTo(new BigDecimal(version)) == 0)) {
@@ -159,25 +160,22 @@ public final class AdfAstParser {
     }
 
     private List<AdfBlock> blocks(JsonNode parent, String parentType) {
-      return children(parent.get("content"), parentType + ".content", this::block);
-    }
-
-    private List<AdfInline> inlines(JsonNode parent, String parentType) {
-      return children(parent.get("content"), parentType + ".content", this::inline);
+      return children(parent, parentType, "content", this::block);
     }
 
     private List<AdfMark> marks(JsonNode parent, String parentType) {
-      return children(parent.get("marks"), parentType + ".marks", this::mark);
+      return children(parent, parentType, "marks", this::mark);
     }
 
-    // The array's object elements through fn; the single place array traversal lives.
+    // The field's object elements through fn; the single place array traversal lives.
     private <T> List<T> children(
-        @Nullable JsonNode arrayNode, String where, Function<JsonNode, T> fn) {
+        JsonNode parent, String parentType, String field, Function<JsonNode, T> fn) {
+      var arrayNode = parent.get(field);
       if (arrayNode == null || isAbsent(arrayNode)) {
         return List.of();
       }
       if (!arrayNode.isArray()) {
-        unpreserved(where + " is not an array");
+        unpreserved(parentType + "." + field + " is not an array");
         return List.of();
       }
       var result = new ArrayList<T>(arrayNode.size());
@@ -185,139 +183,135 @@ public final class AdfAstParser {
         if (child.isObject()) {
           result.add(fn.apply(child));
         } else {
-          unpreserved(where + " has a non-object element");
+          unpreserved(parentType + "." + field + " has a non-object element");
         }
       }
       return result;
     }
 
+    private AdfBlock withBlocks(JsonNode node, String type, ContainerFactory<AdfBlock> factory) {
+      return factory.create(
+          attrs(node, type, CONTAINER_KEYS), blocks(node, type), marks(node, type));
+    }
+
+    private AdfBlock withInlines(JsonNode node, String type, ContainerFactory<AdfInline> factory) {
+      return factory.create(
+          attrs(node, type, CONTAINER_KEYS),
+          children(node, type, "content", this::inline),
+          marks(node, type));
+    }
+
+    private <N> N leaf(
+        JsonNode node, String type, BiFunction<Attributes, List<AdfMark>, N> factory) {
+      return factory.apply(attrs(node, type, LEAF_KEYS), marks(node, type));
+    }
+
+    private AdfMark markOf(JsonNode node, String type, Function<Attributes, AdfMark> factory) {
+      return factory.apply(attrs(node, type, MARK_KEYS));
+    }
+
     AdfBlock block(JsonNode node) {
-      var type = JsonFields.text(node, "type", "");
+      var type = JsonFields.text(node, "type");
       return switch (type) {
-        case "paragraph" ->
-            new Paragraph(attrs(node, type), inlines(node, type), marks(node, type));
-        case "heading" -> new Heading(attrs(node, type), inlines(node, type), marks(node, type));
-        case "blockquote" ->
-            new Blockquote(attrs(node, type), blocks(node, type), marks(node, type));
-        case "codeBlock" ->
-            new CodeBlock(attrs(node, type), inlines(node, type), marks(node, type));
-        case "panel" -> new Panel(attrs(node, type), blocks(node, type), marks(node, type));
-        case "rule" -> new Rule(leafAttrs(node, type), marks(node, type));
-        case "bulletList" ->
-            new BulletList(attrs(node, type), blocks(node, type), marks(node, type));
-        case "orderedList" ->
-            new OrderedList(attrs(node, type), blocks(node, type), marks(node, type));
-        case "listItem" -> new ListItem(attrs(node, type), blocks(node, type), marks(node, type));
-        case "taskList" -> new TaskList(attrs(node, type), blocks(node, type), marks(node, type));
-        case "taskItem" -> new TaskItem(attrs(node, type), inlines(node, type), marks(node, type));
-        case "blockTaskItem" ->
-            new BlockTaskItem(attrs(node, type), blocks(node, type), marks(node, type));
-        case "decisionList" ->
-            new DecisionList(attrs(node, type), blocks(node, type), marks(node, type));
-        case "decisionItem" ->
-            new DecisionItem(attrs(node, type), inlines(node, type), marks(node, type));
-        case "table" -> new Table(attrs(node, type), blocks(node, type), marks(node, type));
-        case "tableRow" -> new TableRow(attrs(node, type), blocks(node, type), marks(node, type));
+        case "paragraph" -> withInlines(node, type, Paragraph::new);
+        case "heading" -> withInlines(node, type, Heading::new);
+        case "blockquote" -> withBlocks(node, type, Blockquote::new);
+        case "codeBlock" -> withInlines(node, type, CodeBlock::new);
+        case "panel" -> withBlocks(node, type, Panel::new);
+        case "rule" -> leaf(node, type, Rule::new);
+        case "bulletList" -> withBlocks(node, type, BulletList::new);
+        case "orderedList" -> withBlocks(node, type, OrderedList::new);
+        case "listItem" -> withBlocks(node, type, ListItem::new);
+        case "taskList" -> withBlocks(node, type, TaskList::new);
+        case "taskItem" -> withInlines(node, type, TaskItem::new);
+        case "blockTaskItem" -> withBlocks(node, type, BlockTaskItem::new);
+        case "decisionList" -> withBlocks(node, type, DecisionList::new);
+        case "decisionItem" -> withInlines(node, type, DecisionItem::new);
+        case "table" -> withBlocks(node, type, Table::new);
+        case "tableRow" -> withBlocks(node, type, TableRow::new);
         case "tableCell" ->
-            new TableCell(false, attrs(node, type), blocks(node, type), marks(node, type));
+            withBlocks(
+                node, type, (attrs, content, marks) -> new TableCell(false, attrs, content, marks));
         case "tableHeader" ->
-            new TableCell(true, attrs(node, type), blocks(node, type), marks(node, type));
-        case "mediaSingle" ->
-            new MediaSingle(attrs(node, type), blocks(node, type), marks(node, type));
-        case "mediaGroup" ->
-            new MediaGroup(attrs(node, type), blocks(node, type), marks(node, type));
-        case "media" -> new Media(leafAttrs(node, type), marks(node, type));
-        case "caption" -> new Caption(attrs(node, type), inlines(node, type), marks(node, type));
-        case "expand" -> new Expand(attrs(node, type), blocks(node, type), marks(node, type));
-        case "nestedExpand" ->
-            new NestedExpand(attrs(node, type), blocks(node, type), marks(node, type));
-        case "layoutSection" ->
-            new LayoutSection(attrs(node, type), blocks(node, type), marks(node, type));
-        case "layoutColumn" ->
-            new LayoutColumn(attrs(node, type), blocks(node, type), marks(node, type));
-        case "extension" -> new Extension(leafAttrs(node, type), marks(node, type));
-        case "bodiedExtension" ->
-            new BodiedExtension(attrs(node, type), blocks(node, type), marks(node, type));
-        case "multiBodiedExtension" ->
-            new MultiBodiedExtension(attrs(node, type), blocks(node, type), marks(node, type));
-        case "extensionFrame" ->
-            new ExtensionFrame(attrs(node, type), blocks(node, type), marks(node, type));
-        case "syncBlock" -> new SyncBlock(leafAttrs(node, type), marks(node, type));
-        case "bodiedSyncBlock" ->
-            new BodiedSyncBlock(attrs(node, type), blocks(node, type), marks(node, type));
-        case "blockCard" -> new BlockCard(leafAttrs(node, type), marks(node, type));
-        case "embedCard" -> new EmbedCard(leafAttrs(node, type), marks(node, type));
+            withBlocks(
+                node, type, (attrs, content, marks) -> new TableCell(true, attrs, content, marks));
+        case "mediaSingle" -> withBlocks(node, type, MediaSingle::new);
+        case "mediaGroup" -> withBlocks(node, type, MediaGroup::new);
+        case "media" -> leaf(node, type, Media::new);
+        case "caption" -> withInlines(node, type, Caption::new);
+        case "expand" -> withBlocks(node, type, Expand::new);
+        case "nestedExpand" -> withBlocks(node, type, NestedExpand::new);
+        case "layoutSection" -> withBlocks(node, type, LayoutSection::new);
+        case "layoutColumn" -> withBlocks(node, type, LayoutColumn::new);
+        case "extension" -> leaf(node, type, Extension::new);
+        case "bodiedExtension" -> withBlocks(node, type, BodiedExtension::new);
+        case "multiBodiedExtension" -> withBlocks(node, type, MultiBodiedExtension::new);
+        case "extensionFrame" -> withBlocks(node, type, ExtensionFrame::new);
+        case "syncBlock" -> leaf(node, type, SyncBlock::new);
+        case "bodiedSyncBlock" -> withBlocks(node, type, BodiedSyncBlock::new);
+        case "blockCard" -> leaf(node, type, BlockCard::new);
+        case "embedCard" -> leaf(node, type, EmbedCard::new);
         default -> new UnknownBlock(type, rawJson(node));
       };
     }
 
     AdfInline inline(JsonNode node) {
-      var type = JsonFields.text(node, "type", "");
+      var type = JsonFields.text(node, "type");
       return switch (type) {
         case "text" -> text(node);
-        case "hardBreak" -> new HardBreak(leafAttrs(node, type), marks(node, type));
-        case "inlineCard" -> new InlineCard(leafAttrs(node, type), marks(node, type));
-        case "embedCard" -> new EmbedCard(leafAttrs(node, type), marks(node, type));
-        case "blockCard" -> new BlockCard(leafAttrs(node, type), marks(node, type));
-        case "mediaInline" -> new MediaInline(leafAttrs(node, type), marks(node, type));
-        case "date" -> new Date(leafAttrs(node, type), marks(node, type));
-        case "emoji" -> new Emoji(leafAttrs(node, type), marks(node, type));
-        case "mention" -> new Mention(leafAttrs(node, type), marks(node, type));
-        case "placeholder" -> new Placeholder(leafAttrs(node, type), marks(node, type));
-        case "status" -> new Status(leafAttrs(node, type), marks(node, type));
-        case "inlineExtension" -> new InlineExtension(leafAttrs(node, type), marks(node, type));
+        case "hardBreak" -> leaf(node, type, HardBreak::new);
+        case "inlineCard" -> leaf(node, type, InlineCard::new);
+        case "embedCard" -> leaf(node, type, EmbedCard::new);
+        case "blockCard" -> leaf(node, type, BlockCard::new);
+        case "mediaInline" -> leaf(node, type, MediaInline::new);
+        case "date" -> leaf(node, type, Date::new);
+        case "emoji" -> leaf(node, type, Emoji::new);
+        case "mention" -> leaf(node, type, Mention::new);
+        case "placeholder" -> leaf(node, type, Placeholder::new);
+        case "status" -> leaf(node, type, Status::new);
+        case "inlineExtension" -> leaf(node, type, InlineExtension::new);
         default -> new UnknownInline(type, rawJson(node));
       };
     }
 
     private Text text(JsonNode node) {
       checkKeys(node, "text", TEXT_KEYS);
-      var text = JsonFields.field(node, "text");
+      var text = node.get("text");
       if (text == null || !text.isString()) {
         unpreserved("text node without a string text");
       }
       return new Text(
-          JsonFields.text(node, "text", ""),
+          JsonFields.text(node, "text"),
           attributes(node.get("attrs"), "text"),
           marks(node, "text"));
     }
 
     AdfMark mark(JsonNode node) {
-      var type = JsonFields.text(node, "type", "");
+      var type = JsonFields.text(node, "type");
       return switch (type) {
-        case "strong" -> new Strong(markAttrs(node, type));
-        case "em" -> new Em(markAttrs(node, type));
-        case "code" -> new Code(markAttrs(node, type));
-        case "strike" -> new Strike(markAttrs(node, type));
-        case "underline" -> new Underline(markAttrs(node, type));
-        case "subsup" -> new SubSup(markAttrs(node, type));
-        case "link" -> new Link(markAttrs(node, type));
-        case "textColor" -> new TextColor(markAttrs(node, type));
-        case "backgroundColor" -> new BackgroundColor(markAttrs(node, type));
-        case "alignment" -> new Alignment(markAttrs(node, type));
-        case "indentation" -> new Indentation(markAttrs(node, type));
-        case "fontSize" -> new FontSize(markAttrs(node, type));
-        case "border" -> new Border(markAttrs(node, type));
-        case "annotation" -> new Annotation(markAttrs(node, type));
-        case "breakout" -> new Breakout(markAttrs(node, type));
-        case "fragment" -> new Fragment(markAttrs(node, type));
-        case "dataConsumer" -> new DataConsumer(markAttrs(node, type));
+        case "strong" -> markOf(node, type, Strong::new);
+        case "em" -> markOf(node, type, Em::new);
+        case "code" -> markOf(node, type, Code::new);
+        case "strike" -> markOf(node, type, Strike::new);
+        case "underline" -> markOf(node, type, Underline::new);
+        case "subsup" -> markOf(node, type, SubSup::new);
+        case "link" -> markOf(node, type, Link::new);
+        case "textColor" -> markOf(node, type, TextColor::new);
+        case "backgroundColor" -> markOf(node, type, BackgroundColor::new);
+        case "alignment" -> markOf(node, type, Alignment::new);
+        case "indentation" -> markOf(node, type, Indentation::new);
+        case "fontSize" -> markOf(node, type, FontSize::new);
+        case "border" -> markOf(node, type, Border::new);
+        case "annotation" -> markOf(node, type, Annotation::new);
+        case "breakout" -> markOf(node, type, Breakout::new);
+        case "fragment" -> markOf(node, type, Fragment::new);
+        case "dataConsumer" -> markOf(node, type, DataConsumer::new);
         default -> new UnknownMark(type, rawJson(node));
       };
     }
 
-    private Attributes attrs(JsonNode node, String type) {
-      checkKeys(node, type, CONTAINER_KEYS);
-      return attributes(node.get("attrs"), type);
-    }
-
-    private Attributes leafAttrs(JsonNode node, String type) {
-      checkKeys(node, type, LEAF_KEYS);
-      return attributes(node.get("attrs"), type);
-    }
-
-    private Attributes markAttrs(JsonNode node, String type) {
-      checkKeys(node, type, MARK_KEYS);
+    private Attributes attrs(JsonNode node, String type, Set<String> allowedKeys) {
+      checkKeys(node, type, allowedKeys);
       return attributes(node.get("attrs"), type);
     }
 
@@ -348,9 +342,15 @@ public final class AdfAstParser {
     }
   }
 
+  // The canonical constructor of a block with `content` of C.
+  @FunctionalInterface
+  private interface ContainerFactory<C> {
+    AdfBlock create(Attributes attrs, List<C> content, List<AdfMark> marks);
+  }
+
   // Null and an empty container mean the same as a missing attrs, content or marks.
   private static boolean isAbsent(JsonNode node) {
-    return node.isNull() || node.isMissingNode() || (node.isContainer() && node.isEmpty());
+    return node.isNull() || (node.isContainer() && node.isEmpty());
   }
 
   // Attributes drops null values, so these attrs write back as no attrs at all.
@@ -360,7 +360,7 @@ public final class AdfAstParser {
 
   // JSON nulls drop out of objects, leaving the key absent, but stay in arrays to keep indices.
   private static LinkedHashMap<String, Object> plainObject(JsonNode object) {
-    var map = new LinkedHashMap<String, Object>();
+    var map = LinkedHashMap.<String, Object>newLinkedHashMap(object.size());
     for (var entry : object.properties()) {
       var value = plainValue(entry.getValue());
       if (value != null) {
@@ -371,7 +371,7 @@ public final class AdfAstParser {
   }
 
   private static @Nullable Object plainValue(JsonNode node) {
-    if (node.isNull() || node.isMissingNode()) {
+    if (node.isNull()) {
       return null;
     }
     if (node.isObject()) {

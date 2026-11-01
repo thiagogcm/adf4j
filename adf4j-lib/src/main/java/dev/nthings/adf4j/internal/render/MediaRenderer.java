@@ -87,9 +87,7 @@ final class MediaRenderer {
               ? attachment.title()
               : AttachmentReferences.fileName(resolvedSource);
       return MarkdownText.link(
-          AdfText.mediaFileLabel(attrs, destinationFileName),
-          destination,
-          context.escapeParentheses());
+          fileLabel(attrs, destinationFileName), destination, context.escapeParentheses());
     }
 
     // The {width= height=} suffix is non-GFM; emit only when opted in.
@@ -106,6 +104,13 @@ final class MediaRenderer {
             attributeSuffix);
   }
 
+  // The name, file name, alt, or destination's file name, else "file".
+  private String fileLabel(MediaAttrs attrs, @Nullable String destinationFileName) {
+    var label =
+        Strings.firstNonBlank(attrs.name(), attrs.fileName(), attrs.alt(), destinationFileName);
+    return label == null ? "file" : label;
+  }
+
   private String imageAlt(MediaAttrs attrs, @Nullable AttachmentReference attachment) {
     var alt = AdfText.mediaAlt(attrs);
     if (!"media".equals(alt) || attachment == null) {
@@ -120,7 +125,7 @@ final class MediaRenderer {
   private boolean isImage(
       MediaAttrs attrs, @Nullable AttachmentReference attachment, @Nullable String resolvedSource) {
     var mimeOrType = Strings.firstNonBlank(attrs.fileMimeType(), attrs.mediaType());
-    if ((mimeOrType == null || mimeOrType.isBlank()) && attachment != null) {
+    if (mimeOrType == null && attachment != null) {
       mimeOrType = attachment.mediaType();
     }
     var attachmentTitle = attachment == null ? null : attachment.title();

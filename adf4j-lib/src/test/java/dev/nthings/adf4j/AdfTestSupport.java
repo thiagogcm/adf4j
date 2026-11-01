@@ -3,7 +3,6 @@ package dev.nthings.adf4j;
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.ast.Attributes;
 import dev.nthings.adf4j.ast.MacroParams;
-import dev.nthings.adf4j.internal.parser.AdfAstParser;
 import dev.nthings.adf4j.testing.TestResources;
 import java.io.IOException;
 import java.util.Map;
@@ -14,18 +13,15 @@ final class AdfTestSupport {
   private static final String CASE_ROOT = "adf/spec/";
 
   private final JsonMapper mapper;
-  private final AdfAstParser astParser;
   private final AdfToMarkdown processor;
 
-  private AdfTestSupport(JsonMapper mapper, AdfAstParser astParser, AdfToMarkdown processor) {
+  private AdfTestSupport(JsonMapper mapper, AdfToMarkdown processor) {
     this.mapper = mapper;
-    this.astParser = astParser;
     this.processor = processor;
   }
 
   static AdfTestSupport create() {
-    var mapper = JsonMapper.builder().build();
-    return new AdfTestSupport(mapper, new AdfAstParser(mapper), AdfToMarkdown.create());
+    return new AdfTestSupport(JsonMapper.builder().build(), AdfToMarkdown.create());
   }
 
   AdfToMarkdown processor() {
@@ -41,14 +37,14 @@ final class AdfTestSupport {
   }
 
   AdfDocument caseDocument(String name) throws IOException {
-    return astParser.parse(mapper.readTree(caseInput(name))).document();
+    return parseDocument(caseInput(name));
   }
 
   MacroParams macroParams(String json) throws IOException {
     return MacroParams.from(new Attributes(mapper.convertValue(mapper.readTree(json), Map.class)));
   }
 
-  AdfDocument parseDocument(String json) throws IOException {
-    return astParser.parse(mapper.readTree(json)).document();
+  AdfDocument parseDocument(String json) {
+    return AdfJson.parse(json).document();
   }
 }

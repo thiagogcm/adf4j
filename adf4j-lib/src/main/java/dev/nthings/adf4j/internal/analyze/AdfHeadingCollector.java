@@ -3,6 +3,7 @@ package dev.nthings.adf4j.internal.analyze;
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.AdfCard;
 import dev.nthings.adf4j.ast.AdfDocument;
+import dev.nthings.adf4j.ast.AdfExtension;
 import dev.nthings.adf4j.ast.AdfInline;
 import dev.nthings.adf4j.ast.Date;
 import dev.nthings.adf4j.ast.Emoji;
@@ -10,7 +11,6 @@ import dev.nthings.adf4j.ast.Extension;
 import dev.nthings.adf4j.ast.HardBreak;
 import dev.nthings.adf4j.ast.Heading;
 import dev.nthings.adf4j.ast.InlineExtension;
-import dev.nthings.adf4j.ast.MacroParams;
 import dev.nthings.adf4j.ast.MediaInline;
 import dev.nthings.adf4j.ast.Mention;
 import dev.nthings.adf4j.ast.Placeholder;
@@ -52,8 +52,7 @@ final class AdfHeadingCollector implements NodeVisitor {
   public void visitBlock(AdfBlock block) {
     switch (block) {
       case Heading heading -> headings.add(heading);
-      case Extension extension ->
-          recordToc(extension.extensionType(), extension.extensionKey(), extension.macroParams());
+      case Extension extension -> recordToc(extension);
       default -> {}
     }
   }
@@ -61,7 +60,7 @@ final class AdfHeadingCollector implements NodeVisitor {
   @Override
   public void visitInline(AdfInline inline) {
     if (inline instanceof InlineExtension extension) {
-      recordToc(extension.extensionType(), extension.extensionKey(), extension.macroParams());
+      recordToc(extension);
     }
   }
 
@@ -94,13 +93,12 @@ final class AdfHeadingCollector implements NodeVisitor {
     return HeadingOutline.of(references, headingsByNode, tocReferencedLevels);
   }
 
-  private void recordToc(
-      @Nullable String extensionType, @Nullable String extensionKey, MacroParams macroParams) {
-    if (!ConfluenceSupport.isConfluenceMacroExtension(extensionType)
-        || !"toc".equals(extensionKey)) {
+  private void recordToc(AdfExtension extension) {
+    if (!ConfluenceSupport.isConfluenceMacroExtension(extension.extensionType())
+        || !"toc".equals(extension.extensionKey())) {
       return;
     }
-    var range = TocLevelRange.of(macroParams);
+    var range = TocLevelRange.of(extension.macroParams());
     for (var level = range.min(); level <= range.max(); level++) {
       tocReferencedLevels.add(level);
     }

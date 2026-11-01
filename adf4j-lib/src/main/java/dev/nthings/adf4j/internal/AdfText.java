@@ -18,13 +18,6 @@ public final class AdfText {
     return label == null ? "media" : label;
   }
 
-  /// Label for a file link: the name, file name, alt, or destination's file name, else `"file"`.
-  public static String mediaFileLabel(MediaAttrs attrs, @Nullable String destinationFileName) {
-    var label =
-        Strings.firstNonBlank(attrs.name(), attrs.fileName(), attrs.alt(), destinationFileName);
-    return label == null ? "file" : label;
-  }
-
   public static int clampHeadingLevel(int level) {
     return Math.clamp(level, 1, 6);
   }

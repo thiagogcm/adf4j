@@ -49,16 +49,10 @@ import dev.nthings.adf4j.ast.Text;
 import dev.nthings.adf4j.ast.UnknownBlock;
 import dev.nthings.adf4j.ast.UnknownInline;
 import dev.nthings.adf4j.ast.UnknownMark;
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.util.List;
-import java.util.Map;
-import org.jspecify.annotations.Nullable;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
-import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
 /// Writes an {@link AdfDocument} as ADF JSON in Jackson tree mode. Empty `attrs` and `marks` are
@@ -98,7 +92,7 @@ public final class AdfJsonWriter {
       default -> {}
     }
     if (!node.attrs().isEmpty()) {
-      json.set("attrs", object(node.attrs().values()));
+      json.set("attrs", mapper.valueToTree(node.attrs().values()));
     }
     if (isContainer(node)) {
       var content = json.putArray("content");
@@ -118,7 +112,7 @@ public final class AdfJsonWriter {
     var json = mapper.createObjectNode();
     json.put("type", mark.type());
     if (!mark.attrs().isEmpty()) {
-      json.set("attrs", object(mark.attrs().values()));
+      json.set("attrs", mapper.valueToTree(mark.attrs().values()));
     }
     return json;
   }
@@ -183,34 +177,5 @@ public final class AdfJsonWriter {
     } catch (JacksonException exception) {
       throw new IllegalArgumentException("Unknown node holds invalid JSON: " + rawJson, exception);
     }
-  }
-
-  private ObjectNode object(Map<?, ?> values) {
-    var json = mapper.createObjectNode();
-    values.forEach((key, value) -> json.set(String.valueOf(key), value(value)));
-    return json;
-  }
-
-  private ArrayNode array(List<?> values) {
-    var json = mapper.createArrayNode();
-    values.forEach(value -> json.add(value(value)));
-    return json;
-  }
-
-  // Covers every value Attributes admits.
-  private JsonNode value(@Nullable Object value) {
-    var nodes = mapper.getNodeFactory();
-    return switch (value) {
-      case null -> nodes.nullNode();
-      case String text -> nodes.stringNode(text);
-      case Boolean bool -> nodes.booleanNode(bool);
-      case Long number -> nodes.numberNode(number);
-      case BigInteger number -> nodes.numberNode(number);
-      case Double number -> nodes.numberNode(number);
-      case BigDecimal number -> nodes.numberNode(number);
-      case Map<?, ?> nested -> object(nested);
-      case List<?> nested -> array(nested);
-      default -> throw new IllegalStateException("Not a JSON value: " + value.getClass());
-    };
   }
 }

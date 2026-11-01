@@ -32,7 +32,6 @@ public class ValidateCommand extends Adf4jSubcommand {
   @Override
   int run() {
     var input = CliIo.readInput(file);
-    var converter = AdfToMarkdown.create();
     var parsed = AdfJson.parse(input);
     var hasError = false;
     var hasWarning = false;
@@ -44,7 +43,7 @@ public class ValidateCommand extends Adf4jSubcommand {
     String output;
     if (format.equals("json")) {
       var json = new CliJson();
-      var renderer = new JsonRenderer(json, converter, MarkdownOptions.defaults());
+      var renderer = new JsonRenderer(json, AdfToMarkdown.create(), MarkdownOptions.defaults());
       output = json.write(renderer.parseResult(parsed), !common.compact) + "\n";
     } else {
       output = validateText(parsed);

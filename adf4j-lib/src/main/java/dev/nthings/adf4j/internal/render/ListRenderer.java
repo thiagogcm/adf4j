@@ -27,24 +27,28 @@ final class ListRenderer {
     var lines = new ArrayList<String>();
     var previousWasNested = false;
     for (var item : items) {
-      if (item instanceof TaskItem taskItem) {
-        lines.add(renderTaskItem(taskItem, context, recursion));
-        previousWasNested = false;
-      } else if (item instanceof BlockTaskItem blockTaskItem) {
-        lines.addAll(renderBlockTaskItemLines(blockTaskItem, context, recursion));
-        previousWasNested = false;
-      } else if (item instanceof TaskList nested) {
-        var rendered =
-            RenderBuffer.indentLines(
-                renderTaskList(nested, context, recursion), RenderBuffer.LIST_INDENT);
-        if (!rendered.isEmpty()) {
-          if (previousWasNested) {
-            lines.add("");
-            lines.add(RenderBuffer.LIST_INDENT + "<!-- -->");
-            lines.add("");
+      switch (item) {
+        case TaskItem taskItem -> {
+          lines.add(renderTaskItem(taskItem, context, recursion));
+          previousWasNested = false;
+        }
+        case BlockTaskItem blockTaskItem -> {
+          lines.addAll(renderBlockTaskItemLines(blockTaskItem, context, recursion));
+          previousWasNested = false;
+        }
+        case TaskList nested -> {
+          var rendered =
+              RenderBuffer.indentLines(
+                  renderTaskList(nested, context, recursion), RenderBuffer.LIST_INDENT);
+          if (!rendered.isEmpty()) {
+            if (previousWasNested) {
+              lines.add("");
+              lines.add(RenderBuffer.LIST_INDENT + "<!-- -->");
+              lines.add("");
+            }
+            lines.addAll(rendered);
+            previousWasNested = true;
           }
-          lines.addAll(rendered);
-          previousWasNested = true;
         }
       }
     }

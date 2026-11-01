@@ -8,7 +8,6 @@ import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.ast.AdfInline;
 import dev.nthings.adf4j.ast.BlockCard;
-import dev.nthings.adf4j.ast.Paragraph;
 import dev.nthings.adf4j.ast.Text;
 import java.util.ArrayList;
 import java.util.List;
@@ -84,9 +83,5 @@ class AdfNodeWalkerTests {
 
   private static AdfDocument documentWithParagraph(String text) {
     return new AdfDocument(1, List.of(paragraph(text)));
-  }
-
-  private static Paragraph paragraph(String text) {
-    return paragraphOf(List.of(new Text(text, List.of())));
   }
 }

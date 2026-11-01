@@ -21,6 +21,7 @@ import dev.nthings.adf4j.ast.TableCell;
 import dev.nthings.adf4j.ast.TableRow;
 import dev.nthings.adf4j.ast.TaskItem;
 import dev.nthings.adf4j.ast.TaskList;
+import dev.nthings.adf4j.ast.Text;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +30,14 @@ import java.util.Map;
 public final class AdfNodes {
 
   private AdfNodes() {}
+
+  public static Text text(String value) {
+    return new Text(value, List.of());
+  }
+
+  public static Paragraph paragraph(String value) {
+    return paragraphOf(List.of(text(value)));
+  }
 
   public static Paragraph paragraphOf(List<AdfInline> content) {
     return new Paragraph(null, content, null);

@@ -2,22 +2,18 @@ package dev.nthings.adf4j.internal.analyze;
 
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.AdfCard;
+import dev.nthings.adf4j.ast.AdfExtension;
 import dev.nthings.adf4j.ast.AdfInline;
 import dev.nthings.adf4j.ast.AdfMark;
 import dev.nthings.adf4j.ast.Attributes;
-import dev.nthings.adf4j.ast.BlockCard;
 import dev.nthings.adf4j.ast.BodiedExtension;
 import dev.nthings.adf4j.ast.CardAttrs;
-import dev.nthings.adf4j.ast.EmbedCard;
-import dev.nthings.adf4j.ast.Extension;
 import dev.nthings.adf4j.ast.InlineExtension;
 import dev.nthings.adf4j.ast.Link;
-import dev.nthings.adf4j.ast.MacroParams;
 import dev.nthings.adf4j.ast.Media;
 import dev.nthings.adf4j.ast.MediaAttrs;
 import dev.nthings.adf4j.ast.MediaInline;
 import dev.nthings.adf4j.ast.Mention;
-import dev.nthings.adf4j.ast.MultiBodiedExtension;
 import dev.nthings.adf4j.ast.Text;
 import dev.nthings.adf4j.confluence.ConfluenceMetadata;
 import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
@@ -67,25 +63,12 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
         collectLinkMarks(media.marks());
         collectMediaAttrs(media.mediaAttrs());
       }
-      case Extension extension ->
-          collectExtension(
-              extension.extensionType(),
-              extension.extensionKey(),
-              extension.macroParams(),
-              extension.parameters());
       case BodiedExtension bodied -> {
-        collectExtension(
-            bodied.extensionType(),
-            bodied.extensionKey(),
-            bodied.macroParams(),
-            bodied.parameters());
+        collectExtension(bodied);
         collectExcerptDefinition(bodied);
       }
-      case MultiBodiedExtension mbe ->
-          collectExtension(
-              mbe.extensionType(), mbe.extensionKey(), mbe.macroParams(), mbe.parameters());
-      case BlockCard blockCard -> collectCardLink(blockCard.cardAttrs());
-      case EmbedCard embedCard -> collectCardLink(embedCard.cardAttrs());
+      case AdfExtension extension -> collectExtension(extension);
+      case AdfCard card -> collectCardLink(card.cardAttrs());
       default -> {
         // Other blocks' references (inline/child) arrive via the walk.
       }
@@ -101,12 +84,7 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
         collectLinkMarks(media.marks());
         collectMediaAttrs(media.mediaAttrs());
       }
-      case InlineExtension extension ->
-          collectExtension(
-              extension.extensionType(),
-              extension.extensionKey(),
-              extension.macroParams(),
-              extension.parameters());
+      case InlineExtension extension -> collectExtension(extension);
       case Mention mention -> collectMention(mention);
       default -> {
         // Plain inline content carries no references.
@@ -200,14 +178,12 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
     }
   }
 
-  private void collectExtension(
-      @Nullable String extensionType,
-      @Nullable String extensionKey,
-      MacroParams macroParams,
-      Attributes parameters) {
+  private void collectExtension(AdfExtension extension) {
+    var extensionType = extension.extensionType();
+    var extensionKey = extension.extensionKey();
     if (ConfluenceSupport.isInlineMediaImage(extensionType, extensionKey)) {
       // A media node in disguise: its file id is referenced like any media id.
-      var mediaAttrs = ConfluenceSupport.inlineMediaImageAttrs(parameters);
+      var mediaAttrs = ConfluenceSupport.inlineMediaImageAttrs(extension.parameters());
       if (mediaAttrs != null) {
         var fileId = mediaAttrs.id();
         if (fileId != null) {
@@ -220,6 +196,7 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
       return;
     }
 
+    var macroParams = extension.macroParams();
     var pageTreeReference = ConfluenceSupport.pageTreeReference(extensionKey, macroParams);
     if (pageTreeReference != null) {
       pageTreeRefs.add(pageTreeReference);

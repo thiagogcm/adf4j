@@ -62,9 +62,7 @@ public record Attributes(Map<String, Object> values) {
   /// Anything else, including a number outside the int range, yields `fallback`.
   public int integer(String key, int fallback) {
     return switch (values.get(key)) {
-      case Long value -> inIntRange(value) ? value.intValue() : fallback;
-      case Double value -> inIntRange(value) ? value.intValue() : fallback;
-      case BigDecimal value -> inIntRange(value.doubleValue()) ? value.intValue() : fallback;
+      case Number value -> inIntRange(value.doubleValue()) ? value.intValue() : fallback;
       case String value -> parsedInt(value, fallback);
       case null, default -> fallback;
     };
@@ -89,10 +87,6 @@ public record Attributes(Map<String, Object> values) {
     return values.get(key) instanceof Map<?, ?> nested
         ? new Attributes((Map<String, Object>) nested)
         : EMPTY;
-  }
-
-  private static boolean inIntRange(long value) {
-    return value >= Integer.MIN_VALUE && value <= Integer.MAX_VALUE;
   }
 
   // Compares before truncating, so 2147483647.5 is out of range.

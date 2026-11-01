@@ -4,24 +4,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.junit.jupiter.params.provider.Arguments.argumentSet;
 
+import dev.nthings.adf4j.AdfJson;
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.ast.AdfInline;
 import dev.nthings.adf4j.ast.Heading;
 import dev.nthings.adf4j.ast.Paragraph;
 import dev.nthings.adf4j.ast.Text;
-import dev.nthings.adf4j.internal.parser.AdfAstParser;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.FieldSource;
-import tools.jackson.databind.json.JsonMapper;
 
 class AdfHeadingCollectorTests {
-
-  private static final JsonMapper MAPPER = JsonMapper.builder().build();
-  private static final AdfAstParser PARSER = new AdfAstParser(MAPPER);
 
   private static final List<Arguments> normalized_heading_content =
       List.of(
@@ -230,7 +226,7 @@ class AdfHeadingCollectorTests {
   @FieldSource("heading_outline_documents")
   void collect_builds_heading_outline_from_rendered_heading_text(HeadingOutlineCase input)
       throws Exception {
-    var document = PARSER.parse(MAPPER.readTree(input.adfJson())).document();
+    var document = AdfJson.parse(input.adfJson()).document();
     var outline = AdfHeadingCollector.collect(document);
 
     assertThat(outline.headings())
@@ -250,7 +246,7 @@ class AdfHeadingCollectorTests {
 
   @Test
   void headings_without_any_toc_macro_are_not_toc_referenced() throws Exception {
-    var document = PARSER.parse(MAPPER.readTree(adfWithHeading(2, "Getting Started"))).document();
+    var document = AdfJson.parse(adfWithHeading(2, "Getting Started")).document();
     var outline = AdfHeadingCollector.collect(document);
 
     assertThat(tocReferencedFlags(document, outline)).containsExactly(false);
@@ -258,7 +254,7 @@ class AdfHeadingCollectorTests {
 
   @Test
   void a_toc_macro_marks_every_heading_in_its_level_range_as_toc_referenced() throws Exception {
-    var document = PARSER.parse(MAPPER.readTree(TOC_WITH_HEADINGS)).document();
+    var document = AdfJson.parse(TOC_WITH_HEADINGS).document();
     var outline = AdfHeadingCollector.collect(document);
 
     // The toc covers levels 1..2, so both the level-1 and level-2 headings are referenced.
@@ -267,7 +263,7 @@ class AdfHeadingCollectorTests {
 
   @Test
   void a_toc_macro_does_not_reference_headings_outside_its_level_range() throws Exception {
-    var document = PARSER.parse(MAPPER.readTree(TOC_LEVEL_1_ONLY)).document();
+    var document = AdfJson.parse(TOC_LEVEL_1_ONLY).document();
     var outline = AdfHeadingCollector.collect(document);
 
     // minLevel=maxLevel=1, so only the level-1 heading is referenced.
@@ -357,7 +353,6 @@ class AdfHeadingCollectorTests {
         "{\"type\":\"doc\",\"version\":1,\"content\":[{\"type\":\"paragraph\",\"content\":"
             + contentJson
             + "}]}";
-    return ((Paragraph) PARSER.parse(MAPPER.readTree(document)).document().content().getFirst())
-        .content();
+    return ((Paragraph) AdfJson.parse(document).document().content().getFirst()).content();
   }
 }

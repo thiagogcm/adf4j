@@ -37,14 +37,11 @@ class AdfJsonSchemaTests {
   @Test
   void written_fixtures_conform_to_the_schema_unless_listed_as_off_schema() throws IOException {
     var schema = schema();
-    var root = TestResources.root("adf/spec");
     var invalid = new TreeSet<String>();
-    try (var files = Files.walk(root)) {
-      for (var file : files.filter(path -> path.toString().endsWith(".json")).toList()) {
-        var written = AdfJson.write(AdfJson.parse(Files.readString(file)).document());
-        if (!schema.validate(AdfJsonComparison.MAPPER.readTree(written)).isEmpty()) {
-          invalid.add(root.relativize(file).toString().replace('\\', '/'));
-        }
+    for (var file : TestResources.specFixtures()) {
+      var written = AdfJson.write(AdfJson.parse(TestResources.read(file)).document());
+      if (!schema.validate(AdfJsonComparison.MAPPER.readTree(written)).isEmpty()) {
+        invalid.add(file.substring("adf/spec/".length()));
       }
     }
 

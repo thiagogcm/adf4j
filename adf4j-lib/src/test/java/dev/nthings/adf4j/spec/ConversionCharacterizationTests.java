@@ -7,7 +7,6 @@ import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
 import dev.nthings.adf4j.metadata.AttachmentReference;
 import dev.nthings.adf4j.metadata.ExcerptDefinition;
-import dev.nthings.adf4j.options.ExtensionContext;
 import dev.nthings.adf4j.options.ExtensionRenderer;
 import dev.nthings.adf4j.options.MarkdownOptions;
 import dev.nthings.adf4j.options.PageTreeEntry;
@@ -16,7 +15,6 @@ import dev.nthings.adf4j.options.UnknownNodePolicy;
 import dev.nthings.adf4j.testing.TestResources;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -70,7 +68,7 @@ class ConversionCharacterizationTests {
 
   private static MarkdownOptions resolvers() {
     ExtensionRenderer dumpingRenderer =
-        extension -> "x".equals(extension.extensionType()) ? dump(extension) : null;
+        extension -> "x".equals(extension.extensionType()) ? describe(extension) : null;
     return MarkdownOptions.defaults()
         .withMediaResolver(attrs -> "https://media.example/" + attrs.id())
         .withAttachmentResolver(reference -> "https://attach.example/" + reference.fileId())
@@ -82,10 +80,6 @@ class ConversionCharacterizationTests {
             ConfluenceRenderContext.empty()
                 .withAttachmentReferences(
                     List.of(new AttachmentReference("1", "a.pdf", "application/pdf"))));
-  }
-
-  private static String dump(ExtensionContext extension) {
-    return describe(extension);
   }
 
   @Test
@@ -128,18 +122,10 @@ class ConversionCharacterizationTests {
   // Fixture files and the off-spec corpus, keyed by a stable name.
   private static Map<String, String> cases() throws IOException {
     var cases = new TreeMap<String, String>();
-    var specRoot = TestResources.root("adf/spec");
-    try (var files = Files.walk(specRoot)) {
-      for (var file : files.filter(path -> path.toString().endsWith(".json")).toList()) {
-        cases.put(
-            specRoot.relativize(file).toString().replace('\\', '/'),
-            Files.readString(file, StandardCharsets.UTF_8));
-      }
+    for (var file : TestResources.specFixtures()) {
+      cases.put(file.substring("adf/spec/".length()), TestResources.read(file));
     }
-    for (var line : TestResources.read(ROOT + "corpus.tsv").split("\n")) {
-      var tab = line.indexOf('\t');
-      cases.put(line.substring(0, tab), line.substring(tab + 1));
-    }
+    cases.putAll(TestResources.corpus());
     return cases;
   }
 

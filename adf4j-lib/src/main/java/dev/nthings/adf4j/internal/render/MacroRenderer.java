@@ -1,11 +1,9 @@
 package dev.nthings.adf4j.internal.render;
 
 import dev.nthings.adf4j.ast.AdfBlock;
-import dev.nthings.adf4j.ast.Attributes;
+import dev.nthings.adf4j.ast.AdfExtension;
 import dev.nthings.adf4j.ast.BodiedExtension;
 import dev.nthings.adf4j.ast.BodiedSyncBlock;
-import dev.nthings.adf4j.ast.Extension;
-import dev.nthings.adf4j.ast.InlineExtension;
 import dev.nthings.adf4j.ast.MacroParams;
 import dev.nthings.adf4j.ast.MultiBodiedExtension;
 import dev.nthings.adf4j.ast.SyncBlock;
@@ -41,40 +39,16 @@ final class MacroRenderer {
     this.mediaRenderer = Objects.requireNonNull(mediaRenderer, "mediaRenderer");
   }
 
-  String renderExtension(Extension node, RendererState context) {
-    return renderExtensionCore(
-        node.extensionType(),
-        node.extensionKey(),
-        node.text(),
-        node.macroParams(),
-        node.parameters(),
-        context);
-  }
-
-  String renderInlineExtension(InlineExtension node, RendererState context) {
-    return renderExtensionCore(
-        node.extensionType(),
-        node.extensionKey(),
-        node.text(),
-        node.macroParams(),
-        node.parameters(),
-        context);
-  }
-
-  private String renderExtensionCore(
-      @Nullable String extensionType,
-      @Nullable String extensionKey,
-      @Nullable String text,
-      MacroParams macroParams,
-      Attributes parameters,
-      RendererState context) {
-    var custom = renderCustom(extensionType, extensionKey, text, macroParams, parameters, context);
+  String renderExtension(AdfExtension node, RendererState context) {
+    var custom = renderCustom(node, context);
     if (custom != null) {
       return custom;
     }
+    var extensionType = node.extensionType();
+    var extensionKey = node.extensionKey();
     if (ConfluenceSupport.isInlineMediaImage(extensionType, extensionKey)) {
       // A media node in disguise: the media path's resolver and placeholder semantics apply as-is.
-      var mediaAttrs = ConfluenceSupport.inlineMediaImageAttrs(parameters);
+      var mediaAttrs = ConfluenceSupport.inlineMediaImageAttrs(node.parameters());
       if (mediaAttrs != null) {
         return mediaRenderer.renderMediaBlock(mediaAttrs, context);
       }
@@ -82,12 +56,13 @@ final class MacroRenderer {
     if (ConfluenceSupport.isModernChartExtension(extensionType)) {
       // Its data table lives elsewhere in the same document, so a caption loses nothing —
       // Confluence's own export renders a sourceless chart as nothing at all.
-      return chartCaption(macroParams, parameters, context);
+      return chartCaption(node, context);
     }
     if (!ConfluenceSupport.isConfluenceMacroExtension(extensionType)) {
-      return extensionFallback(text, extensionType, extensionKey, context);
+      return extensionFallback(node, context);
     }
 
+    var macroParams = node.macroParams();
     var rendered =
         switch (extensionKey) {
           case "children", "pagetree" -> {
@@ -105,9 +80,7 @@ final class MacroRenderer {
           case "attachments" -> renderAttachmentsMacro(context);
           case null, default -> null;
         };
-    return rendered != null
-        ? rendered
-        : extensionFallback(text, extensionType, extensionKey, context);
+    return rendered != null ? rendered : extensionFallback(node, context);
   }
 
   List<String> renderBodiedExtension(
@@ -120,45 +93,21 @@ final class MacroRenderer {
       // The body holds the data table; keep the numbers under a caption, not a placeholder.
       return captionThenBodies(node, context, recursion);
     }
-    return headerThenBodies(
-        node.text(),
-        node.extensionType(),
-        node.extensionKey(),
-        node.macroParams(),
-        node.parameters(),
-        node.content(),
-        context,
-        recursion);
+    return headerThenBodies(node, node.content(), context, recursion);
   }
 
   List<String> renderMultiBodiedExtension(
       MultiBodiedExtension node, RendererState context, BlockRecursion recursion) {
     // The schema predates this node; salvage the frame bodies.
-    return headerThenBodies(
-        node.text(),
-        node.extensionType(),
-        node.extensionKey(),
-        node.macroParams(),
-        node.parameters(),
-        node.content(),
-        context,
-        recursion);
+    return headerThenBodies(node, node.content(), context, recursion);
   }
 
   // Header (custom renderer, else macro text or "[Extension: …]" placeholder) then the body blocks.
   private List<String> headerThenBodies(
-      @Nullable String text,
-      @Nullable String extensionType,
-      @Nullable String extensionKey,
-      MacroParams macroParams,
-      Attributes parameters,
-      List<AdfBlock> content,
-      RendererState context,
-      BlockRecursion recursion) {
+      AdfExtension node, List<AdfBlock> content, RendererState context, BlockRecursion recursion) {
     var blocks = new ArrayList<String>();
-    var custom = renderCustom(extensionType, extensionKey, text, macroParams, parameters, context);
-    blocks.add(
-        custom != null ? custom : extensionFallback(text, extensionType, extensionKey, context));
+    var custom = renderCustom(node, context);
+    blocks.add(custom != null ? custom : extensionFallback(node, context));
     blocks.addAll(recursion.renderBlocks(content, context));
     return blocks;
   }
@@ -167,35 +116,26 @@ final class MacroRenderer {
   private List<String> captionThenBodies(
       BodiedExtension node, RendererState context, BlockRecursion recursion) {
     var blocks = new ArrayList<String>();
-    var custom =
-        renderCustom(
-            node.extensionType(),
-            node.extensionKey(),
-            node.text(),
-            node.macroParams(),
-            node.parameters(),
-            context);
-    blocks.add(
-        custom != null ? custom : chartCaption(node.macroParams(), node.parameters(), context));
+    var custom = renderCustom(node, context);
+    blocks.add(custom != null ? custom : chartCaption(node, context));
     blocks.addAll(recursion.renderBlocks(node.content(), context));
     return blocks;
   }
 
   // Custom renderers, consulted in order (first non-null wins); null defers to the next, then
   // default.
-  private @Nullable String renderCustom(
-      @Nullable String extensionType,
-      @Nullable String extensionKey,
-      @Nullable String text,
-      MacroParams macroParams,
-      Attributes parameters,
-      RendererState context) {
+  private @Nullable String renderCustom(AdfExtension node, RendererState context) {
     var renderers = context.extensionRenderers();
     if (renderers.isEmpty()) {
       return null;
     }
     var extension =
-        new ExtensionContext(extensionType, extensionKey, text, macroParams.values(), parameters);
+        new ExtensionContext(
+            node.extensionType(),
+            node.extensionKey(),
+            node.text(),
+            node.macroParams().values(),
+            node.parameters());
     for (var renderer : renderers) {
       var rendered =
           CallbackGuards.guard("ExtensionRenderer", () -> renderer.render(extension), null);
@@ -206,18 +146,15 @@ final class MacroRenderer {
     return null;
   }
 
-  private String extensionFallback(
-      @Nullable String text,
-      @Nullable String extensionType,
-      @Nullable String extensionKey,
-      RendererState context) {
+  private String extensionFallback(AdfExtension node, RendererState context) {
+    var text = node.text();
     if (text != null && !text.isBlank()) {
       // Attribute-derived text; a block extension emits it at column 0, so neutralise leading
       // markers.
       return MarkdownText.escapeInlineText(text, true, context.escapeParentheses());
     }
-    context.recordUnsupportedExtension(extensionType, extensionKey);
-    return renderExtensionPlaceholder(extensionType, extensionKey, context);
+    context.recordUnsupportedExtension(node.extensionType(), node.extensionKey());
+    return renderExtensionPlaceholder(node.extensionType(), node.extensionKey(), context);
   }
 
   String renderSyncBlock(SyncBlock node, RendererState context) {
@@ -435,9 +372,8 @@ final class MacroRenderer {
   }
 
   // The italic "Chart: <title>" caption; one line so the emphasis wrapping survives any title.
-  private String chartCaption(
-      MacroParams macroParams, Attributes parameters, RendererState context) {
-    var title = ConfluenceSupport.chartTitle(macroParams, parameters);
+  private String chartCaption(AdfExtension node, RendererState context) {
+    var title = ConfluenceSupport.chartTitle(node.macroParams(), node.parameters());
     var label =
         title == null ? "Chart" : "Chart: " + MarkdownText.collapseLineBreaks(title).strip();
     return "*" + MarkdownText.escapeInlineText(label, false, context.escapeParentheses()) + "*";

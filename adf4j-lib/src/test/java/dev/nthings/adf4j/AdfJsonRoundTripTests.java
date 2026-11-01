@@ -9,9 +9,6 @@ import dev.nthings.adf4j.result.Diagnostic;
 import dev.nthings.adf4j.result.ParseResult;
 import dev.nthings.adf4j.testing.TestResources;
 import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -50,9 +47,11 @@ class AdfJsonRoundTripTests {
           "probeMark");
 
   private static final Supplier<Stream<Arguments>> fixtures =
-      () -> specFixtures().map(file -> argumentSet(file, file));
+      () -> TestResources.specFixtures().stream().map(file -> argumentSet(file, file));
   private static final Supplier<Stream<Arguments>> corpus =
-      () -> corpusLines().map(line -> argumentSet(line.split("\t", 2)[0], line.split("\t", 2)[1]));
+      () ->
+          TestResources.corpus().entrySet().stream()
+              .map(entry -> argumentSet(entry.getKey(), entry.getValue()));
 
   @ParameterizedTest(name = "{argumentSetName}")
   @FieldSource("fixtures")
@@ -142,28 +141,5 @@ class AdfJsonRoundTripTests {
 
   private static boolean unpreserved(ParseResult parsed) {
     return parsed.issues().stream().anyMatch(issue -> issue.code().equals(UNPRESERVED));
-  }
-
-  private static Stream<String> specFixtures() {
-    var root = TestResources.root("adf/spec");
-    try (var files = Files.walk(root)) {
-      return files
-          .filter(path -> path.toString().endsWith(".json"))
-          .map(path -> "adf/spec/" + root.relativize(path).toString().replace('\\', '/'))
-          .sorted()
-          .toList()
-          .stream();
-    } catch (IOException failure) {
-      throw new UncheckedIOException(failure);
-    }
-  }
-
-  private static Stream<String> corpusLines() {
-    try {
-      var corpusFile = TestResources.root("adf/characterization").resolve("corpus.tsv");
-      return Files.readAllLines(corpusFile, StandardCharsets.UTF_8).stream();
-    } catch (IOException failure) {
-      throw new UncheckedIOException(failure);
-    }
   }
 }

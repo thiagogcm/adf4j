@@ -10,9 +10,7 @@ import dev.nthings.adf4j.ast.AdfInline;
 import dev.nthings.adf4j.ast.BulletList;
 import dev.nthings.adf4j.ast.HardBreak;
 import dev.nthings.adf4j.ast.OrderedList;
-import dev.nthings.adf4j.ast.Paragraph;
 import dev.nthings.adf4j.ast.TaskItem;
-import dev.nthings.adf4j.ast.Text;
 import java.util.List;
 import java.util.function.Consumer;
 import org.jsoup.Jsoup;
@@ -293,14 +291,6 @@ class ListStructureOracleTests {
     var markdown = CONVERTER.convert(document).body();
     assertions.accept(Jsoup.parse(CommonMarkTestSupport.toHtml(markdown)));
     assertions.accept(Jsoup.parse(CommonMarkTestSupport.roundTripToHtml(markdown)));
-  }
-
-  private static Text text(String value) {
-    return new Text(value, List.of());
-  }
-
-  private static Paragraph paragraph(String value) {
-    return paragraphOf(List.of(text(value)));
   }
 
   private static TaskItem task(String state, String value) {

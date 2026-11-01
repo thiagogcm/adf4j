@@ -8,7 +8,14 @@ final class ChildNodes {
 
   private ChildNodes() {}
 
+  // Records keep `content` immutable, so the usual all-matching case can share it.
+  @SuppressWarnings("unchecked")
   static <T> List<T> ofType(List<? extends AdfNode> content, Class<T> type) {
-    return content.stream().filter(type::isInstance).map(type::cast).toList();
+    for (var child : content) {
+      if (!type.isInstance(child)) {
+        return content.stream().filter(type::isInstance).map(type::cast).toList();
+      }
+    }
+    return (List<T>) content;
   }
 }

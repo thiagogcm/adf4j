@@ -30,13 +30,7 @@ public record TaskList(Attributes attrs, List<AdfBlock> content, List<AdfMark> m
 
   /// The {@link TaskItem}, {@link BlockTaskItem} and nested {@link TaskList} children; `content`
   /// keeps any other child.
-  public List<AdfBlock> items() {
-    return content.stream()
-        .filter(
-            child ->
-                child instanceof TaskItem
-                    || child instanceof BlockTaskItem
-                    || child instanceof TaskList)
-        .toList();
+  public List<TaskListContent> items() {
+    return ChildNodes.ofType(content, TaskListContent.class);
   }
 }

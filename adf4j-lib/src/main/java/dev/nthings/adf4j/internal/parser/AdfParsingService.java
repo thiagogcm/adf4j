@@ -2,8 +2,8 @@ package dev.nthings.adf4j.internal.parser;
 
 import dev.nthings.adf4j.result.Diagnostic;
 import dev.nthings.adf4j.result.ParseResult;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,7 +68,8 @@ public final class AdfParsingService {
       // Only UNSUPPORTED_VERSION (or nothing): parse best-effort, keeping the warning in
       // diagnostics.
       var parsed = astParser.parse(jsonRoot);
-      return new ParseResult(parsed.document(), merged(issues, parsed.issues()), true);
+      var allIssues = Stream.concat(issues.stream(), parsed.issues().stream()).toList();
+      return new ParseResult(parsed.document(), allIssues, true);
     } catch (JacksonException | NumberFormatException exception) {
       // A number beyond what the reader can hold surfaces as NumberFormatException.
       log.error("Failed to parse ADF JSON payload: {}", exception.getMessage(), exception);
@@ -77,14 +78,5 @@ public final class AdfParsingService {
           List.of(new Diagnostic("INVALID_JSON", "Failed to parse ADF JSON payload.", exception)),
           false);
     }
-  }
-
-  private static List<Diagnostic> merged(List<Diagnostic> first, List<Diagnostic> second) {
-    if (second.isEmpty()) {
-      return first;
-    }
-    var merged = new ArrayList<>(first);
-    merged.addAll(second);
-    return merged;
   }
 }
