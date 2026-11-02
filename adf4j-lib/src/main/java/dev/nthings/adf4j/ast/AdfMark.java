@@ -4,24 +4,7 @@ package dev.nthings.adf4j.ast;
 /// marks wrap nodes rather than nest as children. An unrecognized mark parses as
 /// {@link UnknownMark}. The permits list grows with ADF (see the {@link AdfNode} note).
 public sealed interface AdfMark
-    permits Strong,
-        Em,
-        Code,
-        Strike,
-        Underline,
-        SubSup,
-        Link,
-        TextColor,
-        BackgroundColor,
-        Alignment,
-        Indentation,
-        FontSize,
-        Border,
-        Annotation,
-        Breakout,
-        Fragment,
-        DataConsumer,
-        UnknownMark {
+    permits TextMark, ParagraphMark, HeadingMark, MediaMark, Breakout, Fragment, UnknownMark {
 
   /// The ADF `type` this mark reads from and writes to.
   String type();

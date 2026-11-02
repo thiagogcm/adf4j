@@ -6,11 +6,15 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 
 /// Builds ADF documents in code. Every factory returns the immutable AST record for its node, so a
 /// built document works with everything a parsed one does.
@@ -23,30 +27,30 @@ import java.util.UUID;
 ///         heading(2, "Release notes"),
 ///         paragraph(text("Shipped by "), mention("5b10a2844c20165700ede21g", "@Ana"), text(".")),
 ///         panel(PanelType.WARNING, paragraph(text("Restart required", strong()))),
-///         bulletList(listItem("Faster search"), listItem("New exports")),
-///         table(
-///             tableRow(tableHeader("Task"), tableHeader("State")),
-///             tableRow(tableCell("Search"), tableCell(paragraph(status("DONE",
-// StatusColor.GREEN))))));
+///         bulletList(listItem("Faster search"), listItem("New exports")));
 ///
 /// var json = AdfJson.write(document);
 /// }
 ///
-/// The signatures carry the schema's content model. Parameters name the `*Content` type a container
-/// allows, so a heading in a `listItem` doesn't compile. A container the schema requires to be
-/// non-empty takes its first child separately, and `mediaSingle` and `layoutSection` take exactly
-/// the children they may hold. Closed attribute sets are enums. The `List` overloads are for
-// content
-/// built from data, where these counts can't be checked until a document is published.
+/// The signatures carry as much of the schema as types can. Parameters name the `*Content` type a
+/// container allows, so a heading in a `listItem` doesn't compile, and `TextMark` and its siblings
+/// do the same for marks. A container the schema requires to be non-empty takes its first child
+/// separately, and `mediaSingle` and `layoutSection` take exactly the children they may hold.
+/// Closed attribute sets are enums.
+///
+/// Every container also takes a `List`, for content built from data. These overloads throw
+/// `IllegalArgumentException` when a required child is missing, because an empty query result is
+/// ordinary data and the alternative is a rejected document.
 ///
 /// Attributes a node doesn't require are set through `withX` methods on the record, such as
-/// {@link TableCell#withColspan(int)}. The `String` shortcuts skip empty text, because the schema
-/// forbids an empty text node.
+/// {@link TableCell#withColspan(int)}. Empty text is no node at all, wherever it appears, because
+/// the schema forbids it and Jira rejects a document containing it.
 ///
 /// `doc` fills in the `localId`s the schema requires, deriving each from the node rather than at
 /// random, so rebuilding the same content writes the same JSON. A task or decision's id comes from
-/// its content, not its state or position, and identical items are told apart by their order.
-/// Nodes outside a `doc` have no id, and a `withLocalId` value is kept.
+/// its content, not its state or position, and identical items are told apart by their order. A
+/// list's id comes from its order among lists. A `withLocalId` value is kept, and generated ids
+/// avoid every other id on a known node. Nodes outside a `doc` have no id.
 public final class Adf {
 
   private static final int VERSION = 1;
@@ -63,8 +67,7 @@ public final class Adf {
     SUCCESS,
     CUSTOM;
 
-    /// The value ADF stores.
-    public String value() {
+    String value() {
       return name().toLowerCase(Locale.ROOT);
     }
   }
@@ -84,8 +87,7 @@ public final class Adf {
     YELLOW,
     GREEN;
 
-    /// The value ADF stores.
-    public String value() {
+    String value() {
       return name().toLowerCase(Locale.ROOT);
     }
   }
@@ -100,8 +102,7 @@ public final class Adf {
     ALIGN_END,
     ALIGN_START;
 
-    /// The value ADF stores.
-    public String value() {
+    String value() {
       return name().toLowerCase(Locale.ROOT).replace('_', '-');
     }
   }
@@ -115,8 +116,7 @@ public final class Adf {
     ALIGN_END,
     ALIGN_START;
 
-    /// The value ADF stores.
-    public String value() {
+    String value() {
       return name().toLowerCase(Locale.ROOT).replace('_', '-');
     }
   }
@@ -126,8 +126,7 @@ public final class Adf {
     CENTER,
     END;
 
-    /// The value ADF stores.
-    public String value() {
+    String value() {
       return name().toLowerCase(Locale.ROOT);
     }
   }
@@ -139,7 +138,7 @@ public final class Adf {
   }
 
   public static AdfDocument doc(List<? extends DocContent> content) {
-    return new AdfDocument(VERSION, new LocalIds().assign(content));
+    return new AdfDocument(VERSION, withLocalIds(List.of(), content));
   }
 
   public static Paragraph paragraph(InlineContent... content) {
@@ -151,12 +150,17 @@ public final class Adf {
   }
 
   public static Paragraph paragraph(List<? extends InlineContent> content) {
-    return new Paragraph(Attributes.empty(), List.<AdfInline>copyOf(content), List.of());
+    return new Paragraph(Attributes.empty(), inlines(content), List.of());
   }
 
   /// A heading of `level` 1 to 6.
   public static Heading heading(int level, InlineContent... content) {
-    return new Heading(level(level), List.<AdfInline>of(content), List.of());
+    return heading(level, List.of(content));
+  }
+
+  /// A heading of `level` 1 to 6.
+  public static Heading heading(int level, List<? extends InlineContent> content) {
+    return new Heading(level(level), inlines(content), List.of());
   }
 
   /// A heading of `level` 1 to 6.
@@ -166,6 +170,14 @@ public final class Adf {
 
   public static Blockquote blockquote(BlockquoteContent first, BlockquoteContent... rest) {
     return new Blockquote(Attributes.empty(), blocks(first, rest), List.of());
+  }
+
+  public static Blockquote blockquote(String text) {
+    return blockquote(paragraph(text));
+  }
+
+  public static Blockquote blockquote(List<? extends BlockquoteContent> content) {
+    return new Blockquote(Attributes.empty(), required("blockquote", content), List.of());
   }
 
   public static CodeBlock codeBlock(String code) {
@@ -181,6 +193,15 @@ public final class Adf {
     return new Panel(attrs, blocks(first, rest), List.of());
   }
 
+  public static Panel panel(PanelType type, String text) {
+    return panel(type, paragraph(text));
+  }
+
+  public static Panel panel(PanelType type, List<? extends PanelContent> content) {
+    var attrs = Attributes.empty().with("panelType", type.value());
+    return new Panel(attrs, required("panel", content), List.of());
+  }
+
   public static Rule rule() {
     return new Rule(Attributes.empty(), List.of());
   }
@@ -189,10 +210,29 @@ public final class Adf {
     return new Expand(title(title), blocks(first, rest), List.of());
   }
 
+  public static Expand expand(String title, String text) {
+    return expand(title, paragraph(text));
+  }
+
+  public static Expand expand(String title, List<? extends ExpandContent> content) {
+    return new Expand(title(title), required("expand", content), List.of());
+  }
+
   /// An {@link Expand} for inside a table cell, or another expand's content.
   public static NestedExpand nestedExpand(
       String title, NestedExpandContent first, NestedExpandContent... rest) {
     return new NestedExpand(title(title), blocks(first, rest), List.of());
+  }
+
+  /// An {@link Expand} for inside a table cell, or another expand's content.
+  public static NestedExpand nestedExpand(String title, String text) {
+    return nestedExpand(title, paragraph(text));
+  }
+
+  /// An {@link Expand} for inside a table cell, or another expand's content.
+  public static NestedExpand nestedExpand(
+      String title, List<? extends NestedExpandContent> content) {
+    return new NestedExpand(title(title), required("nestedExpand", content), List.of());
   }
 
   // ---- lists ----
@@ -202,7 +242,7 @@ public final class Adf {
   }
 
   public static BulletList bulletList(List<ListItem> items) {
-    return new BulletList(Attributes.empty(), List.<AdfBlock>copyOf(items), List.of());
+    return new BulletList(Attributes.empty(), required("bulletList", items), List.of());
   }
 
   public static OrderedList orderedList(ListItem first, ListItem... rest) {
@@ -210,7 +250,7 @@ public final class Adf {
   }
 
   public static OrderedList orderedList(List<ListItem> items) {
-    return new OrderedList(Attributes.empty(), List.<AdfBlock>copyOf(items), List.of());
+    return new OrderedList(Attributes.empty(), required("orderedList", items), List.of());
   }
 
   public static ListItem listItem(ListItemContent first, ListItemContent... rest) {
@@ -221,16 +261,24 @@ public final class Adf {
     return listItem(paragraph(text));
   }
 
+  public static ListItem listItem(List<? extends ListItemContent> content) {
+    return new ListItem(Attributes.empty(), required("listItem", content), List.of());
+  }
+
   public static TaskList taskList(TaskListContent first, TaskListContent... rest) {
     return new TaskList(Attributes.empty(), blocks(first, rest), List.of());
   }
 
   public static TaskList taskList(List<? extends TaskListContent> items) {
-    return new TaskList(Attributes.empty(), List.<AdfBlock>copyOf(items), List.of());
+    return new TaskList(Attributes.empty(), required("taskList", items), List.of());
   }
 
   public static TaskItem taskItem(TaskState state, InlineContent... content) {
-    return new TaskItem(task(state), List.<AdfInline>of(content), List.of());
+    return taskItem(state, List.of(content));
+  }
+
+  public static TaskItem taskItem(TaskState state, List<? extends InlineContent> content) {
+    return new TaskItem(task(state), inlines(content), List.of());
   }
 
   public static TaskItem taskItem(TaskState state, String text) {
@@ -242,16 +290,25 @@ public final class Adf {
     return new BlockTaskItem(task(state), blocks(first, rest), List.of());
   }
 
+  public static BlockTaskItem blockTaskItem(
+      TaskState state, List<? extends BlockTaskItemContent> content) {
+    return new BlockTaskItem(task(state), required("blockTaskItem", content), List.of());
+  }
+
   public static DecisionList decisionList(DecisionItem first, DecisionItem... rest) {
     return new DecisionList(Attributes.empty(), blocks(first, rest), List.of());
   }
 
   public static DecisionList decisionList(List<DecisionItem> items) {
-    return new DecisionList(Attributes.empty(), List.<AdfBlock>copyOf(items), List.of());
+    return new DecisionList(Attributes.empty(), required("decisionList", items), List.of());
   }
 
   public static DecisionItem decisionItem(InlineContent... content) {
-    return new DecisionItem(decided(), List.<AdfInline>of(content), List.of());
+    return decisionItem(List.of(content));
+  }
+
+  public static DecisionItem decisionItem(List<? extends InlineContent> content) {
+    return new DecisionItem(decided(), inlines(content), List.of());
   }
 
   public static DecisionItem decisionItem(String text) {
@@ -265,7 +322,7 @@ public final class Adf {
   }
 
   public static Table table(List<TableRow> rows) {
-    return new Table(Attributes.empty(), List.<AdfBlock>copyOf(rows), List.of());
+    return new Table(Attributes.empty(), required("table", rows), List.of());
   }
 
   public static TableRow tableRow(TableCell first, TableCell... rest) {
@@ -273,7 +330,7 @@ public final class Adf {
   }
 
   public static TableRow tableRow(List<TableCell> cells) {
-    return new TableRow(Attributes.empty(), List.<AdfBlock>copyOf(cells), List.of());
+    return new TableRow(Attributes.empty(), required("tableRow", cells), List.of());
   }
 
   public static TableCell tableCell(TableCellContent first, TableCellContent... rest) {
@@ -284,12 +341,20 @@ public final class Adf {
     return tableCell(paragraph(text));
   }
 
+  public static TableCell tableCell(List<? extends TableCellContent> content) {
+    return new TableCell(false, Attributes.empty(), required("tableCell", content), List.of());
+  }
+
   public static TableCell tableHeader(TableCellContent first, TableCellContent... rest) {
     return new TableCell(true, Attributes.empty(), blocks(first, rest), List.of());
   }
 
   public static TableCell tableHeader(String text) {
     return tableHeader(paragraph(text));
+  }
+
+  public static TableCell tableHeader(List<? extends TableCellContent> content) {
+    return new TableCell(true, Attributes.empty(), required("tableHeader", content), List.of());
   }
 
   // ---- media and cards ----
@@ -308,6 +373,10 @@ public final class Adf {
     return new MediaGroup(Attributes.empty(), blocks(first, rest), List.of());
   }
 
+  public static MediaGroup mediaGroup(List<Media> items) {
+    return new MediaGroup(Attributes.empty(), required("mediaGroup", items), List.of());
+  }
+
   /// A file held by the media service.
   public static Media media(String id, String collection) {
     return new Media(file(id, collection), List.of());
@@ -323,7 +392,11 @@ public final class Adf {
   }
 
   public static Caption caption(CaptionContent... content) {
-    return new Caption(Attributes.empty(), List.<AdfInline>of(content), List.of());
+    return caption(List.of(content));
+  }
+
+  public static Caption caption(List<? extends CaptionContent> content) {
+    return new Caption(Attributes.empty(), inlines(content), List.of());
   }
 
   public static Caption caption(String text) {
@@ -353,17 +426,40 @@ public final class Adf {
     return new LayoutSection(Attributes.empty(), List.of(first, second, third), List.of());
   }
 
+  /// A section of two or three columns, the only counts the schema allows.
+  public static LayoutSection layoutSection(List<LayoutColumn> columns) {
+    if (columns.size() < 2 || columns.size() > 3) {
+      throw new IllegalArgumentException(
+          "layoutSection needs 2 or 3 columns, got " + columns.size());
+    }
+    return new LayoutSection(Attributes.empty(), List.copyOf(columns), List.of());
+  }
+
   /// A column taking `width` percent of its section.
   public static LayoutColumn layoutColumn(
       double width, LayoutColumnContent first, LayoutColumnContent... rest) {
-    return new LayoutColumn(
-        Attributes.empty().with("width", width), blocks(first, rest), List.of());
+    return new LayoutColumn(width(width), blocks(first, rest), List.of());
   }
 
-  /// An extension without a body. See {@link #macroParameters(Map)} for a Confluence macro's
-  /// `parameters`.
+  /// A column taking `width` percent of its section.
+  public static LayoutColumn layoutColumn(
+      double width, List<? extends LayoutColumnContent> content) {
+    return new LayoutColumn(width(width), required("layoutColumn", content), List.of());
+  }
+
+  public static Extension extension(String type, String key) {
+    return new Extension(extensionAttrs(type, key), List.of());
+  }
+
+  /// An extension without a body. `parameters` are written with their keys sorted, so a `Map.of`
+  /// writes the same JSON on every run. See {@link #macroParameters(Map)} for a Confluence macro.
   public static Extension extension(String type, String key, Map<String, ?> parameters) {
     return new Extension(extensionAttrs(type, key, parameters), List.of());
+  }
+
+  public static BodiedExtension bodiedExtension(
+      String type, String key, BodiedExtensionContent first, BodiedExtensionContent... rest) {
+    return new BodiedExtension(extensionAttrs(type, key), blocks(first, rest), List.of());
   }
 
   public static BodiedExtension bodiedExtension(
@@ -374,6 +470,19 @@ public final class Adf {
       BodiedExtensionContent... rest) {
     return new BodiedExtension(
         extensionAttrs(type, key, parameters), blocks(first, rest), List.of());
+  }
+
+  public static BodiedExtension bodiedExtension(
+      String type,
+      String key,
+      Map<String, ?> parameters,
+      List<? extends BodiedExtensionContent> content) {
+    return new BodiedExtension(
+        extensionAttrs(type, key, parameters), required("bodiedExtension", content), List.of());
+  }
+
+  public static InlineExtension inlineExtension(String type, String key) {
+    return new InlineExtension(extensionAttrs(type, key), List.of());
   }
 
   public static InlineExtension inlineExtension(
@@ -398,10 +507,16 @@ public final class Adf {
     return new BodiedSyncBlock(sync(resourceId), blocks(first, rest), List.of());
   }
 
+  public static BodiedSyncBlock bodiedSyncBlock(
+      String resourceId, List<? extends BodiedSyncBlockContent> content) {
+    return new BodiedSyncBlock(sync(resourceId), required("bodiedSyncBlock", content), List.of());
+  }
+
   // ---- inline nodes ----
 
-  public static Text text(String text, AdfMark... marks) {
-    return new Text(text, List.of(marks));
+  /// A run of text. The schema allows `code` only alongside `link` and `annotation`.
+  public static Text text(String text, TextMark... marks) {
+    return new Text(text, List.<AdfMark>of(marks));
   }
 
   public static HardBreak hardBreak() {
@@ -484,7 +599,7 @@ public final class Adf {
     return new BackgroundColor(Attributes.empty().with("color", color));
   }
 
-  /// Aligns a paragraph or heading. See {@link Paragraph#withMarks(AdfMark...)}.
+  /// Aligns a paragraph or heading, through its `withMarks`.
   public static Alignment alignment(TextAlign align) {
     return new Alignment(Attributes.empty().with("align", align.value()));
   }
@@ -512,9 +627,21 @@ public final class Adf {
 
   // ---- attributes and children ----
 
-  // The schema forbids an empty text node, so empty text is no node at all.
+  // The schema forbids empty text, and Jira rejects it, so empty text is no node at all.
   private static List<AdfInline> inlines(String text) {
     return text.isEmpty() ? List.of() : List.of(text(text));
+  }
+
+  private static List<AdfInline> inlines(List<? extends AdfInline> content) {
+    return content.stream().filter(node -> !isEmptyText(node)).map(AdfInline.class::cast).toList();
+  }
+
+  private static boolean isEmptyText(AdfInline node) {
+    return switch (node) {
+      case Text text -> text.text().isEmpty();
+      case Status status -> status.attrs().text("text", "").isEmpty();
+      default -> false;
+    };
   }
 
   private static List<AdfBlock> blocks(AdfBlock first, AdfBlock[] rest) {
@@ -524,12 +651,23 @@ public final class Adf {
     return blocks;
   }
 
+  private static List<AdfBlock> required(String node, List<? extends AdfBlock> content) {
+    if (content.isEmpty()) {
+      throw new IllegalArgumentException(node + " needs at least one child");
+    }
+    return List.copyOf(content);
+  }
+
   private static Attributes level(int level) {
     return Attributes.empty().with("level", level);
   }
 
   private static Attributes title(String title) {
     return Attributes.empty().with("title", title);
+  }
+
+  private static Attributes width(double width) {
+    return Attributes.empty().with("width", width);
   }
 
   private static Attributes url(String url) {
@@ -556,18 +694,52 @@ public final class Adf {
     return Attributes.empty().with("resourceId", resourceId);
   }
 
+  private static Attributes extensionAttrs(String type, String key) {
+    return Attributes.empty().with("extensionType", type).with("extensionKey", key);
+  }
+
   private static Attributes extensionAttrs(String type, String key, Map<String, ?> parameters) {
-    return Attributes.empty()
-        .with("extensionType", type)
-        .with("extensionKey", key)
-        .with("parameters", parameters);
+    return extensionAttrs(type, key).with("parameters", sorted(parameters));
+  }
+
+  // Map.of iterates in an order salted per JVM run, which would reach the written JSON.
+  private static Map<String, @Nullable Object> sorted(Map<?, ?> map) {
+    var sorted = new TreeMap<String, @Nullable Object>();
+    map.forEach((key, value) -> sorted.put(String.valueOf(key), sortedValue(value)));
+    return sorted;
+  }
+
+  private static @Nullable Object sortedValue(@Nullable Object value) {
+    return switch (value) {
+      case Map<?, ?> map -> sorted(map);
+      case List<?> list -> list.stream().map(Adf::sortedValue).toList();
+      case null, default -> value;
+    };
+  }
+
+  /// `added`, with `localId`s filled in that avoid any id in `existing` or `added`.
+  static List<AdfBlock> withLocalIds(
+      List<? extends AdfBlock> existing, List<? extends AdfBlock> added) {
+    var ids = new LocalIds();
+    existing.forEach(ids::reserve);
+    added.forEach(ids::reserve);
+    return ids.assign(added);
   }
 
   // One document's id assignment, in document order so an item's occurrence is stable. Each node is
   // rebuilt, because records are immutable and only the document sees every item.
   private static final class LocalIds {
 
+    private final Set<String> used = new HashSet<>();
     private final Map<String, Integer> occurrences = new HashMap<>();
+
+    void reserve(AdfNode node) {
+      var id = node.attrs().text("localId");
+      if (id != null) {
+        used.add(id);
+      }
+      node.content().forEach(this::reserve);
+    }
 
     List<AdfBlock> assign(List<? extends AdfBlock> blocks) {
       return blocks.stream().map(this::assign).toList();
@@ -577,11 +749,9 @@ public final class Adf {
       return switch (block) {
         case TaskList n -> new TaskList(id(n, n.type()), assign(n.content()), n.marks());
         case DecisionList n -> new DecisionList(id(n, n.type()), assign(n.content()), n.marks());
-        case TaskItem n -> new TaskItem(id(n, n.type() + n.content()), n.content(), n.marks());
-        case DecisionItem n ->
-            new DecisionItem(id(n, n.type() + n.content()), n.content(), n.marks());
-        case BlockTaskItem n ->
-            new BlockTaskItem(id(n, n.type() + n.content()), n.content(), n.marks());
+        case TaskItem n -> new TaskItem(id(n, identity(n)), n.content(), n.marks());
+        case DecisionItem n -> new DecisionItem(id(n, identity(n)), n.content(), n.marks());
+        case BlockTaskItem n -> new BlockTaskItem(id(n, identity(n)), n.content(), n.marks());
         case SyncBlock n -> new SyncBlock(id(n, n.type() + n.resourceId()), n.marks());
         case BodiedSyncBlock n ->
             new BodiedSyncBlock(id(n, n.type() + n.resourceId()), assign(n.content()), n.marks());
@@ -602,15 +772,40 @@ public final class Adf {
       };
     }
 
-    // A type-3 UUID, the shape the editor writes, of what the node is plus how many came before it.
     private Attributes id(AdfNode node, String identity) {
       if (node.attrs().text("localId") != null) {
         return node.attrs();
       }
-      var occurrence = occurrences.merge(identity, 1, Integer::sum);
-      var name = identity + "#" + occurrence;
-      var id = UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8));
-      return node.attrs().with("localId", id.toString());
+      String id;
+      do {
+        var occurrence = occurrences.merge(identity, 1, Integer::sum);
+        var name = identity + "#" + occurrence;
+        id = UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8)).toString();
+      } while (!used.add(id));
+      return node.attrs().with("localId", id);
+    }
+
+    // What an item says: its children, not its own state, which ticking it changes.
+    private static String identity(AdfNode node) {
+      var identity = new StringBuilder(node.type());
+      node.content().forEach(child -> describe(child, identity));
+      return identity.toString();
+    }
+
+    // Spelled out rather than toString, so a generated id doesn't depend on how a record prints.
+    private static void describe(AdfNode node, StringBuilder out) {
+      out.append('(').append(node.type()).append(sorted(node.attrs().values()));
+      switch (node) {
+        case Text text -> out.append(text.text());
+        case UnknownBlock unknown -> out.append(unknown.rawJson());
+        case UnknownInline unknown -> out.append(unknown.rawJson());
+        default -> {}
+      }
+      for (var mark : node.marks()) {
+        out.append(mark.type()).append(sorted(mark.attrs().values()));
+      }
+      node.content().forEach(child -> describe(child, out));
+      out.append(')');
     }
   }
 }

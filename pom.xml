@@ -276,6 +276,8 @@
                             <compilerArgs>
                                 <arg>-XDcompilePolicy=simple</arg>
                                 <arg>--should-stop=ifError=FLOW</arg>
+                                <arg>-Xlint:dangling-doc-comments</arg>
+                                <arg>-Werror</arg>
                                 <arg>-Xplugin:ErrorProne -XepDisableAllChecks -Xep:NullAway:ERROR
                                     -XepOpt:NullAway:OnlyNullMarked=true
                                     -XepOpt:NullAway:JSpecifyMode=true

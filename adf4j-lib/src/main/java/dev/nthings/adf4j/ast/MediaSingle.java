@@ -65,6 +65,17 @@ public record MediaSingle(Attributes attrs, List<AdfBlock> content, List<AdfMark
 
   /// This node taking `width` percent of the page.
   public MediaSingle withWidth(double width) {
-    return new MediaSingle(attrs.with("width", width), content, marks);
+    return new MediaSingle(
+        attrs.with("width", width).with("widthType", "percentage"), content, marks);
+  }
+
+  /// This node `width` pixels wide.
+  public MediaSingle withPixelWidth(int width) {
+    return new MediaSingle(attrs.with("width", width).with("widthType", "pixel"), content, marks);
+  }
+
+  /// This node linking to `link`'s destination.
+  public MediaSingle withLink(Link link) {
+    return new MediaSingle(attrs, content, List.of(link));
   }
 }

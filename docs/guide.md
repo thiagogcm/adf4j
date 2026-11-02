@@ -381,46 +381,66 @@ var document =
 String json = AdfJson.write(document);
 ```
 
-The static import also brings in the enums for closed attribute sets, such as `PanelType`, `TaskState`, and `StatusColor`.
+The static import also brings in the enums for closed attribute sets, such as `PanelType`, `TaskState`, and `StatusColor`. A method with the same name as a factory hides the import, including a record component's accessor, so inside `record Report(String status)`, qualify the call as `Adf.status(...)`.
 
-The signatures carry the schema's content model, so these don't compile:
+The signatures carry the schema's rules, so these don't compile:
 
 ```java
-listItem(heading(1, "No"));     // a listItem can't hold a heading
-panel(PanelType.INFO);          // a panel needs content
-layoutSection(layoutColumn(100, paragraph("Only one"))); // a section has two or three columns
+listItem(heading(1, "No"));                     // a listItem can't hold a heading
+panel(PanelType.INFO);                          // a panel needs content
+layoutSection(layoutColumn(100, paragraph("x"))); // a section has two or three columns
+text("x", alignment(TextAlign.CENTER));         // alignment isn't a text mark
+paragraph("x").withMarks(strong());             // strong isn't a paragraph mark
 ```
 
-Types can't express everything. Numeric ranges, such as heading levels 1 to 6, and which marks a node allows, are documented on the factories but not checked. Validate against the [ADF schema](spec/adf-schema.json) if a document comes from untrusted data.
+Types can't express everything, and these rules aren't checked:
 
-Text carries its marks, which take the same form for every mark: `text("bold", strong())`, `text("docs", link(url))`, `text("x", strong(), em())`. A paragraph or heading takes block marks with `withMarks`, as in `paragraph("Centered").withMarks(alignment(TextAlign.CENTER))`.
+- Numeric ranges, such as heading levels 1 to 6.
+- `code` combining only with `link` and `annotation`.
+- Block marks in context. Alignment and indentation on a paragraph or heading are accepted only in some containers, not in panels, list items, blockquotes, expands, or extensions, and the two can't combine. `small()` is refused only inside a blockquote.
+
+adf4j doesn't include a schema validator. To check generated documents, run `AdfJson.write` output through a JSON Schema validator with the [ADF schema](spec/adf-schema.json). Atlassian notes that a schema-valid node may still not be accepted by a given product: Jira, for example, may refuse layouts.
+
+Text carries its marks: `text("bold", strong())`, `text("docs", link(url))`, `text("x", strong(), em())`. A paragraph or heading takes block marks with `withMarks`, as in `paragraph("Centered").withMarks(alignment(TextAlign.CENTER))`.
 
 Optional attributes are `withX` methods on the record, which return a copy:
 
 | Record | Methods |
 | --- | --- |
-| `Table` | `withLayout`, `withNumberColumn` |
-| `TableCell` | `withColspan`, `withRowspan`, `withBackground` |
+| `Table` | `withLayout`, `withWidth`, `withNumberColumn` |
+| `TableCell` | `withColspan`, `withRowspan`, `withColwidth`, `withBackground` |
 | `OrderedList` | `withOrder` |
-| `MediaSingle` | `withLayout`, `withWidth` |
+| `MediaSingle` | `withLayout`, `withWidth`, `withPixelWidth`, `withLink` |
 | `Media` | `withAlt`, `withSize`, `withMarks` |
 | `Paragraph`, `Heading` | `withMarks` |
 | `TaskList`, `TaskItem`, `BlockTaskItem`, `DecisionList`, `DecisionItem` | `withLocalId` |
 
 For anything else, a record's constructor takes its `attrs`, and `Attributes.with(key, value)` adds to them.
 
-For content built from data, `doc`, `paragraph`, the list factories, `table`, and `tableRow` also take a `List`. Such a list can be empty, which the schema may reject for that container:
+Every container also takes a `List`, for content built from data. A container the schema requires to be non-empty throws `IllegalArgumentException` naming the node when the list is empty, so an empty query result fails where you can see it rather than as a rejected document:
 
 ```java
 var rows = people.stream().map(p -> tableRow(tableCell(p.name()), tableCell(p.role()))).toList();
 var roster = table(rows);
 ```
 
-The `String` shortcuts, such as `paragraph(String)` and `tableCell(String)`, skip empty text, because the schema forbids an empty text node.
+Empty text is no node at all, wherever it appears, because the schema forbids it and Jira rejects it. `paragraph(text("Phone: "), text(phone))` is safe when `phone` is empty, and so is a `status` with no text.
 
-The schema requires a `localId` on tasks, decisions, and sync blocks. `doc` fills these in from the node, so rebuilding the same content writes the same JSON. A task or decision's id comes from its content, so it survives being ticked and is unaffected by changes to other tasks, but editing its text gives it a new id. Identical items are told apart by their order. Set an id with `withLocalId` when it must outlive an edit. A node has no generated id until it's in a `doc`.
+To add to an existing document, use `append`, which works on a parsed document and keeps its unknown nodes and existing ids:
 
-A Confluence macro stores its parameters in an envelope, which `macroParameters` writes for you:
+```java
+AdfDocument updated = AdfJson.parse(adfJson).document().append(paragraph("Reviewed"));
+```
+
+The schema requires a `localId` on tasks, decisions, and sync blocks. `doc` and `append` fill these in from each node, so rebuilding the same content writes the same JSON:
+
+- A task or decision's id comes from its content, including formatting. Ticking it, or changing other items, leaves its id alone. Editing its text or formatting gives it a new one.
+- Identical items are told apart by their order.
+- A task or decision list's id comes from its order among lists, so inserting a list before it changes it.
+- A value from `withLocalId` is kept, so use it when an id must outlive an edit. Generated ids avoid every other id on a known node, but a node that already has an id keeps it, so adding the same built node twice repeats its id.
+- A node has no generated id until it's in a `doc`.
+
+`extension` writes `parameters` with their keys sorted, so a `Map.of` writes the same JSON on every run. A Confluence macro stores its parameters in an envelope, which `macroParameters` writes for you:
 
 ```java
 var toc =

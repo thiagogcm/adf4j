@@ -3,12 +3,10 @@ package dev.nthings.adf4j.ast;
 import java.util.List;
 
 /// Root of the ADF AST: a document, a block, or an inline. {@link AdfCard}, {@link AdfExtension}
-// and
-/// {@link AdfMedia} are views across blocks and inlines, for the nodes that share accessors. The
-/// sealed hierarchies under this root
-/// *grow* as ADF evolves (new permitted types may be added in any release), so a consumer
-/// `switch` should keep a `default` (or handle the `Unknown*` variants) rather than
-/// rely on exhaustiveness over today's types.
+/// and {@link AdfMedia} are views across blocks and inlines, for the nodes that share accessors.
+/// The sealed hierarchies under this root *grow* as ADF evolves (new permitted types may be added
+/// in any release), so a consumer `switch` should keep a `default` (or handle the `Unknown*`
+/// variants) rather than rely on exhaustiveness over today's types.
 ///
 /// Every node mirrors its JSON object: `type`, the complete `attrs`, its `content` in source order
 /// and its `marks`. Typed accessors such as {@link Heading#level()} are lenient views over `attrs`,

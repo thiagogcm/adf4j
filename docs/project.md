@@ -14,7 +14,7 @@ The public entry point is `AdfToMarkdown`:
 - `convert(json)` returns the body, metadata, diagnostics, and unresolved references.
 - `analyze(parsed)` returns metadata without rendering.
 
-`AdfJson` reads and writes ADF itself: `AdfJson.parse(json)` validates the root and returns the typed AST with its diagnostics, and `AdfJson.write(document)` turns an AST back into ADF JSON without loss. `Adf` builds documents in code, with the compiler enforcing the ADF content model.
+`AdfJson` reads and writes ADF itself: `AdfJson.parse(json)` validates the root and returns the typed AST with its diagnostics, and `AdfJson.write(document)` turns an AST back into ADF JSON without loss. `Adf` builds documents in code, with the compiler enforcing ADF's nesting rules and most of its mark rules.
 
 ## Design choices
 

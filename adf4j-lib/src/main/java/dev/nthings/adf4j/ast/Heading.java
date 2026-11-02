@@ -30,8 +30,9 @@ public record Heading(Attributes attrs, List<AdfInline> content, List<AdfMark> m
     return attrs.integer("level", 1);
   }
 
-  /// This heading with `marks` in place of any it has.
-  public Heading withMarks(AdfMark... marks) {
-    return new Heading(attrs, content, List.of(marks));
+  /// This heading with `marks` in place of any it has. Most containers refuse them, and the
+  /// schema refuses alignment with indentation. See {@link HeadingMark}.
+  public Heading withMarks(HeadingMark... marks) {
+    return new Heading(attrs, content, List.<AdfMark>of(marks));
   }
 }

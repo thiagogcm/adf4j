@@ -67,6 +67,16 @@ public record Attributes(Map<String, Object> values) {
     };
   }
 
+  /// The value at `key` as a double: a number, or a string holding one. Anything else yields
+  /// `fallback`.
+  public double number(String key, double fallback) {
+    return switch (values.get(key)) {
+      case Number value -> value.doubleValue();
+      case String value -> parsedDouble(value, fallback);
+      case null, default -> fallback;
+    };
+  }
+
   /// The value at `key` as a boolean: a boolean, the string `true` or `false`, or an integer
   /// (non-zero is true). Anything else yields `fallback`.
   public boolean bool(String key, boolean fallback) {
@@ -98,6 +108,20 @@ public record Attributes(Map<String, Object> values) {
   // Compares before truncating, so 2147483647.5 is out of range.
   private static boolean inIntRange(double value) {
     return value >= Integer.MIN_VALUE && value <= Integer.MAX_VALUE;
+  }
+
+  // ASCII through BigDecimal, because Double.parseDouble also accepts "NaN" and "Infinity", and
+  // BigDecimal alone accepts other scripts' digits. Overflow ("1e400") yields `fallback` too.
+  private static double parsedDouble(String value, double fallback) {
+    if (!value.chars().allMatch(c -> c < 128)) {
+      return fallback;
+    }
+    try {
+      var parsed = new BigDecimal(value.strip()).doubleValue();
+      return Double.isFinite(parsed) ? parsed : fallback;
+    } catch (NumberFormatException _) {
+      return fallback;
+    }
   }
 
   // ASCII digits only: Integer.parseInt alone also accepts other scripts' digits.

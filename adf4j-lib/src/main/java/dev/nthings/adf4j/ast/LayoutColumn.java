@@ -17,7 +17,8 @@ public record LayoutColumn(Attributes attrs, List<AdfBlock> content, List<AdfMar
     return "layoutColumn";
   }
 
-  public int width() {
-    return attrs.integer("width", 0);
+  /// The percentage of the section this column takes.
+  public double width() {
+    return attrs.number("width", 0);
   }
 }

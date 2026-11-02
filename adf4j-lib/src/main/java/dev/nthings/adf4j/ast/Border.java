@@ -6,7 +6,7 @@ import org.jspecify.annotations.Nullable;
 /// (e.g. `2`). Visual-only and dropped by default; emitted as a `<span style="border:…">` only
 /// when `MarkdownOptions.htmlVisualMarks()` is enabled, and only when `color` and `size` are both
 /// present and of a safe CSS shape.
-public record Border(Attributes attrs) implements AdfMark {
+public record Border(Attributes attrs) implements MediaMark {
 
   @Override
   public String type() {

@@ -29,8 +29,10 @@ public record Paragraph(Attributes attrs, List<AdfInline> content, List<AdfMark>
     return "paragraph";
   }
 
-  /// This paragraph with `marks` in place of any it has.
-  public Paragraph withMarks(AdfMark... marks) {
-    return new Paragraph(attrs, content, List.of(marks));
+  /// This paragraph with `marks` in place of any it has. Most containers refuse alignment and
+  /// indentation, which can't combine; only a blockquote refuses `small`. See {@link
+  /// ParagraphMark}.
+  public Paragraph withMarks(ParagraphMark... marks) {
+    return new Paragraph(attrs, content, List.<AdfMark>of(marks));
   }
 }

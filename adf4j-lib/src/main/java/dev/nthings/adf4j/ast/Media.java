@@ -29,7 +29,7 @@ public record Media(Attributes attrs, List<AdfMark> marks) implements AdfBlock, 
   }
 
   /// This media with `marks` in place of any it has.
-  public Media withMarks(AdfMark... marks) {
-    return new Media(attrs, List.of(marks));
+  public Media withMarks(MediaMark... marks) {
+    return new Media(attrs, List.<AdfMark>of(marks));
   }
 }

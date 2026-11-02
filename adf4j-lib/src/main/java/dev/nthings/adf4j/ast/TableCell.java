@@ -1,5 +1,6 @@
 package dev.nthings.adf4j.ast;
 
+import java.util.Arrays;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
@@ -41,6 +42,12 @@ public record TableCell(
   /// This cell spanning `rowspan` rows.
   public TableCell withRowspan(int rowspan) {
     return new TableCell(header, attrs.with("rowspan", rowspan), content, marks);
+  }
+
+  /// This cell with its column widths in pixels, one for each column it spans.
+  public TableCell withColwidth(int... widths) {
+    var colwidth = Arrays.stream(widths).boxed().toList();
+    return new TableCell(header, attrs.with("colwidth", colwidth), content, marks);
   }
 
   /// This cell with a background color, as `#rrggbb`.

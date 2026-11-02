@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -125,6 +126,54 @@ class AdfContentModelTests {
         .contains(fromModel.keySet().toArray(new Class<?>[0]));
     assertThat(AdfUnknown.class.getPermittedSubclasses())
         .containsExactlyInAnyOrder(UnknownBlock.class, UnknownInline.class, UnknownMark.class);
+  }
+
+  @Test
+  void every_mark_set_permits_exactly_what_the_schema_allows() throws IOException {
+    var schema =
+        AdfJsonComparison.MAPPER.readTree(
+            Files.readString(Path.of("../docs/spec/adf-schema.json")));
+    schema.get("definitions").properties().forEach(e -> definitions.put(e.getKey(), e.getValue()));
+
+    assertThat(markTypes(TextMark.class))
+        .isEqualTo(marksOf("formatted_text_inline_node", "code_inline_node"));
+    assertThat(markTypes(ParagraphMark.class))
+        .isEqualTo(
+            marksOf(
+                "paragraph_with_alignment_node",
+                "paragraph_with_indentation_node",
+                "paragraph_with_font_size_node"));
+    assertThat(markTypes(HeadingMark.class))
+        .isEqualTo(marksOf("heading_with_alignment_node", "heading_with_indentation_node"));
+    assertThat(markTypes(MediaMark.class)).isEqualTo(marksOf("media_node"));
+  }
+
+  private static Set<String> markTypes(Class<?> type) {
+    return Arrays.stream(type.getPermittedSubclasses())
+        .map(mark -> mark.getSimpleName().toLowerCase(Locale.ROOT))
+        .collect(Collectors.toCollection(TreeSet::new));
+  }
+
+  private Set<String> marksOf(String... nodes) {
+    var marks = new TreeSet<String>();
+    for (var node : nodes) {
+      collectMarks(definitions.get(node), false, marks);
+    }
+    return marks;
+  }
+
+  private void collectMarks(JsonNode node, boolean underMarks, Set<String> marks) {
+    if (underMarks && node.has("$ref")) {
+      ownTypes(node, new HashSet<>()).forEach(mark -> marks.add(mark.toLowerCase(Locale.ROOT)));
+    }
+    node.properties()
+        .forEach(
+            entry ->
+                collectMarks(
+                    entry.getValue(), underMarks || entry.getKey().equals("marks"), marks));
+    if (node.isArray()) {
+      node.forEach(child -> collectMarks(child, underMarks, marks));
+    }
   }
 
   private static Set<String> without(Set<String> types) {

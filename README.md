@@ -62,7 +62,7 @@ var document =
 String json = AdfJson.write(document);
 ```
 
-The compiler enforces the ADF content model: a heading in a list item, or a panel with no content, doesn't compile. See [Building documents](docs/guide.md#building-documents).
+The compiler enforces ADF's nesting rules and most of its mark rules: a heading in a list item, a panel with no content, or alignment on a text run doesn't compile. See [Building documents](docs/guide.md#building-documents).
 
 ## CLI
 

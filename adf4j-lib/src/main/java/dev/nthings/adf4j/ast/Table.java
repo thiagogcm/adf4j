@@ -36,6 +36,11 @@ public record Table(Attributes attrs, List<AdfBlock> content, List<AdfMark> mark
     return new Table(attrs.with("layout", layout.value()), content, marks);
   }
 
+  /// This table `width` pixels wide.
+  public Table withWidth(int width) {
+    return new Table(attrs.with("width", width), content, marks);
+  }
+
   /// This table with a leading row-number column.
   public Table withNumberColumn() {
     return new Table(attrs.with("isNumberColumnEnabled", true), content, marks);

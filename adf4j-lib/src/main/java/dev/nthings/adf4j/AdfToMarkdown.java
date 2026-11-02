@@ -47,8 +47,7 @@ public final class AdfToMarkdown {
   }
 
   /// Converts ADF JSON to Markdown. Blank or invalid input yields an empty body (plus the
-  // configured
-  /// `documentTitle`, if any) with its diagnostics.
+  /// configured `documentTitle`, if any) with its diagnostics.
   public MarkdownResult convert(@Nullable String adfJson) {
     return PIPELINE.convert(adfJson, options);
   }

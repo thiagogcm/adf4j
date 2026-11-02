@@ -151,4 +151,19 @@ class AttributesTests {
     assertThat(one(2.5).bool("k", true)).isTrue();
     assertThat(Attributes.empty().bool("k", true)).isTrue();
   }
+
+  @Test
+  void number_reads_numbers_and_numeric_strings() {
+    var attributes =
+        new Attributes(
+            Map.of("a", 33.33, "b", "50", "c", "NaN", "d", true, "e", "1e400", "f", "٥٠"));
+
+    assertThat(attributes.number("a", 0)).isEqualTo(33.33);
+    assertThat(attributes.number("b", 0)).isEqualTo(50);
+    assertThat(attributes.number("c", 7)).isEqualTo(7);
+    assertThat(attributes.number("d", 7)).isEqualTo(7);
+    assertThat(attributes.number("e", 7)).isEqualTo(7);
+    assertThat(attributes.number("f", 7)).isEqualTo(7);
+    assertThat(attributes.number("missing", 7)).isEqualTo(7);
+  }
 }
