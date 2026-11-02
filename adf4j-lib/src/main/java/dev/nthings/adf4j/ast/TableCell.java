@@ -12,9 +12,8 @@ public record TableCell(
     implements AdfBlock {
 
   public TableCell {
-    attrs = attrs == null ? Attributes.empty() : attrs;
-    content = content == null ? List.of() : List.copyOf(content);
-    marks = marks == null ? List.of() : List.copyOf(marks);
+    content = List.copyOf(content);
+    marks = List.copyOf(marks);
   }
 
   @Override
@@ -32,5 +31,20 @@ public record TableCell(
 
   public @Nullable String background() {
     return attrs.text("background");
+  }
+
+  /// This cell spanning `colspan` columns.
+  public TableCell withColspan(int colspan) {
+    return new TableCell(header, attrs.with("colspan", colspan), content, marks);
+  }
+
+  /// This cell spanning `rowspan` rows.
+  public TableCell withRowspan(int rowspan) {
+    return new TableCell(header, attrs.with("rowspan", rowspan), content, marks);
+  }
+
+  /// This cell with a background color, as `#rrggbb`.
+  public TableCell withBackground(String color) {
+    return new TableCell(header, attrs.with("background", color), content, marks);
   }
 }

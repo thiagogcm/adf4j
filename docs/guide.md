@@ -1,8 +1,8 @@
 # Guide
 
-Use this guide for integration work: choosing an entry point, reading results, supplying resolvers, rendering macros, and reusing the AST. For exhaustive tables, see the [reference](./reference.md). For internal design, see the [architecture](./architecture.md).
+Use this guide for integration work: choosing an entry point, reading results, supplying resolvers, rendering macros, reusing the AST, and building documents. For exhaustive tables, see the [reference](./reference.md). For internal design, see the [architecture](./architecture.md).
 
-All examples use the public entry point `dev.nthings.adf4j.AdfToMarkdown`.
+Conversion examples use the public entry point `dev.nthings.adf4j.AdfToMarkdown`.
 
 ## How the conversion works
 
@@ -346,6 +346,87 @@ if (parsed.isValid()) {
 Keep a `default` arm, or handle the `Unknown*` variants explicitly. New ADF node types can expand the sealed `permits` lists in future releases.
 
 A record keeps its node's complete `attrs`, `content`, and `marks`, so `AdfJson.write(doc)` writes a parsed document back without loss. Typed accessors are lenient views that hide off-schema children: `MediaSingle.media()` and `captions()`, `MediaGroup.items()`, and `TaskList.items()`, which returns `List<TaskListContent>` because it holds task items and nested task lists. `AdfMedia`, `AdfCard`, and `AdfExtension` carry the accessors shared across node types, and `AdfUnknown` covers `UnknownBlock`, `UnknownInline`, and `UnknownMark`, with `type()` and `rawJson()`.
+
+## Building documents
+
+`dev.nthings.adf4j.ast.Adf` builds documents in code. Its factories return the same immutable records the parser produces, so a built document works with `AdfJson.write`, `AdfToMarkdown`, and everything else that takes an `AdfDocument`.
+
+```java
+import static dev.nthings.adf4j.ast.Adf.*;
+
+import dev.nthings.adf4j.AdfJson;
+import java.time.LocalDate;
+
+var document =
+    doc(
+        heading(1, "Release 2.0"),
+        paragraph(
+            text("Shipped on "),
+            date(LocalDate.of(2026, 11, 1)),
+            text(" by "),
+            mention("5b10a2844c20165700ede21g", "@Ana"),
+            text(". See the "),
+            text("notes", link("https://example.com/notes")),
+            text(".")),
+        panel(PanelType.WARNING, paragraph(text("Restart required", strong(), textColor("#bf2600")))),
+        orderedList(listItem("Stop the service"), listItem("Upgrade")),
+        taskList(taskItem(TaskState.TODO, "Update the runbook")),
+        codeBlock("bash", "./upgrade.sh"),
+        table(
+                tableRow(tableHeader("Area"), tableHeader("State")),
+                tableRow(tableCell("Search"), tableCell(paragraph(status("DONE", StatusColor.GREEN)))))
+            .withLayout(TableLayout.WIDE),
+        mediaSingle(externalMedia("https://example.com/chart.png").withAlt("Chart"), caption("Latency")));
+
+String json = AdfJson.write(document);
+```
+
+The static import also brings in the enums for closed attribute sets, such as `PanelType`, `TaskState`, and `StatusColor`.
+
+The signatures carry the schema's content model, so these don't compile:
+
+```java
+listItem(heading(1, "No"));     // a listItem can't hold a heading
+panel(PanelType.INFO);          // a panel needs content
+layoutSection(layoutColumn(100, paragraph("Only one"))); // a section has two or three columns
+```
+
+Types can't express everything. Numeric ranges, such as heading levels 1 to 6, and which marks a node allows, are documented on the factories but not checked. Validate against the [ADF schema](spec/adf-schema.json) if a document comes from untrusted data.
+
+Text carries its marks, which take the same form for every mark: `text("bold", strong())`, `text("docs", link(url))`, `text("x", strong(), em())`. A paragraph or heading takes block marks with `withMarks`, as in `paragraph("Centered").withMarks(alignment(TextAlign.CENTER))`.
+
+Optional attributes are `withX` methods on the record, which return a copy:
+
+| Record | Methods |
+| --- | --- |
+| `Table` | `withLayout`, `withNumberColumn` |
+| `TableCell` | `withColspan`, `withRowspan`, `withBackground` |
+| `OrderedList` | `withOrder` |
+| `MediaSingle` | `withLayout`, `withWidth` |
+| `Media` | `withAlt`, `withSize`, `withMarks` |
+| `Paragraph`, `Heading` | `withMarks` |
+| `TaskList`, `TaskItem`, `BlockTaskItem`, `DecisionList`, `DecisionItem` | `withLocalId` |
+
+For anything else, a record's constructor takes its `attrs`, and `Attributes.with(key, value)` adds to them.
+
+For content built from data, `doc`, `paragraph`, the list factories, `table`, and `tableRow` also take a `List`. Such a list can be empty, which the schema may reject for that container:
+
+```java
+var rows = people.stream().map(p -> tableRow(tableCell(p.name()), tableCell(p.role()))).toList();
+var roster = table(rows);
+```
+
+The `String` shortcuts, such as `paragraph(String)` and `tableCell(String)`, skip empty text, because the schema forbids an empty text node.
+
+The schema requires a `localId` on tasks, decisions, and sync blocks. `doc` fills these in from the node, so rebuilding the same content writes the same JSON. A task or decision's id comes from its content, so it survives being ticked and is unaffected by changes to other tasks, but editing its text gives it a new id. Identical items are told apart by their order. Set an id with `withLocalId` when it must outlive an edit. A node has no generated id until it's in a `doc`.
+
+A Confluence macro stores its parameters in an envelope, which `macroParameters` writes for you:
+
+```java
+var toc =
+    extension(
+        "com.atlassian.confluence.macro.core", "toc", macroParameters(Map.of("maxLevel", "3")));
+```
 
 ## Options per document
 

@@ -7,10 +7,6 @@ import org.jspecify.annotations.Nullable;
 /// `MarkdownOptions.htmlVisualMarks()` is enabled and the value is of a safe CSS shape.
 public record FontSize(Attributes attrs) implements AdfMark {
 
-  public FontSize {
-    attrs = attrs == null ? Attributes.empty() : attrs;
-  }
-
   @Override
   public String type() {
     return "fontSize";

@@ -8,7 +8,6 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
 
@@ -81,6 +80,13 @@ public record Attributes(Map<String, Object> values) {
     };
   }
 
+  /// These attributes with `value` at `key`, replacing any value already there. New keys go last.
+  public Attributes with(String key, Object value) {
+    var copy = new LinkedHashMap<String, Object>(values);
+    copy.put(key, value);
+    return new Attributes(copy);
+  }
+
   /// The nested object at `key`, or {@link #empty()} when absent or not an object.
   @SuppressWarnings("unchecked")
   public Attributes object(String key) {
@@ -104,8 +110,8 @@ public record Attributes(Map<String, Object> values) {
   }
 
   // Not Map.copyOf: its per-JVM-run salted iteration order would lose the document order.
-  private static Map<String, Object> normalizedMap(@Nullable Map<String, ?> values) {
-    if (values == null || values.isEmpty()) {
+  private static Map<String, Object> normalizedMap(Map<String, ?> values) {
+    if (values.isEmpty()) {
       return Map.of();
     }
     if (values instanceof NormalizedMap normalized) {
@@ -113,9 +119,7 @@ public record Attributes(Map<String, Object> values) {
     }
     var copy = LinkedHashMap.<String, Object>newLinkedHashMap(values.size());
     for (var entry : values.entrySet()) {
-      copy.put(
-          Objects.requireNonNull(entry.getKey(), "key"),
-          normalized(Objects.requireNonNull(entry.getValue(), "value")));
+      copy.put(entry.getKey(), normalized(entry.getValue()));
     }
     return new NormalizedMap(Collections.unmodifiableMap(copy));
   }

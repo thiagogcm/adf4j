@@ -10,8 +10,7 @@ public record InlineExtension(Attributes attrs, List<AdfMark> marks)
     implements AdfInline, AdfExtension, InlineContent {
 
   public InlineExtension {
-    attrs = attrs == null ? Attributes.empty() : attrs;
-    marks = marks == null ? List.of() : List.copyOf(marks);
+    marks = List.copyOf(marks);
   }
 
   @Override

@@ -9,9 +9,8 @@ public record DecisionItem(Attributes attrs, List<AdfInline> content, List<AdfMa
     implements AdfBlock {
 
   public DecisionItem {
-    attrs = attrs == null ? Attributes.empty() : attrs;
-    content = content == null ? List.of() : List.copyOf(content);
-    marks = marks == null ? List.of() : List.copyOf(marks);
+    content = List.copyOf(content);
+    marks = List.copyOf(marks);
   }
 
   @Override
@@ -21,5 +20,10 @@ public record DecisionItem(Attributes attrs, List<AdfInline> content, List<AdfMa
 
   public @Nullable String state() {
     return attrs.text("state");
+  }
+
+  /// This node with a fixed `localId` in place of the generated one.
+  public DecisionItem withLocalId(String localId) {
+    return new DecisionItem(attrs.with("localId", localId), content, marks);
   }
 }

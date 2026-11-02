@@ -8,9 +8,7 @@ public record Text(String text, Attributes attrs, List<AdfMark> marks)
     implements AdfInline, CaptionContent, InlineContent {
 
   public Text {
-    text = text == null ? "" : text;
-    attrs = attrs == null ? Attributes.empty() : attrs;
-    marks = marks == null ? List.of() : List.copyOf(marks);
+    marks = List.copyOf(marks);
   }
 
   /// A text run without attributes, which is the only form the ADF schema defines.

@@ -40,60 +40,62 @@ public final class AdfNodes {
   }
 
   public static Paragraph paragraphOf(List<AdfInline> content) {
-    return new Paragraph(null, content, null);
+    return new Paragraph(Attributes.empty(), content, List.of());
   }
 
   public static ListItem listItem(List<? extends AdfBlock> content) {
-    return new ListItem(null, List.copyOf(content), null);
+    return new ListItem(Attributes.empty(), List.copyOf(content), List.of());
   }
 
   public static BulletList bulletList(List<? extends AdfBlock> items) {
-    return new BulletList(null, List.copyOf(items), null);
+    return new BulletList(Attributes.empty(), List.copyOf(items), List.of());
   }
 
   public static OrderedList orderedList(int order, List<? extends AdfBlock> items) {
-    return new OrderedList(new Attributes(Map.of("order", order)), List.copyOf(items), null);
+    return new OrderedList(new Attributes(Map.of("order", order)), List.copyOf(items), List.of());
   }
 
   public static TaskList taskList(List<? extends AdfBlock> items) {
-    return new TaskList(null, List.copyOf(items), null);
+    return new TaskList(Attributes.empty(), List.copyOf(items), List.of());
   }
 
   public static TaskItem taskItem(String state, List<AdfInline> content) {
-    return new TaskItem(new Attributes(Map.of("state", state)), content, null);
+    return new TaskItem(new Attributes(Map.of("state", state)), content, List.of());
   }
 
   public static BlockTaskItem blockTaskItem(String state, List<? extends AdfBlock> content) {
-    return new BlockTaskItem(new Attributes(Map.of("state", state)), List.copyOf(content), null);
+    return new BlockTaskItem(
+        new Attributes(Map.of("state", state)), List.copyOf(content), List.of());
   }
 
   public static DecisionList decisionList(List<? extends AdfBlock> items) {
-    return new DecisionList(null, List.copyOf(items), null);
+    return new DecisionList(Attributes.empty(), List.copyOf(items), List.of());
   }
 
   public static DecisionItem decisionItem(String state, List<AdfInline> content) {
-    return new DecisionItem(new Attributes(Map.of("state", state)), content, null);
+    return new DecisionItem(new Attributes(Map.of("state", state)), content, List.of());
   }
 
   public static Panel panel(String panelType, List<? extends AdfBlock> content) {
-    return new Panel(new Attributes(Map.of("panelType", panelType)), List.copyOf(content), null);
+    return new Panel(
+        new Attributes(Map.of("panelType", panelType)), List.copyOf(content), List.of());
   }
 
   public static Blockquote blockquote(List<? extends AdfBlock> content) {
-    return new Blockquote(null, List.copyOf(content), null);
+    return new Blockquote(Attributes.empty(), List.copyOf(content), List.of());
   }
 
   public static Expand expand(String title, List<? extends AdfBlock> content) {
-    return new Expand(new Attributes(Map.of("title", title)), List.copyOf(content), null);
+    return new Expand(new Attributes(Map.of("title", title)), List.copyOf(content), List.of());
   }
 
   public static Table table(boolean numberColumn, List<? extends AdfBlock> rows) {
     var attrs = new Attributes(Map.of("isNumberColumnEnabled", numberColumn));
-    return new Table(attrs, List.copyOf(rows), null);
+    return new Table(attrs, List.copyOf(rows), List.of());
   }
 
   public static TableRow tableRow(List<? extends AdfBlock> cells) {
-    return new TableRow(null, List.copyOf(cells), null);
+    return new TableRow(Attributes.empty(), List.copyOf(cells), List.of());
   }
 
   public static TableCell tableCell(
@@ -101,7 +103,7 @@ public final class AdfNodes {
     var attrs = new LinkedHashMap<String, Object>();
     attrs.put("colspan", colspan);
     attrs.put("rowspan", rowspan);
-    return new TableCell(header, new Attributes(attrs), List.copyOf(content), null);
+    return new TableCell(header, new Attributes(attrs), List.copyOf(content), List.of());
   }
 
   public static BodiedExtension bodiedExtension(
@@ -109,16 +111,16 @@ public final class AdfNodes {
     var attrs = new LinkedHashMap<String, Object>();
     attrs.put("extensionType", extensionType);
     attrs.put("extensionKey", extensionKey);
-    return new BodiedExtension(new Attributes(attrs), List.copyOf(content), null);
+    return new BodiedExtension(new Attributes(attrs), List.copyOf(content), List.of());
   }
 
   public static ExtensionFrame extensionFrame(List<? extends AdfBlock> content) {
-    return new ExtensionFrame(null, List.copyOf(content), null);
+    return new ExtensionFrame(Attributes.empty(), List.copyOf(content), List.of());
   }
 
   public static BodiedSyncBlock bodiedSyncBlock(
       String resourceId, List<? extends AdfBlock> content) {
     var attrs = new Attributes(Map.of("resourceId", resourceId));
-    return new BodiedSyncBlock(attrs, List.copyOf(content), null);
+    return new BodiedSyncBlock(attrs, List.copyOf(content), List.of());
   }
 }

@@ -11,24 +11,13 @@ import org.junit.jupiter.api.Test;
 class AstRecordContractTests {
 
   @Test
-  void node_defaults_null_attrs_content_and_marks() {
-    var node = new BodiedExtension(null, null, null);
-
-    assertThat(node.attrs()).isEqualTo(Attributes.empty());
-    assertThat(node.content()).isEmpty();
-    assertThat(node.marks()).isEmpty();
-    assertThat(node.macroParams()).isEqualTo(MacroParams.empty());
-    assertThat(node.parameters()).isEqualTo(Attributes.empty());
-  }
-
-  @Test
   void container_defensively_copies_content_and_marks() {
     var content = new ArrayList<AdfBlock>();
-    content.add(new Paragraph(null, List.of(new Text("kept", List.of())), null));
+    content.add(new Paragraph(Attributes.empty(), List.of(new Text("kept", List.of())), List.of()));
     var marks = new ArrayList<AdfMark>();
-    marks.add(new Strong(null));
+    marks.add(new Strong(Attributes.empty()));
 
-    var node = new BodiedSyncBlock(null, content, marks);
+    var node = new BodiedSyncBlock(Attributes.empty(), content, marks);
     content.clear();
     marks.clear();
 
@@ -39,9 +28,12 @@ class AstRecordContractTests {
   }
 
   @Test
-  void card_accessors_are_null_for_null_attrs() {
+  void card_accessors_are_null_for_empty_attrs() {
     List<AdfCard> cards =
-        List.of(new InlineCard(null, null), new BlockCard(null, null), new EmbedCard(null, null));
+        List.of(
+            new InlineCard(Attributes.empty(), List.of()),
+            new BlockCard(Attributes.empty(), List.of()),
+            new EmbedCard(Attributes.empty(), List.of()));
 
     assertThat(cards)
         .allSatisfy(
@@ -57,7 +49,7 @@ class AstRecordContractTests {
   void card_accessors_read_attrs_with_the_data_url_fallback() {
     var data = Map.of("url", "https://example.com/data", "name", "Title");
 
-    var fallback = new InlineCard(new Attributes(Map.of("url", " ", "data", data)), null);
+    var fallback = new InlineCard(new Attributes(Map.of("url", " ", "data", data)), List.of());
     var direct =
         new BlockCard(
             new Attributes(
@@ -70,7 +62,7 @@ class AstRecordContractTests {
                     "local",
                     "datasource",
                     Map.of("id", "source"))),
-            null);
+            List.of());
 
     assertThat(fallback.url()).isEqualTo("https://example.com/data");
     assertThat(fallback.title()).isEqualTo("Title");
@@ -97,7 +89,7 @@ class AstRecordContractTests {
                 Map.entry("__fileName", "a.png"),
                 Map.entry("name", "Name")));
 
-    List<AdfMedia> nodes = List.of(new Media(attrs, null), new MediaInline(attrs, null));
+    List<AdfMedia> nodes = List.of(new Media(attrs, List.of()), new MediaInline(attrs, List.of()));
 
     assertThat(nodes)
         .allSatisfy(
@@ -119,8 +111,8 @@ class AstRecordContractTests {
   }
 
   @Test
-  void media_accessors_are_null_for_null_attrs() {
-    var media = new Media(null, null);
+  void media_accessors_are_null_for_empty_attrs() {
+    var media = new Media(Attributes.empty(), List.of());
 
     assertThat(media.sourceType()).isNull();
     assertThat(media.id()).isNull();
@@ -141,10 +133,12 @@ class AstRecordContractTests {
 
   @Test
   void each_record_reports_its_json_type() {
-    assertThat(new TableCell(false, null, null, null).type()).isEqualTo("tableCell");
-    assertThat(new TableCell(true, null, null, null).type()).isEqualTo("tableHeader");
-    assertThat(new SubSup(null).type()).isEqualTo("subsup");
-    assertThat(new AdfDocument(1, null).type()).isEqualTo("doc");
+    assertThat(new TableCell(false, Attributes.empty(), List.of(), List.of()).type())
+        .isEqualTo("tableCell");
+    assertThat(new TableCell(true, Attributes.empty(), List.of(), List.of()).type())
+        .isEqualTo("tableHeader");
+    assertThat(new SubSup(Attributes.empty()).type()).isEqualTo("subsup");
+    assertThat(new AdfDocument(1, List.of()).type()).isEqualTo("doc");
     assertThat(new UnknownBlock("mystery", "{}").type()).isEqualTo("mystery");
   }
 
@@ -152,8 +146,8 @@ class AstRecordContractTests {
   void accessors_read_attrs_leniently_without_changing_them() {
     var attrs = new Attributes(Map.of("level", "9", "colspan", 0));
 
-    var heading = new Heading(attrs, null, null);
-    var cell = new TableCell(false, attrs, null, null);
+    var heading = new Heading(attrs, List.of(), List.of());
+    var cell = new TableCell(false, attrs, List.of(), List.of());
 
     assertThat(heading.level()).isEqualTo(9);
     assertThat(cell.colspan()).isEqualTo(1);
@@ -163,9 +157,9 @@ class AstRecordContractTests {
   @Test
   void filtered_accessors_hide_off_schema_children_that_content_keeps() {
     var stray = new UnknownBlock("mystery", "{}");
-    var item = new ListItem(null, null, null);
+    var item = new ListItem(Attributes.empty(), List.of(), List.of());
 
-    var list = new BulletList(null, List.of(stray, item), null);
+    var list = new BulletList(Attributes.empty(), List.of(stray, item), List.of());
 
     assertThat(list.content()).containsExactly(stray, item);
     assertThat(list.items()).containsExactly(item);

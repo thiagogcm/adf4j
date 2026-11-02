@@ -20,13 +20,17 @@ public record Paragraph(Attributes attrs, List<AdfInline> content, List<AdfMark>
         TableCellContent {
 
   public Paragraph {
-    attrs = attrs == null ? Attributes.empty() : attrs;
-    content = content == null ? List.of() : List.copyOf(content);
-    marks = marks == null ? List.of() : List.copyOf(marks);
+    content = List.copyOf(content);
+    marks = List.copyOf(marks);
   }
 
   @Override
   public String type() {
     return "paragraph";
+  }
+
+  /// This paragraph with `marks` in place of any it has.
+  public Paragraph withMarks(AdfMark... marks) {
+    return new Paragraph(attrs, content, List.of(marks));
   }
 }

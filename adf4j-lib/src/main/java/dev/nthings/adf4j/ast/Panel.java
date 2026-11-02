@@ -16,9 +16,8 @@ public record Panel(Attributes attrs, List<AdfBlock> content, List<AdfMark> mark
         TableCellContent {
 
   public Panel {
-    attrs = attrs == null ? Attributes.empty() : attrs;
-    content = content == null ? List.of() : List.copyOf(content);
-    marks = marks == null ? List.of() : List.copyOf(marks);
+    content = List.copyOf(content);
+    marks = List.copyOf(marks);
   }
 
   @Override

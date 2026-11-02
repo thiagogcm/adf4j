@@ -47,7 +47,6 @@ public sealed interface AdfBlock extends AdfNode
         ExpandContent,
         LayoutColumnContent,
         ListItemContent,
-        MediaSingleContent,
         NestedExpandContent,
         PanelContent,
         TableCellContent,

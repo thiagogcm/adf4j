@@ -5,10 +5,6 @@ package dev.nthings.adf4j.ast;
 /// intact.
 public record DataConsumer(Attributes attrs) implements AdfMark {
 
-  public DataConsumer {
-    attrs = attrs == null ? Attributes.empty() : attrs;
-  }
-
   @Override
   public String type() {
     return "dataConsumer";

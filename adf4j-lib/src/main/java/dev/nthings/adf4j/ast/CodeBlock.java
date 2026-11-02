@@ -20,9 +20,8 @@ public record CodeBlock(Attributes attrs, List<AdfInline> content, List<AdfMark>
         TableCellContent {
 
   public CodeBlock {
-    attrs = attrs == null ? Attributes.empty() : attrs;
-    content = content == null ? List.of() : List.copyOf(content);
-    marks = marks == null ? List.of() : List.copyOf(marks);
+    content = List.copyOf(content);
+    marks = List.copyOf(marks);
   }
 
   @Override

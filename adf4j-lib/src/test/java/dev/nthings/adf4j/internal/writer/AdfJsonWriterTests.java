@@ -26,10 +26,10 @@ class AdfJsonWriterTests {
 
   @Test
   void writes_type_attrs_content_and_marks_omitting_empty_attrs_and_marks() {
-    var text = new Text("hi", List.of(new Strong(null)));
+    var text = new Text("hi", List.of(new Strong(Attributes.empty())));
     var document =
         new AdfDocument(
-            1, List.of(new Paragraph(new Attributes(Map.of("a", 1)), List.of(text), null)));
+            1, List.of(new Paragraph(new Attributes(Map.of("a", 1)), List.of(text), List.of())));
 
     assertThat(writer.write(document))
         .isEqualTo(
@@ -44,8 +44,11 @@ class AdfJsonWriterTests {
         new AdfDocument(
             2,
             List.of(
-                new TableCell(true, null, null, null),
-                new Paragraph(null, List.of(new HardBreak(null, null)), null)));
+                new TableCell(true, Attributes.empty(), List.of(), List.of()),
+                new Paragraph(
+                    Attributes.empty(),
+                    List.of(new HardBreak(Attributes.empty(), List.of())),
+                    List.of())));
 
     assertThat(writer.write(document))
         .isEqualTo(
@@ -70,7 +73,7 @@ class AdfJsonWriterTests {
                 true,
                 "nested",
                 Map.of("list", Arrays.asList("x", null, 1))));
-    var document = new AdfDocument(1, List.of(new Paragraph(attrs, null, null)));
+    var document = new AdfDocument(1, List.of(new Paragraph(attrs, List.of(), List.of())));
 
     assertThat(writer.write(document))
         .contains("\"long\":5")
@@ -90,7 +93,9 @@ class AdfJsonWriterTests {
             List.of(
                 new UnknownBlock("b", "{\"type\":\"b\",\"x\":[1]}"),
                 new Paragraph(
-                    null, List.of(inline, new UnknownInline("i", "{\"type\":\"i\"}")), null)));
+                    Attributes.empty(),
+                    List.of(inline, new UnknownInline("i", "{\"type\":\"i\"}")),
+                    List.of())));
 
     assertThat(writer.write(document))
         .contains("{\"type\":\"b\",\"x\":[1]}")

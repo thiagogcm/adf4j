@@ -8,10 +8,6 @@ import org.jspecify.annotations.Nullable;
 /// present and of a safe CSS shape.
 public record Border(Attributes attrs) implements AdfMark {
 
-  public Border {
-    attrs = attrs == null ? Attributes.empty() : attrs;
-  }
-
   @Override
   public String type() {
     return "border";

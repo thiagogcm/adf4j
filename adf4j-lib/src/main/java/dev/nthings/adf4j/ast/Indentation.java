@@ -4,10 +4,6 @@ package dev.nthings.adf4j.ast;
 /// when rendered), emitted as a leading run of four spaces per level on the paragraph or heading.
 public record Indentation(Attributes attrs) implements AdfMark {
 
-  public Indentation {
-    attrs = attrs == null ? Attributes.empty() : attrs;
-  }
-
   @Override
   public String type() {
     return "indentation";

@@ -9,8 +9,7 @@ public record MediaInline(Attributes attrs, List<AdfMark> marks)
     implements AdfInline, AdfMedia, InlineContent {
 
   public MediaInline {
-    attrs = attrs == null ? Attributes.empty() : attrs;
-    marks = marks == null ? List.of() : List.copyOf(marks);
+    marks = List.copyOf(marks);
   }
 
   @Override

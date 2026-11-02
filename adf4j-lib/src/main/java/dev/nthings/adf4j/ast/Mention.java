@@ -11,8 +11,7 @@ public record Mention(Attributes attrs, List<AdfMark> marks)
     implements AdfInline, CaptionContent, InlineContent {
 
   public Mention {
-    attrs = attrs == null ? Attributes.empty() : attrs;
-    marks = marks == null ? List.of() : List.copyOf(marks);
+    marks = List.copyOf(marks);
   }
 
   @Override

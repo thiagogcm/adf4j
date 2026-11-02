@@ -1,6 +1,6 @@
 # adf4j
 
-Java tools for Atlassian Document Format (ADF). adf4j converts Confluence and Jira rich-text JSON to GitHub-Flavored Markdown, extracts document metadata, and validates ADF structure.
+Java tools for Atlassian Document Format (ADF). adf4j converts Confluence and Jira rich-text JSON to GitHub-Flavored Markdown, extracts document metadata, validates ADF structure, and builds ADF documents in code.
 
 - **Library:** `dev.nthings:adf4j`, published to Maven Central.
 - **CLI:** native executables for Linux, macOS, and Windows, attached to each [GitHub release](https://github.com/thiagogcm/adf4j/releases).
@@ -44,6 +44,25 @@ String markdown = AdfToMarkdown.create().toMarkdown(adfJson);
 ```
 
 A converter is immutable, thread-safe, and cheap to create, so bind one per document when options differ: `AdfToMarkdown.with(options)`.
+
+## Build ADF
+
+```java
+import static dev.nthings.adf4j.ast.Adf.*;
+
+import dev.nthings.adf4j.AdfJson;
+
+var document =
+    doc(
+        heading(2, "Release notes"),
+        paragraph(text("Shipped by "), mention("5b10a2844c20165700ede21g", "@Ana"), text(".")),
+        panel(PanelType.WARNING, paragraph(text("Restart required", strong()))),
+        bulletList(listItem("Faster search"), listItem("New exports")));
+
+String json = AdfJson.write(document);
+```
+
+The compiler enforces the ADF content model: a heading in a list item, or a panel with no content, doesn't compile. See [Building documents](docs/guide.md#building-documents).
 
 ## CLI
 

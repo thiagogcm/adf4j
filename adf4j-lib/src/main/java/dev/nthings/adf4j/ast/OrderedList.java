@@ -18,9 +18,8 @@ public record OrderedList(Attributes attrs, List<AdfBlock> content, List<AdfMark
         TableCellContent {
 
   public OrderedList {
-    attrs = attrs == null ? Attributes.empty() : attrs;
-    content = content == null ? List.of() : List.copyOf(content);
-    marks = marks == null ? List.of() : List.copyOf(marks);
+    content = List.copyOf(content);
+    marks = List.copyOf(marks);
   }
 
   @Override
@@ -35,5 +34,10 @@ public record OrderedList(Attributes attrs, List<AdfBlock> content, List<AdfMark
   /// The {@link ListItem} children; `content` keeps any other child.
   public List<ListItem> items() {
     return ChildNodes.ofType(content, ListItem.class);
+  }
+
+  /// This list numbered from `order`.
+  public OrderedList withOrder(int order) {
+    return new OrderedList(attrs.with("order", order), content, marks);
   }
 }

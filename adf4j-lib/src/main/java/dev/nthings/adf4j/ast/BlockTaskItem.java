@@ -10,9 +10,8 @@ public record BlockTaskItem(Attributes attrs, List<AdfBlock> content, List<AdfMa
     implements AdfBlock, TaskListContent {
 
   public BlockTaskItem {
-    attrs = attrs == null ? Attributes.empty() : attrs;
-    content = content == null ? List.of() : List.copyOf(content);
-    marks = marks == null ? List.of() : List.copyOf(marks);
+    content = List.copyOf(content);
+    marks = List.copyOf(marks);
   }
 
   @Override
@@ -22,5 +21,10 @@ public record BlockTaskItem(Attributes attrs, List<AdfBlock> content, List<AdfMa
 
   public @Nullable String state() {
     return attrs.text("state");
+  }
+
+  /// This node with a fixed `localId` in place of the generated one.
+  public BlockTaskItem withLocalId(String localId) {
+    return new BlockTaskItem(attrs.with("localId", localId), content, marks);
   }
 }

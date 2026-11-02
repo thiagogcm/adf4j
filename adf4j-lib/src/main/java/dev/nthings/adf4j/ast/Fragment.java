@@ -5,10 +5,6 @@ package dev.nthings.adf4j.ast;
 /// intact.
 public record Fragment(Attributes attrs) implements AdfMark {
 
-  public Fragment {
-    attrs = attrs == null ? Attributes.empty() : attrs;
-  }
-
   @Override
   public String type() {
     return "fragment";

@@ -25,9 +25,8 @@ public record MediaSingle(Attributes attrs, List<AdfBlock> content, List<AdfMark
         TableCellContent {
 
   public MediaSingle {
-    attrs = attrs == null ? Attributes.empty() : attrs;
-    content = content == null ? List.of() : List.copyOf(content);
-    marks = marks == null ? List.of() : List.copyOf(marks);
+    content = List.copyOf(content);
+    marks = List.copyOf(marks);
   }
 
   @Override
@@ -57,5 +56,15 @@ public record MediaSingle(Attributes attrs, List<AdfBlock> content, List<AdfMark
 
   public @Nullable String width() {
     return attrs.text("width");
+  }
+
+  /// This node with `layout`.
+  public MediaSingle withLayout(Adf.MediaLayout layout) {
+    return new MediaSingle(attrs.with("layout", layout.value()), content, marks);
+  }
+
+  /// This node taking `width` percent of the page.
+  public MediaSingle withWidth(double width) {
+    return new MediaSingle(attrs.with("width", width), content, marks);
   }
 }

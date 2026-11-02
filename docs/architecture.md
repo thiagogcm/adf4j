@@ -12,7 +12,7 @@ This document describes adf4j internals for contributors and advanced integrator
 
 ## System context
 
-adf4j is an embeddable transformation library. It accepts an ADF JSON string, a `ParseResult`, or a parsed `AdfDocument`, then returns Markdown plus metadata and diagnostics. It also writes an `AdfDocument` back to ADF JSON. It does not perform network, filesystem, or database I/O.
+adf4j is an embeddable transformation library. It accepts an ADF JSON string, a `ParseResult`, or a parsed `AdfDocument`, then returns Markdown plus metadata and diagnostics. It also writes an `AdfDocument` back to ADF JSON, whether parsed or built with `Adf`. It does not perform network, filesystem, or database I/O.
 
 ```mermaid
 flowchart LR
@@ -129,11 +129,11 @@ The AST is a sealed hierarchy of immutable records:
 - `AdfMark` is a separate hierarchy for marks that decorate text and media, including `UnknownMark`.
 - `AdfUnknown` covers `UnknownBlock`, `UnknownInline`, and `UnknownMark`, with their `type()` and `rawJson()`.
 - `BlockCard` and `EmbedCard` are both blocks and inlines, because they occur inside paragraphs too.
-- Sealed `*Content` interfaces such as `PanelContent` name the node types the schema allows inside each container. They are stricter than the schema in two places it leaves open: `blockTaskItem` children after the second, and `mediaSingle` inside `bodiedSyncBlock`. They are groundwork for code that constructs documents: no construction API uses them yet, and record constructors still take any child. `TaskList.items()` is the only accessor that returns one.
+- Sealed `*Content` interfaces such as `PanelContent` name the node types the schema allows inside each container. They are stricter than the schema in two places it leaves open: `blockTaskItem` children after the second, and `mediaSingle` inside `bodiedSyncBlock`. `Adf` takes them as parameter types, so built documents get their nesting checked at compile time, and non-empty containers take their first child as a separate parameter.
 
 A record mirrors its JSON node. It stores the complete `attrs` as `Attributes`, its `content` in source order, and its `marks`, whether or not the schema allows them there. Typed accessors such as `Heading.level()` and `Table.rows()` are lenient views over that data: they coerce scalars, apply defaults, and hide off-schema children, without changing what is stored. `AdfMedia`, `AdfCard`, and `AdfExtension` define the accessors shared by several node types, such as `AdfMedia.sourceType()` for the media `type` attribute. Markdown policy stays in the renderer.
 
-Records defensively copy collections and normalize missing values to safe defaults. `Attributes` holds plain JSON values and normalizes numbers, so equal documents compare equal and numbers beyond `long` and `double` keep every digit.
+Records defensively copy collections. `Adf` is the way to construct them: its factories supply the `attrs` a node requires, and `doc` derives the required `localId`s from each node's content, so rebuilding is deterministic. `Attributes` holds plain JSON values and normalizes numbers, so equal documents compare equal and numbers beyond `long` and `double` keep every digit.
 
 ### Unknown node handling
 
@@ -280,7 +280,9 @@ The library targets JDK 25 and uses:
 | Unknown nodes preserved | Forward compatibility with newer ADF. | Larger public AST surface. |
 | Records keep raw `attrs` behind typed accessors | Lossless by construction, with one source of truth. | Accessors coerce on each read. |
 | Wide `AdfBlock`/`AdfInline` children | Off-schema input stays renderable. | Record constructors accept any nesting. |
-| Sealed `*Content` interfaces derived from the schema | They name each container's allowed children for a future construction API, and `AdfContentModelTests` checks them against the schema. | No construction API uses them yet. They cover node types only: marks, position, count, and attributes need runtime checks. |
+| `Adf` factories typed by sealed `*Content` interfaces derived from the schema | The compiler enforces the content model with no runtime validation, and `AdfContentModelTests` checks the interfaces against the schema. | They cover node types and required children. Attribute ranges and allowed marks stay unchecked, and `List` overloads can't check counts. |
+| `localId`s derived per node in `doc` | Rebuilt documents write the same JSON, and an item's id ignores its state and other items. A hash of the whole document would change every id on any edit. | `doc` rebuilds the tree, and editing an item's text changes its id. |
+| `withX` methods on records for optional attributes | Immutable, discoverable, and consistent with `MarkdownOptions`. | Only common attributes have one; the rest go through `Attributes.with`. |
 | One analysis walk with visitors | Metadata, outline, and lossiness share traversal cost. | Visitors must stay independent, and the walker must track what the renderer renders. |
 | List separation reads rendered Markdown | It sees through transparent containers and macros that expand to lists. | It depends on the output's line shape, not the AST. |
 | Diagnostics as data | Callers can inspect quality without catching exceptions. | Callers must check `wasLossy()` or severity. |

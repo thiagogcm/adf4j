@@ -15,9 +15,8 @@ public record DecisionList(Attributes attrs, List<AdfBlock> content, List<AdfMar
         TableCellContent {
 
   public DecisionList {
-    attrs = attrs == null ? Attributes.empty() : attrs;
-    content = content == null ? List.of() : List.copyOf(content);
-    marks = marks == null ? List.of() : List.copyOf(marks);
+    content = List.copyOf(content);
+    marks = List.copyOf(marks);
   }
 
   @Override
@@ -28,5 +27,10 @@ public record DecisionList(Attributes attrs, List<AdfBlock> content, List<AdfMar
   /// The {@link DecisionItem} children; `content` keeps any other child.
   public List<DecisionItem> items() {
     return ChildNodes.ofType(content, DecisionItem.class);
+  }
+
+  /// This node with a fixed `localId` in place of the generated one.
+  public DecisionList withLocalId(String localId) {
+    return new DecisionList(attrs.with("localId", localId), content, marks);
   }
 }

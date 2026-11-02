@@ -19,8 +19,7 @@ public record BlockCard(Attributes attrs, List<AdfMark> marks)
         TableCellContent {
 
   public BlockCard {
-    attrs = attrs == null ? Attributes.empty() : attrs;
-    marks = marks == null ? List.of() : List.copyOf(marks);
+    marks = List.copyOf(marks);
   }
 
   @Override

@@ -3,6 +3,7 @@ package dev.nthings.adf4j;
 import static dev.nthings.adf4j.testing.AdfSnippets.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.nthings.adf4j.ast.Attributes;
 import dev.nthings.adf4j.ast.Media;
 import dev.nthings.adf4j.ast.MediaGroup;
 import dev.nthings.adf4j.ast.MediaSingle;
@@ -126,7 +127,7 @@ class MediaAndMacroMetadataTests {
     assertThat(single.media()).extracting(Media::url).containsExactly("https://a", "https://b");
     assertThat(single.captions()).hasSize(1);
     assertThat(group.items()).extracting(Media::url).containsExactly("https://c");
-    assertThat(new MediaSingle(null, List.of(), null).captions()).isEmpty();
+    assertThat(new MediaSingle(Attributes.empty(), List.of(), List.of()).captions()).isEmpty();
   }
 
   @Test

@@ -13,9 +13,8 @@ public record Table(Attributes attrs, List<AdfBlock> content, List<AdfMark> mark
         LayoutColumnContent {
 
   public Table {
-    attrs = attrs == null ? Attributes.empty() : attrs;
-    content = content == null ? List.of() : List.copyOf(content);
-    marks = marks == null ? List.of() : List.copyOf(marks);
+    content = List.copyOf(content);
+    marks = List.copyOf(marks);
   }
 
   @Override
@@ -30,5 +29,15 @@ public record Table(Attributes attrs, List<AdfBlock> content, List<AdfMark> mark
   /// The {@link TableRow} children; `content` keeps any other child.
   public List<TableRow> rows() {
     return ChildNodes.ofType(content, TableRow.class);
+  }
+
+  /// This table with `layout`.
+  public Table withLayout(Adf.TableLayout layout) {
+    return new Table(attrs.with("layout", layout.value()), content, marks);
+  }
+
+  /// This table with a leading row-number column.
+  public Table withNumberColumn() {
+    return new Table(attrs.with("isNumberColumnEnabled", true), content, marks);
   }
 }

@@ -7,6 +7,7 @@ import dev.nthings.adf4j.AdfToMarkdown;
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.ast.AdfInline;
+import dev.nthings.adf4j.ast.Attributes;
 import dev.nthings.adf4j.ast.BulletList;
 import dev.nthings.adf4j.ast.HardBreak;
 import dev.nthings.adf4j.ast.OrderedList;
@@ -202,10 +203,10 @@ class ListStructureOracleTests {
     var content =
         List.<AdfInline>of(
             text("Before"),
-            new HardBreak(null, null),
-            new HardBreak(null, null),
+            new HardBreak(Attributes.empty(), List.of()),
+            new HardBreak(Attributes.empty(), List.of()),
             text("# After"),
-            new HardBreak(null, null),
+            new HardBreak(Attributes.empty(), List.of()),
             text("- literal"));
     AdfBlock item =
         switch (kind) {

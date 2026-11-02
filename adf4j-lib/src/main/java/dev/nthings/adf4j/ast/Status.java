@@ -11,8 +11,7 @@ public record Status(Attributes attrs, List<AdfMark> marks)
     implements AdfInline, CaptionContent, InlineContent {
 
   public Status {
-    attrs = attrs == null ? Attributes.empty() : attrs;
-    marks = marks == null ? List.of() : List.copyOf(marks);
+    marks = List.copyOf(marks);
   }
 
   @Override

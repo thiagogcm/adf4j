@@ -26,8 +26,7 @@ public record Extension(Attributes attrs, List<AdfMark> marks)
         TableCellContent {
 
   public Extension {
-    attrs = attrs == null ? Attributes.empty() : attrs;
-    marks = marks == null ? List.of() : List.copyOf(marks);
+    marks = List.copyOf(marks);
   }
 
   @Override

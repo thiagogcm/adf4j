@@ -17,9 +17,8 @@ public record Heading(Attributes attrs, List<AdfInline> content, List<AdfMark> m
         TableCellContent {
 
   public Heading {
-    attrs = attrs == null ? Attributes.empty() : attrs;
-    content = content == null ? List.of() : List.copyOf(content);
-    marks = marks == null ? List.of() : List.copyOf(marks);
+    content = List.copyOf(content);
+    marks = List.copyOf(marks);
   }
 
   @Override
@@ -29,5 +28,10 @@ public record Heading(Attributes attrs, List<AdfInline> content, List<AdfMark> m
 
   public int level() {
     return attrs.integer("level", 1);
+  }
+
+  /// This heading with `marks` in place of any it has.
+  public Heading withMarks(AdfMark... marks) {
+    return new Heading(attrs, content, List.of(marks));
   }
 }

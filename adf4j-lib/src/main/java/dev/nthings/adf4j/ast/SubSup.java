@@ -7,10 +7,6 @@ import org.jspecify.annotations.Nullable;
 /// text unwrapped.
 public record SubSup(Attributes attrs) implements AdfMark {
 
-  public SubSup {
-    attrs = attrs == null ? Attributes.empty() : attrs;
-  }
-
   @Override
   public String type() {
     return "subsup";

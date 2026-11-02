@@ -18,9 +18,8 @@ public record TaskList(Attributes attrs, List<AdfBlock> content, List<AdfMark> m
         TaskListContent {
 
   public TaskList {
-    attrs = attrs == null ? Attributes.empty() : attrs;
-    content = content == null ? List.of() : List.copyOf(content);
-    marks = marks == null ? List.of() : List.copyOf(marks);
+    content = List.copyOf(content);
+    marks = List.copyOf(marks);
   }
 
   @Override
@@ -32,5 +31,10 @@ public record TaskList(Attributes attrs, List<AdfBlock> content, List<AdfMark> m
   /// keeps any other child.
   public List<TaskListContent> items() {
     return ChildNodes.ofType(content, TaskListContent.class);
+  }
+
+  /// This node with a fixed `localId` in place of the generated one.
+  public TaskList withLocalId(String localId) {
+    return new TaskList(attrs.with("localId", localId), content, marks);
   }
 }

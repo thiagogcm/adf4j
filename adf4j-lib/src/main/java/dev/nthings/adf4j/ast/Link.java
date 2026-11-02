@@ -8,10 +8,6 @@ import org.jspecify.annotations.Nullable;
 /// reference) used to resolve the href; see {@link Attributes}.
 public record Link(Attributes attrs) implements AdfMark {
 
-  public Link {
-    attrs = attrs == null ? Attributes.empty() : attrs;
-  }
-
   @Override
   public String type() {
     return "link";

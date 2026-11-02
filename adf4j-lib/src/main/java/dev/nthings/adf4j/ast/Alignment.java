@@ -7,10 +7,6 @@ import org.jspecify.annotations.Nullable;
 /// `MarkdownOptions.htmlVisualMarks()` is enabled.
 public record Alignment(Attributes attrs) implements AdfMark {
 
-  public Alignment {
-    attrs = attrs == null ? Attributes.empty() : attrs;
-  }
-
   @Override
   public String type() {
     return "alignment";

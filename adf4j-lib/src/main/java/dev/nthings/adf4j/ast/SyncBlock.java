@@ -10,8 +10,7 @@ import org.jspecify.annotations.Nullable;
 public record SyncBlock(Attributes attrs, List<AdfMark> marks) implements AdfBlock, DocContent {
 
   public SyncBlock {
-    attrs = attrs == null ? Attributes.empty() : attrs;
-    marks = marks == null ? List.of() : List.copyOf(marks);
+    marks = List.copyOf(marks);
   }
 
   @Override

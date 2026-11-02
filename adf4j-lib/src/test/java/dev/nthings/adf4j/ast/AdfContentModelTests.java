@@ -46,7 +46,6 @@ class AdfContentModelTests {
           Map.entry("layoutSection", LayoutColumn.class),
           Map.entry("listItem", ListItemContent.class),
           Map.entry("mediaGroup", Media.class),
-          Map.entry("mediaSingle", MediaSingleContent.class),
           Map.entry("nestedExpand", NestedExpandContent.class),
           Map.entry("orderedList", ListItem.class),
           Map.entry("panel", PanelContent.class),
@@ -92,6 +91,8 @@ class AdfContentModelTests {
 
     var fromModel = new TreeMap<String, Set<String>>();
     CHILDREN_OF.forEach((container, type) -> fromModel.put(container, types(type)));
+    // Adf.mediaSingle takes exactly a media and an optional caption.
+    fromModel.put("mediaSingle", Set.of("caption", "media"));
 
     assertThat(fromModel).isEqualTo(fromSchema);
   }

@@ -7,10 +7,6 @@ import org.jspecify.annotations.Nullable;
 /// `MarkdownOptions.htmlVisualMarks()` is enabled and the value is of a safe CSS shape.
 public record BackgroundColor(Attributes attrs) implements AdfMark {
 
-  public BackgroundColor {
-    attrs = attrs == null ? Attributes.empty() : attrs;
-  }
-
   @Override
   public String type() {
     return "backgroundColor";

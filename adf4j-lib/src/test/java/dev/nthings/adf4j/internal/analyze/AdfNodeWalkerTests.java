@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.ast.AdfInline;
+import dev.nthings.adf4j.ast.Attributes;
 import dev.nthings.adf4j.ast.BlockCard;
 import dev.nthings.adf4j.ast.Text;
 import java.util.ArrayList;
@@ -50,7 +51,7 @@ class AdfNodeWalkerTests {
                     "tabs-group",
                     List.of(extensionFrame(List.of(paragraph("extension body"))))),
                 bodiedSyncBlock("resource-1", List.of(paragraph("synced body"))),
-                new BlockCard(null, null)));
+                new BlockCard(Attributes.empty(), List.of())));
     var visited = new ArrayList<String>();
 
     AdfNodeWalker.walk(

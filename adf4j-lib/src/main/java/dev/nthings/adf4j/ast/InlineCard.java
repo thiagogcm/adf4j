@@ -10,8 +10,7 @@ public record InlineCard(Attributes attrs, List<AdfMark> marks)
     implements AdfInline, AdfCard, CaptionContent, InlineContent {
 
   public InlineCard {
-    attrs = attrs == null ? Attributes.empty() : attrs;
-    marks = marks == null ? List.of() : List.copyOf(marks);
+    marks = List.copyOf(marks);
   }
 
   @Override
