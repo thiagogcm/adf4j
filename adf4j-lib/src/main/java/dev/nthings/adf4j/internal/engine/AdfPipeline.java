@@ -2,6 +2,7 @@ package dev.nthings.adf4j.internal.engine;
 
 import dev.nthings.adf4j.AdfToMarkdown;
 import dev.nthings.adf4j.ast.AdfDocument;
+import dev.nthings.adf4j.internal.AttachmentInventory;
 import dev.nthings.adf4j.internal.analyze.AdfDocumentAnalyzer;
 import dev.nthings.adf4j.internal.parser.AdfParsingService;
 import dev.nthings.adf4j.internal.render.AdfRenderer;
@@ -13,15 +14,11 @@ import dev.nthings.adf4j.result.ParseResult;
 import java.util.ArrayList;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /// Assembles and runs the `parse → analyze → render` pipeline behind
-/// {@link AdfToMarkdown}. Thread-safe once built (the analyzer memoizes its last walk); each
+/// {@link AdfToMarkdown}. Stateless and thread-safe, so one instance serves the whole process; each
 /// phase owns its own construction via `createDefault()`.
 public final class AdfPipeline {
-
-  private static final Logger log = LoggerFactory.getLogger(AdfPipeline.class);
 
   private final AdfParsingService parsingService;
   private final AdfDocumentAnalyzer analyzer;
@@ -41,52 +38,34 @@ public final class AdfPipeline {
         AdfRenderer.createDefault());
   }
 
-  public ContentMetadata analyze(@Nullable String adfJson, MarkdownOptions options) {
-    if (adfJson == null || adfJson.isBlank()) {
-      return ContentMetadata.empty();
-    }
-    var parsed = parsingService.parse(adfJson);
-    if (parsed.document() == null || !parsed.validAdfRoot()) {
-      return ContentMetadata.empty();
-    }
-    return analyze(parsed.document(), options);
+  public ContentMetadata analyze(ParseResult parsed, MarkdownOptions options) {
+    var document = parsed.document();
+    return document == null ? ContentMetadata.empty() : analyze(document, options);
   }
 
-  public ContentMetadata analyze(@Nullable AdfDocument document, MarkdownOptions options) {
-    if (document == null) {
-      return ContentMetadata.empty();
-    }
-    return analyzer.analyze(document, options).metadata();
+  public ContentMetadata analyze(AdfDocument document, MarkdownOptions options) {
+    var attachments = AttachmentInventory.from(options.attachments());
+    return analyzer.analyze(document, options, attachments).metadata();
   }
 
   public MarkdownResult convert(@Nullable String adfJson, MarkdownOptions options) {
-    if (adfJson == null || adfJson.isBlank()) {
-      return render(null, options, List.of());
-    }
-    var parsed = parsingService.parse(adfJson);
-    if (parsed.document() == null || !parsed.validAdfRoot()) {
-      log.warn("Input is not a valid ADF document – returning empty result with diagnostics");
-      return render(null, options, parsed.issues());
-    }
-    return render(parsed.document(), options, parsed.issues());
+    return convert(parsingService.parse(adfJson), options);
   }
 
-  public MarkdownResult convert(@Nullable ParseResult parsed, MarkdownOptions options) {
-    if (parsed == null) {
-      return render(null, options, List.of());
-    }
-    return render(parsed.validAdfRoot() ? parsed.document() : null, options, parsed.issues());
+  public MarkdownResult convert(ParseResult parsed, MarkdownOptions options) {
+    return render(parsed.document(), options, parsed.diagnostics());
   }
 
-  public MarkdownResult convert(@Nullable AdfDocument document, MarkdownOptions options) {
+  public MarkdownResult convert(AdfDocument document, MarkdownOptions options) {
     return render(document, options, List.of());
   }
 
   // A null document yields an empty (possibly titled) body.
   private MarkdownResult render(
       @Nullable AdfDocument document, MarkdownOptions options, List<Diagnostic> diagnostics) {
-    var analysis = analyzer.analyze(document, options);
-    var rendered = renderer.render(document, options, analysis.outline());
+    var attachments = AttachmentInventory.from(options.attachments());
+    var analysis = analyzer.analyze(document, options, attachments);
+    var rendered = renderer.render(document, options, attachments, analysis.outline());
     // Diagnostics in pipeline order: parse, then analyze-phase lossiness, then render-phase macros.
     var merged =
         mergeDiagnostics(

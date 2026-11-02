@@ -4,7 +4,7 @@ package dev.nthings.adf4j.ast;
 /// parser does not recognize, preserving the original `type` string and full `rawJson` so the
 /// node survives without data loss. Emission is governed by an `UnknownNodePolicy`; consumers
 /// matching on {@link AdfInline} should keep a `default`/handle this case.
-public record UnknownInline(String type, String rawJson) implements AdfInline {
+public record UnknownInline(String type, String rawJson) implements AdfInline, AdfUnknown {
 
   /// Always empty: the node's attributes are inside `rawJson`.
   @Override

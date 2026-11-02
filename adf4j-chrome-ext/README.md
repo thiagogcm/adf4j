@@ -33,7 +33,7 @@ node --run chrome-ext:verify
 3. Choose **Load unpacked**.
 4. Select `adf4j-chrome-ext/dist`.
 
-Open a Confluence Cloud page under `https://*.atlassian.net/wiki/*`. The extension adds a floating `Copy as markdown` button when it can identify a page id. Clicking the button fetches the published page body through Confluence REST v2 with `body-format=atlas_doc_format`, converts it in the extension background worker, and writes the result to the clipboard.
+Open a Confluence Cloud page under `https://*.atlassian.net/wiki/*`. The extension adds a floating `Copy as markdown` button when it can identify a page id. Clicking the button fetches the published page body through Confluence REST v2 with `body-format=atlas_doc_format`, converts it in the extension background worker with the page title as its heading, and writes the result to the clipboard. If the conversion fails, the button shows `Failed`, with the reason in its tooltip, and the clipboard is left alone.
 
 ## Scope
 

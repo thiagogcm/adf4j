@@ -10,7 +10,7 @@ adf4j requires **JDK 25**. The library is a JPMS module named `dev.nthings.adf4j
 <dependency>
   <groupId>dev.nthings</groupId>
   <artifactId>adf4j</artifactId>
-  <version>1.0.0</version>
+  <version>2.0.0</version>
 </dependency>
 ```
 
@@ -20,7 +20,7 @@ If your application uses modules:
 requires dev.nthings.adf4j;
 ```
 
-The supported API is in `dev.nthings.adf4j` plus `.options`, `.result`, `.metadata`, `.confluence`, and `.ast`. Packages under `.internal` are not API.
+The supported API is in `dev.nthings.adf4j` plus `.options`, `.result`, `.metadata`, and `.ast`. Packages under `.internal` are not API.
 
 Confluence Cloud exposes ADF at `body.atlas_doc_format.value` when the REST API request uses `body-format=atlas_doc_format`. Jira rich-text fields also use ADF. Confluence Server and Data Center use storage-format XHTML instead.
 
@@ -33,7 +33,7 @@ AdfToMarkdown converter = AdfToMarkdown.create();
 String markdown = converter.toMarkdown(adfJson);
 ```
 
-`AdfToMarkdown` is immutable and thread-safe. Create one converter and reuse it. When resolver state differs by document, pass per-call `MarkdownOptions` instead of creating a new converter.
+`AdfToMarkdown` is immutable, thread-safe, and cheap to create: a converter holds only its options. When resolver state differs by document, bind a converter per document with `AdfToMarkdown.with(options)`.
 
 ## Example
 
@@ -108,7 +108,7 @@ if (result.wasLossy()) {
 
 ## Use the CLI
 
-Download the native executable for your OS from the [latest GitHub release](https://github.com/thiagogcm/adf4j/releases/latest), extract it, and run `adf4j-cli`.
+Download the native executable for your OS from the [latest GitHub release](https://github.com/thiagogcm/adf4j/releases/latest), extract it, and run `adf4j`.
 
 ```bash
 adf4j convert doc.adf.json
@@ -122,7 +122,7 @@ Input comes from `<input-file>` or stdin:
 cat doc.adf.json | adf4j convert -t "My Page" -o out.md
 ```
 
-Stdout contains only the requested output. Diagnostics and warnings go to stderr, so shell redirection stays clean. The `-o` flag writes output atomically.
+Stdout contains only the requested output. Diagnostics and warnings go to stderr, so shell redirection stays clean. Invalid input exits 3. The `-o` flag writes output atomically.
 
 ## Next
 

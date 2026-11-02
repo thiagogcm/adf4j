@@ -1,7 +1,7 @@
 package dev.nthings.adf4j.internal.render;
 
+import dev.nthings.adf4j.internal.AdfText;
 import dev.nthings.adf4j.result.Diagnostic;
-import dev.nthings.adf4j.result.Diagnostic.Severity;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -14,18 +14,9 @@ final class MacroDiagnostics {
 
   private final Set<String> unsupportedMacros = new LinkedHashSet<>();
 
-  void recordUnsupported(@Nullable String extensionType, @Nullable String extensionKey) {
-    unsupportedMacros.add(label(extensionType, extensionKey));
-  }
-
-  static String label(@Nullable String extensionType, @Nullable String extensionKey) {
-    if (extensionType != null && extensionKey != null) {
-      return extensionType + "/" + extensionKey;
-    }
-    if (extensionKey != null) {
-      return extensionKey;
-    }
-    return "Extension";
+  /// Records one unsupported macro, returning whether this render had not seen its label yet.
+  boolean recordUnsupported(@Nullable String extensionType, @Nullable String extensionKey) {
+    return unsupportedMacros.add(AdfText.extensionLabel(extensionType, extensionKey));
   }
 
   List<Diagnostic> build() {
@@ -34,12 +25,10 @@ final class MacroDiagnostics {
     }
     return List.of(
         new Diagnostic(
-            "UNSUPPORTED_MACRO",
+            Diagnostic.Code.UNSUPPORTED_MACRO,
             unsupportedMacros.size()
                 + " unsupported macro(s) rendered as placeholders; original content not represented: "
                 + String.join(", ", unsupportedMacros)
-                + ".",
-            null,
-            Severity.WARNING));
+                + "."));
   }
 }

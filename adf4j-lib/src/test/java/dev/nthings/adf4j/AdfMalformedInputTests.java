@@ -3,6 +3,7 @@ package dev.nthings.adf4j;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
+import dev.nthings.adf4j.result.Diagnostic;
 import org.junit.jupiter.api.Test;
 
 /// Degradation tests for structurally-malformed ADF. The converter is expected to be lenient: a
@@ -150,7 +151,7 @@ class AdfMalformedInputTests {
     assertThat(result.body()).isBlank();
     assertThat(result.diagnostics())
         .singleElement()
-        .satisfies(issue -> assertThat(issue.code()).isEqualTo("INVALID_JSON"));
+        .satisfies(issue -> assertThat(issue.code()).isEqualTo(Diagnostic.Code.INVALID_JSON));
   }
 
   @Test

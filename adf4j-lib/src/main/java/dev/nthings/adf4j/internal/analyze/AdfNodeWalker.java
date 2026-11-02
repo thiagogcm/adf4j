@@ -38,7 +38,6 @@ import dev.nthings.adf4j.ast.TaskItem;
 import dev.nthings.adf4j.ast.TaskList;
 import dev.nthings.adf4j.ast.UnknownBlock;
 import java.util.List;
-import org.jspecify.annotations.Nullable;
 
 /// The analyze phase's one tree-walk: descends a document in order, handing every block and inline
 /// to each {@link NodeVisitor}. The single home for "what are a node's children".
@@ -50,10 +49,7 @@ final class AdfNodeWalker {
     this.visitors = visitors;
   }
 
-  static void walk(@Nullable AdfDocument document, List<NodeVisitor> visitors) {
-    if (document == null || visitors.isEmpty()) {
-      return;
-    }
+  static void walk(AdfDocument document, List<NodeVisitor> visitors) {
     new AdfNodeWalker(visitors).blocks(document.content());
   }
 
@@ -88,8 +84,12 @@ final class AdfNodeWalker {
       case NestedExpand node -> blocks(node.content());
       case LayoutSection node -> blocks(node.columns());
       case LayoutColumn node -> blocks(node.content());
-      case MediaSingle node -> blocks(node.content());
-      case MediaGroup node -> blocks(node.content());
+      // Only the children that render: a stray child would feed references the body doesn't have.
+      case MediaSingle node -> {
+        blocks(node.media());
+        blocks(node.captions());
+      }
+      case MediaGroup node -> blocks(node.items());
       case BodiedExtension node -> blocks(node.content());
       case MultiBodiedExtension node -> blocks(node.content());
       case ExtensionFrame node -> blocks(node.content());

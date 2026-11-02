@@ -6,10 +6,16 @@ import static dev.nthings.adf4j.cli.CliTestSupport.UNKNOWN_NODE_DOC;
 import static dev.nthings.adf4j.cli.CliTestSupport.convert;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
+import java.util.List;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class ConvertCommandTest {
 
@@ -47,6 +53,53 @@ class ConvertCommandTest {
   }
 
   @Test
+  void jsonResultRendersExcerptsWithoutTheDocumentTitle() {
+    var excerpt =
+        """
+        {"type":"doc","version":1,"content":[{"type":"bodiedExtension","attrs":{
+          "extensionType":"com.atlassian.confluence.macro.core","extensionKey":"excerpt"},
+          "content":[{"type":"paragraph","content":[{"type":"text","text":"Shared"}]}]}]}
+        """;
+    var result = convert(excerpt, "-f", "json", "-t", "Page");
+    assertThat(result.exitCode()).isZero();
+    assertThat(result.out())
+        .contains("\"name\" : null")
+        .contains("\"markdown\" : \"Shared\"")
+        .doesNotContain("\"markdown\" : \"# Page");
+  }
+
+  @Test
+  void jsonNamesFollowTheApi(@TempDir Path dir) {
+    var inventory =
+        CliTestSupport.write(
+            dir, "inventory.json", "[{\"fileId\":\"FILE_ID\",\"downloadUrl\":\"https://x/f\"}]");
+    var result =
+        convert(CliTestSupport.MEDIA_DOC, "-f", "json", "--attachments", inventory.toString());
+    assertThat(result.out())
+        .contains("\"pageIds\"")
+        .contains("\"externalUrls\"")
+        .contains("\"downloadUrl\" : \"https://x/f\"")
+        .doesNotContain("pageRefs")
+        .doesNotContain("externalRefs");
+  }
+
+  @Test
+  void unresolvedReferencesProjectLikeMetadata() {
+    var pageTree =
+        """
+        {"type":"doc","version":1,"content":[{"type":"extension","attrs":{
+          "extensionType":"com.atlassian.confluence.macro.core","extensionKey":"children",
+          "parameters":{"macroParams":{"depth":{"value":"2"},"all":{"value":"true"}}}}}]}
+        """;
+    var result = convert(pageTree, "-f", "json", "--compact");
+    var reference =
+        "{\"macro\":\"children\",\"root\":null,\"depth\":2,\"all\":true,\"parameters\":";
+    assertThat(result.out().indexOf(reference)) // once under metadata, once under unresolved
+        .isNotNegative()
+        .isLessThan(result.out().lastIndexOf(reference));
+  }
+
+  @Test
   void compactFlagProducesSingleLineJson() {
     var result = convert(SIMPLE_DOC, "-f", "json", "--compact");
     assertThat(result.out().strip().lines().count()).isEqualTo(1);
@@ -63,6 +116,45 @@ class ConvertCommandTest {
   }
 
   @Test
+  void outputFileGetsTheUmaskDefaultMode(@TempDir Path dir) throws Exception {
+    assumePosix(dir);
+    // A file created without an explicit mode shows what the umask leaves.
+    var expected = Files.getPosixFilePermissions(Files.createFile(dir.resolve("reference")));
+    var out = dir.resolve("out.md");
+    var result = convert(SIMPLE_DOC, "-o", out.toString());
+    assertThat(result.exitCode()).isZero();
+    assertThat(Files.getPosixFilePermissions(out)).isEqualTo(expected);
+    assertThat(leftovers(dir)).isEmpty();
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"rw-r-----", "rw-------", "r--r--r--", "rw-rw-rw-"})
+  void outputFileKeepsAnExistingFilesMode(String mode, @TempDir Path dir) throws Exception {
+    assumePosix(dir);
+    var out = CliTestSupport.write(dir, "out.md", "old");
+    var permissions = PosixFilePermissions.fromString(mode);
+    Files.setPosixFilePermissions(out, permissions);
+    var result = convert(SIMPLE_DOC, "-o", out.toString());
+    assertThat(result.exitCode()).isZero();
+    assertThat(Files.readString(out)).isEqualTo("# Hello\n\nWorld");
+    assertThat(Files.getPosixFilePermissions(out)).isEqualTo(permissions);
+    assertThat(leftovers(dir)).isEmpty();
+  }
+
+  @Test
+  void outputThroughASymlinkKeepsTheLink(@TempDir Path dir) throws Exception {
+    assumePosix(dir); // creating symlinks takes a privilege on Windows
+    var elsewhere = Files.createDirectory(dir.resolve("elsewhere"));
+    var real = CliTestSupport.write(elsewhere, "real.md", "old");
+    var link = Files.createSymbolicLink(dir.resolve("link.md"), real);
+    var result = convert(SIMPLE_DOC, "-o", link.toString());
+    assertThat(result.exitCode()).isZero();
+    assertThat(Files.isSymbolicLink(link)).isTrue();
+    assertThat(Files.readString(real)).isEqualTo("# Hello\n\nWorld");
+    assertThat(leftovers(elsewhere)).isEmpty();
+  }
+
+  @Test
   void diagnosticsSummaryGoesToStderrNotStdout() {
     var result = convert(LOSSY_DOC, "-f", "json");
     assertThat(result.out()).doesNotContain("warning(s)");
@@ -76,9 +168,39 @@ class ConvertCommandTest {
   }
 
   @Test
-  void malformedAdfStillExitsZeroByDefault() {
-    var result = convert("{ not json");
-    assertThat(result.exitCode()).isZero(); // conversion never throws on bad input
+  void malformedAdfExitsContentFailureStillWritingStdout() {
+    var result = convert("{ not json", "-t", "Page");
+    assertThat(result.exitCode()).isEqualTo(ExitCodes.CONTENT_FAILURE);
+    assertThat(result.out()).isEqualTo("# Page");
+    assertThat(result.err()).contains("1 error(s)").contains("[ERROR] INVALID_JSON:");
+  }
+
+  @Test
+  void invalidRootExitsContentFailureWithAJsonResult() {
+    var result = convert("{\"version\":1,\"type\":\"paragraph\"}", "-f", "json");
+    assertThat(result.exitCode()).isEqualTo(ExitCodes.CONTENT_FAILURE);
+    assertThat(result.out()).contains("\"body\" : \"\"").contains("INVALID_ROOT_NODE");
+  }
+
+  @Test
+  void blankInputIsInvalidAndSaysSo() {
+    var result = convert("  ");
+    assertThat(result.exitCode()).isEqualTo(ExitCodes.CONTENT_FAILURE);
+    assertThat(result.out()).isEmpty();
+    assertThat(result.err()).contains("input is blank");
+  }
+
+  @Test
+  void invalidInputOutranksTheLossyGate() {
+    var result = convert("{ not json", "--fail-on-lossy");
+    assertThat(result.exitCode()).isEqualTo(ExitCodes.CONTENT_FAILURE);
+  }
+
+  @Test
+  void quietSilencesStderrOnInvalidInput() {
+    var result = convert("{ not json", "-q");
+    assertThat(result.exitCode()).isEqualTo(ExitCodes.CONTENT_FAILURE);
+    assertThat(result.err()).isEmpty();
   }
 
   @Test
@@ -97,7 +219,7 @@ class ConvertCommandTest {
   void unknownNodesFailAbortsWithContentFailure() {
     var result = convert(UNKNOWN_NODE_DOC, "--unknown-nodes", "fail");
     assertThat(result.exitCode()).isEqualTo(ExitCodes.CONTENT_FAILURE);
-    assertThat(result.err()).contains("error:");
+    assertThat(result.err()).contains("error:").contains("unknown node 'bogusBlock'");
     assertThat(result.out()).isEmpty();
   }
 
@@ -115,5 +237,15 @@ class ConvertCommandTest {
     assertThat(result.out()).contains("INVALID_JSON");
     assertThat(result.out()).doesNotContain("\tat "); // no stack frames
     assertThat(result.out()).doesNotContain("Exception");
+  }
+
+  private static void assumePosix(Path dir) {
+    Assumptions.assumeTrue(dir.getFileSystem().supportedFileAttributeViews().contains("posix"));
+  }
+
+  private static List<Path> leftovers(Path dir) throws IOException {
+    try (var files = Files.list(dir)) {
+      return files.filter(file -> file.getFileName().toString().startsWith(".adf4j-")).toList();
+    }
   }
 }

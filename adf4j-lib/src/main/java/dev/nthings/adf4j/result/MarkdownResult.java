@@ -21,10 +21,6 @@ public record MarkdownResult(
     unresolved = unresolved == null ? UnresolvedReferences.empty() : unresolved;
   }
 
-  public static MarkdownResult empty() {
-    return new MarkdownResult("", ContentMetadata.empty(), List.of(), UnresolvedReferences.empty());
-  }
-
   /// `true` when any diagnostic is a {@link Diagnostic.Severity#WARNING} or
   /// {@link Diagnostic.Severity#ERROR}, i.e. the document did not convert cleanly: structural
   /// parse problems, content dropped/placeholdered under the active `UnknownNodePolicy`, or

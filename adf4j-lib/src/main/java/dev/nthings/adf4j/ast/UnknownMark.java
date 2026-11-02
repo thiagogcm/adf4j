@@ -5,7 +5,7 @@ package dev.nthings.adf4j.ast;
 /// data loss. By default the renderer leaves the marked text alone (it applies no formatting).
 /// Consumers matching on {@link AdfMark} should keep a `default`/handle this case. See
 /// {@link UnknownBlock}/{@link UnknownInline} for the node-level equivalents.
-public record UnknownMark(String type, String rawJson) implements AdfMark {
+public record UnknownMark(String type, String rawJson) implements AdfMark, AdfUnknown {
 
   /// Always empty: the node's attributes are inside `rawJson`.
   @Override

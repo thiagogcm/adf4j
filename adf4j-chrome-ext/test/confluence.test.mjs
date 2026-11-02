@@ -159,12 +159,6 @@ test('extracts ADF JSON body from Confluence responses', () => {
   assert.throws(() => helpers.extractAdfBody({ body: {} }), /atlas_doc_format/);
 });
 
-test('formats copied markdown with the page title', () => {
-  assert.equal(helpers.formatMarkdownWithTitle('My Page', 'body\n'), '# My Page\n\nbody\n');
-  assert.equal(helpers.formatMarkdownWithTitle('  My   Page  ', 'body'), '# My Page\n\nbody');
-  assert.equal(helpers.formatMarkdownWithTitle('', 'body'), 'body');
-});
-
 test('extracts title from response, metadata, or document title', () => {
   assert.equal(helpers.extractPageTitle(fakeDocument({}, 'Ignored'), { title: 'API Title' }), 'API Title');
   assert.equal(

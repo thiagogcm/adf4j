@@ -18,7 +18,7 @@ adf4j is immutable, thread-safe, dependency-light, and I/O-free. It never calls 
 <dependency>
     <groupId>dev.nthings</groupId>
     <artifactId>adf4j</artifactId>
-    <version>1.0.0</version>
+    <version>2.0.0</version>
 </dependency>
 ```
 
@@ -40,15 +40,14 @@ Each recipe wraps the Maven wrapper, so `./mvnw verify` and friends still work d
 ```java
 import dev.nthings.adf4j.AdfToMarkdown;
 
-AdfToMarkdown converter = AdfToMarkdown.create();
-String markdown = converter.toMarkdown(adfJson);
+String markdown = AdfToMarkdown.create().toMarkdown(adfJson);
 ```
 
-Build one `AdfToMarkdown` and reuse it across documents and threads.
+A converter is immutable, thread-safe, and cheap to create, so bind one per document when options differ: `AdfToMarkdown.with(options)`.
 
 ## CLI
 
-Download the archive for your platform from the [latest release](https://github.com/thiagogcm/adf4j/releases/latest), extract it, and run `adf4j-cli`.
+Download the archive for your platform from the [latest release](https://github.com/thiagogcm/adf4j/releases/latest), extract it, and run `adf4j`.
 
 ```bash
 adf4j convert doc.adf.json
@@ -57,7 +56,7 @@ adf4j analyze --select referencedFileIds,outline doc.adf.json
 adf4j validate --fail-on-warning doc.adf.json
 ```
 
-Input comes from a file argument or stdin. Stdout contains only the requested output, while diagnostics go to stderr. Run `adf4j <command> --help` for command-specific flags.
+Input comes from a file argument or stdin. Stdout contains only the requested output, while diagnostics go to stderr. Invalid input exits 3. Run `adf4j <command> --help` for command-specific flags.
 
 ## WASM
 
@@ -69,9 +68,14 @@ npm install @nthings.dev/adf4j-wasm
 import { loadAdf4j } from "@nthings.dev/adf4j-wasm";
 
 const adf4j = await loadAdf4j();
-const markdown = adf4j.convert(adfJsonString);
-const result = adf4j.convertJson(adfJsonString);
+const result = adf4j.convert(adfJsonString, { title: "Page title" });
+if (!result.ok) {
+  throw new Error(result.error);
+}
+console.log(result.body);
 ```
+
+`convert` returns `{ ok, body, wasLossy, diagnostics, error? }` and does not throw on bad input. The optional second argument is `{ attachments, title }`.
 
 One entry point runs in Node.js, Bun, Deno, and the browser. The npm package bundles the GraalVM Web Image loader and the compiled `.wasm`. In Vite, add the shipped plugin (`import adf4jWasm from '@nthings.dev/adf4j-wasm/vite'`) or set `optimizeDeps.exclude: ['@nthings.dev/adf4j-wasm']`. See the [package README](adf4j-wasm/src/npm/README.md) for bundler, runtime, and self-hosting details.
 

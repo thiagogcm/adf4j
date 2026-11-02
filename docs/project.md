@@ -12,9 +12,9 @@ The public entry point is `AdfToMarkdown`:
 
 - `toMarkdown(json)` returns only the Markdown body.
 - `convert(json)` returns the body, metadata, diagnostics, and unresolved references.
-- `analyze(json)` returns metadata without rendering.
+- `analyze(parsed)` returns metadata without rendering.
 
-`AdfJson` reads and writes ADF itself: `AdfJson.parse(json)` validates the root and returns the typed AST, and `AdfJson.write(document)` turns an AST back into ADF JSON without loss.
+`AdfJson` reads and writes ADF itself: `AdfJson.parse(json)` validates the root and returns the typed AST with its diagnostics, and `AdfJson.write(document)` turns an AST back into ADF JSON without loss.
 
 ## Design choices
 
@@ -22,7 +22,7 @@ The public entry point is `AdfToMarkdown`:
 
 **Three phases:** Conversion runs parse, analyze, then render. Analysis builds the heading outline and metadata before rendering, which lets table-of-contents macros and unique heading anchors work in a single forward render pass.
 
-**Reusable converter:** `AdfToMarkdown` is immutable and thread-safe. Create one instance and pass per-document `MarkdownOptions` when a page needs different resolver state.
+**Cheap converters:** `AdfToMarkdown` is immutable and thread-safe, and an instance is just its bound options over one process-wide pipeline. When a page needs different resolver state, bind a converter for it with `AdfToMarkdown.with(options)`.
 
 **Safe defaults:** Input is treated as untrusted. JSON depth is bounded, URL schemes are sanitized, and resolver failures fall back to placeholders instead of aborting the whole document.
 
@@ -31,14 +31,13 @@ The public entry point is `AdfToMarkdown`:
 ## Example
 
 ```java
-AdfToMarkdown converter = AdfToMarkdown.create();
-String markdown = converter.toMarkdown(adfJson);
+String markdown = AdfToMarkdown.create().toMarkdown(adfJson);
 ```
 
 For metadata and diagnostics:
 
 ```java
-MarkdownResult result = converter.convert(adfJson);
+MarkdownResult result = AdfToMarkdown.create().convert(adfJson);
 String body = result.body();
 ContentMetadata metadata = result.metadata();
 boolean lossy = result.wasLossy();

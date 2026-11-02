@@ -21,7 +21,7 @@ public class Adf4jCommand implements Command<CommandInvocation> {
   private static final String VERSION_RESOURCE = "/dev/nthings/adf4j/cli/adf4j-cli.properties";
   private static final String VERSION_KEY = "version";
 
-  static final String VERSION = resolveVersion();
+  static final String VERSION = loadVersion();
 
   @Option(
       shortName = 'V',
@@ -40,14 +40,7 @@ public class Adf4jCommand implements Command<CommandInvocation> {
     return CommandResult.SUCCESS;
   }
 
-  private static String resolveVersion() {
-    var implementationVersion = Adf4jCommand.class.getPackage().getImplementationVersion();
-    return implementationVersion != null && !implementationVersion.isBlank()
-        ? implementationVersion
-        : loadVersionResource();
-  }
-
-  private static String loadVersionResource() {
+  private static String loadVersion() {
     var stream = Adf4jCommand.class.getResourceAsStream(VERSION_RESOURCE);
     if (stream == null) {
       return UNKNOWN_VERSION;

@@ -9,22 +9,25 @@ import dev.nthings.adf4j.ast.Table;
 import dev.nthings.adf4j.ast.TableCell;
 import dev.nthings.adf4j.ast.TableRow;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.IntStream;
 
 /// Renders ADF tables as GFM pipe tables and routes to {@link HtmlTableRenderer} when a table
-/// can't be expressed as one. Owns the routing and the pipe-table layout (column widths, header
-/// mode, separator).
+/// can't be expressed as one. Owns the routing and the pipe-table layout (column widths, header,
+/// separator).
 final class TableRenderer {
 
+  private final BlockRenderer blockRenderer;
   private final HtmlTableRenderer htmlTableRenderer;
 
-  TableRenderer(MarkdownRenderingSupport markdownRenderingSupport) {
-    this.htmlTableRenderer = new HtmlTableRenderer(markdownRenderingSupport);
+  TableRenderer(BlockRenderer blockRenderer, CellHtmlRenderer cellHtmlRenderer) {
+    this.blockRenderer = blockRenderer;
+    this.htmlTableRenderer = new HtmlTableRenderer(blockRenderer, cellHtmlRenderer);
   }
 
-  String renderTable(Table node, RendererState context, BlockRecursion recursion) {
+  String renderTable(Table node, RenderContext context) {
     var rows = node.rows();
     if (rows.isEmpty()) {
       return "";
@@ -36,65 +39,53 @@ final class TableRenderer {
     if (numberColumn
         || requiresHtmlTableFallback(rows)
         || (hasHeaderCell(rows) && !firstRowIsHeader(rows))) {
-      return htmlTableRenderer.renderHtmlTable(rows, context, recursion, numberColumn);
+      return htmlTableRenderer.renderHtmlTable(rows, context, numberColumn);
     }
     if (firstRowIsHeader(rows)) {
-      return renderGfmTable(rows, context, recursion, HeaderMode.NATURAL);
+      return renderGfmTable(rows, context, false);
     }
-    // GFM-safe but headerless: apply the fallback policy.
-    return switch (context.tableFallback()) {
-      case HTML -> htmlTableRenderer.renderHtmlTable(rows, context, recursion, numberColumn);
-      case GFM_PROMOTE_FIRST_ROW ->
-          renderGfmTable(rows, context, recursion, HeaderMode.PROMOTE_FIRST_ROW);
-      case GFM_EMPTY_HEADER ->
-          renderGfmTable(rows, context, recursion, HeaderMode.SYNTHESIZE_EMPTY);
+    // GFM-safe but headerless: apply the fallback policy. Promoting the first row needs no extra
+    // step, because the first emitted row always sits above the separator.
+    return switch (context.session().options().tableFallback()) {
+      case HTML -> htmlTableRenderer.renderHtmlTable(rows, context, numberColumn);
+      case GFM_PROMOTE_FIRST_ROW -> renderGfmTable(rows, context, false);
+      case GFM_EMPTY_HEADER -> renderGfmTable(rows, context, true);
     };
   }
 
-  private enum HeaderMode {
-    NATURAL,
-    PROMOTE_FIRST_ROW,
-    SYNTHESIZE_EMPTY
-  }
-
   private String renderGfmTable(
-      List<TableRow> rows, RendererState context, BlockRecursion recursion, HeaderMode mode) {
-    var renderedRows = new ArrayList<Row>();
+      List<TableRow> rows, RenderContext context, boolean syntheticEmptyHeader) {
+    var renderedRows = new ArrayList<List<String>>();
     var maxColumns = 0;
 
     for (var row : rows) {
-      var rendered = renderTableRowCells(row, context, recursion);
-      if (rendered.cells().isEmpty()) {
+      var rendered = renderTableRowCells(row, context);
+      if (rendered.isEmpty()) {
         continue;
       }
       renderedRows.add(rendered);
-      maxColumns = Math.max(maxColumns, rendered.cells().size());
+      maxColumns = Math.max(maxColumns, rendered.size());
     }
 
     if (renderedRows.isEmpty()) {
       return "";
     }
 
-    // Make the first emitted row the GFM-required header. The synthetic cells are read-only
-    // (withPadding returns them unchanged at exact column count), so an immutable list is safe.
-    if (mode == HeaderMode.SYNTHESIZE_EMPTY) {
-      renderedRows.add(0, new Row(Collections.nCopies(maxColumns, ""), true));
-    } else if (mode == HeaderMode.PROMOTE_FIRST_ROW) {
-      renderedRows.set(0, new Row(renderedRows.get(0).cells(), true));
+    // GFM requires a header row, so give a headerless table an empty one.
+    if (syntheticEmptyHeader) {
+      renderedRows.addFirst(Collections.nCopies(maxColumns, ""));
     }
 
     final int columns = maxColumns;
-    var normalizedRows = renderedRows.stream().map(row -> row.withPadding(columns)).toList();
+    var normalizedRows = renderedRows.stream().map(row -> withPadding(row, columns)).toList();
 
-    var widths = new int[maxColumns == 0 ? 1 : maxColumns];
+    // GFM's delimiter row needs at least three dashes per column; cells pad to the same width.
+    var widths = new int[columns];
+    Arrays.fill(widths, 3);
     for (var row : normalizedRows) {
-      for (var index = 0; index < row.cells().size(); index++) {
-        widths[index] = Math.max(widths[index], row.cells().get(index).length());
+      for (var index = 0; index < row.size(); index++) {
+        widths[index] = Math.max(widths[index], row.get(index).length());
       }
-    }
-
-    for (var index = 0; index < widths.length; index++) {
-      widths[index] = Math.max(3, widths[index]);
     }
 
     var separator = renderTableSeparator(widths);
@@ -103,8 +94,8 @@ final class TableRenderer {
     for (var rowIndex = 0; rowIndex < normalizedRows.size(); rowIndex++) {
       var row = normalizedRows.get(rowIndex);
       var padded = new ArrayList<String>();
-      for (var index = 0; index < row.cells().size(); index++) {
-        padded.add(padRight(row.cells().get(index), widths[index]));
+      for (var index = 0; index < row.size(); index++) {
+        padded.add(padRight(row.get(index), widths[index]));
       }
       lines.add("| " + String.join(" | ", padded) + " |");
       if (rowIndex == 0) {
@@ -115,36 +106,26 @@ final class TableRenderer {
     return String.join("\n", lines);
   }
 
-  String renderTableRow(TableRow node, RendererState context, BlockRecursion recursion) {
-    var rendered = renderTableRowCells(node, context, recursion);
-    return rendered.cells().isEmpty() ? "" : "| " + String.join(" | ", rendered.cells()) + " |";
+  String renderTableRow(TableRow node, RenderContext context) {
+    var rendered = renderTableRowCells(node, context);
+    return rendered.isEmpty() ? "" : "| " + String.join(" | ", rendered) + " |";
   }
 
-  String renderTableCell(TableCell cell, RendererState context, BlockRecursion recursion) {
+  String renderTableCell(TableCell cell, RenderContext context) {
     var text =
-        RenderBuffer.joinBlocks(
-                recursion.renderBlocks(cell.content(), context.withTableCell(TableCellKind.GFM)))
-            .trim();
+        blockRenderer.renderBlocks(cell.content(), context.withSite(InlineSite.GFM_CELL)).trim();
     if (text.isBlank()) {
       return "";
     }
     return text.replace("|", "\\|").replace("\n", "<br>");
   }
 
-  private Row renderTableRowCells(TableRow row, RendererState context, BlockRecursion recursion) {
-    var cells = row.cells();
-    if (cells.isEmpty()) {
-      return new Row(List.of(), false);
-    }
-    var header = false;
+  private List<String> renderTableRowCells(TableRow row, RenderContext context) {
     var rendered = new ArrayList<String>();
-    for (var cell : cells) {
-      if (cell.header()) {
-        header = true;
-      }
-      rendered.add(renderTableCell(cell, context, recursion));
+    for (var cell : row.cells()) {
+      rendered.add(renderTableCell(cell, context));
     }
-    return new Row(rendered, header);
+    return rendered;
   }
 
   private boolean hasHeaderCell(List<TableRow> rows) {
@@ -170,7 +151,7 @@ final class TableRenderer {
   }
 
   private String renderTableSeparator(int[] widths) {
-    var columns = IntStream.of(widths).mapToObj(width -> "-".repeat(Math.max(3, width))).toList();
+    var columns = IntStream.of(widths).mapToObj("-"::repeat).toList();
     return "| " + String.join(" | ", columns) + " |";
   }
 
@@ -217,17 +198,11 @@ final class TableRenderer {
     return value + " ".repeat(width - value.length());
   }
 
-  private record Row(List<String> cells, boolean header) {
-
-    Row withPadding(int columns) {
-      if (cells.size() >= columns) {
-        return this;
-      }
-      var padded = new ArrayList<>(cells);
-      while (padded.size() < columns) {
-        padded.add("");
-      }
-      return new Row(padded, header);
+  private static List<String> withPadding(List<String> cells, int columns) {
+    var padded = new ArrayList<>(cells);
+    while (padded.size() < columns) {
+      padded.add("");
     }
+    return padded;
   }
 }

@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-adf4j follows [semantic versioning](https://semver.org/). Security fixes are released for the latest published version on Maven Central. Until 1.0.0, only the most recent release is supported.
+adf4j follows [semantic versioning](https://semver.org/). Security fixes are released for the latest published version on Maven Central.
 
 ## Reporting a vulnerability
 

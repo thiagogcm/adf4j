@@ -25,36 +25,51 @@ class AdfToMarkdownParsingTests {
               "parseable non-ADF document reports every root mismatch",
               new InvalidRootCase(
                   "{\"type\":\"paragraph\",\"version\":2,\"content\":{}}",
-                  List.of("INVALID_ROOT_NODE", "UNSUPPORTED_VERSION", "INVALID_CONTENT"))),
+                  List.of(
+                      Diagnostic.Code.INVALID_ROOT_NODE,
+                      Diagnostic.Code.UNSUPPORTED_VERSION,
+                      Diagnostic.Code.INVALID_CONTENT))),
           argumentSet(
               "array root is rejected before field validation",
-              new InvalidRootCase("[]", List.of("INVALID_ROOT_TYPE"))),
+              new InvalidRootCase("[]", List.of(Diagnostic.Code.INVALID_ROOT_TYPE))),
           argumentSet(
               "missing fields report the missing required root fields",
               new InvalidRootCase(
-                  "{\"type\":\"doc\"}", List.of("INVALID_VERSION", "INVALID_CONTENT"))),
+                  "{\"type\":\"doc\"}",
+                  List.of(Diagnostic.Code.INVALID_VERSION, Diagnostic.Code.INVALID_CONTENT))),
           argumentSet(
               "non-numeric string version is not accepted as ADF version",
               new InvalidRootCase(
                   "{\"type\":\"doc\",\"version\":\"x\",\"content\":[]}",
-                  List.of("INVALID_VERSION"))));
+                  List.of(Diagnostic.Code.INVALID_VERSION))));
 
   private final AdfTestSupport testSupport = AdfTestSupport.create();
   private final AdfToMarkdown processor = testSupport.processor();
 
-  record InvalidRootCase(String rawAdf, List<String> issueCodes) {}
+  record InvalidRootCase(String rawAdf, List<Diagnostic.Code> issueCodes) {}
 
   @ParameterizedTest(name = "{argumentSetName}")
   @FieldSource("blank_inputs")
   void parse_returns_the_empty_result_for_absent_input(String rawAdf) {
     var result = AdfJson.parse(rawAdf);
 
-    assertThat(result).isEqualTo(ParseResult.empty());
+    assertThat(result).isEqualTo(new ParseResult(null, List.of()));
+    assertThat(result.isValid()).isFalse();
   }
 
   @Test
-  void parse_result_normalises_a_null_issue_list_to_an_empty_one() {
-    assertThat(new ParseResult(null, null, true).issues()).isNotNull().isEmpty();
+  void a_fractional_version_is_invalid() {
+    var result = AdfJson.parse("{\"type\":\"doc\",\"version\":1.5,\"content\":[]}");
+
+    assertThat(result.isValid()).isFalse();
+    assertThat(result.diagnostics())
+        .extracting(Diagnostic::code)
+        .containsExactly(Diagnostic.Code.INVALID_VERSION);
+  }
+
+  @Test
+  void parse_result_normalises_a_null_diagnostic_list_to_an_empty_one() {
+    assertThat(new ParseResult(null, null).diagnostics()).isNotNull().isEmpty();
   }
 
   @Test
@@ -62,12 +77,12 @@ class AdfToMarkdownParsingTests {
     var result = AdfJson.parse("{");
 
     assertThat(result.document()).isNull();
-    assertThat(result.validAdfRoot()).isFalse();
-    assertThat(result.issues())
+    assertThat(result.isValid()).isFalse();
+    assertThat(result.diagnostics())
         .singleElement()
         .satisfies(
             issue -> {
-              assertThat(issue.code()).isEqualTo("INVALID_JSON");
+              assertThat(issue.code()).isEqualTo(Diagnostic.Code.INVALID_JSON);
               assertThat(issue.message()).isEqualTo("Failed to parse ADF JSON payload.");
               assertThat(issue.cause()).isNotNull();
             });
@@ -79,8 +94,8 @@ class AdfToMarkdownParsingTests {
     var result = AdfJson.parse(input.rawAdf());
 
     assertThat(result.document()).isNull();
-    assertThat(result.validAdfRoot()).isFalse();
-    assertThat(result.issues())
+    assertThat(result.isValid()).isFalse();
+    assertThat(result.diagnostics())
         .extracting(Diagnostic::code)
         .containsExactlyElementsOf(input.issueCodes());
   }
@@ -90,8 +105,8 @@ class AdfToMarkdownParsingTests {
     var result = AdfJson.parse(testSupport.caseInput("valid-adf-root"));
 
     assertThat(result.document()).isNotNull();
-    assertThat(result.validAdfRoot()).isTrue();
-    assertThat(result.issues()).isEmpty();
+    assertThat(result.isValid()).isTrue();
+    assertThat(result.diagnostics()).isEmpty();
     assertThat(result.document().version()).isEqualTo(1);
   }
 
@@ -102,8 +117,10 @@ class AdfToMarkdownParsingTests {
     var result = AdfJson.parse(json);
 
     assertThat(result.document()).isNotNull();
-    assertThat(result.validAdfRoot()).isTrue();
-    assertThat(result.issues()).extracting(Diagnostic::code).doesNotContain("INVALID_VERSION");
+    assertThat(result.isValid()).isTrue();
+    assertThat(result.diagnostics())
+        .extracting(Diagnostic::code)
+        .doesNotContain(Diagnostic.Code.INVALID_VERSION);
   }
 
   @Test
@@ -112,10 +129,12 @@ class AdfToMarkdownParsingTests {
         "{\"type\":\"doc\",\"version\":2,\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Hi\"}]}]}";
     var result = AdfJson.parse(json);
 
-    assertThat(result.validAdfRoot()).isTrue();
+    assertThat(result.isValid()).isTrue();
     assertThat(result.document()).isNotNull();
     assertThat(result.document().version()).isEqualTo(2);
-    assertThat(result.issues()).extracting(Diagnostic::code).containsExactly("UNSUPPORTED_VERSION");
+    assertThat(result.diagnostics())
+        .extracting(Diagnostic::code)
+        .containsExactly(Diagnostic.Code.UNSUPPORTED_VERSION);
     assertThat(processor.toMarkdown(json)).isEqualTo("Hi");
   }
 }

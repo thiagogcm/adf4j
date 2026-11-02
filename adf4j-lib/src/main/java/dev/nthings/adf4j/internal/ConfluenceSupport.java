@@ -2,203 +2,55 @@ package dev.nthings.adf4j.internal;
 
 import dev.nthings.adf4j.ast.Attributes;
 import dev.nthings.adf4j.ast.MacroParams;
-import dev.nthings.adf4j.ast.MediaAttrs;
-import dev.nthings.adf4j.confluence.ConfluenceMetadata;
-import dev.nthings.adf4j.metadata.ExcerptIncludeReference;
-import dev.nthings.adf4j.metadata.PageTreeMacro;
-import dev.nthings.adf4j.metadata.PageTreeReference;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
 
+/// Confluence heuristics that aren't tied to one macro: page ids in URLs and link metadata, and
+/// where a chart keeps its title.
 public final class ConfluenceSupport {
 
   private static final Pattern CONFLUENCE_PAGE_URL_PATTERN =
       Pattern.compile(
           "^(?:https?://[^/]+)?(?:/wiki)?(?:/spaces/[^/]+)?/pages/(?:edit-v\\d+/)?(\\d+)(?:/[^?#]*)?(?:\\?.*)?(?:#.*)?$",
           Pattern.CASE_INSENSITIVE);
-  private static final String CONFLUENCE_MACRO_EXTENSION = "com.atlassian.confluence.macro.core";
-  private static final String CHART_EXTENSION = "com.atlassian.chart";
-  private static final String MIGRATION_EXTENSION = "com.atlassian.confluence.migration";
 
   private ConfluenceSupport() {}
-
-  public static boolean isConfluenceMacroExtension(@Nullable String extensionType) {
-    return CONFLUENCE_MACRO_EXTENSION.equals(extensionType);
-  }
-
-  /// Whether the extension is a chart: the modern chart app (`com.atlassian.chart`, any key) or
-  /// the legacy Confluence `chart`/`chart:*` macro.
-  public static boolean isChartExtension(
-      @Nullable String extensionType, @Nullable String extensionKey) {
-    if (isModernChartExtension(extensionType)) {
-      return true;
-    }
-    return isConfluenceMacroExtension(extensionType)
-        && extensionKey != null
-        && ("chart".equals(extensionKey) || extensionKey.startsWith("chart:"));
-  }
-
-  /// Whether the extension belongs to the modern chart app (`com.atlassian.chart`).
-  public static boolean isModernChartExtension(@Nullable String extensionType) {
-    return CHART_EXTENSION.equals(extensionType);
-  }
 
   /// The user-visible chart title, or `null`. The legacy macro carries it as the `title`
   /// macro param; the modern chart app nests it at
   /// `parameters.chartGroup.customizeTab.titlesField.chartTitle` with the generic
   /// `extensionTitle` as a fallback.
-  public static @Nullable String chartTitle(
-      @Nullable MacroParams macroParams, @Nullable Attributes parameters) {
-    var fromParams = macroParams == null ? null : macroParams.value("title");
+  public static @Nullable String chartTitle(MacroParams macroParams, Attributes parameters) {
     var nested =
-        parameters == null
-            ? null
-            : parameters
-                .object("chartGroup")
-                .object("customizeTab")
-                .object("titlesField")
-                .string("chartTitle");
-    var generic = parameters == null ? null : parameters.string("extensionTitle");
-    return Strings.firstNonBlankStripped(fromParams, nested, generic);
+        parameters
+            .object("chartGroup")
+            .object("customizeTab")
+            .object("titlesField")
+            .string("chartTitle");
+    return Strings.firstNonBlankStripped(
+        macroParams.value("title"), nested, parameters.string("extensionTitle"));
   }
 
-  /// Whether the extension is the editor-migration `inline-media-image` macro.
-  public static boolean isInlineMediaImage(
-      @Nullable String extensionType, @Nullable String extensionKey) {
-    return MIGRATION_EXTENSION.equals(extensionType) && "inline-media-image".equals(extensionKey);
-  }
-
-  /// The `media`-node attributes equivalent to an `inline-media-image` macro, or `null` when the
-  /// macro carries no media id. This migration macro stores the media identity directly under
-  /// `parameters` (`id`, `collection`, `width`, `height`), not under `macroParams`; it always
-  /// wraps an image, so the media type is fixed.
-  public static @Nullable MediaAttrs inlineMediaImageAttrs(@Nullable Attributes parameters) {
-    if (parameters == null) {
-      return null;
-    }
-    var id = stringValue(parameters, "id");
-    if (id == null) {
-      return null;
-    }
-    return MediaAttrs.builder()
-        .type("file")
-        .mediaType("image")
-        .id(id)
-        .collection(stringValue(parameters, "collection"))
-        .alt(stringValue(parameters, "alt"))
-        .width(stringValue(parameters, "width"))
-        .height(stringValue(parameters, "height"))
-        .build();
-  }
-
-  // A parameter as trimmed text (numbers stringified), or null when absent/blank.
-  private static @Nullable String stringValue(Attributes parameters, String key) {
-    var value = parameters.values().get(key);
-    var text =
-        switch (value) {
-          case null -> null;
-          case String s -> s;
-          case Number n -> n.toString();
-          default -> null;
-        };
-    if (text == null) {
-      return null;
-    }
-    var stripped = text.strip();
-    return stripped.isEmpty() ? null : stripped;
-  }
-
-  /// The {@link ExcerptIncludeReference} for an `excerpt-include` macro, or `null` for any
-  /// other extension key or when the source page (the macro's unnamed default parameter) is absent.
-  /// The single place the macro's parameters are normalized, shared by rendering and metadata
-  /// extraction.
-  public static @Nullable ExcerptIncludeReference excerptIncludeReference(
-      @Nullable String extensionKey, @Nullable MacroParams macroParams) {
-    if (!"excerpt-include".equals(extensionKey)) {
-      return null;
-    }
-    var params = macroParams == null ? MacroParams.empty() : macroParams;
-    var page = Strings.trimToNull(params.value(""));
-    if (page == null) {
-      return null;
-    }
-    return new ExcerptIncludeReference(
-        page, Strings.trimToNull(params.value("name")), params.values());
-  }
-
-  /// The `excerpt` macro's named-excerpt identifier, or `null` for the unnamed excerpt.
-  public static @Nullable String excerptName(@Nullable MacroParams macroParams) {
-    return macroParams == null ? null : Strings.trimToNull(macroParams.value("name"));
-  }
-
-  public static @Nullable String pageId(@Nullable String rawUrl) {
-    if (rawUrl == null) {
-      return null;
-    }
-    var normalizedUrl = rawUrl.strip();
-    if (normalizedUrl.isEmpty()) {
-      return null;
-    }
-
-    var matcher = CONFLUENCE_PAGE_URL_PATTERN.matcher(normalizedUrl);
+  public static @Nullable String pageId(String rawUrl) {
+    var matcher = CONFLUENCE_PAGE_URL_PATTERN.matcher(rawUrl.strip());
     return matcher.matches() ? matcher.group(1) : null;
   }
 
   /// The Confluence page node id a link points at, or `null` when the link is not an internal
-  /// page reference. A link counts as a page when its URL parses to a page id, its Confluence
-  /// metadata carries a page id, or the metadata's `linkType` is `"page"`; the inferred URL id
-  /// wins over the metadata id. The single source of truth shared by metadata extraction and
-  /// `PageLinkResolver` rewriting, so both agree on which links are pages.
-  public static @Nullable String pageNodeId(
-      @Nullable String url, @Nullable ConfluenceMetadata metadata) {
-    var normalizedUrl = url == null ? null : url.strip();
-    if (normalizedUrl == null || normalizedUrl.isEmpty() || "#".equals(normalizedUrl)) {
+  /// page reference. A link counts as a page when its URL parses to a page id or its Confluence
+  /// metadata carries one; the inferred URL id wins over the metadata id. The single source of
+  /// truth shared by metadata extraction and `PageLinkResolver` rewriting, so both agree on which
+  /// links are pages.
+  public static @Nullable String pageNodeId(String url, ConfluenceMetadata metadata) {
+    var normalizedUrl = url.strip();
+    if (normalizedUrl.isEmpty() || "#".equals(normalizedUrl)) {
       return null;
     }
 
     var inferredNodeId = pageId(normalizedUrl);
-    var metadataNodeId =
-        metadata == null
-            ? null
-            : Strings.firstNonBlankStripped(metadata.pageId(), metadata.contentId(), metadata.id());
-    var linkType =
-        metadata == null || metadata.linkType() == null ? null : metadata.linkType().strip();
-    if (!"page".equalsIgnoreCase(linkType) && inferredNodeId == null && metadataNodeId == null) {
-      return null;
+    if (inferredNodeId != null) {
+      return inferredNodeId;
     }
-    return inferredNodeId != null ? inferredNodeId : metadataNodeId;
-  }
-
-  /// The {@link PageTreeReference} for a `pagetree`/`children` macro, or `null` for
-  /// any other extension key. The single place the macro's root parameter (`root` for pagetree,
-  /// `page` for children) is normalized, shared by rendering and metadata extraction.
-  public static @Nullable PageTreeReference pageTreeReference(
-      @Nullable String extensionKey, @Nullable MacroParams macroParams) {
-    var params = macroParams == null ? MacroParams.empty() : macroParams;
-    return switch (extensionKey) {
-      case "pagetree" ->
-          new PageTreeReference(PageTreeMacro.PAGETREE, rootParam(params, "root"), params.values());
-      case "children" ->
-          new PageTreeReference(PageTreeMacro.CHILDREN, rootParam(params, "page"), params.values());
-      case null, default -> null;
-    };
-  }
-
-  // A macro root parameter (trimmed), or null for a blank or "@keyword" root.
-  private static @Nullable String rootParam(MacroParams macroParams, String name) {
-    var value = macroParams.value(name);
-    if (value == null) {
-      return null;
-    }
-    var trimmed = value.strip();
-    return trimmed.isEmpty() || trimmed.startsWith("@") ? null : trimmed;
-  }
-
-  public static @Nullable String anchorId(@Nullable MacroParams macroParams) {
-    if (macroParams == null) {
-      return null;
-    }
-    return Strings.firstNonBlankStripped(
-        macroParams.value(""), macroParams.value("legacyAnchorId"));
+    return Strings.firstNonBlankStripped(metadata.pageId(), metadata.contentId(), metadata.id());
   }
 }

@@ -8,8 +8,7 @@ import org.jspecify.annotations.Nullable;
 /// embed via `excerpt-include`. `name` is the named-excerpt identifier (`name`
 /// parameter), or `null` for the page's unnamed excerpt. `content` is the marked region's
 /// parsed ADF blocks, which an `ExcerptResolver` implementation can keep per source page and
-/// render with `convert(new AdfDocument(1, definition.content()), options)` when another
-/// page includes it.
+/// render with `AdfToMarkdown.convert(ExcerptDefinition)` when another page includes it.
 public record ExcerptDefinition(@Nullable String name, List<AdfBlock> content) {
 
   public ExcerptDefinition {

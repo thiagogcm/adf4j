@@ -1,12 +1,15 @@
 package dev.nthings.adf4j.cli;
 
 import dev.nthings.adf4j.AdfToMarkdown;
+import dev.nthings.adf4j.cli.JsonRenderer.RenderedExcerpt;
 import dev.nthings.adf4j.result.Diagnostic;
 import dev.nthings.adf4j.result.MarkdownResult;
+import dev.nthings.adf4j.result.UnknownNodeException;
 import java.util.List;
 import org.aesh.command.CommandDefinition;
 import org.aesh.command.option.Mixin;
 import org.aesh.command.option.Option;
+import tools.jackson.databind.node.ObjectNode;
 
 /// `adf4j convert`: renders ADF JSON as Markdown, or as a full JSON result envelope.
 @CommandDefinition(
@@ -30,40 +33,50 @@ public class ConvertCommand extends Adf4jSubcommand {
 
   @Mixin RenderingOptions rendering = new RenderingOptions();
   @Mixin ResolverOptions resolvers = new ResolverOptions();
+  @Mixin AttachmentOptions attachments = new AttachmentOptions();
 
   @Override
   int run() {
     resolvers.warnVerbatim(common.quiet);
 
     var json = new CliJson();
-    var input = CliIo.readInput(file);
+    var parsed = parseInput();
     var options = RenderConfig.build(rendering, resolvers, json);
-    var converter = AdfToMarkdown.with(options);
+    var converter = AdfToMarkdown.with(options.withAttachments(attachments.read(json)));
 
     MarkdownResult result;
+    String output;
     try {
-      result = converter.convert(input);
-    } catch (IllegalStateException fail) { // UnknownNodePolicy.FAIL aborts
+      result = converter.convert(parsed);
+      output =
+          format.equals("json")
+              ? json.write(jsonResult(result, converter), !common.compact) + "\n"
+              : result.body();
+    } catch (UnknownNodeException fail) { // UnknownNodePolicy.FAIL aborts
       throw new CliException(
           ExitCodes.CONTENT_FAILURE,
-          "conversion aborted by --unknown-nodes fail: " + fail.getMessage(),
+          "unknown node '" + fail.nodeType() + "' aborted the conversion (--unknown-nodes fail)",
           fail);
-    }
-
-    String output;
-    if (format.equals("json")) {
-      var node = new JsonRenderer(json, converter, options).markdownResult(result);
-      output = json.write(node, !common.compact) + "\n";
-    } else {
-      output = result.body();
     }
     CliIo.writeOutput(common.output, output);
 
     printSummary(result.diagnostics(), result.wasLossy());
+    if (!parsed.isValid()) {
+      printDiagnostics(parsed.diagnostics());
+      return ExitCodes.CONTENT_FAILURE;
+    }
     if (failOnLossy && result.wasLossy()) {
       return ExitCodes.QUALITY_GATE;
     }
     return ExitCodes.OK;
+  }
+
+  private static ObjectNode jsonResult(MarkdownResult result, AdfToMarkdown converter) {
+    var excerpts =
+        result.metadata().excerpts().stream()
+            .map(excerpt -> new RenderedExcerpt(excerpt.name(), converter.convert(excerpt).body()))
+            .toList();
+    return JsonRenderer.markdownResult(result, excerpts);
   }
 
   private void printSummary(List<Diagnostic> diagnostics, boolean lossy) {

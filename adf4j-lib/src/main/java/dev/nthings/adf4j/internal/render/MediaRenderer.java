@@ -1,10 +1,7 @@
 package dev.nthings.adf4j.internal.render;
 
-import dev.nthings.adf4j.ast.Caption;
-import dev.nthings.adf4j.ast.Media;
-import dev.nthings.adf4j.ast.MediaAttrs;
+import dev.nthings.adf4j.ast.AdfMedia;
 import dev.nthings.adf4j.ast.MediaGroup;
-import dev.nthings.adf4j.ast.MediaInline;
 import dev.nthings.adf4j.ast.MediaSingle;
 import dev.nthings.adf4j.internal.AdfText;
 import dev.nthings.adf4j.internal.AttachmentReferences;
@@ -15,104 +12,78 @@ import org.jspecify.annotations.Nullable;
 
 final class MediaRenderer {
 
-  String renderMediaSingle(MediaSingle node, RendererState context, BlockRecursion recursion) {
-    if (node.content().isEmpty()) {
-      return "";
-    }
+  private final TextMarkRenderer markRenderer;
+  private final BlockRenderer blockRenderer;
 
-    // A mediaSingle-level link mark wraps the image only; any caption stays a separate block.
-    var imageBlocks = new ArrayList<String>();
-    var captionBlocks = new ArrayList<String>();
-    for (var item : node.content()) {
-      if (item instanceof Media media) {
-        imageBlocks.add(renderMedia(media, context, recursion));
-      } else if (item instanceof Caption caption) {
-        var rendered = renderCaption(caption, context, recursion);
-        if (!rendered.isBlank()) {
-          captionBlocks.add(rendered);
-        }
+  MediaRenderer(TextMarkRenderer markRenderer, BlockRenderer blockRenderer) {
+    this.markRenderer = markRenderer;
+    this.blockRenderer = blockRenderer;
+  }
+
+  String renderMediaSingle(MediaSingle node, RenderContext context) {
+    // A wrapper link mark wraps each image alone: a link can't span the blank line between two, and
+    // any caption stays a separate block.
+    var blocks = new ArrayList<String>();
+    for (var media : node.media()) {
+      var image = renderMedia(media, context);
+      blocks.add(markRenderer.applyMarks(image, node.marks(), context.session()));
+    }
+    for (var caption : node.captions()) {
+      var rendered = blockRenderer.renderCaption(caption, context);
+      if (!rendered.isBlank()) {
+        blocks.add(rendered);
       }
     }
-
-    var blocks = new ArrayList<String>();
-    if (!imageBlocks.isEmpty()) {
-      var imageString = String.join("\n\n", imageBlocks);
-      blocks.add(recursion.applyMarks(imageString, node.marks(), context.context()));
-    }
-    blocks.addAll(captionBlocks);
-
     return String.join("\n\n", blocks);
   }
 
-  String renderCaption(Caption node, RendererState context, BlockRecursion recursion) {
-    // A caption renders as its own block at column 0, so its first inline is at a block start.
-    return recursion.renderInlineNodes(node.content(), context, true);
-  }
-
-  String renderMediaGroup(MediaGroup node, RendererState context, BlockRecursion recursion) {
-    if (node.content().isEmpty()) {
-      return "";
-    }
-
-    var lines = new ArrayList<String>();
-    for (var item : node.content()) {
-      if (item instanceof Media media) {
-        lines.add(renderMedia(media, context, recursion));
-      }
-    }
+  String renderMediaGroup(MediaGroup node, RenderContext context) {
     // Single soft break: a media group renders as one visual cluster.
-    return String.join("\n", lines);
+    return String.join(
+        "\n", node.items().stream().map(media -> renderMedia(media, context)).toList());
   }
 
-  String renderMedia(Media node, RendererState context, BlockRecursion recursion) {
-    var rendered = renderMediaBlock(node.mediaAttrs(), context);
-    return recursion.applyMarks(rendered, node.marks(), context.context());
+  String renderMedia(AdfMedia node, RenderContext context) {
+    var rendered = renderEmbedOrLink(node, context);
+    return markRenderer.applyMarks(rendered, node.marks(), context.session());
   }
 
-  String renderMediaInline(MediaInline node, RendererState context, BlockRecursion recursion) {
-    var rendered = renderMediaBlock(node.mediaAttrs(), context);
-    return recursion.applyMarks(rendered, node.marks(), context.context());
-  }
-
-  String renderMediaBlock(MediaAttrs attrs, RendererState context) {
-    var attachment = context.context().attachmentByFileId(attrs.id());
-    var resolvedSource = resolveMediaSource(attrs, attachment, context);
-    var destination = resolvedSource != null ? resolvedSource : placeholder(attrs);
+  private String renderEmbedOrLink(AdfMedia media, RenderContext context) {
+    var attachment = context.session().attachments().byFileId(media.id());
+    var resolvedSource = resolveMediaSource(media, attachment, context);
+    var destination = resolvedSource != null ? resolvedSource : placeholder(media);
 
     // Non-image attachments (PDF, video, archive, …) render as a link; an image embed would break.
-    if (!isImage(attrs, attachment, resolvedSource)) {
+    if (!isImage(media, attachment, resolvedSource)) {
       // Prefer the inventory title: a downloadUrl's last segment may be a route word ("download").
       var destinationFileName =
           attachment != null && notBlank(attachment.title())
               ? attachment.title()
               : AttachmentReferences.fileName(resolvedSource);
-      return MarkdownText.link(
-          fileLabel(attrs, destinationFileName), destination, context.escapeParentheses());
+      return context.session().writer().link(fileLabel(media, destinationFileName), destination);
     }
 
     // The {width= height=} suffix is non-GFM; emit only when opted in.
     var source = MarkdownText.escapeUrlDestination(destination);
     var attributeSuffix =
-        context.imageSizeAttributes()
+        context.session().options().imageSizeAttributes()
             ? renderImageAttributeSuffix(
-                positiveInteger(attrs.width()), positiveInteger(attrs.height()))
+                positiveInteger(media.width()), positiveInteger(media.height()))
             : "";
     return "![%s](%s)%s"
         .formatted(
-            MarkdownText.escapeAltText(imageAlt(attrs, attachment), context.escapeParentheses()),
-            source,
-            attributeSuffix);
+            context.session().writer().alt(imageAlt(media, attachment)), source, attributeSuffix);
   }
 
   // The name, file name, alt, or destination's file name, else "file".
-  private String fileLabel(MediaAttrs attrs, @Nullable String destinationFileName) {
+  private String fileLabel(AdfMedia media, @Nullable String destinationFileName) {
     var label =
-        Strings.firstNonBlank(attrs.name(), attrs.fileName(), attrs.alt(), destinationFileName);
+        Strings.firstNonBlank(media.name(), media.fileName(), media.alt(), destinationFileName);
     return label == null ? "file" : label;
   }
 
-  private String imageAlt(MediaAttrs attrs, @Nullable AttachmentReference attachment) {
-    var alt = AdfText.mediaAlt(attrs);
+  private String imageAlt(AdfMedia media, @Nullable AttachmentReference attachment) {
+    var alt = AdfText.mediaAlt(media);
     if (!"media".equals(alt) || attachment == null) {
       return alt;
     }
@@ -123,37 +94,34 @@ final class MediaRenderer {
   // Classifies a file node whose own attrs omit the type — as Confluence's do — via the
   // attachment inventory's mediaType/title or the resolved destination's filename extension.
   private boolean isImage(
-      MediaAttrs attrs, @Nullable AttachmentReference attachment, @Nullable String resolvedSource) {
-    var mimeOrType = Strings.firstNonBlank(attrs.fileMimeType(), attrs.mediaType());
+      AdfMedia media, @Nullable AttachmentReference attachment, @Nullable String resolvedSource) {
+    var mimeOrType = Strings.firstNonBlank(media.fileMimeType(), media.mediaType());
     if (mimeOrType == null && attachment != null) {
       mimeOrType = attachment.mediaType();
     }
     var attachmentTitle = attachment == null ? null : attachment.title();
     return AttachmentReferences.isImage(
         mimeOrType,
-        attrs.fileName(),
-        attrs.name(),
-        attrs.alt(),
+        media.fileName(),
+        media.name(),
+        media.alt(),
         attachmentTitle,
-        attrs.url(),
+        media.url(),
         resolvedSource);
   }
 
   // A url attr, media resolver, or inventory downloadUrl, never the synthetic placeholder: null
   // so the label and image-ness are decided only by genuine filenames.
   private @Nullable String resolveMediaSource(
-      MediaAttrs attrs, @Nullable AttachmentReference attachment, RendererState context) {
-    var url = attrs.url();
+      AdfMedia media, @Nullable AttachmentReference attachment, RenderContext context) {
+    var url = media.url();
     if (url != null && !url.isBlank()) {
       return url;
     }
 
-    var resolver = context.mediaResolver();
-    if (resolver != null) {
-      var resolved = CallbackGuards.guardNonBlank("MediaResolver", () -> resolver.resolve(attrs));
-      if (resolved != null) {
-        return resolved;
-      }
+    var resolved = context.session().resolvers().media(media);
+    if (resolved != null) {
+      return resolved;
     }
 
     var downloadUrl = attachment == null ? null : attachment.downloadUrl();
@@ -165,13 +133,13 @@ final class MediaRenderer {
   }
 
   // The synthetic media:collection/id reference, or "media" when even the id is absent.
-  private String placeholder(MediaAttrs attrs) {
-    var id = attrs.id();
+  private String placeholder(AdfMedia media) {
+    var id = media.id();
     if (id == null || id.isBlank()) {
       return "media";
     }
 
-    var collection = attrs.collection();
+    var collection = media.collection();
     if (collection == null || collection.isBlank()) {
       return "media:%s".formatted(id);
     }

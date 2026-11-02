@@ -30,7 +30,7 @@ const adf4j = await loadAdf4j({
 });
 
 console.error(`adf4j wasm v${adf4j.version()} — converting ${inputPath}`);
-const result = adf4j.convertJson(adfJson);
+const result = adf4j.convert(adfJson);
 
 if (!result.ok) {
   console.error(`conversion failed: ${result.error}`);
@@ -42,4 +42,4 @@ if (!result.body.endsWith('\n')) {
   process.stdout.write('\n');
 }
 
-console.error(`\n[lossy=${result.lossy} warnings=${result.warnings} errors=${result.errors}]`);
+console.error(`\n[wasLossy=${result.wasLossy} diagnostics=${result.diagnostics.length}]`);

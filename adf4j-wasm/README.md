@@ -4,7 +4,7 @@ A GraalVM **Web Image** (WebAssembly) build of adf4j, callable directly from Jav
 
 ## Why a separate module
 
-GraalVM's wasm backend has **no stdin and only an in-memory filesystem**, so the `adf4j-cli` stdin/file contract can't be driven from a JS host. This module instead exposes plain `string -> string` functions via the `@JS` helper pattern (the supported stand-in while `@JS.Export` is unimplemented in GraalVM 25). See `src/main/java/.../WasmBridge.java`.
+GraalVM's wasm backend has **no stdin and only an in-memory filesystem**, so the `adf4j-cli` stdin/file contract can't be driven from a JS host. This module instead exposes a `convert(json, context?)` function returning a result object via the `@JS` helper pattern (the supported stand-in while `@JS.Export` is unimplemented in GraalVM 25). See `src/main/java/.../WasmBridge.java`.
 
 ## Building
 
@@ -35,9 +35,8 @@ import { loadAdf4j } from "@nthings.dev/adf4j-wasm";
 
 const adf4j = await loadAdf4j();
 adf4j.version(); // adf4j version string
-adf4j.convert(adfJsonString); // -> Markdown string
-adf4j.convertJson(adfJsonString);
-// -> { ok, lossy, warnings, errors, body }
+adf4j.convert(adfJsonString, { title: "Page title" });
+// -> { ok, body, wasLossy, diagnostics: [{ code, severity, message }], error? }
 ```
 
 In Vite, add the shipped plugin (or set `optimizeDeps.exclude: ['@nthings.dev/adf4j-wasm']`) so the `.wasm` survives dependency pre-bundling:
@@ -46,6 +45,8 @@ In Vite, add the shipped plugin (or set `optimizeDeps.exclude: ['@nthings.dev/ad
 import adf4jWasm from "@nthings.dev/adf4j-wasm/vite";
 export default defineConfig({ plugins: [adf4jWasm()] });
 ```
+
+`ok` is `false`, with `error` set, on invalid input or an invalid `context` (`{ attachments, title }`); `convert` does not throw on either.
 
 Consumption details (Vite, other bundlers, Bun, Deno, CommonJS, self-hosting assets) live in the published package README at [src/npm/README.md](src/npm/README.md).
 

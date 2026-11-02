@@ -14,8 +14,8 @@ final class ExitCodes {
   /// malformed/invalid map file. Matches the aesh runtime's own parse-error exit code.
   static final int USAGE = 2;
 
-  /// `validate`: not a valid ADF root or an ERROR diagnostic; `convert --unknown-nodes fail`
-  /// aborted.
+  /// The input has no valid ADF root, whatever the subcommand (stdout is still written), or
+  /// `convert --unknown-nodes fail` aborted.
   static final int CONTENT_FAILURE = 3;
 
   /// A quality gate tripped: `convert --fail-on-lossy` on a lossy result, or `validate

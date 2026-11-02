@@ -5,29 +5,34 @@ import dev.nthings.adf4j.ast.AdfCard;
 import dev.nthings.adf4j.ast.AdfExtension;
 import dev.nthings.adf4j.ast.AdfInline;
 import dev.nthings.adf4j.ast.AdfMark;
+import dev.nthings.adf4j.ast.AdfMedia;
 import dev.nthings.adf4j.ast.Attributes;
 import dev.nthings.adf4j.ast.BodiedExtension;
-import dev.nthings.adf4j.ast.CardAttrs;
+import dev.nthings.adf4j.ast.Extension;
 import dev.nthings.adf4j.ast.InlineExtension;
-import dev.nthings.adf4j.ast.Link;
 import dev.nthings.adf4j.ast.Media;
-import dev.nthings.adf4j.ast.MediaAttrs;
 import dev.nthings.adf4j.ast.MediaInline;
+import dev.nthings.adf4j.ast.MediaSingle;
 import dev.nthings.adf4j.ast.Mention;
 import dev.nthings.adf4j.ast.Text;
-import dev.nthings.adf4j.confluence.ConfluenceMetadata;
-import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
+import dev.nthings.adf4j.internal.AdfText;
+import dev.nthings.adf4j.internal.AttachmentInventory;
 import dev.nthings.adf4j.internal.AttachmentReferences;
+import dev.nthings.adf4j.internal.ConfluenceMetadata;
 import dev.nthings.adf4j.internal.ConfluenceSupport;
 import dev.nthings.adf4j.internal.Strings;
+import dev.nthings.adf4j.internal.analyze.ConfluenceMacro.Attachments;
+import dev.nthings.adf4j.internal.analyze.ConfluenceMacro.Excerpt;
+import dev.nthings.adf4j.internal.analyze.ConfluenceMacro.ExcerptInclude;
+import dev.nthings.adf4j.internal.analyze.ConfluenceMacro.InlineMediaImage;
+import dev.nthings.adf4j.internal.analyze.ConfluenceMacro.PageTree;
+import dev.nthings.adf4j.internal.analyze.ConfluenceMacro.ViewPdf;
 import dev.nthings.adf4j.metadata.AttachmentReference;
 import dev.nthings.adf4j.metadata.ContentMetadata;
 import dev.nthings.adf4j.metadata.ExcerptDefinition;
 import dev.nthings.adf4j.metadata.ExcerptIncludeReference;
-import dev.nthings.adf4j.metadata.ExternalReference;
 import dev.nthings.adf4j.metadata.HeadingReference;
 import dev.nthings.adf4j.metadata.MentionReference;
-import dev.nthings.adf4j.metadata.PageReference;
 import dev.nthings.adf4j.metadata.PageTreeReference;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -41,34 +46,31 @@ import org.jspecify.annotations.Nullable;
 /// document.
 final class AdfContentMetadataExtractor implements NodeVisitor {
 
-  private final LinkedHashSet<String> pageRefs = new LinkedHashSet<>();
-  private final LinkedHashSet<String> externalRefs = new LinkedHashSet<>();
+  private final LinkedHashSet<String> pageIds = new LinkedHashSet<>();
+  private final LinkedHashSet<String> externalUrls = new LinkedHashSet<>();
   private final LinkedHashSet<MentionReference> mentionRefs = new LinkedHashSet<>();
-  private final LinkedHashMap<String, AttachmentRefBuilder> attachmentRefs = new LinkedHashMap<>();
+  private final LinkedHashMap<String, AttachmentFacts> attachmentRefs = new LinkedHashMap<>();
   // Occurrences, not sets: the counts of tree/excerpt macros are themselves a signal.
   private final ArrayList<PageTreeReference> pageTreeRefs = new ArrayList<>();
   private final ArrayList<ExcerptIncludeReference> excerptRefs = new ArrayList<>();
   private final ArrayList<ExcerptDefinition> excerpts = new ArrayList<>();
-  private final ConfluenceRenderContext confluenceContext;
+  private final AttachmentInventory inventory;
 
-  AdfContentMetadataExtractor(@Nullable ConfluenceRenderContext confluenceContext) {
-    this.confluenceContext =
-        confluenceContext == null ? ConfluenceRenderContext.empty() : confluenceContext;
+  AdfContentMetadataExtractor(AttachmentInventory inventory) {
+    this.inventory = inventory;
   }
 
   @Override
   public void visitBlock(AdfBlock block) {
     switch (block) {
-      case Media media -> {
-        collectLinkMarks(media.marks());
-        collectMediaAttrs(media.mediaAttrs());
-      }
-      case BodiedExtension bodied -> {
-        collectExtension(bodied);
-        collectExcerptDefinition(bodied);
-      }
-      case AdfExtension extension -> collectExtension(extension);
-      case AdfCard card -> collectCardLink(card.cardAttrs());
+      case Media media -> collectMedia(media);
+      // A wrapper's link wraps its media, so without any it renders nothing.
+      case MediaSingle single when !single.media().isEmpty() -> collectLinkMarks(single.marks());
+      case Extension extension -> collectExtension(extension);
+      // A macro with a body renders a placeholder over it and never expands, so only an excerpt
+      // counts, as a definition.
+      case BodiedExtension bodied -> collectExcerptDefinition(bodied);
+      case AdfCard card -> collectLink(card.url(), card.attrs());
       default -> {
         // Other blocks' references (inline/child) arrive via the walk.
       }
@@ -79,11 +81,8 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
   public void visitInline(AdfInline inline) {
     switch (inline) {
       case Text text -> collectLinkMarks(text.marks());
-      case AdfCard card -> collectCardLink(card.cardAttrs());
-      case MediaInline media -> {
-        collectLinkMarks(media.marks());
-        collectMediaAttrs(media.mediaAttrs());
-      }
+      case AdfCard card -> collectLink(card.url(), card.attrs());
+      case MediaInline media -> collectMedia(media);
       case InlineExtension extension -> collectExtension(extension);
       case Mention mention -> collectMention(mention);
       default -> {
@@ -92,20 +91,19 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
     }
   }
 
-  ContentMetadata build(@Nullable List<HeadingReference> outline) {
+  ContentMetadata build(List<HeadingReference> outline) {
     var attachments = new ArrayList<AttachmentReference>(attachmentRefs.size());
-    for (var builder : attachmentRefs.values()) {
-      attachments.add(builder.build());
-    }
+    attachmentRefs.forEach(
+        (fileId, facts) -> attachments.add(facts.reference(fileId, inventory.byFileId(fileId))));
     return new ContentMetadata(
-        pageRefs.stream().map(PageReference::new).toList(),
-        externalRefs.stream().map(ExternalReference::new).toList(),
+        List.copyOf(pageIds),
+        List.copyOf(externalUrls),
         List.copyOf(mentionRefs),
         attachments,
         List.copyOf(pageTreeRefs),
         List.copyOf(excerptRefs),
         List.copyOf(excerpts),
-        outline == null ? List.of() : List.copyOf(outline));
+        List.copyOf(outline));
   }
 
   private void collectMention(Mention mention) {
@@ -114,18 +112,10 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
   }
 
   private void collectLinkMarks(List<AdfMark> marks) {
-    for (var mark : marks) {
-      if (mark instanceof Link link) {
-        collectLink(link.href(), link.attrs());
-      }
+    var link = AdfText.effectiveLink(marks);
+    if (link != null) {
+      collectLink(link.href(), link.attrs());
     }
-  }
-
-  private void collectCardLink(@Nullable CardAttrs attrs) {
-    if (attrs == null) {
-      return;
-    }
-    collectLink(attrs.url(), attrs.attrs());
   }
 
   private void collectLink(@Nullable String rawUrl, Attributes attrs) {
@@ -135,139 +125,105 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
     }
     var pageNodeId = ConfluenceSupport.pageNodeId(normalized, ConfluenceMetadata.from(attrs));
     if (pageNodeId != null) {
-      pageRefs.add(pageNodeId);
+      pageIds.add(pageNodeId);
       return;
     }
-    externalRefs.add(normalized);
+    externalUrls.add(normalized);
   }
 
-  private void collectMediaAttrs(@Nullable MediaAttrs attrs) {
-    if (attrs == null) {
-      return;
-    }
+  private void collectMedia(AdfMedia media) {
+    collectLinkMarks(media.marks());
+    upsertAttachmentRef(media);
 
-    var fileId = Strings.firstNonBlankStripped(attrs.id(), attrs.localId());
-    if (fileId != null) {
-      upsertAttachmentRef(fileId, attrs);
-    }
-
-    if ("external".equalsIgnoreCase(Strings.trimToNull(attrs.type()))) {
-      var url = Strings.trimToNull(attrs.url());
+    if ("external".equalsIgnoreCase(Strings.trimToNull(media.sourceType()))) {
+      var url = Strings.trimToNull(media.url());
       if (url != null) {
-        externalRefs.add(url);
+        externalUrls.add(url);
       }
     }
   }
 
-  private void upsertAttachmentRef(String fileId, MediaAttrs attrs) {
-    var builder = attachmentRefs.computeIfAbsent(fileId, AttachmentRefBuilder::new);
-
-    var title = Strings.firstNonBlankStripped(attrs.fileName(), attrs.name(), attrs.alt());
-    var mediaType =
-        Strings.firstNonBlankStripped(
-            attrs.fileMimeType(),
-            attrs.mediaType(),
-            AttachmentReferences.inferMediaType(title),
-            attrs.type());
-    if (mediaType != null) {
-      builder.mediaType = mediaType;
+  private void upsertAttachmentRef(AdfMedia media) {
+    var fileId = Strings.trimToNull(media.id());
+    if (fileId == null) {
+      return;
     }
 
-    if (title != null) {
-      builder.title = title;
-    }
+    var title = Strings.firstNonBlankStripped(media.fileName(), media.name(), media.alt());
+    var mediaType = Strings.firstNonBlankStripped(media.fileMimeType(), media.mediaType());
+    var entry = inventory.byFileId(fileId);
+    var titleForGuess = title != null || entry == null ? title : entry.title();
+    var guessedMediaType = AttachmentReferences.inferMediaType(titleForGuess);
+    mergeAttachmentRef(fileId, new AttachmentFacts(title, mediaType, guessedMediaType));
   }
 
   private void collectExtension(AdfExtension extension) {
-    var extensionType = extension.extensionType();
-    var extensionKey = extension.extensionKey();
-    if (ConfluenceSupport.isInlineMediaImage(extensionType, extensionKey)) {
+    switch (ConfluenceMacro.of(extension)) {
       // A media node in disguise: its file id is referenced like any media id.
-      var mediaAttrs = ConfluenceSupport.inlineMediaImageAttrs(extension.parameters());
-      if (mediaAttrs != null) {
-        var fileId = mediaAttrs.id();
-        if (fileId != null) {
-          upsertAttachmentRef(fileId, mediaAttrs);
+      case InlineMediaImage(var media) -> collectMedia(media);
+      case PageTree(var reference) -> pageTreeRefs.add(reference);
+      case ExcerptInclude(var reference) -> excerptRefs.add(reference);
+      // The macro expands to the supplied inventory, so each entry is referenced; without one the
+      // expansion is unknown and contributes nothing (the same caveat as viewpdf).
+      case Attachments _ -> inventory.entries().forEach(this::upsertAttachmentRef);
+      case ViewPdf _ -> {
+        var reference = AttachmentReferences.resolve(extension.macroParams(), inventory);
+        if (reference != null) {
+          upsertAttachmentRef(reference);
         }
       }
-      return;
-    }
-    if (!ConfluenceSupport.isConfluenceMacroExtension(extensionType)) {
-      return;
-    }
-
-    var macroParams = extension.macroParams();
-    var pageTreeReference = ConfluenceSupport.pageTreeReference(extensionKey, macroParams);
-    if (pageTreeReference != null) {
-      pageTreeRefs.add(pageTreeReference);
-      return;
-    }
-
-    var excerptIncludeReference =
-        ConfluenceSupport.excerptIncludeReference(extensionKey, macroParams);
-    if (excerptIncludeReference != null) {
-      excerptRefs.add(excerptIncludeReference);
-      return;
-    }
-
-    if ("attachments".equals(extensionKey)) {
-      // The macro expands to the supplied inventory, so each entry is referenced; without a context
-      // the expansion is unknown and contributes nothing (the same seed-the-context caveat as
-      // viewpdf).
-      for (var reference : confluenceContext.attachmentReferencesByTitle().values()) {
-        upsertAttachmentRef(reference);
+      default -> {
+        // Other macros reference nothing the metadata tracks.
       }
-      return;
     }
-
-    if (!"viewpdf".equals(extensionKey)) {
-      return;
-    }
-
-    var attachmentReference = AttachmentReferences.resolve(macroParams, confluenceContext);
-    if (attachmentReference == null
-        || attachmentReference.fileId() == null
-        || attachmentReference.fileId().isBlank()) {
-      return;
-    }
-    upsertAttachmentRef(attachmentReference);
   }
 
   // The marked region an `excerpt` macro defines, exposed so resolvers can index source pages.
   private void collectExcerptDefinition(BodiedExtension bodied) {
-    if (!ConfluenceSupport.isConfluenceMacroExtension(bodied.extensionType())
-        || !"excerpt".equals(bodied.extensionKey())) {
-      return;
+    if (ConfluenceMacro.of(bodied) instanceof Excerpt(var name)) {
+      excerpts.add(new ExcerptDefinition(name, bodied.content()));
     }
-    excerpts.add(
-        new ExcerptDefinition(
-            ConfluenceSupport.excerptName(bodied.macroParams()), bodied.content()));
   }
 
   private void upsertAttachmentRef(AttachmentReference attachmentReference) {
-    var builder =
-        attachmentRefs.computeIfAbsent(attachmentReference.fileId(), AttachmentRefBuilder::new);
-
-    if (attachmentReference.title() != null && !attachmentReference.title().isBlank()) {
-      builder.title = attachmentReference.title();
-    }
-    if (attachmentReference.mediaType() != null && !attachmentReference.mediaType().isBlank()) {
-      builder.mediaType = attachmentReference.mediaType();
-    }
+    mergeAttachmentRef(
+        attachmentReference.fileId(),
+        new AttachmentFacts(
+            Strings.firstNonBlank(attachmentReference.title()),
+            Strings.firstNonBlank(attachmentReference.mediaType()),
+            null));
   }
 
-  private static final class AttachmentRefBuilder {
+  // One entry per file, under the inventory's spelling of the id when the file is inventoried.
+  private void mergeAttachmentRef(String fileId, AttachmentFacts facts) {
+    var entry = inventory.byFileId(fileId);
+    attachmentRefs.merge(
+        entry == null ? fileId : entry.fileId(), facts, AttachmentFacts::updatedWith);
+  }
 
-    final String fileId;
-    @Nullable String title;
-    @Nullable String mediaType;
+  // What the document says about a file, each fact null or non-blank. The latest mention of a fact
+  // wins. At the end they complete from the file's inventory entry: the document wins, but an
+  // entry's explicit media type beats a guess from the name.
+  private record AttachmentFacts(
+      @Nullable String title, @Nullable String mediaType, @Nullable String guessedMediaType) {
 
-    AttachmentRefBuilder(String fileId) {
-      this.fileId = fileId;
+    AttachmentFacts updatedWith(AttachmentFacts newer) {
+      return new AttachmentFacts(
+          Strings.firstNonBlank(newer.title, title),
+          Strings.firstNonBlank(newer.mediaType, mediaType),
+          Strings.firstNonBlank(newer.guessedMediaType, guessedMediaType));
     }
 
-    AttachmentReference build() {
-      return new AttachmentReference(fileId, title, mediaType);
+    AttachmentReference reference(String fileId, @Nullable AttachmentReference entry) {
+      if (entry == null) {
+        return new AttachmentReference(
+            fileId, title, Strings.firstNonBlank(mediaType, guessedMediaType));
+      }
+      return new AttachmentReference(
+          fileId,
+          Strings.firstNonBlank(title, entry.title()),
+          Strings.firstNonBlank(mediaType, entry.mediaType(), guessedMediaType),
+          entry.downloadUrl());
     }
   }
 }

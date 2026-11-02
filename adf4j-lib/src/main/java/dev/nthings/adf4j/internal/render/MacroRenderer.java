@@ -7,21 +7,32 @@ import dev.nthings.adf4j.ast.BodiedSyncBlock;
 import dev.nthings.adf4j.ast.MacroParams;
 import dev.nthings.adf4j.ast.MultiBodiedExtension;
 import dev.nthings.adf4j.ast.SyncBlock;
+import dev.nthings.adf4j.internal.AdfText;
 import dev.nthings.adf4j.internal.AttachmentReferences;
 import dev.nthings.adf4j.internal.ConfluenceSupport;
 import dev.nthings.adf4j.internal.Strings;
+import dev.nthings.adf4j.internal.analyze.ConfluenceMacro;
+import dev.nthings.adf4j.internal.analyze.ConfluenceMacro.Anchor;
+import dev.nthings.adf4j.internal.analyze.ConfluenceMacro.Attachments;
+import dev.nthings.adf4j.internal.analyze.ConfluenceMacro.Chart;
+import dev.nthings.adf4j.internal.analyze.ConfluenceMacro.Excerpt;
+import dev.nthings.adf4j.internal.analyze.ConfluenceMacro.ExcerptInclude;
+import dev.nthings.adf4j.internal.analyze.ConfluenceMacro.Iframe;
+import dev.nthings.adf4j.internal.analyze.ConfluenceMacro.InlineMediaImage;
+import dev.nthings.adf4j.internal.analyze.ConfluenceMacro.LegacyChart;
+import dev.nthings.adf4j.internal.analyze.ConfluenceMacro.Other;
+import dev.nthings.adf4j.internal.analyze.ConfluenceMacro.PageTree;
+import dev.nthings.adf4j.internal.analyze.ConfluenceMacro.Toc;
+import dev.nthings.adf4j.internal.analyze.ConfluenceMacro.ViewPdf;
 import dev.nthings.adf4j.internal.analyze.TocLevelRange;
 import dev.nthings.adf4j.metadata.AttachmentReference;
 import dev.nthings.adf4j.metadata.ExcerptIncludeReference;
 import dev.nthings.adf4j.metadata.HeadingReference;
 import dev.nthings.adf4j.metadata.PageTreeReference;
-import dev.nthings.adf4j.options.ExtensionContext;
 import dev.nthings.adf4j.options.PageTreeEntry;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiFunction;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,152 +42,109 @@ final class MacroRenderer {
   private static final Logger log = LoggerFactory.getLogger(MacroRenderer.class);
 
   private final MediaRenderer mediaRenderer;
-  // One WARN per extension type/key per converter; repeats log at DEBUG (diagnostics carry the
-  // per-document detail).
-  private final Set<String> placeholderWarned = ConcurrentHashMap.newKeySet();
+  private final BlockRenderer blockRenderer;
 
-  MacroRenderer(MediaRenderer mediaRenderer) {
-    this.mediaRenderer = Objects.requireNonNull(mediaRenderer, "mediaRenderer");
+  MacroRenderer(MediaRenderer mediaRenderer, BlockRenderer blockRenderer) {
+    this.mediaRenderer = mediaRenderer;
+    this.blockRenderer = blockRenderer;
   }
 
-  String renderExtension(AdfExtension node, RendererState context) {
-    var custom = renderCustom(node, context);
+  // `atLineStart` is where the output lands: true for a block, whose fallback text sits at column
+  // 0.
+  String renderExtension(AdfExtension node, RenderContext context, boolean atLineStart) {
+    var custom = context.session().resolvers().extension(node);
     if (custom != null) {
       return custom;
     }
-    var extensionType = node.extensionType();
-    var extensionKey = node.extensionKey();
-    if (ConfluenceSupport.isInlineMediaImage(extensionType, extensionKey)) {
+    return switch (ConfluenceMacro.of(node)) {
       // A media node in disguise: the media path's resolver and placeholder semantics apply as-is.
-      var mediaAttrs = ConfluenceSupport.inlineMediaImageAttrs(node.parameters());
-      if (mediaAttrs != null) {
-        return mediaRenderer.renderMediaBlock(mediaAttrs, context);
-      }
-    }
-    if (ConfluenceSupport.isModernChartExtension(extensionType)) {
+      case InlineMediaImage(var media) -> mediaRenderer.renderMedia(media, context);
       // Its data table lives elsewhere in the same document, so a caption loses nothing —
       // Confluence's own export renders a sourceless chart as nothing at all.
-      return chartCaption(node, context);
-    }
-    if (!ConfluenceSupport.isConfluenceMacroExtension(extensionType)) {
-      return extensionFallback(node, context);
-    }
-
-    var macroParams = node.macroParams();
-    var rendered =
-        switch (extensionKey) {
-          case "children", "pagetree" -> {
-            var reference = ConfluenceSupport.pageTreeReference(extensionKey, macroParams);
-            yield reference == null ? null : renderPageTreeMacro(reference, context);
-          }
-          case "toc" -> renderTocMacro(macroParams, context);
-          case "anchor" -> HtmlFragments.anchor(ConfluenceSupport.anchorId(macroParams));
-          case "iframe" -> renderIframeMacro(macroParams, context);
-          case "viewpdf" -> renderViewPdfMacro(macroParams, context);
-          case "chart:default" -> renderChartMacro(macroParams, context);
-          case "excerpt-include" ->
-              renderExcerptInclude(
-                  ConfluenceSupport.excerptIncludeReference(extensionKey, macroParams), context);
-          case "attachments" -> renderAttachmentsMacro(context);
-          case null, default -> null;
-        };
-    return rendered != null ? rendered : extensionFallback(node, context);
+      case Chart _ -> chartCaption(node, context);
+      case PageTree(var reference) -> renderPageTreeMacro(reference, context);
+      case Toc(var range) -> renderTocMacro(range, context);
+      case Anchor(var id) -> HtmlFragments.anchor(id);
+      case Iframe(var src) -> renderIframeMacro(src, context);
+      case ViewPdf _ -> renderViewPdfMacro(node.macroParams(), context);
+      case LegacyChart(var labelled) ->
+          labelled
+              ? renderChartMacro(node.macroParams(), context)
+              : extensionFallback(node, context, atLineStart);
+      case ExcerptInclude(var reference) -> renderExcerptInclude(reference, context);
+      case Attachments _ -> renderAttachmentsMacro(node, context, atLineStart);
+      case Excerpt _, Other _ -> extensionFallback(node, context, atLineStart);
+    };
   }
 
-  List<String> renderBodiedExtension(
-      BodiedExtension node, RendererState context, BlockRecursion recursion) {
-    if (ConfluenceSupport.isConfluenceMacroExtension(node.extensionType())
-        && "excerpt".equals(node.extensionKey())) {
-      return recursion.renderBlocks(node.content(), context);
-    }
-    if (ConfluenceSupport.isChartExtension(node.extensionType(), node.extensionKey())) {
+  String renderBodiedExtension(BodiedExtension node, RenderContext context) {
+    return switch (ConfluenceMacro.of(node)) {
+      // The excerpt is transparent: without a custom header, only its body renders.
+      case Excerpt _ -> headerThenBodies(node, node.content(), context, (_, _) -> "");
       // The body holds the data table; keep the numbers under a caption, not a placeholder.
-      return captionThenBodies(node, context, recursion);
-    }
-    return headerThenBodies(node, node.content(), context, recursion);
+      case Chart _, LegacyChart _ ->
+          headerThenBodies(node, node.content(), context, this::chartCaption);
+      case InlineMediaImage _,
+          PageTree _,
+          Toc _,
+          Anchor _,
+          Iframe _,
+          ViewPdf _,
+          ExcerptInclude _,
+          Attachments _,
+          Other _ ->
+          headerThenBodies(node, node.content(), context, this::blockFallback);
+    };
   }
 
-  List<String> renderMultiBodiedExtension(
-      MultiBodiedExtension node, RendererState context, BlockRecursion recursion) {
+  String renderMultiBodiedExtension(MultiBodiedExtension node, RenderContext context) {
     // The schema predates this node; salvage the frame bodies.
-    return headerThenBodies(node, node.content(), context, recursion);
+    return headerThenBodies(node, node.content(), context, this::blockFallback);
   }
 
-  // Header (custom renderer, else macro text or "[Extension: …]" placeholder) then the body blocks.
-  private List<String> headerThenBodies(
-      AdfExtension node, List<AdfBlock> content, RendererState context, BlockRecursion recursion) {
-    var blocks = new ArrayList<String>();
-    var custom = renderCustom(node, context);
-    blocks.add(custom != null ? custom : extensionFallback(node, context));
-    blocks.addAll(recursion.renderBlocks(content, context));
-    return blocks;
+  // Header (custom renderer, else defaultHeader) then the body blocks.
+  private String headerThenBodies(
+      AdfExtension node,
+      List<AdfBlock> content,
+      RenderContext context,
+      BiFunction<AdfExtension, RenderContext, String> defaultHeader) {
+    var custom = context.session().resolvers().extension(node);
+    var header = custom != null ? custom : defaultHeader.apply(node, context);
+    return MarkdownBlocks.join(List.of(header, blockRenderer.renderBlocks(content, context)));
   }
 
-  // Chart caption (custom renderer first) then the body blocks — no placeholder.
-  private List<String> captionThenBodies(
-      BodiedExtension node, RendererState context, BlockRecursion recursion) {
-    var blocks = new ArrayList<String>();
-    var custom = renderCustom(node, context);
-    blocks.add(custom != null ? custom : chartCaption(node, context));
-    blocks.addAll(recursion.renderBlocks(node.content(), context));
-    return blocks;
+  private String blockFallback(AdfExtension node, RenderContext context) {
+    return extensionFallback(node, context, true);
   }
 
-  // Custom renderers, consulted in order (first non-null wins); null defers to the next, then
-  // default.
-  private @Nullable String renderCustom(AdfExtension node, RendererState context) {
-    var renderers = context.extensionRenderers();
-    if (renderers.isEmpty()) {
-      return null;
-    }
-    var extension =
-        new ExtensionContext(
-            node.extensionType(),
-            node.extensionKey(),
-            node.text(),
-            node.macroParams().values(),
-            node.parameters());
-    for (var renderer : renderers) {
-      var rendered =
-          CallbackGuards.guard("ExtensionRenderer", () -> renderer.render(extension), null);
-      if (rendered != null) {
-        return rendered;
-      }
-    }
-    return null;
-  }
-
-  private String extensionFallback(AdfExtension node, RendererState context) {
+  private String extensionFallback(AdfExtension node, RenderContext context, boolean atLineStart) {
     var text = node.text();
     if (text != null && !text.isBlank()) {
-      // Attribute-derived text; a block extension emits it at column 0, so neutralise leading
-      // markers.
-      return MarkdownText.escapeInlineText(text, true, context.escapeParentheses());
+      // Attribute-derived text, escaped like literal text for where it lands.
+      return context.session().writer().text(text, atLineStart);
     }
-    context.recordUnsupportedExtension(node.extensionType(), node.extensionKey());
-    return renderExtensionPlaceholder(node.extensionType(), node.extensionKey(), context);
+    var diagnostics = context.session().macroDiagnostics();
+    var firstInRender = diagnostics.recordUnsupported(node.extensionType(), node.extensionKey());
+    return renderExtensionPlaceholder(node, firstInRender, context);
   }
 
-  String renderSyncBlock(SyncBlock node, RendererState context) {
+  String renderSyncBlock(SyncBlock node, RenderContext context) {
     return syncBlockLabel(node.resourceId(), context);
   }
 
-  List<String> renderBodiedSyncBlock(
-      BodiedSyncBlock node, RendererState context, BlockRecursion recursion) {
-    var blocks = new ArrayList<String>();
-    blocks.add(syncBlockLabel(node.resourceId(), context));
-    blocks.addAll(recursion.renderBlocks(node.content(), context));
-    return blocks;
+  String renderBodiedSyncBlock(BodiedSyncBlock node, RenderContext context) {
+    var label = syncBlockLabel(node.resourceId(), context);
+    return MarkdownBlocks.join(List.of(label, blockRenderer.renderBlocks(node.content(), context)));
   }
 
-  private String syncBlockLabel(@Nullable String resourceId, RendererState context) {
-    return MarkdownText.labelToken(
-        resourceId == null || resourceId.isBlank() ? "Sync block" : "Sync block: " + resourceId,
-        context.escapeParentheses());
+  private String syncBlockLabel(@Nullable String resourceId, RenderContext context) {
+    var label =
+        resourceId == null || resourceId.isBlank() ? "Sync block" : "Sync block: " + resourceId;
+    return context.session().writer().label(label);
   }
 
   // Expand via the resolver, else the macro's placeholder token (recorded as unresolved).
-  private String renderPageTreeMacro(PageTreeReference reference, RendererState context) {
+  private String renderPageTreeMacro(PageTreeReference reference, RenderContext context) {
     var expanded = expandPageTree(reference, context);
     if (expanded != null) {
       return expanded;
@@ -196,16 +164,11 @@ final class MacroRenderer {
   }
 
   // The resolver's entries as an indented bullet list ("" for an authoritative empty answer), or
-  // null
-  // to fall back to the token (no resolver, a null return, or a throw — recorded as unresolved).
-  private @Nullable String expandPageTree(PageTreeReference reference, RendererState context) {
-    var resolver = context.pageTreeResolver();
-    var entries =
-        resolver == null
-            ? null
-            : CallbackGuards.guard("PageTreeResolver", () -> resolver.resolve(reference), null);
+  // null to fall back to the token (no resolver, a null return, or a throw — recorded as
+  // unresolved).
+  private @Nullable String expandPageTree(PageTreeReference reference, RenderContext context) {
+    var entries = context.session().resolvers().pageTree(reference);
     if (entries == null) {
-      context.unresolvedTracker().recordPageTree(reference);
       return null;
     }
 
@@ -216,7 +179,7 @@ final class MacroRenderer {
     for (var entry : entries) {
       var label = pageTreeLabel(entry, context);
       if (label != null) {
-        lines.add(RenderBuffer.LIST_INDENT.repeat(entry.depth() - baseDepth) + "- " + label);
+        lines.add(MarkdownBlocks.LIST_INDENT.repeat(entry.depth() - baseDepth) + "- " + label);
       }
     }
     return String.join("\n", lines);
@@ -224,16 +187,13 @@ final class MacroRenderer {
 
   // A link when the page id resolves, else the escaped (single-line) title; null when nothing
   // renders.
-  private @Nullable String pageTreeLabel(PageTreeEntry entry, RendererState context) {
-    var title = entry.title();
-    var label = title == null ? "" : Strings.collapseWhitespace(title).strip();
-    var href = TextMarkRenderer.resolvePageId(entry.pageNodeId(), context.context());
+  private @Nullable String pageTreeLabel(PageTreeEntry entry, RenderContext context) {
+    var label = Strings.collapseWhitespace(entry.title()).strip();
+    var href = context.session().resolvers().pageId(entry.pageNodeId());
     if (href != null) {
-      return MarkdownText.link(label.isEmpty() ? href : label, href, context.escapeParentheses());
+      return context.session().writer().link(label.isEmpty() ? href : label, href);
     }
-    return label.isEmpty()
-        ? null
-        : MarkdownText.escapeInlineText(label, false, context.escapeParentheses());
+    return label.isEmpty() ? null : context.session().writer().text(label, false);
   }
 
   // The {{pagetree:<root>}} token root: the request root with whitespace collapsed and braces
@@ -246,112 +206,76 @@ final class MacroRenderer {
     return flattened.isEmpty() ? null : flattened;
   }
 
-  // Expand via the resolver, else the labelled placeholder (recorded as unresolved); a null
-  // reference (no source page) defers to the generic extension fallback.
-  private @Nullable String renderExcerptInclude(
-      @Nullable ExcerptIncludeReference reference, RendererState context) {
-    if (reference == null) {
-      return null;
-    }
-    var resolver = context.excerptResolver();
-    var resolved =
-        resolver == null
-            ? null
-            : CallbackGuards.guard("ExcerptResolver", () -> resolver.resolve(reference), null);
+  // Expand via the resolver, else the labelled placeholder (recorded as unresolved).
+  private String renderExcerptInclude(ExcerptIncludeReference reference, RenderContext context) {
+    var resolved = context.session().resolvers().excerpt(reference);
     if (resolved != null) {
       return resolved;
     }
-    context.unresolvedTracker().recordExcerpt(reference);
     var label =
         reference.excerptName() == null
             ? "Excerpt include: " + reference.page()
             : "Excerpt include: " + reference.page() + " / " + reference.excerptName();
-    return MarkdownText.labelToken(label, context.escapeParentheses());
+    return context.session().writer().label(label);
   }
 
   // The supplied attachment inventory as a bullet list of links ("" for an authoritative empty
-  // inventory), or null when no inventory was supplied — only that keeps the placeholder.
-  private @Nullable String renderAttachmentsMacro(RendererState context) {
-    var confluenceContext = context.confluenceContext();
-    if (confluenceContext == null || !confluenceContext.attachmentsSupplied()) {
-      return null;
+  // inventory); only a missing inventory keeps the placeholder. A title-less entry is labelled by
+  // its file id.
+  private String renderAttachmentsMacro(
+      AdfExtension node, RenderContext context, boolean atLineStart) {
+    var attachments = context.session().attachments();
+    if (!attachments.isKnown()) {
+      return extensionFallback(node, context, atLineStart);
     }
+    var writer = context.session().writer();
     var lines = new ArrayList<String>();
-    for (var reference : confluenceContext.attachmentReferencesByTitle().values()) {
-      lines.add(
-          "- "
-              + MarkdownText.link(
-                  reference.title(),
-                  resolveAttachment(reference, context),
-                  context.escapeParentheses()));
+    for (var reference : attachments.entries()) {
+      var title = reference.title();
+      var label = title == null || title.isBlank() ? reference.fileId() : title;
+      lines.add("- " + writer.link(label, resolveAttachment(reference, context)));
     }
     return String.join("\n", lines);
   }
 
-  private String renderTocMacro(MacroParams macroParams, RendererState context) {
-    var headings = context.headings();
-    if (headings.isEmpty()) {
-      return "";
-    }
-
-    var range = TocLevelRange.of(macroParams);
-    var filtered = headings.stream().filter(heading -> range.includes(heading.level())).toList();
-    if (filtered.isEmpty()) {
-      return "";
-    }
+  private String renderTocMacro(TocLevelRange range, RenderContext context) {
+    var filtered =
+        context.session().headingOutline().headings().stream()
+            .filter(heading -> range.includes(heading.level()))
+            .toList();
 
     var baseLevel = filtered.stream().mapToInt(HeadingReference::level).min().orElse(1);
     var lines = new ArrayList<String>();
     for (var heading : filtered) {
-      var indent = RenderBuffer.LIST_INDENT.repeat(Math.max(0, heading.level() - baseLevel));
-      if (heading.anchor() != null && !heading.anchor().isBlank()) {
-        lines.add(
-            indent
-                + "- "
-                + MarkdownText.link(
-                    heading.text(), "#" + heading.anchor(), context.escapeParentheses()));
-      } else {
-        lines.add(
-            indent
-                + "- "
-                + MarkdownText.escapeInlineText(
-                    heading.text(), false, context.escapeParentheses()));
-      }
+      lines.add(
+          MarkdownBlocks.LIST_INDENT.repeat(heading.level() - baseLevel)
+              + "- "
+              + context.session().writer().link(heading.text(), "#" + heading.anchor()));
     }
     return String.join("\n", lines);
   }
 
-  private String renderIframeMacro(MacroParams macroParams, RendererState context) {
-    var src = macroParams.value("src");
+  private String renderIframeMacro(@Nullable String src, RenderContext context) {
     if (src == null || src.isBlank()) {
-      return MarkdownText.labelToken("Embedded content", context.escapeParentheses());
+      return context.session().writer().label("Embedded content");
     }
-    return MarkdownText.link("Embedded content", src, context.escapeParentheses());
+    return context.session().writer().link("Embedded content", src);
   }
 
-  private String renderViewPdfMacro(MacroParams macroParams, RendererState context) {
+  private String renderViewPdfMacro(MacroParams macroParams, RenderContext context) {
     var name = macroParams.value("name");
+    var label = name == null || name.isBlank() ? "PDF" : "PDF: " + name;
     var attachmentReference =
-        AttachmentReferences.resolve(macroParams, context.confluenceContext());
-    if (attachmentReference == null
-        || attachmentReference.fileId() == null
-        || attachmentReference.fileId().isBlank()) {
-      return MarkdownText.labelToken(
-          name == null || name.isBlank() ? "PDF" : "PDF: " + name, context.escapeParentheses());
-    }
-
-    var label = (name == null || name.isBlank()) ? "PDF" : "PDF: " + name;
-    var destination = resolveAttachment(attachmentReference, context);
-    return MarkdownText.link(label, destination, context.escapeParentheses());
+        AttachmentReferences.resolve(macroParams, context.session().attachments());
+    var writer = context.session().writer();
+    return attachmentReference == null
+        ? writer.label(label)
+        : writer.link(label, resolveAttachment(attachmentReference, context));
   }
 
   // Resolver, then the reference's own downloadUrl, else the attachment:<fileId> placeholder.
-  private String resolveAttachment(AttachmentReference reference, RendererState context) {
-    var resolver = context.attachmentResolver();
-    var resolved =
-        resolver == null
-            ? null
-            : CallbackGuards.guardNonBlank("AttachmentResolver", () -> resolver.resolve(reference));
+  private String resolveAttachment(AttachmentReference reference, RenderContext context) {
+    var resolved = context.session().resolvers().attachment(reference);
     if (resolved != null) {
       return resolved;
     }
@@ -364,34 +288,34 @@ final class MacroRenderer {
 
   // The bodyless legacy chart macro: nothing recoverable in the document, so a labelled
   // placeholder.
-  private String renderChartMacro(MacroParams macroParams, RendererState context) {
-    var title = macroParams.value("title");
-    return MarkdownText.labelToken(
-        title == null || title.isBlank() ? "Chart" : "Chart: " + title,
-        context.escapeParentheses());
+  private String renderChartMacro(MacroParams macroParams, RenderContext context) {
+    return context.session().writer().label(chartLabel(macroParams.value("title")));
   }
 
-  // The italic "Chart: <title>" caption; one line so the emphasis wrapping survives any title.
-  private String chartCaption(AdfExtension node, RendererState context) {
+  // The italic "Chart: <title>" caption.
+  private String chartCaption(AdfExtension node, RenderContext context) {
     var title = ConfluenceSupport.chartTitle(node.macroParams(), node.parameters());
-    var label =
-        title == null ? "Chart" : "Chart: " + MarkdownText.collapseLineBreaks(title).strip();
-    return "*" + MarkdownText.escapeInlineText(label, false, context.escapeParentheses()) + "*";
+    return "*" + context.session().writer().text(chartLabel(title), false) + "*";
   }
 
+  // One line, so a label token or the emphasis around a caption survives any title.
+  private static String chartLabel(@Nullable String title) {
+    var oneLine = title == null ? "" : Strings.collapseLineBreaks(title).strip();
+    return oneLine.isEmpty() ? "Chart" : "Chart: " + oneLine;
+  }
+
+  // One WARN per extension type/key per render; repeats log at DEBUG.
   private String renderExtensionPlaceholder(
-      @Nullable String extensionType, @Nullable String extensionKey, RendererState context) {
-    var label = MacroDiagnostics.label(extensionType, extensionKey);
-    if (placeholderWarned.add(label)) {
+      AdfExtension node, boolean firstInRender, RenderContext context) {
+    var label = AdfText.extensionLabel(node.extensionType(), node.extensionKey());
+    if (firstInRender) {
       log.warn(
-          "Rendering placeholder for unsupported extension: {} (logged once per converter; "
+          "Rendering placeholder for unsupported extension: {} (logged once per render; "
               + "further occurrences log at DEBUG, per-document detail is on diagnostics)",
           label);
     } else {
       log.debug("Rendering placeholder for unsupported extension: {}", label);
     }
-    return MarkdownText.labelToken(
-        "Extension".equals(label) ? "Extension" : "Extension: " + label,
-        context.escapeParentheses());
+    return context.session().writer().label(AdfText.extensionPlaceholder(node));
   }
 }

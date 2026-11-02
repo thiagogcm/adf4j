@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 
 class ValidateCommandTest {
 
-  // A valid root whose only issue is an UNSUPPORTED_VERSION warning.
+  // A valid root whose only diagnostic is an UNSUPPORTED_VERSION warning.
   private static final String UNSUPPORTED_VERSION_DOC =
       "{\"version\":999,\"type\":\"doc\",\"content\":[]}";
 
@@ -19,7 +19,7 @@ class ValidateCommandTest {
   void validDocumentExitsZeroWithTextReport() {
     var result = run(SIMPLE_DOC, "validate");
     assertThat(result.exitCode()).isZero();
-    assertThat(result.out()).contains("valid: true").contains("issues: none");
+    assertThat(result.out()).contains("valid: true").contains("diagnostics: none");
   }
 
   @Test
@@ -30,9 +30,15 @@ class ValidateCommandTest {
   }
 
   @Test
-  void jsonFormatEmitsValidFlagAndIssues() {
+  void textReportListsDiagnostics() {
+    var result = run(INVALID_ROOT_DOC, "validate");
+    assertThat(result.out()).contains("diagnostics:\n  [ERROR] INVALID_ROOT_NODE: ");
+  }
+
+  @Test
+  void jsonFormatEmitsValidFlagAndDiagnostics() {
     var result = run(SIMPLE_DOC, "validate", "-f", "json");
-    assertThat(result.out()).contains("\"validAdfRoot\" : true").contains("\"issues\"");
+    assertThat(result.out()).contains("\"valid\" : true").contains("\"diagnostics\"");
   }
 
   @Test

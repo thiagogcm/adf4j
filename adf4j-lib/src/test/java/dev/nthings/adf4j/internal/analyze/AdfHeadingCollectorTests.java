@@ -10,6 +10,8 @@ import dev.nthings.adf4j.ast.AdfInline;
 import dev.nthings.adf4j.ast.Heading;
 import dev.nthings.adf4j.ast.Paragraph;
 import dev.nthings.adf4j.ast.Text;
+import dev.nthings.adf4j.internal.AttachmentInventory;
+import dev.nthings.adf4j.options.MarkdownOptions;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -227,7 +229,7 @@ class AdfHeadingCollectorTests {
   void collect_builds_heading_outline_from_rendered_heading_text(HeadingOutlineCase input)
       throws Exception {
     var document = AdfJson.parse(input.adfJson()).document();
-    var outline = AdfHeadingCollector.collect(document);
+    var outline = outlineOf(document);
 
     assertThat(outline.headings())
         .extracting("level", "text", "anchor")
@@ -239,7 +241,7 @@ class AdfHeadingCollectorTests {
 
   @Test
   void collect_returns_empty_outline_for_null_adf_input() {
-    var outline = AdfHeadingCollector.collect(null);
+    var outline = outlineOf(null);
 
     assertThat(outline.headings()).isEmpty();
   }
@@ -247,7 +249,7 @@ class AdfHeadingCollectorTests {
   @Test
   void headings_without_any_toc_macro_are_not_toc_referenced() throws Exception {
     var document = AdfJson.parse(adfWithHeading(2, "Getting Started")).document();
-    var outline = AdfHeadingCollector.collect(document);
+    var outline = outlineOf(document);
 
     assertThat(tocReferencedFlags(document, outline)).containsExactly(false);
   }
@@ -255,7 +257,7 @@ class AdfHeadingCollectorTests {
   @Test
   void a_toc_macro_marks_every_heading_in_its_level_range_as_toc_referenced() throws Exception {
     var document = AdfJson.parse(TOC_WITH_HEADINGS).document();
-    var outline = AdfHeadingCollector.collect(document);
+    var outline = outlineOf(document);
 
     // The toc covers levels 1..2, so both the level-1 and level-2 headings are referenced.
     assertThat(tocReferencedFlags(document, outline)).containsExactly(true, true);
@@ -264,10 +266,88 @@ class AdfHeadingCollectorTests {
   @Test
   void a_toc_macro_does_not_reference_headings_outside_its_level_range() throws Exception {
     var document = AdfJson.parse(TOC_LEVEL_1_ONLY).document();
-    var outline = AdfHeadingCollector.collect(document);
+    var outline = outlineOf(document);
 
     // minLevel=maxLevel=1, so only the level-1 heading is referenced.
     assertThat(tocReferencedFlags(document, outline)).containsExactly(true, false);
+  }
+
+  @Test
+  void an_explicit_anchor_is_injected() {
+    var document = AdfJson.parse(headingDocument("Title", ANCHOR_MACRO)).document();
+
+    assertThat(outlineOf(document).anchorToInject(firstHeading(document), false)).isEqualTo("here");
+  }
+
+  @Test
+  void a_toc_referenced_heading_injects_its_slug() {
+    var document = AdfJson.parse(TOC_WITH_HEADINGS).document();
+
+    assertThat(outlineOf(document).anchorToInject(firstHeading(document), false)).isNotBlank();
+  }
+
+  @Test
+  void a_plain_heading_injects_nothing() {
+    var document = AdfJson.parse(adfWithHeading(2, "Getting Started")).document();
+
+    assertThat(outlineOf(document).anchorToInject(firstHeading(document), false)).isNull();
+  }
+
+  @Test
+  void a_heading_that_rendered_blank_keeps_only_its_explicit_anchor() {
+    var anchored = AdfJson.parse(headingDocument(" ", ANCHOR_MACRO)).document();
+    var bare = AdfJson.parse(headingDocument(" ", "{\"type\":\"hardBreak\"}")).document();
+
+    assertThat(outlineOf(anchored).anchorToInject(firstHeading(anchored), true)).isEqualTo("here");
+    assertThat(outlineOf(bare).anchorToInject(firstHeading(bare), true)).isNull();
+  }
+
+  @Test
+  void a_textless_status_heading_is_in_the_outline_with_its_explicit_anchor() {
+    var document = AdfJson.parse(headingDocument(ANCHOR_MACRO, "{\"type\":\"status\"}")).document();
+    var outline = outlineOf(document);
+
+    assertThat(outline.headings())
+        .extracting("text", "anchor")
+        .containsExactly(tuple("[status]", "here"));
+    assertThat(outline.anchorToInject(firstHeading(document), false)).isEqualTo("here");
+  }
+
+  @Test
+  void a_heading_outside_the_outline_keeps_only_its_explicit_anchor() {
+    var anchored = AdfJson.parse(headingDocument("Title", ANCHOR_MACRO)).document();
+    var bare = AdfJson.parse(adfWithHeading(2, "Title")).document();
+    var unrelated = outlineOf(AdfJson.parse(TOC_WITH_HEADINGS).document());
+
+    assertThat(unrelated.anchorToInject(firstHeading(anchored), false)).isEqualTo("here");
+    assertThat(unrelated.anchorToInject(firstHeading(bare), false)).isNull();
+  }
+
+  private static Heading firstHeading(AdfDocument document) {
+    return document.content().stream()
+        .filter(Heading.class::isInstance)
+        .map(Heading.class::cast)
+        .findFirst()
+        .orElseThrow();
+  }
+
+  private static String headingDocument(String first, String second) {
+    return """
+        {"type": "doc", "version": 1, "content": [
+          {"type": "heading", "attrs": {"level": 2}, "content": [%s, %s]}
+        ]}
+        """
+        .formatted(inlineJson(first), inlineJson(second));
+  }
+
+  private static String inlineJson(String inline) {
+    return inline.startsWith("{") ? inline : "{\"type\": \"text\", \"text\": \"" + inline + "\"}";
+  }
+
+  private static HeadingOutline outlineOf(AdfDocument document) {
+    return AdfDocumentAnalyzer.createDefault()
+        .analyze(document, MarkdownOptions.defaults(), AttachmentInventory.from(null))
+        .outline();
   }
 
   private static List<Boolean> tocReferencedFlags(AdfDocument document, HeadingOutline outline) {
@@ -277,6 +357,17 @@ class AdfHeadingCollectorTests {
         .map(outline::isTocReferenced)
         .toList();
   }
+
+  private static final String ANCHOR_MACRO =
+      """
+      {
+        "type": "inlineExtension",
+        "attrs": {
+          "extensionType": "com.atlassian.confluence.macro.core",
+          "extensionKey": "anchor",
+          "parameters": {"macroParams": {"": {"value": "here"}}}
+        }
+      }""";
 
   private static final String TOC_WITH_HEADINGS =
       """

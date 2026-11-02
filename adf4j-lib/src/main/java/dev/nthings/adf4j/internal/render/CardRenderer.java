@@ -1,37 +1,34 @@
 package dev.nthings.adf4j.internal.render;
 
-import dev.nthings.adf4j.ast.CardAttrs;
+import dev.nthings.adf4j.ast.AdfCard;
+import dev.nthings.adf4j.internal.AdfText;
 import dev.nthings.adf4j.internal.Strings;
 import org.jspecify.annotations.Nullable;
 
 /// Renders smart-link nodes (block/inline/embed cards) to Markdown links.
 final class CardRenderer {
 
-  String renderBlockCard(CardAttrs attrs, RenderContext context) {
-    var link = renderCardLink(attrs, context);
+  String renderBlockCard(AdfCard card, RenderSession session) {
+    var link = renderCardLink(card, session);
     if (link != null) {
       return link;
     }
 
-    var identifier = Strings.firstNonBlank(attrs.datasourceId(), attrs.localId());
+    var identifier = Strings.firstNonBlank(card.datasourceId(), card.localId());
     if (identifier == null) {
-      return MarkdownText.labelToken("Card", context.options().escapeParentheses());
+      return session.writer().label("Card");
     }
-    return MarkdownText.labelToken("Card: " + identifier, context.options().escapeParentheses());
+    return session.writer().label("Card: " + identifier);
   }
 
-  String renderInlineCard(CardAttrs attrs, RenderContext context) {
-    var link = renderCardLink(attrs, context);
-    return link != null
-        ? link
-        : MarkdownText.labelToken("Inline card", context.options().escapeParentheses());
+  String renderInlineCard(AdfCard card, RenderSession session) {
+    var link = renderCardLink(card, session);
+    return link != null ? link : session.writer().label(AdfText.INLINE_CARD_LABEL);
   }
 
-  String renderEmbedCard(CardAttrs attrs, RenderContext context) {
-    var link = renderCardLink(attrs, context);
-    return link != null
-        ? link
-        : MarkdownText.labelToken("Embed card", context.options().escapeParentheses());
+  String renderEmbedCard(AdfCard card, RenderSession session) {
+    var link = renderCardLink(card, session);
+    return link != null ? link : session.writer().label("Embed card");
   }
 
   /// Shared url/title rendering for all three card kinds, or `null` when the card has neither:
@@ -39,15 +36,15 @@ final class CardRenderer {
   /// the escaped title as plain text. A `PageLinkResolver` rewrites an internal page card's
   /// destination; a url-only card whose destination is rewritten keeps the original url as its
   /// visible label.
-  private @Nullable String renderCardLink(CardAttrs attrs, RenderContext context) {
-    var url = attrs.url();
-    var title = attrs.title();
+  private @Nullable String renderCardLink(AdfCard card, RenderSession session) {
+    var url = card.url();
+    var title = card.title();
     var hasTitle = title != null && !title.isBlank();
 
     if (url != null && !url.isBlank()) {
-      var resolvedUrl = TextMarkRenderer.resolvePageHref(url, attrs.attrs(), context);
+      var resolvedUrl = session.resolvers().pageHref(url, card.attrs());
       if (hasTitle) {
-        return MarkdownText.link(title, resolvedUrl, context.options().escapeParentheses());
+        return session.writer().link(title, resolvedUrl);
       }
       // url-only: an autolink needs an untouched url (not rewritten, not escaped); otherwise fall
       // back to a labelled link that keeps the original url visible.
@@ -55,11 +52,11 @@ final class CardRenderer {
       var destination = MarkdownText.escapeUrlDestination(resolvedUrl);
       return !rewritten && url.equals(destination) && isAbsoluteUri(url)
           ? "<%s>".formatted(url)
-          : MarkdownText.link(url, resolvedUrl, context.options().escapeParentheses());
+          : session.writer().link(url, resolvedUrl);
     }
 
     if (hasTitle) {
-      return MarkdownText.escapeInlineText(title, false, context.options().escapeParentheses());
+      return session.writer().text(title, false);
     }
 
     return null;

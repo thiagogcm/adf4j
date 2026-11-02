@@ -162,15 +162,6 @@
     return collapseWhitespace(documentTitle.replace(/\s+-\s+Confluence\s*$/i, ''));
   }
 
-  function formatMarkdownWithTitle(title, markdown) {
-    const normalizedTitle = collapseWhitespace(title);
-    const body = String(markdown ?? '').trimStart();
-    if (!normalizedTitle) {
-      return body;
-    }
-    return body ? `# ${normalizedTitle}\n\n${body}` : `# ${normalizedTitle}\n`;
-  }
-
   function readDomValue(documentRef, selectors, attribute) {
     for (const selector of selectors) {
       const element = documentRef?.querySelector?.(selector);
@@ -210,7 +201,6 @@
     extractPageIdFromDocument,
     extractPageIdFromUrl,
     extractPageTitle,
-    formatMarkdownWithTitle,
     isConfluenceCloudUrl,
     isConfluencePageContext,
     nextAttachmentsPageUrl,

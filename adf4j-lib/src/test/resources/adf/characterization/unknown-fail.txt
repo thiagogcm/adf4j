@@ -1,44 +1,44 @@
 ### number-unknown-node-big-integer
-threw: java.lang.IllegalStateException: Unsupported ADF block node type: mystery
+threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: mystery
 ### number-unknown-node-exponent
-threw: java.lang.IllegalStateException: Unsupported ADF block node type: mystery
+threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: mystery
 ### number-unknown-node-huge-exponent
-threw: java.lang.IllegalStateException: Unsupported ADF block node type: mystery
+threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: mystery
 ### number-unknown-node-limit-scale
-threw: java.lang.IllegalStateException: Unsupported ADF block node type: mystery
+threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: mystery
 ### number-unknown-node-limit-scale-digits
-threw: java.lang.IllegalStateException: Unsupported ADF block node type: mystery
+threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: mystery
 ### number-unknown-node-long-decimal
-threw: java.lang.IllegalStateException: Unsupported ADF block node type: mystery
+threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: mystery
 ### number-unknown-node-negative-zero
-threw: java.lang.IllegalStateException: Unsupported ADF block node type: mystery
+threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: mystery
 ### number-unknown-node-overflowing-scale
-threw: java.lang.IllegalStateException: Unsupported ADF block node type: mystery
+threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: mystery
 ### number-unknown-node-tiny-exponent
-threw: java.lang.IllegalStateException: Unsupported ADF block node type: mystery
+threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: mystery
 ### number-unknown-node-trailing-zero
-threw: java.lang.IllegalStateException: Unsupported ADF block node type: mystery
+threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: mystery
 ### pos-extension-in-paragraph
-threw: java.lang.IllegalStateException: Unsupported ADF inline node type: extension
+threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF inline node type: extension
 ### pos-inlinecard-in-doc
-threw: java.lang.IllegalStateException: Unsupported ADF block node type: inlineCard
+threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: inlineCard
 ### pos-inlineextension-in-doc
-threw: java.lang.IllegalStateException: Unsupported ADF block node type: inlineExtension
+threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: inlineExtension
 ### pos-media-in-paragraph
-threw: java.lang.IllegalStateException: Unsupported ADF inline node type: media
+threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF inline node type: media
 ### pos-paragraph-in-paragraph
-threw: java.lang.IllegalStateException: Unsupported ADF inline node type: paragraph
+threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF inline node type: paragraph
 ### pos-text-in-doc
-threw: java.lang.IllegalStateException: Unsupported ADF block node type: text
+threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: text
 ### shape-marks-string
-threw: java.lang.IllegalStateException: Unsupported ADF block node type: text
+threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: text
 ### shape-type-float
-threw: java.lang.IllegalStateException: Unsupported ADF block node type: 1.0E8
+threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: 1.0E8
 ### shape-type-missing
-threw: java.lang.IllegalStateException: Unsupported ADF block node type: <empty>
+threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: <empty>
 ### shape-type-number
-threw: java.lang.IllegalStateException: Unsupported ADF block node type: 5
+threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: 5
 ### shape-type-object
-threw: java.lang.IllegalStateException: Unsupported ADF block node type: <empty>
+threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: <empty>
 ### unknown-node-policy.json
-threw: java.lang.IllegalStateException: Unsupported ADF block node type: mysteryBlock
+threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: mysteryBlock

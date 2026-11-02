@@ -117,20 +117,16 @@
         }),
       ]);
       if (!isCurrent()) return;
-      const conversion = await sendConvertMessage(
-        helpers.extractAdfBody(page),
-        attachments && { attachments },
-      );
+      const conversion = await sendConvertMessage(helpers.extractAdfBody(page), {
+        title: helpers.extractPageTitle(document, page),
+        ...(attachments && { attachments }),
+      });
       if (!isCurrent()) return;
       if (!conversion?.ok) {
         throw new Error(conversion?.error || 'adf4j conversion failed.');
       }
 
-      const markdown = helpers.formatMarkdownWithTitle(
-        helpers.extractPageTitle(document, page),
-        conversion.markdown,
-      );
-      await navigator.clipboard.writeText(markdown);
+      await navigator.clipboard.writeText(conversion.markdown);
       if (isCurrent()) setButtonState(button, 'copied');
     } catch (error) {
       if (!isCurrent()) return;

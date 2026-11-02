@@ -20,13 +20,13 @@ final class CommonOptions {
       shortName = 'q',
       name = "quiet",
       hasValue = false,
-      description = "Suppress the stderr diagnostics summary and warnings")
+      description = "Suppress stderr diagnostics and warnings")
   boolean quiet;
 
   @Option(
       shortName = 'v',
       name = "verbose",
       hasValue = false,
-      description = "Show stack traces on error")
+      description = "Show library logs, and stack traces on error")
   boolean verbose;
 }

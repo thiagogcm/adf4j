@@ -41,7 +41,11 @@ final class AdfTestSupport {
   }
 
   MacroParams macroParams(String json) throws IOException {
-    return MacroParams.from(new Attributes(mapper.convertValue(mapper.readTree(json), Map.class)));
+    return MacroParams.from(attributes(json));
+  }
+
+  Attributes attributes(String json) throws IOException {
+    return new Attributes(mapper.convertValue(mapper.readTree(json), Map.class));
   }
 
   AdfDocument parseDocument(String json) {

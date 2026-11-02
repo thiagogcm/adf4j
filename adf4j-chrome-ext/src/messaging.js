@@ -27,6 +27,14 @@ export function createListener(convert) {
   };
 }
 
+// Maps an adf4j.convert() result onto the message the content script gets back. A failed result's
+// body is never forwarded: it can still hold the title, which must not reach the clipboard alone.
+export function conversionResponse(result) {
+  return result?.ok
+    ? { ok: true, markdown: String(result.body ?? '') }
+    : { ok: false, error: result?.error || 'adf4j conversion failed.' };
+}
+
 export function validateConversionRequest(message, sender) {
   if (!message || message.type !== MESSAGE_TYPE) {
     return { handled: false };
@@ -66,31 +74,38 @@ export function sanitizeConversionContext(context) {
   }
 
   const keys = Object.keys(context);
-  if (keys.some((key) => key !== 'attachments')) {
+  if (keys.some((key) => key !== 'attachments' && key !== 'title')) {
     return { ok: false, error: 'Invalid conversion context payload.' };
   }
 
-  if (context.attachments === undefined) {
-    return { ok: true, value: undefined };
-  }
-  if (!Array.isArray(context.attachments) || context.attachments.length > MAX_ATTACHMENTS) {
-    return { ok: false, error: 'Invalid attachment metadata payload.' };
+  const value = {};
+  if (context.title !== undefined) {
+    if (typeof context.title !== 'string') {
+      return { ok: false, error: 'Invalid conversion context payload.' };
+    }
+    value.title = context.title;
   }
 
-  const attachments = [];
-  for (const item of context.attachments) {
-    if (!isPlainObject(item) || typeof item.fileId !== 'string' || !item.fileId.trim()) {
+  if (context.attachments !== undefined) {
+    if (!Array.isArray(context.attachments) || context.attachments.length > MAX_ATTACHMENTS) {
       return { ok: false, error: 'Invalid attachment metadata payload.' };
     }
-    attachments.push({
-      fileId: item.fileId.trim(),
-      title: optionalString(item.title),
-      mediaType: optionalString(item.mediaType),
-      downloadUrl: optionalString(item.downloadUrl),
-    });
+
+    value.attachments = [];
+    for (const item of context.attachments) {
+      if (!isPlainObject(item) || typeof item.fileId !== 'string' || !item.fileId.trim()) {
+        return { ok: false, error: 'Invalid attachment metadata payload.' };
+      }
+      value.attachments.push({
+        fileId: item.fileId.trim(),
+        title: optionalString(item.title),
+        mediaType: optionalString(item.mediaType),
+        downloadUrl: optionalString(item.downloadUrl),
+      });
+    }
   }
 
-  return { ok: true, value: { attachments } };
+  return { ok: true, value };
 }
 
 function isPlainObject(value) {

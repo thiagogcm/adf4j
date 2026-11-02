@@ -1,55 +1,67 @@
 package dev.nthings.adf4j;
 
-import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNullPointerException;
+
+import dev.nthings.adf4j.metadata.AttachmentReference;
 import dev.nthings.adf4j.options.AttachmentResolver;
+import dev.nthings.adf4j.options.ExcerptResolver;
+import dev.nthings.adf4j.options.ExtensionRenderer;
 import dev.nthings.adf4j.options.MarkdownOptions;
 import dev.nthings.adf4j.options.MediaResolver;
 import dev.nthings.adf4j.options.PageLinkResolver;
+import dev.nthings.adf4j.options.PageTreeResolver;
 import dev.nthings.adf4j.options.TableFallback;
 import dev.nthings.adf4j.options.UnknownNodePolicy;
-
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 class MarkdownOptionsTests {
 
   @Test
-  void defaults_use_placeholder_policy_and_empty_render_context() {
+  void defaults_use_placeholder_policy_and_an_unknown_attachment_inventory() {
     var options = MarkdownOptions.defaults();
 
     assertThat(options.unknownNodePolicy()).isEqualTo(UnknownNodePolicy.PLACEHOLDER);
-    assertThat(options.confluenceContext()).isEqualTo(ConfluenceRenderContext.empty());
-  }
-
-  @Test
-  void null_builder_values_normalize_to_the_defaults() {
-    var options = MarkdownOptions.builder()
-        .unknownNodePolicy(null)
-        .confluenceContext(null)
-        .tableFallback(null)
-        .mediaResolver(null)
-        .extensionRenderers(null)
-        .attachmentResolver(null)
-        .pageLinkResolver(null)
-        .pageTreeResolver(null)
-        .documentTitle(null)
-        .build();
-
-    assertThat(options.unknownNodePolicy()).isEqualTo(UnknownNodePolicy.PLACEHOLDER);
-    assertThat(options.confluenceContext()).isEqualTo(ConfluenceRenderContext.empty());
+    assertThat(options.attachments()).isNull();
     assertThat(options.tableFallback()).isEqualTo(TableFallback.GFM_PROMOTE_FIRST_ROW);
     assertThat(options.mediaResolver()).isNull();
     assertThat(options.extensionRenderers()).isEmpty();
     assertThat(options.attachmentResolver()).isNull();
     assertThat(options.pageLinkResolver()).isNull();
     assertThat(options.pageTreeResolver()).isNull();
+    assertThat(options.excerptResolver()).isNull();
     assertThat(options.collapseHardBreaks()).isFalse();
     assertThat(options.documentTitle()).isNull();
     assertThat(options.escapeParentheses()).isFalse();
-    assertThat(options.withUnknownNodePolicy(UnknownNodePolicy.SKIP).unknownNodePolicy())
-        .isEqualTo(UnknownNodePolicy.SKIP);
-    assertThat(options.withConfluenceContext(null).confluenceContext()).isEqualTo(ConfluenceRenderContext.empty());
+  }
+
+  @Test
+  void required_values_reject_null() {
+    var options = MarkdownOptions.defaults();
+
+    assertThatNullPointerException().isThrownBy(() -> options.withUnknownNodePolicy(null));
+    assertThatNullPointerException().isThrownBy(() -> options.withTableFallback(null));
+    assertThatNullPointerException().isThrownBy(() -> options.withExtensionRenderers(null));
+  }
+
+  @Test
+  void attachments_distinguish_unknown_from_empty_and_are_copied_in_order() {
+    var attachments =
+        new ArrayList<>(
+            List.of(
+                new AttachmentReference("b", "b.pdf", null),
+                new AttachmentReference("a", null, null)));
+    var options = MarkdownOptions.defaults().withAttachments(attachments);
+    var expected = List.copyOf(attachments);
+
+    attachments.clear();
+
+    assertThat(options.attachments()).containsExactlyElementsOf(expected);
+    assertThat(options.withAttachments(List.of()).attachments()).isEmpty();
+    assertThat(options.withAttachments(null).attachments()).isNull();
   }
 
   @Test
@@ -80,8 +92,9 @@ class MarkdownOptionsTests {
 
     var enabled = options.withImageSizeAttributes(true);
     assertThat(enabled.imageSizeAttributes()).isTrue();
-    assertThat(enabled.withUnknownNodePolicy(UnknownNodePolicy.SKIP).imageSizeAttributes()).isTrue();
-    assertThat(enabled.withConfluenceContext(ConfluenceRenderContext.empty()).imageSizeAttributes()).isTrue();
+    assertThat(enabled.withUnknownNodePolicy(UnknownNodePolicy.SKIP).imageSizeAttributes())
+        .isTrue();
+    assertThat(enabled.withAttachments(List.of()).imageSizeAttributes()).isTrue();
   }
 
   @Test
@@ -107,10 +120,11 @@ class MarkdownOptionsTests {
 
   @Test
   void passing_null_to_a_resolver_setter_clears_it() {
-    var options = MarkdownOptions.defaults()
-        .withMediaResolver(attrs -> "x")
-        .withAttachmentResolver(reference -> "y")
-        .withPageLinkResolver(pageNodeId -> "z");
+    var options =
+        MarkdownOptions.defaults()
+            .withMediaResolver(attrs -> "x")
+            .withAttachmentResolver(reference -> "y")
+            .withPageLinkResolver(pageNodeId -> "z");
 
     assertThat(options.withMediaResolver(null).mediaResolver()).isNull();
     assertThat(options.withAttachmentResolver(null).attachmentResolver()).isNull();
@@ -118,62 +132,52 @@ class MarkdownOptionsTests {
   }
 
   @Test
-  void builder_with_no_setters_matches_defaults_field_by_field() {
-    var built = MarkdownOptions.builder().build();
-    var defaults = MarkdownOptions.defaults();
-
-    assertThat(built.unknownNodePolicy()).isEqualTo(defaults.unknownNodePolicy());
-    assertThat(built.confluenceContext()).isEqualTo(defaults.confluenceContext());
-    assertThat(built.imageSizeAttributes()).isEqualTo(defaults.imageSizeAttributes());
-    assertThat(built.tableFallback()).isEqualTo(defaults.tableFallback());
-    assertThat(built.mediaResolver()).isNull();
-    assertThat(built.htmlVisualMarks()).isEqualTo(defaults.htmlVisualMarks());
-    assertThat(built.extensionRenderers()).isEmpty();
-    assertThat(built.attachmentResolver()).isNull();
-    assertThat(built.pageLinkResolver()).isNull();
-    assertThat(built.pageTreeResolver()).isNull();
-    assertThat(built.collapseHardBreaks()).isEqualTo(defaults.collapseHardBreaks());
-    assertThat(built.documentTitle()).isNull();
-    assertThat(built.escapeParentheses()).isEqualTo(defaults.escapeParentheses());
-  }
-
-  @Test
   void a_null_extension_renderer_element_is_rejected_with_a_named_message() {
-    var renderers = java.util.Arrays.<dev.nthings.adf4j.options.ExtensionRenderer>asList(
-        extension -> null, null);
+    var renderers = Arrays.<ExtensionRenderer>asList(extension -> null, null);
 
-    org.assertj.core.api.Assertions.assertThatThrownBy(
-            () -> MarkdownOptions.builder().extensionRenderers(renderers).build())
-        .isInstanceOf(NullPointerException.class)
-        .hasMessageContaining("extensionRenderers");
+    assertThatNullPointerException()
+        .isThrownBy(() -> MarkdownOptions.defaults().withExtensionRenderers(renderers))
+        .withMessageContaining("extensionRenderers");
   }
 
   @Test
-  void builder_sets_each_field() {
+  void every_wither_sets_its_field_and_keeps_the_others() {
     MediaResolver media = attrs -> "m";
     AttachmentResolver attachment = reference -> "a";
     PageLinkResolver pageLink = pageNodeId -> "p";
+    PageTreeResolver pageTree = reference -> List.of();
+    ExcerptResolver excerpt = reference -> "e";
+    ExtensionRenderer extension = node -> "x";
+    var attachments = List.of(new AttachmentReference("a", "a.pdf", null));
 
-    var options = MarkdownOptions.builder()
-        .unknownNodePolicy(UnknownNodePolicy.SKIP)
-        .imageSizeAttributes(true)
-        .tableFallback(TableFallback.HTML)
-        .mediaResolver(media)
-        .htmlVisualMarks(true)
-        .attachmentResolver(attachment)
-        .pageLinkResolver(pageLink)
-        .collapseHardBreaks(true)
-        .documentTitle("My Page")
-        .escapeParentheses(true)
-        .build();
+    var options =
+        MarkdownOptions.defaults()
+            .withUnknownNodePolicy(UnknownNodePolicy.SKIP)
+            .withAttachments(attachments)
+            .withImageSizeAttributes(true)
+            .withTableFallback(TableFallback.HTML)
+            .withMediaResolver(media)
+            .withHtmlVisualMarks(true)
+            .withExtensionRenderers(List.of(extension))
+            .withAttachmentResolver(attachment)
+            .withPageLinkResolver(pageLink)
+            .withPageTreeResolver(pageTree)
+            .withExcerptResolver(excerpt)
+            .withCollapseHardBreaks(true)
+            .withDocumentTitle("My Page")
+            .withEscapeParentheses(true);
 
     assertThat(options.unknownNodePolicy()).isEqualTo(UnknownNodePolicy.SKIP);
+    assertThat(options.attachments()).isEqualTo(attachments);
     assertThat(options.imageSizeAttributes()).isTrue();
     assertThat(options.tableFallback()).isEqualTo(TableFallback.HTML);
     assertThat(options.mediaResolver()).isSameAs(media);
     assertThat(options.htmlVisualMarks()).isTrue();
+    assertThat(options.extensionRenderers()).containsExactly(extension);
     assertThat(options.attachmentResolver()).isSameAs(attachment);
     assertThat(options.pageLinkResolver()).isSameAs(pageLink);
+    assertThat(options.pageTreeResolver()).isSameAs(pageTree);
+    assertThat(options.excerptResolver()).isSameAs(excerpt);
     assertThat(options.collapseHardBreaks()).isTrue();
     assertThat(options.documentTitle()).isEqualTo("My Page");
     assertThat(options.escapeParentheses()).isTrue();

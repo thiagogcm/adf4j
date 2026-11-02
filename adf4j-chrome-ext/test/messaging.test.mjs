@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   MESSAGE_TYPE,
+  conversionResponse,
   createListener,
+  sanitizeConversionContext,
   validateConversionRequest,
 } from '../src/messaging.js';
 
@@ -62,6 +64,50 @@ test('rejects malformed conversion payloads', () => {
   );
   assert.equal(badAttachment.ok, false);
   assert.match(badAttachment.error, /Invalid attachment metadata/);
+});
+
+test('passes the page title through the conversion context', () => {
+  assert.deepEqual(sanitizeConversionContext({ title: 'My Page' }), {
+    ok: true,
+    value: { title: 'My Page' },
+  });
+  const both = sanitizeConversionContext({ title: 'My Page', attachments: [{ fileId: 'f1' }] });
+  assert.deepEqual(both.value, {
+    title: 'My Page',
+    attachments: [{ fileId: 'f1', title: '', mediaType: '', downloadUrl: '' }],
+  });
+});
+
+test('rejects a non-string title', () => {
+  for (const title of [1, null, { a: 1 }]) {
+    assert.equal(sanitizeConversionContext({ title }).ok, false);
+  }
+});
+
+test('an empty context stays empty', () => {
+  assert.deepEqual(sanitizeConversionContext({}), { ok: true, value: {} });
+  assert.deepEqual(sanitizeConversionContext(undefined), { ok: true, value: undefined });
+});
+
+test('a successful result forwards only the Markdown', () => {
+  assert.deepEqual(
+    conversionResponse({ ok: true, body: '# T\n\nBody', wasLossy: true, diagnostics: [{}] }),
+    { ok: true, markdown: '# T\n\nBody' },
+  );
+});
+
+test('a failed result forwards the error, never the lone title body', () => {
+  assert.deepEqual(
+    conversionResponse({
+      ok: false,
+      body: '# Page',
+      wasLossy: true,
+      diagnostics: [{ code: 'INVALID_JSON', severity: 'ERROR', message: 'bad' }],
+      error: 'Failed to parse ADF JSON payload.',
+    }),
+    { ok: false, error: 'Failed to parse ADF JSON payload.' },
+  );
+  assert.deepEqual(conversionResponse(undefined), { ok: false, error: 'adf4j conversion failed.' });
 });
 
 test('ignores unsupported message types', () => {

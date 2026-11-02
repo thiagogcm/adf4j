@@ -1,12 +1,11 @@
 package dev.nthings.adf4j;
 
-import java.util.List;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.nthings.adf4j.options.MarkdownOptions;
-
+import dev.nthings.adf4j.result.Diagnostic;
+import java.util.List;
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 class ChartMacroRenderingTests {
 
@@ -123,14 +122,15 @@ class ChartMacroRenderingTests {
   void a_bodied_chart_renders_an_italic_caption_and_its_data_table() {
     var result = AdfToMarkdown.create().convert(LEGACY_BODIED_CHART);
 
-    assertThat(result.body()).isEqualTo(
-        """
+    assertThat(result.body())
+        .isEqualTo(
+            """
         *Chart: Monthly visits*
 
         | Month   | Visits |
         | ------- | ------ |
         | January | 42     |""");
-    assertThat(result.diagnostics()).noneMatch(d -> "UNSUPPORTED_MACRO".equals(d.code()));
+    assertThat(result.diagnostics()).noneMatch(d -> d.code() == Diagnostic.Code.UNSUPPORTED_MACRO);
   }
 
   @Test
@@ -140,7 +140,7 @@ class ChartMacroRenderingTests {
     // The chart's table is a separate document node (already rendered where it sits), so the chart
     // itself contributes only the caption — never a placeholder hole.
     assertThat(result.body()).isEqualTo("*Chart: Resoluções por mês*");
-    assertThat(result.diagnostics()).noneMatch(d -> "UNSUPPORTED_MACRO".equals(d.code()));
+    assertThat(result.diagnostics()).noneMatch(d -> d.code() == Diagnostic.Code.UNSUPPORTED_MACRO);
   }
 
   @Test
@@ -159,10 +159,16 @@ class ChartMacroRenderingTests {
 
   @Test
   void a_custom_extension_renderer_still_overrides_the_chart_caption() {
-    var options = MarkdownOptions.defaults().withExtensionRenderers(List.of(extension ->
-        "com.atlassian.chart".equals(extension.extensionType())
-            ? "custom chart block (" + extension.rawParameters().string("extensionTitle") + ")"
-            : null));
+    var options =
+        MarkdownOptions.defaults()
+            .withExtensionRenderers(
+                List.of(
+                    extension ->
+                        "com.atlassian.chart".equals(extension.extensionType())
+                            ? "custom chart block ("
+                                + extension.parameters().string("extensionTitle")
+                                + ")"
+                            : null));
 
     var markdown = AdfToMarkdown.with(options).toMarkdown(MODERN_CHART).strip();
 

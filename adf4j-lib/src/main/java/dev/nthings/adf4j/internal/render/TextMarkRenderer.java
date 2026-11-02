@@ -3,7 +3,6 @@ package dev.nthings.adf4j.internal.render;
 import dev.nthings.adf4j.ast.AdfMark;
 import dev.nthings.adf4j.ast.Alignment;
 import dev.nthings.adf4j.ast.Annotation;
-import dev.nthings.adf4j.ast.Attributes;
 import dev.nthings.adf4j.ast.BackgroundColor;
 import dev.nthings.adf4j.ast.Border;
 import dev.nthings.adf4j.ast.Breakout;
@@ -20,250 +19,216 @@ import dev.nthings.adf4j.ast.SubSup;
 import dev.nthings.adf4j.ast.TextColor;
 import dev.nthings.adf4j.ast.Underline;
 import dev.nthings.adf4j.ast.UnknownMark;
-import dev.nthings.adf4j.confluence.ConfluenceMetadata;
-import dev.nthings.adf4j.internal.ConfluenceSupport;
+import dev.nthings.adf4j.internal.AdfText;
+import dev.nthings.adf4j.internal.Strings;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
 
+/// Applies marks to rendered text, and the block marks (indentation, alignment) to a whole block.
 final class TextMarkRenderer {
 
-  private static final Comparator<AdfMark> INLINE_MARK_ORDER =
-      Comparator.comparingInt(TextMarkRenderer::canonicalRank);
+  // U+00A0 per indent step; ASCII spaces are unreliable as leading indent (4+ become a code block).
+  private static final String INDENT_UNIT = "    ";
+
+  // Hex and rgb()/hsl() colors, keywords (`red`, `x-small`) and sizes (`20px`, `1.5em`, `120%`):
+  // none can end a declaration or the attribute, or load anything.
+  private static final Pattern SAFE_CSS_VALUE =
+      Pattern.compile(
+          "#\\p{XDigit}{3,8}"
+              + "|\\p{Alpha}[\\p{Alpha}-]*"
+              + "|\\d+(?:\\.\\d+)?(?:\\p{Alpha}+|%)?"
+              + "|(?:rgb|hsl)a?\\([\\d.,%/ -]*\\)");
+
+  private static final Pattern CSS_NUMBER = Pattern.compile("\\d+(?:\\.\\d+)?");
+
+  /// What one mark does to rendered text, applied in `rank` order.
+  private sealed interface MarkEffect {
+
+    int rank();
+  }
+
+  /// Wraps the text in `open` and `close`.
+  private record Wrap(int rank, String open, String close) implements MarkEffect {}
+
+  /// One declaration of the opt-in visual `<span style>`.
+  private record Css(int rank, String declaration) implements MarkEffect {}
+
+  /// The link around a run. `pageNodeId` is what a `PageLinkResolver` will look up, so two links
+  /// that could resolve differently differ here without asking the resolver.
+  private record LinkTarget(String href, @Nullable String title, @Nullable String pageNodeId) {}
+
+  /// What a mark list renders to under the active options, holding nothing that doesn't render:
+  /// `effects` are the formatting by rank, a later mark replacing an earlier one of the same rank.
+  /// A code mark makes the text literal, superseding them. Two mark lists render identically
+  /// exactly when their styles are equal.
+  private record Style(boolean code, Map<Integer, MarkEffect> effects, @Nullable LinkTarget link) {}
 
   // Inside-out: format marks (canonical order), then a combined visual <span>, then the link
-  // outermost. A code mark makes the text literal, superseding the format/visual layers.
-  String applyMarks(String value, @Nullable List<AdfMark> marks, RenderContext context) {
-    if (marks == null || marks.isEmpty()) {
+  // outermost.
+  String applyMarks(String value, List<AdfMark> marks, RenderSession session) {
+    if (marks.isEmpty()) {
       return value;
     }
-    Link link = null;
-    var hasCode = false;
-    var formatMarks = new ArrayList<AdfMark>();
-    for (var mark : marks) {
-      switch (mark) {
-        case Link found -> link = found;
-        case Code _ -> hasCode = true;
-        case UnknownMark _ -> {}
-        default -> formatMarks.add(mark);
-      }
-    }
+    var style = style(marks, session);
+    var rendered =
+        style.code()
+            ? MarkdownText.inlineCodeSpan(value)
+            : applyEffects(value, style.effects().values());
+    var link = style.link();
+    return link == null ? rendered : applyLink(rendered, link, session);
+  }
 
-    var rendered = value;
-    if (hasCode) {
-      rendered = wrapCodeSpan(rendered);
-    } else {
-      formatMarks.sort(INLINE_MARK_ORDER);
-      for (var mark : formatMarks) {
-        rendered = applyInlineMark(rendered, mark);
-      }
-      // Opt-in: preserve visual-only marks as one combined <span style> instead of dropping them.
-      if (context.options().htmlVisualMarks()) {
-        var style = visualStyle(formatMarks);
-        if (!style.isEmpty()) {
-          rendered = wrap(rendered, "<span style=\"" + style + "\">", "</span>");
-        }
+  /// Whether text runs with these marks render identically, and so must merge into one run. Asks no
+  /// resolver: two different hrefs stay apart even when a `PageLinkResolver` maps them to one page.
+  boolean rendersAlike(List<AdfMark> left, List<AdfMark> right, RenderSession session) {
+    return left.equals(right) || style(left, session).equals(style(right, session));
+  }
+
+  private static Style style(List<AdfMark> marks, RenderSession session) {
+    var visual = session.options().htmlVisualMarks();
+    var code = false;
+    var effects = new TreeMap<Integer, MarkEffect>();
+    for (var mark : marks) {
+      code |= mark instanceof Code;
+      var effect = effect(mark, visual);
+      if (effect != null) {
+        effects.put(effect.rank(), effect);
       }
     }
-    if (link != null) {
-      rendered = applyLink(rendered, link, context);
+    return new Style(code, code ? Map.of() : effects, linkTarget(marks, session));
+  }
+
+  private static @Nullable MarkEffect effect(AdfMark mark, boolean visual) {
+    return switch (mark) {
+      case Strong _ -> new Wrap(0, "**", "**");
+      case Em _ -> new Wrap(1, "*", "*");
+      case Strike _ -> new Wrap(2, "~~", "~~");
+      case SubSup s when "sup".equalsIgnoreCase(s.subSupType()) -> new Wrap(3, "<sup>", "</sup>");
+      case SubSup s when "sub".equalsIgnoreCase(s.subSupType()) -> new Wrap(3, "<sub>", "</sub>");
+      case Underline _ -> new Wrap(4, "<u>", "</u>");
+      case FontSize size when visual -> css(5, "font-size", size.fontSize());
+      case TextColor color when visual -> css(6, "color", color.color());
+      case BackgroundColor color when visual -> css(7, "background-color", color.color());
+      case Border border when visual -> border(8, border);
+      // An unknown subsup type is left unwrapped rather than guessed; code and links are not
+      // formatting (see style); the rest never touch the text.
+      case SubSup _,
+          FontSize _,
+          TextColor _,
+          BackgroundColor _,
+          Border _,
+          Code _,
+          Link _,
+          Alignment _,
+          Indentation _,
+          UnknownMark _,
+          Annotation _,
+          Breakout _,
+          DataConsumer _,
+          Fragment _ ->
+          null;
+    };
+  }
+
+  private static @Nullable LinkTarget linkTarget(List<AdfMark> marks, RenderSession session) {
+    var link = AdfText.effectiveLink(marks);
+    var href = link == null ? null : link.href();
+    if (link == null || href == null || href.isBlank()) {
+      return null;
+    }
+    return new LinkTarget(
+        href,
+        Strings.firstNonBlank(link.title()),
+        session.resolvers().linkedPageId(href, link.attrs()));
+  }
+
+  private String applyEffects(String value, Collection<MarkEffect> effects) {
+    var rendered = value;
+    var declarations = new ArrayList<String>();
+    for (var effect : effects) {
+      switch (effect) {
+        case Wrap wrap -> rendered = wrap(rendered, wrap.open(), wrap.close());
+        case Css css -> declarations.add(css.declaration());
+      }
+    }
+    // Opt-in: preserve visual-only marks as one combined <span style> instead of dropping them.
+    if (!declarations.isEmpty()) {
+      var style = String.join("; ", declarations);
+      rendered = wrap(rendered, "<span style=\"" + style + "\">", "</span>");
     }
     return rendered;
   }
 
-  // Wraps formatted text in a Markdown link, or returns it unchanged when the link has no href. A
-  // PageLinkResolver rewrites an internal page href to the caller's destination; the visible label
-  // (the original text, or the original href when the text is blank) is left untouched.
-  private String applyLink(String rendered, Link link, RenderContext context) {
-    var href = link.href();
-    if (href == null || href.isBlank()) {
-      return rendered;
-    }
-    var label =
-        rendered.isBlank()
-            ? MarkdownText.escapeInlineText(href, false, context.options().escapeParentheses())
-            : rendered;
-    var resolvedHref = resolvePageHref(href, link.attrs(), context);
+  // Wraps formatted text in a Markdown link. A PageLinkResolver rewrites an internal page href to
+  // the caller's destination; the visible label (the original text, or the original href when the
+  // text is blank) is left untouched.
+  private String applyLink(String rendered, LinkTarget link, RenderSession session) {
+    var label = rendered.isBlank() ? session.writer().text(link.href(), false) : rendered;
+    var resolved = session.resolvers().pageId(link.pageNodeId());
+    var destination = resolved == null ? link.href() : resolved;
     var title = link.title();
-    return (title == null || title.isBlank())
-        ? MarkdownText.linkRendered(label, resolvedHref)
-        : MarkdownText.linkRendered(label, resolvedHref, title);
+    return title == null
+        ? MarkdownText.linkRendered(label, destination)
+        : MarkdownText.linkRendered(label, destination, title);
   }
 
-  // The caller-resolved destination for an internal page href, or the original href when there is
-  // no
-  // PageLinkResolver, the href is not a page reference, or the resolver declines.
-  static String resolvePageHref(String href, Attributes attrs, RenderContext context) {
-    if (context.options().pageLinkResolver() == null) {
-      return href;
-    }
-    var resolved =
-        resolvePageId(ConfluenceSupport.pageNodeId(href, ConfluenceMetadata.from(attrs)), context);
-    return resolved == null ? href : resolved;
+  // The values are arbitrary JSON from untrusted ADF, so one that isn't a known-safe shape drops
+  // the declaration.
+  private static @Nullable MarkEffect css(int rank, String property, @Nullable String value) {
+    var safe = safeCssValue(value);
+    return safe == null ? null : new Css(rank, property + ":" + safe);
   }
 
-  // The resolver's destination for a page node id, or null when there is no id/resolver or it
-  // declines; a decline is recorded as an unresolved page ref.
-  static @Nullable String resolvePageId(@Nullable String pageNodeId, RenderContext context) {
-    var resolver = context.options().pageLinkResolver();
-    if (resolver == null || pageNodeId == null || pageNodeId.isBlank()) {
+  private static @Nullable MarkEffect border(int rank, Border border) {
+    var size = Strings.trimToNull(border.size());
+    var color = safeCssValue(border.color());
+    if (size == null || color == null || !CSS_NUMBER.matcher(size).matches()) {
       return null;
     }
-    var resolved =
-        CallbackGuards.guardNonBlank("PageLinkResolver", () -> resolver.resolve(pageNodeId));
-    if (resolved == null) {
-      context.unresolvedTracker().recordPageId(pageNodeId);
+    return new Css(rank, "border:" + size + "px solid " + color);
+  }
+
+  private static @Nullable String safeCssValue(@Nullable String value) {
+    var stripped = Strings.trimToNull(value);
+    return stripped != null && SAFE_CSS_VALUE.matcher(stripped).matches() ? stripped : null;
+  }
+
+  // Wraps a block in <div align> for a center/end Alignment mark when htmlVisualMarks is on.
+  String alignmentWrap(String body, List<AdfMark> marks, boolean htmlVisualMarks) {
+    if (!htmlVisualMarks || body.isBlank()) {
+      return body;
     }
-    return resolved;
-  }
-
-  // What a mark contributes to the rendered text. Two text runs merge when their marks' keys match,
-  // so attributes that never render (annotation ids, fragment names, ...) must stay out of the key.
-  static List<@Nullable Object> renderKey(AdfMark mark) {
-    return switch (mark) {
-      case Link link -> Arrays.asList(link.type(), link.attrs());
-      case SubSup subSup -> Arrays.asList(subSup.type(), subSup.subSupType());
-      case TextColor textColor -> Arrays.asList(textColor.type(), textColor.color());
-      case BackgroundColor color -> Arrays.asList(color.type(), color.color());
-      case Alignment alignment -> Arrays.asList(alignment.type(), alignment.align());
-      case Indentation indentation -> Arrays.asList(indentation.type(), indentation.level());
-      case FontSize fontSize -> Arrays.asList(fontSize.type(), fontSize.fontSize());
-      case Border border -> Arrays.asList(border.type(), border.color(), border.size());
-      case UnknownMark unknown -> Arrays.asList(unknown.type(), unknown.rawJson());
-      case Annotation _,
-          Breakout _,
-          Code _,
-          DataConsumer _,
-          Em _,
-          Fragment _,
-          Strike _,
-          Strong _,
-          Underline _ ->
-          Arrays.asList(mark.type());
-    };
-  }
-
-  private static int canonicalRank(AdfMark mark) {
-    return switch (mark) {
-      case Strong _ -> 0;
-      case Em _ -> 1;
-      case Strike _ -> 2;
-      case SubSup _ -> 3;
-      case Underline _ -> 4;
-      case FontSize _ -> 5;
-      case TextColor _ -> 6;
-      case BackgroundColor _ -> 7;
-      case Border _ -> 8;
-      case Alignment _,
-          Annotation _,
-          Breakout _,
-          Code _,
-          DataConsumer _,
-          Fragment _,
-          Indentation _,
-          Link _,
-          UnknownMark _ ->
-          99;
-    };
-  }
-
-  // CSS for the visual-only marks, in canonical order, guarded against HTML-attribute breakout
-  // (the colour/size values are arbitrary JSON). Empty when there are no visual marks.
-  private String visualStyle(List<AdfMark> marks) {
-    var declarations = new ArrayList<String>();
     for (var mark : marks) {
-      switch (mark) {
-        case FontSize fontSize -> addDeclaration(declarations, "font-size", fontSize.fontSize());
-        case TextColor textColor -> addDeclaration(declarations, "color", textColor.color());
-        case BackgroundColor backgroundColor ->
-            addDeclaration(declarations, "background-color", backgroundColor.color());
-        case Border border -> addBorderDeclaration(declarations, border);
-        default -> {}
+      if (mark instanceof Alignment alignment) {
+        var align =
+            switch (alignment.align()) {
+              case "center" -> "center";
+              case "end" -> "right";
+              case null, default -> null;
+            };
+        if (align != null) {
+          // Blank lines around the body so CommonMark parses it as markdown, not a raw-HTML block.
+          return "<div align=\"" + align + "\">\n\n" + body + "\n\n</div>";
+        }
       }
     }
-    return String.join("; ", declarations);
+    return body;
   }
 
-  private void addDeclaration(List<String> declarations, String property, @Nullable String value) {
-    if (value != null && !value.isBlank()) {
-      declarations.add(property + ":" + HtmlFragments.escapeHtmlText(value));
+  // A run of non-breaking spaces for the block's first Indentation mark that indents (level clamped
+  // to 6), or "" when there is none.
+  String indentationPrefix(List<AdfMark> marks) {
+    for (var mark : marks) {
+      if (mark instanceof Indentation indentation && indentation.level() > 0) {
+        return INDENT_UNIT.repeat(Math.min(indentation.level(), 6));
+      }
     }
-  }
-
-  private void addBorderDeclaration(List<String> declarations, Border border) {
-    var size = border.size();
-    var color = border.color();
-    if (size == null || size.isBlank() || color == null || color.isBlank()) {
-      return;
-    }
-    declarations.add(
-        "border:"
-            + HtmlFragments.escapeHtmlText(size)
-            + "px solid "
-            + HtmlFragments.escapeHtmlText(color));
-  }
-
-  private boolean isVisualOnlyHtmlMark(AdfMark mark) {
-    return switch (mark) {
-      case TextColor _, BackgroundColor _, Border _, FontSize _ -> true;
-      case Alignment _,
-          Annotation _,
-          Breakout _,
-          Code _,
-          DataConsumer _,
-          Em _,
-          Fragment _,
-          Indentation _,
-          Link _,
-          Strike _,
-          Strong _,
-          SubSup _,
-          Underline _,
-          UnknownMark _ ->
-          false;
-    };
-  }
-
-  private String applyInlineMark(String value, AdfMark mark) {
-    // Pure-visual marks (colour/background/border/size) are dropped; sub/sup and underline map to
-    // HTML.
-    if (isVisualOnlyHtmlMark(mark)) {
-      return value;
-    }
-
-    return switch (mark) {
-      case Strong _ -> wrapDelimited(value, "**");
-      case Em _ -> wrapDelimited(value, "*");
-      case Strike _ -> wrapDelimited(value, "~~");
-      case SubSup s when "sup".equalsIgnoreCase(s.subSupType()) -> wrapTag(value, "sup");
-      case SubSup s when "sub".equalsIgnoreCase(s.subSupType()) -> wrapTag(value, "sub");
-      case SubSup _ -> value; // unknown subtype: leave unwrapped rather than guess
-      case Underline _ -> wrapTag(value, "u");
-      case TextColor _,
-          BackgroundColor _,
-          Border _,
-          FontSize _,
-          Alignment _,
-          Indentation _,
-          Annotation _,
-          Fragment _,
-          DataConsumer _,
-          Breakout _,
-          Link _,
-          Code _,
-          UnknownMark _ ->
-          value;
-    };
-  }
-
-  private String wrapDelimited(String value, String delimiter) {
-    return wrap(value, delimiter, delimiter);
-  }
-
-  private String wrapTag(String value, String tag) {
-    return wrap(value, "<" + tag + ">", "</" + tag + ">");
+    return "";
   }
 
   // Wraps value's non-whitespace core with the open/close affixes, leaving any surrounding
@@ -275,20 +240,10 @@ final class TextMarkRenderer {
 
     var leadingWhitespaceLength = value.length() - value.stripLeading().length();
     var contentEnd = value.stripTrailing().length();
-    var content = value.substring(leadingWhitespaceLength, contentEnd);
-    if (content.isBlank()) {
-      return value;
-    }
-
     return value.substring(0, leadingWhitespaceLength)
         + open
-        + content
+        + value.substring(leadingWhitespaceLength, contentEnd)
         + close
         + value.substring(contentEnd);
-  }
-
-  // Inline code span: the fence must exceed the longest backtick run in the content.
-  private String wrapCodeSpan(String content) {
-    return MarkdownText.inlineCodeSpan(content);
   }
 }

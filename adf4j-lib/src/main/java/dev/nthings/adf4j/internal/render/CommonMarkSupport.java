@@ -38,9 +38,9 @@ public final class CommonMarkSupport {
     return MarkdownRenderer.builder().extensions(EXTENSIONS).build();
   }
 
-  static MarkdownRenderingSupport markdownRenderingSupport() {
+  static CellHtmlRenderer cellHtmlRenderer() {
     // Defence-in-depth for the HTML-table fallback (destinations are already scheme-sanitized
     // upstream).
-    return new MarkdownRenderingSupport(parser(), htmlRenderer(true));
+    return new CellHtmlRenderer(parser(), htmlRenderer(true));
   }
 }

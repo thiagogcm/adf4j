@@ -3,8 +3,8 @@ body: ```json\n{"type":"mystery","attrs":{"x":99999999999999999999999}}\n```
 lossy: false
 diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -15,8 +15,8 @@ body: ```json\n{"type":"mystery","attrs":{"x":1E+2}}\n```
 lossy: false
 diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -27,8 +27,8 @@ body: ```json\n{"type":"mystery","attrs":{"x":1E+400}}\n```
 lossy: false
 diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -39,8 +39,8 @@ body: ```json\n{"type":"mystery","attrs":{"x":1.0E+2147483648}}\n```
 lossy: false
 diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -51,8 +51,8 @@ body: ```json\n{"type":"mystery","attrs":{"x":1.230E+2147483650}}\n```
 lossy: false
 diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -63,8 +63,8 @@ body: ```json\n{"type":"mystery","attrs":{"x":1.2345678901234567890123456}}\n```
 lossy: false
 diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -75,8 +75,8 @@ body: ```json\n{"type":"mystery","attrs":{"x":0.0}}\n```
 lossy: false
 diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -87,8 +87,8 @@ body: ```json\n{"type":"mystery","attrs":{"x":1.00E+2147483649}}\n```
 lossy: false
 diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -99,8 +99,8 @@ body: ```json\n{"type":"mystery","attrs":{"x":1E-400}}\n```
 lossy: false
 diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -111,8 +111,8 @@ body: ```json\n{"type":"mystery","attrs":{"x":1.10}}\n```
 lossy: false
 diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -123,8 +123,8 @@ body: `{"type":"extension","attrs":{"extensionKey":"k"}}`
 lossy: false
 diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -135,8 +135,8 @@ body: ```json\n{"type":"inlineCard","attrs":{"url":"http://a"}}\n```
 lossy: false
 diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -147,8 +147,8 @@ body: ```json\n{"type":"inlineExtension","attrs":{"extensionKey":"k"}}\n```
 lossy: false
 diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -159,8 +159,8 @@ body: `{"type":"media","attrs":{"type":"external","url":"https://e.example/a.png
 lossy: false
 diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -171,8 +171,8 @@ body: `{"type":"paragraph","content":[{"type":"text","text":"x"}]}`
 lossy: false
 diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -183,8 +183,8 @@ body: ```json\n{"type":"text","text":"x"}\n```
 lossy: false
 diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -195,8 +195,8 @@ body: ```json\n{"type":"text","marks":"x","text":"x"}\n```
 lossy: false
 diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -207,8 +207,8 @@ body: ```json\n{"type":1E+8}\n```
 lossy: false
 diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -219,8 +219,8 @@ body: ```json\n{"content":[]}\n```
 lossy: false
 diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -231,8 +231,8 @@ body: ```json\n{"type":5}\n```
 lossy: false
 diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -243,8 +243,8 @@ body: ```json\n{"type":{}}\n```
 lossy: false
 diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -255,8 +255,8 @@ body: ```json\n{"type":"mysteryBlock","content":[]}\n```
 lossy: false
 diagnostic: UNKNOWN_NODE_PRESERVED|INFO|1 unsupported node(s) preserved as raw JSON.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []

@@ -1,21 +1,28 @@
 package dev.nthings.adf4j.options;
 
-import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
+import dev.nthings.adf4j.metadata.AttachmentReference;
 import java.util.List;
+import java.util.Objects;
+import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
 
-/// Immutable configuration for an ADF-to-Markdown conversion. Construct via {@link #defaults()}
-/// plus
-/// the `withX(...)` withers, or via {@link #builder()}; an existing instance can be varied
-/// with {@link #toBuilder()}.
+/// Immutable configuration for an ADF-to-Markdown conversion: {@link #defaults()} plus the
+/// `withX(...)` withers.
 ///
 /// `imageSizeAttributes` emits the non-GFM `{width= height=}` image suffix (off by
 /// default; the library targets GFM). `tableFallback` selects how a GFM-safe table without an
 /// all-header first row is rendered (first row promoted to a native pipe-table header by default).
+/// `attachments` is the page's attachment inventory, in document order: `null` means it is unknown,
+/// while a list, even an empty one, is authoritative, so an `attachments` macro lists exactly those
+/// entries. An entry is identified by its `fileId`; the first entry with a given `fileId` wins, as
+/// does the first with a given title when a macro looks one up by name, and the title lookup is
+/// case-insensitive and ignores surrounding whitespace. An entry needs no title, but one with a
+/// blank `fileId` is ignored. A `downloadUrl` is the default destination of the file's links.
 /// `mediaResolver` is an optional hook that turns file media (which carries ids, not a URL)
 /// into a concrete link; `null` keeps the `media:` placeholder. `htmlVisualMarks`
 /// preserves visual-only marks (textColor/backgroundColor/border/fontSize) as an inline `<span
-/// style>` instead of dropping them (off by default). `extensionRenderers` are optional hooks
+/// style>` instead of dropping them (off by default), except for a value that isn't a plain color
+/// or size, which is untrusted input and stays dropped. `extensionRenderers` are optional hooks
 /// for rendering custom extensions (macros), consulted before the built-in Confluence macros (empty
 /// by default). `attachmentResolver` turns a resolved Confluence `attachment:` reference
 /// into a concrete link; `null` keeps the `attachment:<fileId>` placeholder.
@@ -37,8 +44,10 @@ import org.jspecify.annotations.Nullable;
 /// image alt text; off by default, since the escapes are inert noise outside a link destination.
 public final class MarkdownOptions {
 
+  private static final MarkdownOptions DEFAULTS = new MarkdownOptions(new Copy());
+
   private final UnknownNodePolicy unknownNodePolicy;
-  private final ConfluenceRenderContext confluenceContext;
+  private final @Nullable List<AttachmentReference> attachments;
   private final boolean imageSizeAttributes;
   private final TableFallback tableFallback;
   private final @Nullable MediaResolver mediaResolver;
@@ -52,79 +61,35 @@ public final class MarkdownOptions {
   private final @Nullable String documentTitle;
   private final boolean escapeParentheses;
 
-  private MarkdownOptions(Builder builder) {
-    this.unknownNodePolicy =
-        builder.unknownNodePolicy == null
-            ? UnknownNodePolicy.PLACEHOLDER
-            : builder.unknownNodePolicy;
-    this.confluenceContext =
-        builder.confluenceContext == null
-            ? ConfluenceRenderContext.empty()
-            : builder.confluenceContext;
-    this.imageSizeAttributes = builder.imageSizeAttributes;
-    this.tableFallback =
-        builder.tableFallback == null ? TableFallback.GFM_PROMOTE_FIRST_ROW : builder.tableFallback;
-    this.mediaResolver = builder.mediaResolver;
-    this.htmlVisualMarks = builder.htmlVisualMarks;
-    this.extensionRenderers = copyOfRenderers(builder.extensionRenderers);
-    this.attachmentResolver = builder.attachmentResolver;
-    this.pageLinkResolver = builder.pageLinkResolver;
-    this.pageTreeResolver = builder.pageTreeResolver;
-    this.excerptResolver = builder.excerptResolver;
-    this.collapseHardBreaks = builder.collapseHardBreaks;
-    this.documentTitle = builder.documentTitle;
-    this.escapeParentheses = builder.escapeParentheses;
-  }
-
-  private static List<ExtensionRenderer> copyOfRenderers(
-      @Nullable List<ExtensionRenderer> renderers) {
-    if (renderers == null || renderers.isEmpty()) {
-      return List.of();
-    }
-    for (var renderer : renderers) {
-      if (renderer == null) {
-        throw new NullPointerException("extensionRenderers must not contain null elements");
-      }
-    }
-    return List.copyOf(renderers);
+  private MarkdownOptions(Copy copy) {
+    this.unknownNodePolicy = copy.unknownNodePolicy;
+    this.attachments = copy.attachments;
+    this.imageSizeAttributes = copy.imageSizeAttributes;
+    this.tableFallback = copy.tableFallback;
+    this.mediaResolver = copy.mediaResolver;
+    this.htmlVisualMarks = copy.htmlVisualMarks;
+    this.extensionRenderers = copy.extensionRenderers;
+    this.attachmentResolver = copy.attachmentResolver;
+    this.pageLinkResolver = copy.pageLinkResolver;
+    this.pageTreeResolver = copy.pageTreeResolver;
+    this.excerptResolver = copy.excerptResolver;
+    this.collapseHardBreaks = copy.collapseHardBreaks;
+    this.documentTitle = copy.documentTitle;
+    this.escapeParentheses = copy.escapeParentheses;
   }
 
   /// GFM-targeting options with every hook unset and every toggle off (the safe baseline).
   public static MarkdownOptions defaults() {
-    return builder().build();
-  }
-
-  /// A new {@link Builder} whose unset fields take the same defaults as {@link #defaults()}.
-  public static Builder builder() {
-    return new Builder();
-  }
-
-  /// A {@link Builder} pre-populated with this instance's values.
-  public Builder toBuilder() {
-    var builder = new Builder();
-    builder.unknownNodePolicy = unknownNodePolicy;
-    builder.confluenceContext = confluenceContext;
-    builder.imageSizeAttributes = imageSizeAttributes;
-    builder.tableFallback = tableFallback;
-    builder.mediaResolver = mediaResolver;
-    builder.htmlVisualMarks = htmlVisualMarks;
-    builder.extensionRenderers = extensionRenderers;
-    builder.attachmentResolver = attachmentResolver;
-    builder.pageLinkResolver = pageLinkResolver;
-    builder.pageTreeResolver = pageTreeResolver;
-    builder.excerptResolver = excerptResolver;
-    builder.collapseHardBreaks = collapseHardBreaks;
-    builder.documentTitle = documentTitle;
-    builder.escapeParentheses = escapeParentheses;
-    return builder;
+    return DEFAULTS;
   }
 
   public UnknownNodePolicy unknownNodePolicy() {
     return unknownNodePolicy;
   }
 
-  public ConfluenceRenderContext confluenceContext() {
-    return confluenceContext;
+  /// The page's attachment inventory in document order, or `null` when it is unknown.
+  public @Nullable List<AttachmentReference> attachments() {
+    return attachments;
   }
 
   public boolean imageSizeAttributes() {
@@ -175,170 +140,125 @@ public final class MarkdownOptions {
     return escapeParentheses;
   }
 
-  /// Sets the unknown-node policy; `null` resets to {@link UnknownNodePolicy#PLACEHOLDER}.
-  public MarkdownOptions withUnknownNodePolicy(@Nullable UnknownNodePolicy policy) {
-    return toBuilder().unknownNodePolicy(policy).build();
+  /// Sets the unknown-node policy.
+  public MarkdownOptions withUnknownNodePolicy(UnknownNodePolicy policy) {
+    Objects.requireNonNull(policy, "policy");
+    return with(copy -> copy.unknownNodePolicy = policy);
   }
 
-  /// Sets the Confluence context; `null` resets to {@link ConfluenceRenderContext#empty()}.
-  public MarkdownOptions withConfluenceContext(@Nullable ConfluenceRenderContext context) {
-    return toBuilder().confluenceContext(context).build();
+  /// Sets the attachment inventory (defensively copied, keeping its order); `null` means it is
+  /// unknown, and a list, even an empty one, is authoritative.
+  public MarkdownOptions withAttachments(@Nullable List<AttachmentReference> attachments) {
+    var copied = attachments == null ? null : List.copyOf(attachments);
+    return with(copy -> copy.attachments = copied);
   }
 
   public MarkdownOptions withImageSizeAttributes(boolean enabled) {
-    return toBuilder().imageSizeAttributes(enabled).build();
+    return with(copy -> copy.imageSizeAttributes = enabled);
   }
 
-  /// Sets the table fallback; `null` resets to {@link TableFallback#GFM_PROMOTE_FIRST_ROW}.
-  public MarkdownOptions withTableFallback(@Nullable TableFallback fallback) {
-    return toBuilder().tableFallback(fallback).build();
+  /// Sets the table fallback.
+  public MarkdownOptions withTableFallback(TableFallback fallback) {
+    Objects.requireNonNull(fallback, "fallback");
+    return with(copy -> copy.tableFallback = fallback);
   }
 
   /// Sets the media resolver; `null` clears it (the default `media:` placeholder path).
   public MarkdownOptions withMediaResolver(@Nullable MediaResolver resolver) {
-    return toBuilder().mediaResolver(resolver).build();
+    return with(copy -> copy.mediaResolver = resolver);
   }
 
   public MarkdownOptions withHtmlVisualMarks(boolean enabled) {
-    return toBuilder().htmlVisualMarks(enabled).build();
+    return with(copy -> copy.htmlVisualMarks = enabled);
   }
 
-  /// Sets the ordered extension renderers (defensively copied); `null`/empty registers none. The
-  /// list must not contain `null` elements.
-  public MarkdownOptions withExtensionRenderers(@Nullable List<ExtensionRenderer> renderers) {
-    return toBuilder().extensionRenderers(renderers).build();
+  /// Sets the ordered extension renderers (defensively copied). The list must not contain `null`
+  /// elements.
+  public MarkdownOptions withExtensionRenderers(List<ExtensionRenderer> renderers) {
+    Objects.requireNonNull(renderers, "renderers");
+    renderers.forEach(
+        renderer ->
+            Objects.requireNonNull(renderer, "extensionRenderers must not contain null elements"));
+    var copied = List.copyOf(renderers);
+    return with(copy -> copy.extensionRenderers = copied);
   }
 
   /// Sets the attachment resolver; `null` clears it (the default `attachment:` path).
   public MarkdownOptions withAttachmentResolver(@Nullable AttachmentResolver resolver) {
-    return toBuilder().attachmentResolver(resolver).build();
+    return with(copy -> copy.attachmentResolver = resolver);
   }
 
   /// Sets the page-link resolver; `null` clears it (links keep their original href).
   public MarkdownOptions withPageLinkResolver(@Nullable PageLinkResolver resolver) {
-    return toBuilder().pageLinkResolver(resolver).build();
+    return with(copy -> copy.pageLinkResolver = resolver);
   }
 
   /// Sets the page-tree resolver; `null` clears it (pagetree macros keep the `{{pagetree}}` token).
   public MarkdownOptions withPageTreeResolver(@Nullable PageTreeResolver resolver) {
-    return toBuilder().pageTreeResolver(resolver).build();
+    return with(copy -> copy.pageTreeResolver = resolver);
   }
 
   /// Sets the excerpt resolver; `null` clears it (excerpt-include macros keep their placeholder).
   public MarkdownOptions withExcerptResolver(@Nullable ExcerptResolver resolver) {
-    return toBuilder().excerptResolver(resolver).build();
+    return with(copy -> copy.excerptResolver = resolver);
   }
 
   /// Renders hard breaks as soft breaks (a plain newline), dropping the two-space GFM hard break.
   public MarkdownOptions withCollapseHardBreaks(boolean enabled) {
-    return toBuilder().collapseHardBreaks(enabled).build();
+    return with(copy -> copy.collapseHardBreaks = enabled);
   }
 
   /// Sets a level-1 title heading prepended to the output; `null`/blank emits no title.
   public MarkdownOptions withDocumentTitle(@Nullable String title) {
-    return toBuilder().documentTitle(title).build();
+    return with(copy -> copy.documentTitle = title);
   }
 
   /// Backslash-escapes literal `(` and `)` in rendered text and image alt text.
   public MarkdownOptions withEscapeParentheses(boolean enabled) {
-    return toBuilder().escapeParentheses(enabled).build();
+    return with(copy -> copy.escapeParentheses = enabled);
   }
 
-  /// Fluent builder for {@link MarkdownOptions}. Unset fields take the {@link #defaults()} values;
-  /// passing `null` to a setter resets that field to its default.
-  public static final class Builder {
+  private MarkdownOptions with(Consumer<Copy> change) {
+    var copy = new Copy(this);
+    change.accept(copy);
+    return new MarkdownOptions(copy);
+  }
 
-    private @Nullable UnknownNodePolicy unknownNodePolicy;
-    private @Nullable ConfluenceRenderContext confluenceContext;
-    private boolean imageSizeAttributes;
-    private @Nullable TableFallback tableFallback;
-    private @Nullable MediaResolver mediaResolver;
-    private boolean htmlVisualMarks;
-    private @Nullable List<ExtensionRenderer> extensionRenderers;
-    private @Nullable AttachmentResolver attachmentResolver;
-    private @Nullable PageLinkResolver pageLinkResolver;
-    private @Nullable PageTreeResolver pageTreeResolver;
-    private @Nullable ExcerptResolver excerptResolver;
-    private boolean collapseHardBreaks;
-    private @Nullable String documentTitle;
-    private boolean escapeParentheses;
+  // The fields of an instance being derived, starting at the defaults.
+  private static final class Copy {
 
-    private Builder() {}
+    UnknownNodePolicy unknownNodePolicy = UnknownNodePolicy.PLACEHOLDER;
+    @Nullable List<AttachmentReference> attachments;
+    boolean imageSizeAttributes;
+    TableFallback tableFallback = TableFallback.GFM_PROMOTE_FIRST_ROW;
+    @Nullable MediaResolver mediaResolver;
+    boolean htmlVisualMarks;
+    List<ExtensionRenderer> extensionRenderers = List.of();
+    @Nullable AttachmentResolver attachmentResolver;
+    @Nullable PageLinkResolver pageLinkResolver;
+    @Nullable PageTreeResolver pageTreeResolver;
+    @Nullable ExcerptResolver excerptResolver;
+    boolean collapseHardBreaks;
+    @Nullable String documentTitle;
+    boolean escapeParentheses;
 
-    public Builder unknownNodePolicy(@Nullable UnknownNodePolicy policy) {
-      this.unknownNodePolicy = policy;
-      return this;
-    }
+    Copy() {}
 
-    public Builder confluenceContext(@Nullable ConfluenceRenderContext context) {
-      this.confluenceContext = context;
-      return this;
-    }
-
-    public Builder imageSizeAttributes(boolean enabled) {
-      this.imageSizeAttributes = enabled;
-      return this;
-    }
-
-    public Builder tableFallback(@Nullable TableFallback fallback) {
-      this.tableFallback = fallback;
-      return this;
-    }
-
-    public Builder mediaResolver(@Nullable MediaResolver resolver) {
-      this.mediaResolver = resolver;
-      return this;
-    }
-
-    public Builder htmlVisualMarks(boolean enabled) {
-      this.htmlVisualMarks = enabled;
-      return this;
-    }
-
-    public Builder extensionRenderers(@Nullable List<ExtensionRenderer> renderers) {
-      this.extensionRenderers = renderers;
-      return this;
-    }
-
-    public Builder attachmentResolver(@Nullable AttachmentResolver resolver) {
-      this.attachmentResolver = resolver;
-      return this;
-    }
-
-    public Builder pageLinkResolver(@Nullable PageLinkResolver resolver) {
-      this.pageLinkResolver = resolver;
-      return this;
-    }
-
-    public Builder pageTreeResolver(@Nullable PageTreeResolver resolver) {
-      this.pageTreeResolver = resolver;
-      return this;
-    }
-
-    public Builder excerptResolver(@Nullable ExcerptResolver resolver) {
-      this.excerptResolver = resolver;
-      return this;
-    }
-
-    public Builder collapseHardBreaks(boolean enabled) {
-      this.collapseHardBreaks = enabled;
-      return this;
-    }
-
-    /// Sets a level-1 title heading prepended to the output; `null`/blank emits no title.
-    public Builder documentTitle(@Nullable String title) {
-      this.documentTitle = title;
-      return this;
-    }
-
-    /// Backslash-escapes literal `(` and `)` in rendered text and image alt text.
-    public Builder escapeParentheses(boolean enabled) {
-      this.escapeParentheses = enabled;
-      return this;
-    }
-
-    public MarkdownOptions build() {
-      return new MarkdownOptions(this);
+    Copy(MarkdownOptions options) {
+      this.unknownNodePolicy = options.unknownNodePolicy;
+      this.attachments = options.attachments;
+      this.imageSizeAttributes = options.imageSizeAttributes;
+      this.tableFallback = options.tableFallback;
+      this.mediaResolver = options.mediaResolver;
+      this.htmlVisualMarks = options.htmlVisualMarks;
+      this.extensionRenderers = options.extensionRenderers;
+      this.attachmentResolver = options.attachmentResolver;
+      this.pageLinkResolver = options.pageLinkResolver;
+      this.pageTreeResolver = options.pageTreeResolver;
+      this.excerptResolver = options.excerptResolver;
+      this.collapseHardBreaks = options.collapseHardBreaks;
+      this.documentTitle = options.documentTitle;
+      this.escapeParentheses = options.escapeParentheses;
     }
   }
 }

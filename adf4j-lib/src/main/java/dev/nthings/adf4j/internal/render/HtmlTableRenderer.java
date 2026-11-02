@@ -16,14 +16,15 @@ import org.jsoup.parser.Tag;
 /// placement). Split out of {@link TableRenderer} so the GFM and HTML paths are separate concerns.
 final class HtmlTableRenderer {
 
-  private final MarkdownRenderingSupport markdownRenderingSupport;
+  private final BlockRenderer blockRenderer;
+  private final CellHtmlRenderer cellHtmlRenderer;
 
-  HtmlTableRenderer(MarkdownRenderingSupport markdownRenderingSupport) {
-    this.markdownRenderingSupport = markdownRenderingSupport;
+  HtmlTableRenderer(BlockRenderer blockRenderer, CellHtmlRenderer cellHtmlRenderer) {
+    this.blockRenderer = blockRenderer;
+    this.cellHtmlRenderer = cellHtmlRenderer;
   }
 
-  String renderHtmlTable(
-      List<TableRow> rows, RendererState context, BlockRecursion recursion, boolean numberColumn) {
+  String renderHtmlTable(List<TableRow> rows, RenderContext context, boolean numberColumn) {
     var table = new Element(Tag.valueOf("table"), "");
     var dataRowIndex = 0;
 
@@ -46,7 +47,7 @@ final class HtmlTableRenderer {
       }
 
       for (var cell : cells) {
-        tableRow.appendChild(renderHtmlTableCell(cell, context, recursion));
+        tableRow.appendChild(renderHtmlTableCell(cell, context));
       }
       table.appendChild(tableRow);
     }
@@ -54,8 +55,7 @@ final class HtmlTableRenderer {
     return HtmlFragments.outerHtml(table);
   }
 
-  private Element renderHtmlTableCell(
-      TableCell cell, RendererState context, BlockRecursion recursion) {
+  private Element renderHtmlTableCell(TableCell cell, RenderContext context) {
     var tag = cell.header() ? "th" : "td";
     var element = new Element(Tag.valueOf(tag), "");
 
@@ -66,61 +66,41 @@ final class HtmlTableRenderer {
       element.attr("rowspan", Integer.toString(cell.rowspan()));
     }
 
-    var value =
-        renderHtmlTableCellContent(
-            cell.content(), context.withTableCell(TableCellKind.HTML), recursion);
-    element.html(value);
+    element.html(joinCellBlocks(cell.content(), context.withSite(InlineSite.HTML_CELL)));
     return element;
   }
 
-  private String renderHtmlTableCellContent(
-      List<AdfBlock> content, RendererState context, BlockRecursion recursion) {
+  private String joinCellBlocks(List<AdfBlock> blocks, RenderContext context) {
     var renderedBlocks = new ArrayList<String>();
-    for (var block : content) {
-      var rendered = renderHtmlTableCellBlock(block, context, recursion);
-      if (rendered != null && !rendered.isBlank()) {
+    for (var block : blocks) {
+      var rendered = renderHtmlTableCellBlock(block, context);
+      if (!rendered.isBlank()) {
         renderedBlocks.add(rendered);
       }
     }
     return String.join("<br>", renderedBlocks);
   }
 
-  private String renderHtmlTableCellBlock(
-      AdfBlock block, RendererState context, BlockRecursion recursion) {
+  private String renderHtmlTableCellBlock(AdfBlock block, RenderContext context) {
     if (block instanceof BulletList bulletList) {
-      return renderHtmlList(bulletList.items(), context, recursion, false, 1);
+      return renderHtmlList(bulletList.items(), context, false, 1);
     }
     if (block instanceof OrderedList orderedList) {
-      return renderHtmlList(orderedList.items(), context, recursion, true, orderedList.order());
+      return renderHtmlList(orderedList.items(), context, true, orderedList.order());
     }
-    return renderHtmlTableCellLeafBlock(block, context, recursion);
-  }
-
-  private String renderHtmlTableCellLeafBlock(
-      AdfBlock block, RendererState context, BlockRecursion recursion) {
-    var rendered =
-        RenderBuffer.joinBlocks(
-                recursion.renderBlock(block, context.withTableCell(TableCellKind.HTML)))
-            .trim();
-    if (rendered.isBlank()) {
-      return "";
-    }
-    return markdownRenderingSupport.renderHtmlFragment(rendered);
+    var rendered = blockRenderer.renderBlock(block, context).trim();
+    return rendered.isBlank() ? "" : cellHtmlRenderer.render(rendered);
   }
 
   private String renderHtmlList(
-      List<ListItem> items,
-      RendererState context,
-      BlockRecursion recursion,
-      boolean ordered,
-      int start) {
+      List<ListItem> items, RenderContext context, boolean ordered, int start) {
     var tag = ordered ? "ol" : "ul";
     var list = new Element(Tag.valueOf(tag), "");
     if (ordered && start != 1) {
       list.attr("start", Integer.toString(start));
     }
     for (var item : items) {
-      var rendered = renderHtmlListItem(item, context, recursion);
+      var rendered = renderHtmlListItem(item, context);
       list.appendChild(rendered);
     }
     if (list.children().isEmpty()) {
@@ -129,18 +109,9 @@ final class HtmlTableRenderer {
     return HtmlFragments.outerHtml(list);
   }
 
-  private Element renderHtmlListItem(
-      ListItem item, RendererState context, BlockRecursion recursion) {
-    var fragments = new ArrayList<String>();
-    for (var block : item.content()) {
-      var rendered =
-          renderHtmlTableCellBlock(block, context.withTableCell(TableCellKind.HTML), recursion);
-      if (rendered != null && !rendered.isBlank()) {
-        fragments.add(rendered);
-      }
-    }
+  private Element renderHtmlListItem(ListItem item, RenderContext context) {
     var element = new Element(Tag.valueOf("li"), "");
-    element.html(String.join("<br>", fragments));
+    element.html(joinCellBlocks(item.content(), context));
     return element;
   }
 }

@@ -8,14 +8,15 @@ import org.jspecify.annotations.Nullable;
 ///
 /// `depth` is the 0-based nesting level; the renderer shifts the shallowest entry to column 0,
 /// so a list starting at depth `1` renders the same as one starting at `0`. `title`
-/// is the visible label (Markdown-escaped). `pageNodeId` is routed through the conversion's
+/// is the visible label (Markdown-escaped); `null` is taken as empty. `pageNodeId` is routed
+// through the conversion's
 /// `pageLinkResolver` (the same hook that rewrites inline page links) to produce the link
 /// destination; an entry whose id is `null` or does not resolve renders as plain text.
 public record PageTreeEntry(int depth, String title, @Nullable String pageNodeId) {
 
-  public PageTreeEntry(int depth, String title, @Nullable String pageNodeId) {
+  public PageTreeEntry(int depth, @Nullable String title, @Nullable String pageNodeId) {
     this.depth = Math.max(0, depth);
-    this.title = title;
+    this.title = title == null ? "" : title;
     this.pageNodeId = pageNodeId;
   }
 }

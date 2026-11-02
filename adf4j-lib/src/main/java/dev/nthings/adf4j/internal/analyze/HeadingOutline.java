@@ -22,13 +22,12 @@ public final class HeadingOutline {
   private final Set<Integer> tocReferencedLevels;
 
   private HeadingOutline(
-      @Nullable List<HeadingReference> headings,
-      @Nullable Map<Heading, HeadingReference> headingsByNode,
-      @Nullable Set<Integer> tocReferencedLevels) {
-    this.headings = headings == null ? List.of() : List.copyOf(headings);
-    this.headingsByNode = headingsByNode == null ? new IdentityHashMap<>() : headingsByNode;
-    this.tocReferencedLevels =
-        tocReferencedLevels == null ? Set.of() : Set.copyOf(tocReferencedLevels);
+      List<HeadingReference> headings,
+      Map<Heading, HeadingReference> headingsByNode,
+      Set<Integer> tocReferencedLevels) {
+    this.headings = List.copyOf(headings);
+    this.headingsByNode = headingsByNode;
+    this.tocReferencedLevels = Set.copyOf(tocReferencedLevels);
   }
 
   public static HeadingOutline empty() {
@@ -37,11 +36,10 @@ public final class HeadingOutline {
 
   // Takes ownership of headingsByNode; the sole caller builds it fresh and never touches it again.
   static HeadingOutline of(
-      @Nullable List<HeadingReference> headings,
-      @Nullable IdentityHashMap<Heading, HeadingReference> headingsByNode,
-      @Nullable Set<Integer> tocReferencedLevels) {
-    if ((headings == null || headings.isEmpty())
-        && (headingsByNode == null || headingsByNode.isEmpty())) {
+      List<HeadingReference> headings,
+      IdentityHashMap<Heading, HeadingReference> headingsByNode,
+      Set<Integer> tocReferencedLevels) {
+    if (headings.isEmpty()) {
       return EMPTY;
     }
     return new HeadingOutline(headings, headingsByNode, tocReferencedLevels);
@@ -51,11 +49,21 @@ public final class HeadingOutline {
     return headings;
   }
 
-  public @Nullable HeadingReference infoFor(Heading heading) {
-    return headingsByNode.get(heading);
+  /// The id of the `<a id>` to emit with a heading, or `null` for none. A heading always keeps its
+  /// explicit anchor, even one that rendered to nothing, where it is all that is left of it. Any
+  /// other non-blank heading in the outline gets its generated anchor when a toc macro covers its
+  /// level, so toc links don't depend on the consumer's slugger matching commonmark's.
+  /// `renderedBlank` comes from the renderer because options decide what renders.
+  public @Nullable String anchorToInject(Heading heading, boolean renderedBlank) {
+    var explicit = HeadingContent.extractAnchorId(heading.content());
+    if (explicit != null || renderedBlank) {
+      return explicit;
+    }
+    var reference = headingsByNode.get(heading);
+    return reference != null && isTocReferenced(heading) ? reference.anchor() : null;
   }
 
-  public boolean isTocReferenced(Heading heading) {
+  boolean isTocReferenced(Heading heading) {
     return tocReferencedLevels.contains(AdfText.clampHeadingLevel(heading.level()));
   }
 }

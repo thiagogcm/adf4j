@@ -2,8 +2,6 @@ package dev.nthings.adf4j.cli;
 
 import static java.util.Objects.requireNonNullElse;
 
-import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
-import dev.nthings.adf4j.metadata.AttachmentReference;
 import dev.nthings.adf4j.metadata.PageTreeMacro;
 import dev.nthings.adf4j.options.AttachmentResolver;
 import dev.nthings.adf4j.options.ExcerptResolver;
@@ -17,158 +15,136 @@ import dev.nthings.adf4j.options.TableFallback;
 import dev.nthings.adf4j.options.UnknownNodePolicy;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.BiFunction;
+import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
-/// Translates the shared rendering/resolver flags into a {@link MarkdownOptions}. Resolvers are
-/// data-driven (URL templates plus JSON lookup tables) and preserve the library's decline-vs-answer
-/// contract: an absent key/entry declines, a present entry answers (an empty value being a valid
-/// empty answer).
+/// Translates the rendering/resolver flags of `convert` into a {@link MarkdownOptions}. Resolvers
+/// are data-driven (URL templates plus JSON lookup tables) and preserve the library's
+/// decline-vs-answer contract: an absent key/entry declines, a present entry answers (an empty
+/// value being a valid empty answer).
 final class RenderConfig {
 
   private static final Set<String> MEDIA_PLACEHOLDERS = Set.of("id", "collection", "localId");
   private static final Set<String> ATTACHMENT_PLACEHOLDERS = Set.of("fileId", "title");
   private static final Set<String> PAGE_PLACEHOLDERS = Set.of("pageId");
+  private static final Set<String> PAGE_TREE_KEYS = Set.of("depth", "title", "pageNodeId");
+  private static final Set<String> EXCERPT_KEYS = Set.of("page", "name", "markdown");
+  private static final Set<String> EXTENSION_KEYS = Set.of("type", "key", "template");
 
   private RenderConfig() {}
 
   static MarkdownOptions build(
       RenderingOptions rendering, ResolverOptions resolvers, CliJson json) {
-    var builder = MarkdownOptions.builder();
-
-    if (rendering.title != null) {
-      builder.documentTitle(rendering.title);
-    }
-    builder.collapseHardBreaks(rendering.collapseHardBreaks);
-    builder.escapeParentheses(rendering.escapeParentheses);
-    builder.imageSizeAttributes(rendering.imageSize);
-    builder.htmlVisualMarks(rendering.htmlVisualMarks);
+    var options =
+        MarkdownOptions.defaults()
+            .withDocumentTitle(rendering.title)
+            .withCollapseHardBreaks(rendering.collapseHardBreaks)
+            .withEscapeParentheses(rendering.escapeParentheses)
+            .withImageSizeAttributes(rendering.imageSize)
+            .withHtmlVisualMarks(rendering.htmlVisualMarks)
+            .withMediaResolver(mediaResolver(resolvers, json))
+            .withAttachmentResolver(attachmentResolver(resolvers, json))
+            .withPageLinkResolver(pageLinkResolver(resolvers, json))
+            .withPageTreeResolver(pageTreeResolver(resolvers, json))
+            .withExcerptResolver(excerptResolver(resolvers, json))
+            .withExtensionRenderers(extensionRenderers(resolvers, json));
     if (rendering.unknownNodes != null) {
-      builder.unknownNodePolicy(enumOption(UnknownNodePolicy.values(), rendering.unknownNodes));
+      options =
+          options.withUnknownNodePolicy(
+              enumOption(UnknownNodePolicy.values(), rendering.unknownNodes));
     }
     if (rendering.tableFallback != null) {
-      builder.tableFallback(enumOption(TableFallback.values(), rendering.tableFallback));
+      options =
+          options.withTableFallback(enumOption(TableFallback.values(), rendering.tableFallback));
     }
-
-    builder.mediaResolver(mediaResolver(resolvers, json));
-    builder.attachmentResolver(attachmentResolver(resolvers, json));
-    builder.pageLinkResolver(pageLinkResolver(resolvers, json));
-    builder.pageTreeResolver(pageTreeResolver(resolvers, json));
-    builder.excerptResolver(excerptResolver(resolvers, json));
-    var extension = extensionRenderer(resolvers, json);
-    if (extension != null) {
-      builder.extensionRenderers(List.of(extension));
-    }
-    builder.confluenceContext(confluenceContext(resolvers, json));
-
-    return builder.build();
+    return options;
   }
 
   // ---- enum options -------------------------------------------------------
 
-  // The CLI spelling of an enum option is the kebab-case of its constant name. Takes the
-  // constants (not the Class) so the native/wasm images stay reflection-free. The parser already
-  // validated the value against the option's allowedValues, so a miss here is a bug (the
+  // Takes the constants (not the Class) so the native image stays reflection-free. The parser
+  // already validated the value against the option's allowedValues, so a miss here is a bug (the
   // annotation list drifted from the enum; OptionContractTest pins them together).
   private static <E extends Enum<E>> E enumOption(E[] constants, String value) {
     for (var constant : constants) {
-      if (kebabCase(constant).equals(value)) {
+      if (CliJson.kebabCase(constant).equals(value)) {
         return constant;
       }
     }
     throw new IllegalStateException("option value '" + value + "' missing from the enum");
   }
 
-  static String kebabCase(Enum<?> constant) {
-    return constant.name().toLowerCase(Locale.ROOT).replace('_', '-');
-  }
-
   // ---- URL-rewriting resolvers (template + map, map wins) -----------------
 
   private static @Nullable MediaResolver mediaResolver(ResolverOptions resolvers, CliJson json) {
     var lookup =
-        urlResolver(
-            resolvers.mediaMap,
-            resolvers.mediaUrl,
-            json,
-            "--media-map",
-            "--media-url",
-            MEDIA_PLACEHOLDERS);
-    return lookup == null
+        new UrlLookup(
+            readStringMap(resolvers.mediaMap, json, "--media-map"),
+            template(resolvers.mediaUrl, MEDIA_PLACEHOLDERS, "--media-url"));
+    return lookup.isUnset()
         ? null
-        : attrs ->
-            lookup.apply(
-                attrs.id(),
+        : media ->
+            lookup.resolve(
+                media.id() == null || media.id().isBlank() ? media.localId() : media.id(),
                 Map.of(
-                    "id", requireNonNullElse(attrs.id(), ""),
-                    "collection", requireNonNullElse(attrs.collection(), ""),
-                    "localId", requireNonNullElse(attrs.localId(), "")));
+                    "id", requireNonNullElse(media.id(), ""),
+                    "collection", requireNonNullElse(media.collection(), ""),
+                    "localId", requireNonNullElse(media.localId(), "")));
   }
 
   private static @Nullable AttachmentResolver attachmentResolver(
       ResolverOptions resolvers, CliJson json) {
     var lookup =
-        urlResolver(
-            resolvers.attachmentMap,
-            resolvers.attachmentUrl,
-            json,
-            "--attachment-map",
-            "--attachment-url",
-            ATTACHMENT_PLACEHOLDERS);
-    return lookup == null
+        new UrlLookup(
+            readStringMap(resolvers.attachmentMap, json, "--attachment-map"),
+            template(resolvers.attachmentUrl, ATTACHMENT_PLACEHOLDERS, "--attachment-url"));
+    return lookup.isUnset()
         ? null
         : reference ->
-            lookup.apply(
+            lookup.resolve(
                 reference.fileId(),
                 Map.of(
-                    "fileId", requireNonNullElse(reference.fileId(), ""),
+                    "fileId", reference.fileId(),
                     "title", requireNonNullElse(reference.title(), "")));
   }
 
   private static @Nullable PageLinkResolver pageLinkResolver(
       ResolverOptions resolvers, CliJson json) {
     var lookup =
-        urlResolver(
-            resolvers.pageMap,
-            resolvers.pageUrl,
-            json,
-            "--page-map",
-            "--page-url",
-            PAGE_PLACEHOLDERS);
-    return lookup == null
+        new UrlLookup(
+            readStringMap(resolvers.pageMap, json, "--page-map"),
+            template(resolvers.pageUrl, PAGE_PLACEHOLDERS, "--page-url"));
+    return lookup.isUnset()
         ? null
-        : pageNodeId ->
-            lookup.apply(pageNodeId, Map.of("pageId", requireNonNullElse(pageNodeId, "")));
+        : pageNodeId -> lookup.resolve(pageNodeId, Map.of("pageId", pageNodeId));
   }
 
-  // (key, placeholders) -> URL: the map wins on a non-blank hit, else the template expands; null
-  // when neither flag was given (so the resolver stays unset and the library keeps its default
-  // behavior).
-  private static @Nullable BiFunction<String, Map<String, String>, @Nullable String> urlResolver(
-      @Nullable String mapPath,
-      @Nullable String urlTemplate,
-      CliJson json,
-      String mapFlag,
-      String urlFlag,
-      Set<String> placeholders) {
-    var map = readStringMap(mapPath, json, mapFlag);
-    var template = template(urlTemplate, placeholders, urlFlag);
-    if (map.isEmpty() && template == null) {
-      return null;
+  // A file map backed by a URL template. Unset when neither flag was given, so the resolver stays
+  // null and the library keeps its default behavior.
+  private record UrlLookup(Map<String, String> map, @Nullable UrlTemplate template) {
+
+    boolean isUnset() {
+      return map.isEmpty() && template == null;
     }
-    return (key, values) -> {
+
+    // The map wins on a non-blank hit, else the template expands. Nothing to look up declines, so
+    // an id-less node keeps the library's placeholder instead of a URL with an empty segment.
+    @Nullable String resolve(@Nullable String key, Map<String, String> values) {
+      if (key == null || key.isBlank()) {
+        return null;
+      }
       var hit = map.get(key);
       if (hit != null && !hit.isBlank()) {
         return hit;
       }
       return template == null ? null : template.expand(values);
-    };
+    }
   }
 
   // ---- structured-data resolvers ------------------------------------------
@@ -179,40 +155,42 @@ final class RenderConfig {
     if (path == null) {
       return null;
     }
-    var root =
-        CliJson.requireObject(json.readFile(Path.of(path), "--page-tree-map"), "--page-tree-map");
-    CliJson.rejectUnknownKeys(root, Set.of("pagetree", "children"), "--page-tree-map");
+    var flag = "--page-tree-map";
+    var root = CliJson.requireObject(json.readFile(Path.of(path), flag), flag);
+    var macros = PageTreeMacro.values();
+    CliJson.rejectUnknownKeys(
+        root, Arrays.stream(macros).map(CliJson::kebabCase).collect(Collectors.toSet()), flag);
     var byMacro = new LinkedHashMap<PageTreeMacro, Map<String, List<PageTreeEntry>>>();
-    byMacro.put(PageTreeMacro.PAGETREE, readPageTreeBucket(root.get("pagetree"), "pagetree"));
-    byMacro.put(PageTreeMacro.CHILDREN, readPageTreeBucket(root.get("children"), "children"));
+    for (var macro : macros) {
+      var name = CliJson.kebabCase(macro);
+      byMacro.put(macro, readPageTreeBucket(root.get(name), flag + " '" + name + "'"));
+    }
 
     return reference -> {
-      var bucket = byMacro.getOrDefault(reference.macro(), Map.of());
       var key = reference.root() == null ? "" : reference.root();
-      return bucket.get(key); // absent key -> null (decline); present (even empty) -> authoritative
+      // absent key -> null (decline); present (even empty) -> authoritative
+      return byMacro.getOrDefault(reference.macro(), Map.of()).get(key);
     };
   }
 
   private static Map<String, List<PageTreeEntry>> readPageTreeBucket(
-      @Nullable JsonNode bucketNode, String name) {
+      @Nullable JsonNode bucketNode, String context) {
     var bucket = new LinkedHashMap<String, List<PageTreeEntry>>();
     if (bucketNode == null || bucketNode.isNull()) {
       return bucket;
     }
-    var object = CliJson.requireObject(bucketNode, "--page-tree-map '" + name + "'");
-    for (var entry : object.properties()) {
+    for (var root : CliJson.requireObject(bucketNode, context).properties()) {
+      var rootContext = context + " root '" + root.getKey() + "'";
+      var entryContext = rootContext + " entry";
       var entries = new ArrayList<PageTreeEntry>();
-      var array =
-          CliJson.requireArray(
-              entry.getValue(), "--page-tree-map '" + name + "/" + entry.getKey() + "'");
-      for (var item : array) {
+      for (var item : CliJson.entries(root.getValue(), rootContext, PAGE_TREE_KEYS)) {
         entries.add(
             new PageTreeEntry(
-                item.path("depth").asInt(),
-                requireNonNullElse(CliJson.string(item, "title"), ""),
-                CliJson.string(item, "pageNodeId")));
+                CliJson.integer(item, "depth", entryContext),
+                CliJson.string(item, "title", entryContext),
+                CliJson.string(item, "pageNodeId", entryContext)));
       }
-      bucket.put(entry.getKey(), List.copyOf(entries));
+      bucket.put(root.getKey(), List.copyOf(entries));
     }
     return bucket;
   }
@@ -223,75 +201,48 @@ final class RenderConfig {
     if (path == null) {
       return null;
     }
-    var array =
-        CliJson.requireArray(json.readFile(Path.of(path), "--excerpt-map"), "--excerpt-map");
+    var flag = "--excerpt-map";
+    var context = flag + " entry";
     var byKey = new LinkedHashMap<ExcerptKey, String>();
-    for (var item : array) {
-      var object = CliJson.requireObject(item, "--excerpt-map entry");
-      CliJson.rejectUnknownKeys(object, Set.of("page", "name", "markdown"), "--excerpt-map entry");
-      var page = CliJson.requireString(object, "page", "--excerpt-map entry");
-      var excerptName = CliJson.string(object, "name"); // null == the unnamed excerpt
+    for (var entry : json.readEntries(path, flag, EXCERPT_KEYS)) {
+      var page = CliJson.requireString(entry, "page", context);
+      var excerptName = CliJson.string(entry, "name", context); // null == the unnamed excerpt
       byKey.put(
           new ExcerptKey(page, excerptName),
-          requireNonNullElse(CliJson.string(object, "markdown"), ""));
+          requireNonNullElse(CliJson.string(entry, "markdown", context), ""));
     }
     return reference -> byKey.get(new ExcerptKey(reference.page(), reference.excerptName()));
   }
 
-  private static @Nullable ExtensionRenderer extensionRenderer(
+  private static List<ExtensionRenderer> extensionRenderers(
       ResolverOptions resolvers, CliJson json) {
     var path = resolvers.extensionMap;
     if (path == null) {
-      return null;
+      return List.of();
     }
-    var array =
-        CliJson.requireArray(json.readFile(Path.of(path), "--extension-map"), "--extension-map");
+    var flag = "--extension-map";
+    var context = flag + " entry";
     var entries = new ArrayList<ExtensionEntry>();
-    for (var item : array) {
-      var object = CliJson.requireObject(item, "--extension-map entry");
-      CliJson.rejectUnknownKeys(object, Set.of("type", "key", "template"), "--extension-map entry");
+    for (var entry : json.readEntries(path, flag, EXTENSION_KEYS)) {
       entries.add(
           new ExtensionEntry(
-              CliJson.string(object, "type"),
-              CliJson.requireString(object, "key", "--extension-map entry"),
-              requireNonNullElse(CliJson.string(object, "template"), "")));
+              CliJson.string(entry, "type", context),
+              CliJson.requireString(entry, "key", context),
+              requireNonNullElse(CliJson.string(entry, "template", context), "")));
     }
-    return context -> {
-      for (var entry : entries) {
-        if (entry.key().equals(context.extensionKey())
-            && (entry.type() == null || entry.type().equals(context.extensionType()))) {
-          // Verbatim per the ExtensionRenderer contract; unknown {tokens} become empty.
-          return UrlTemplate.render(
-              entry.template(), name -> requireNonNullElse(context.parameter(name), ""));
-        }
-      }
-      return null; // no match -> defer to built-in macros
-    };
-  }
-
-  private static ConfluenceRenderContext confluenceContext(
-      ResolverOptions resolvers, CliJson json) {
-    var path = resolvers.attachmentsMap;
-    if (path == null) {
-      return ConfluenceRenderContext.empty();
-    }
-    var array =
-        CliJson.requireArray(
-            json.readFile(Path.of(path), "--attachments-map"), "--attachments-map");
-    var references = new ArrayList<AttachmentReference>();
-    for (var item : array) {
-      var object = CliJson.requireObject(item, "--attachments-map entry");
-      CliJson.rejectUnknownKeys(
-          object, Set.of("fileId", "title", "mediaType", "downloadUrl"), "--attachments-map entry");
-      references.add(
-          new AttachmentReference(
-              CliJson.requireString(object, "fileId", "--attachments-map entry"),
-              CliJson.string(object, "title"),
-              CliJson.string(object, "mediaType"),
-              CliJson.string(object, "downloadUrl")));
-    }
-    // A supplied inventory (even empty) is authoritative: attachmentsSupplied becomes true.
-    return ConfluenceRenderContext.empty().withAttachmentReferences(references);
+    return List.of(
+        extension -> {
+          for (var entry : entries) {
+            if (entry.key().equals(extension.extensionKey())
+                && (entry.type() == null || entry.type().equals(extension.extensionType()))) {
+              // Verbatim per the ExtensionRenderer contract; unknown {tokens} become empty.
+              var macroParams = extension.macroParams();
+              return Placeholders.render(
+                  entry.template(), name -> requireNonNullElse(macroParams.value(name), ""));
+            }
+          }
+          return null; // no match -> defer to built-in macros
+        });
   }
 
   // ---- helpers ------------------------------------------------------------
@@ -309,7 +260,8 @@ final class RenderConfig {
     var object = CliJson.requireObject(json.readFile(Path.of(path), flag), flag);
     var map = new LinkedHashMap<String, String>();
     for (var entry : object.properties()) {
-      map.put(entry.getKey(), entry.getValue().isNull() ? "" : entry.getValue().asString());
+      var key = entry.getKey();
+      map.put(key, requireNonNullElse(CliJson.string(object, key, flag), ""));
     }
     return map;
   }

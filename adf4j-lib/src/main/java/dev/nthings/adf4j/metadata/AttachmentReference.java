@@ -6,7 +6,9 @@ import org.jspecify.annotations.Nullable;
 /// needs), the human `title` (file name, when known), the `mediaType` (an explicit or
 /// extension-inferred MIME type, or `null` when neither is available), and the `downloadUrl`
 /// (the attachment's real URL or path, or `null` when unknown). A non-null `downloadUrl` is the
-/// default link destination, so no resolver callback is needed to produce working links.
+/// default link destination, so no resolver callback is needed to produce working links. Supplied
+/// through `MarkdownOptions.withAttachments`, this is also one entry of a page's attachment
+/// inventory, identified by its `fileId`; its `title` is optional there.
 public record AttachmentReference(
     String fileId,
     @Nullable String title,

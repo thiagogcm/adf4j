@@ -1,7 +1,6 @@
 package dev.nthings.adf4j.internal;
 
 import dev.nthings.adf4j.ast.MacroParams;
-import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
 import dev.nthings.adf4j.metadata.AttachmentReference;
 import java.net.URLConnection;
 import java.util.Locale;
@@ -54,30 +53,33 @@ public final class AttachmentReferences {
     return normalized.indexOf('/') >= 0 ? Boolean.FALSE : null;
   }
 
+  /// The attachment an attachment macro names: its inventory entry by file id, since titles can
+  /// collide, else by title, else a reference built from the macro itself when it carries a file
+  /// id. A title-less entry takes the macro's name.
   public static @Nullable AttachmentReference resolve(
-      @Nullable MacroParams macroParams, @Nullable ConfluenceRenderContext confluenceContext) {
-    if (macroParams == null) {
-      return null;
-    }
-
+      MacroParams macroParams, AttachmentInventory attachments) {
     var name = macroParams.value("name");
-    if (confluenceContext != null) {
-      var resolved = confluenceContext.attachment(name);
-      if (resolved != null) {
-        return resolved;
-      }
-    }
-
     var fileId =
         Strings.firstNonBlank(
             macroParams.value("fileId"),
             macroParams.value("id"),
             macroParams.value("attachmentId"));
-    if (fileId == null) {
-      return null;
-    }
 
-    return new AttachmentReference(fileId, name, inferMediaType(name));
+    var entry = attachments.byFileId(fileId);
+    if (entry == null) {
+      entry = attachments.byTitle(name);
+    }
+    if (entry == null) {
+      return fileId == null ? null : new AttachmentReference(fileId, name, inferMediaType(name));
+    }
+    var title = entry.title();
+    return title != null && !title.isBlank()
+        ? entry
+        : new AttachmentReference(
+            entry.fileId(),
+            name,
+            Strings.firstNonBlank(entry.mediaType(), inferMediaType(name)),
+            entry.downloadUrl());
   }
 
   /// The file name a URL or path carries: its last path segment, or null when none is present.

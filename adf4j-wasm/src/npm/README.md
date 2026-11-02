@@ -18,13 +18,16 @@ import { loadAdf4j } from '@nthings.dev/adf4j-wasm';
 
 const adf4j = await loadAdf4j();
 
-const markdown = adf4j.convert(JSON.stringify({
+const result = adf4j.convert(JSON.stringify({
   version: 1,
   type: 'doc',
   content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Hello from ADF' }] }],
 }));
 
-console.log(markdown);
+if (!result.ok) {
+  throw new Error(result.error);
+}
+console.log(result.body);
 ```
 
 CommonJS works too on Node 22+ and Bun (`const { loadAdf4j } = require('@nthings.dev/adf4j-wasm')`).
@@ -60,7 +63,7 @@ automatically:
 import { loadAdf4j } from '@nthings.dev/adf4j-wasm';
 
 const adf4j = await loadAdf4j();
-console.log(adf4j.convert(adfJsonString));
+console.log(adf4j.convert(adfJsonString).body);
 ```
 
 Both dev (`vite`) and production (`vite build`) work with no other configuration.
@@ -90,23 +93,37 @@ In Node.js you can also pass `imagePath`/`wasmPath` (filesystem paths) or set th
 
 ## API
 
-| Call                          | Returns                                                                    |
-| ----------------------------- | -------------------------------------------------------------------------- |
-| `convert(json, context?)`     | Markdown string.                                                           |
-| `convertJson(json, context?)` | `{ ok, lossy, warnings, errors, body }`, or `{ ok: false, error }` on a hard failure. |
-| `version()`                   | The adf4j version string.                                                  |
+| Call                      | Returns                                                         |
+| ------------------------- | --------------------------------------------------------------- |
+| `convert(json, context?)` | `{ ok, body, wasLossy, diagnostics: [...], error? }`, see below. |
+| `version()`               | The adf4j version string.                                       |
 
-`json` is the ADF document as a JSON **string**. Invalid input does not throw; `convertJson` reports
-it through `errors` and an empty `body`.
+`json` is the ADF document as a JSON **string**. `convert` does not throw on bad input; it reports
+it in the result:
 
-`context` is optional caller-supplied Confluence knowledge, as an object or JSON string. Its
-`attachments` array is the page's attachment inventory (from the Confluence REST API, e.g.
-`GET /wiki/api/v2/pages/{id}/attachments`); when supplied, attachment macros and `media` /
+| Field         | Meaning                                                                                |
+| ------------- | -------------------------------------------------------------------------------------- |
+| `ok`          | `false` on invalid or blank input and on an invalid `context`; `error` then says why.  |
+| `body`        | The Markdown. Don't use it when `ok` is `false`.                                       |
+| `wasLossy`    | `true` when any diagnostic is a `WARNING` or `ERROR`.                                  |
+| `diagnostics` | `[{ code, severity, message }]`, where `severity` is `INFO`, `WARNING` or `ERROR`.     |
+| `error`       | Present only when `ok` is `false`.                                                     |
+
+`context` is optional caller-supplied Confluence knowledge, as an object or JSON string:
+`{ attachments?, title? }`. An unknown key, or anything else that doesn't fit this shape, makes the
+result `ok: false`.
+
+`title` is prepended as an escaped level-1 heading; a blank one emits nothing.
+
+`attachments` is the page's attachment inventory (from the Confluence REST API, e.g.
+`GET /wiki/api/v2/pages/{id}/attachments`). It must be an array of objects, each with a `fileId` and
+optionally `title`, `mediaType` and `downloadUrl`. When supplied, attachment macros and `media` /
 `mediaInline` file nodes link to each attachment's real `downloadUrl` instead of a synthetic
 `media:`/`attachment:` placeholder:
 
 ```js
-const markdown = adf4j.convert(adfJsonString, {
+const result = adf4j.convert(adfJsonString, {
+  title: 'Quarterly report',
   attachments: [
     {
       fileId: 'cd01b020-40c6-4e88-acf8-ddc6dcce835c', // the media file UUID ("fileId" in the REST API)

@@ -3,8 +3,8 @@ body:
 lossy: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -15,8 +15,8 @@ body:
 lossy: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -27,8 +27,8 @@ body:
 lossy: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -39,8 +39,8 @@ body:
 lossy: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -51,8 +51,8 @@ body:
 lossy: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -63,8 +63,8 @@ body:
 lossy: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -75,8 +75,8 @@ body:
 lossy: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -87,8 +87,8 @@ body:
 lossy: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -99,8 +99,8 @@ body:
 lossy: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -111,8 +111,8 @@ body:
 lossy: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -123,8 +123,8 @@ body:
 lossy: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -135,8 +135,8 @@ body:
 lossy: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -147,8 +147,8 @@ body:
 lossy: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -159,8 +159,8 @@ body:
 lossy: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -171,8 +171,8 @@ body:
 lossy: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -183,8 +183,8 @@ body:
 lossy: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -195,8 +195,8 @@ body:
 lossy: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -207,8 +207,8 @@ body:
 lossy: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -219,8 +219,8 @@ body:
 lossy: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -231,8 +231,8 @@ body:
 lossy: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -243,8 +243,8 @@ body:
 lossy: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -255,8 +255,8 @@ body:
 lossy: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []

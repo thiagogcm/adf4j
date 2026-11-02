@@ -3,10 +3,8 @@ package dev.nthings.adf4j.spec;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.nthings.adf4j.AdfToMarkdown;
-import dev.nthings.adf4j.ast.AdfDocument;
-import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
+import dev.nthings.adf4j.ast.AdfExtension;
 import dev.nthings.adf4j.metadata.AttachmentReference;
-import dev.nthings.adf4j.metadata.ExcerptDefinition;
 import dev.nthings.adf4j.options.ExtensionRenderer;
 import dev.nthings.adf4j.options.MarkdownOptions;
 import dev.nthings.adf4j.options.PageTreeEntry;
@@ -35,7 +33,6 @@ class ConversionCharacterizationTests {
 
   private static final String ROOT = "adf/characterization/";
   private static final Path SOURCE_ROOT = Path.of("src/test/resources", ROOT);
-  private static final AdfToMarkdown CONVERTER = AdfToMarkdown.create();
 
   // Non-default presets store only the cases that differ from `defaults`, which keeps them small.
   private static final Map<String, MarkdownOptions> PRESETS = presets();
@@ -68,18 +65,16 @@ class ConversionCharacterizationTests {
 
   private static MarkdownOptions resolvers() {
     ExtensionRenderer dumpingRenderer =
-        extension -> "x".equals(extension.extensionType()) ? describe(extension) : null;
+        extension ->
+            "x".equals(extension.extensionType()) ? describe(ExtensionView.of(extension)) : null;
     return MarkdownOptions.defaults()
-        .withMediaResolver(attrs -> "https://media.example/" + attrs.id())
+        .withMediaResolver(media -> "https://media.example/" + media.id())
         .withAttachmentResolver(reference -> "https://attach.example/" + reference.fileId())
         .withPageLinkResolver(id -> "https://page.example/" + id)
         .withPageTreeResolver(reference -> List.of(new PageTreeEntry(0, "Child", "1")))
         .withExcerptResolver(reference -> "excerpt:" + reference.page())
         .withExtensionRenderers(List.of(dumpingRenderer))
-        .withConfluenceContext(
-            ConfluenceRenderContext.empty()
-                .withAttachmentReferences(
-                    List.of(new AttachmentReference("1", "a.pdf", "application/pdf"))));
+        .withAttachments(List.of(new AttachmentReference("1", "a.pdf", "application/pdf")));
   }
 
   @Test
@@ -132,7 +127,8 @@ class ConversionCharacterizationTests {
   private static String characterize(String adf, MarkdownOptions options) {
     var builder = new StringBuilder();
     try {
-      var result = CONVERTER.convert(adf, options);
+      var converter = AdfToMarkdown.with(options);
+      var result = converter.convert(adf);
       line(builder, "body", result.body());
       line(builder, "lossy", result.wasLossy());
       for (var diagnostic : result.diagnostics()) {
@@ -143,15 +139,15 @@ class ConversionCharacterizationTests {
       }
       line(builder, "unresolved", describe(result.unresolved()));
       var metadata = result.metadata();
-      line(builder, "pageRefs", describe(metadata.pageRefs()));
-      line(builder, "externalRefs", describe(metadata.externalRefs()));
+      line(builder, "pageIds", describe(metadata.pageIds()));
+      line(builder, "externalUrls", describe(metadata.externalUrls()));
       line(builder, "mentionRefs", describe(metadata.mentionRefs()));
       line(builder, "attachmentRefs", describe(metadata.attachmentRefs()));
       line(builder, "pageTreeRefs", describe(metadata.pageTreeRefs()));
       line(builder, "excerptRefs", describe(metadata.excerptRefs()));
       line(builder, "outline", describe(metadata.outline()));
       for (var excerpt : metadata.excerpts()) {
-        line(builder, "excerpt", excerptText(excerpt, options));
+        line(builder, "excerpt", excerpt.name() + ":" + converter.convert(excerpt).body());
       }
     } catch (RuntimeException failure) {
       line(builder, "threw", failure.getClass().getName() + ": " + failure.getMessage());
@@ -159,9 +155,22 @@ class ConversionCharacterizationTests {
     return builder.toString();
   }
 
-  private static String excerptText(ExcerptDefinition excerpt, MarkdownOptions options) {
-    var body = CONVERTER.convert(new AdfDocument(1, excerpt.content()), options).body();
-    return excerpt.name() + ":" + body;
+  // What an extension renderer reads, kept apart from `attrs` so the dump pins the accessors.
+  private record ExtensionView(
+      String extensionType,
+      String extensionKey,
+      String text,
+      Object macroParams,
+      Object parameters) {
+
+    static ExtensionView of(AdfExtension extension) {
+      return new ExtensionView(
+          extension.extensionType(),
+          extension.extensionKey(),
+          extension.text(),
+          extension.macroParams().values(),
+          extension.parameters());
+    }
   }
 
   private static void line(StringBuilder builder, String key, Object value) {

@@ -51,7 +51,7 @@ jobs:
         shell: bash
         run: |
           just native
-          if [ -f adf4j-cli/target/adf4j-cli.exe ] || [ -f adf4j-cli/target/adf4j-cli ]; then
+          if [ -f adf4j-cli/target/adf4j.exe ] || [ -f adf4j-cli/target/adf4j ]; then
             exit 0
           fi
           echo "Executable not found!"

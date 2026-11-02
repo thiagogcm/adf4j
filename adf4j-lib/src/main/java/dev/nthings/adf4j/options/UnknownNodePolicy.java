@@ -1,6 +1,7 @@
 package dev.nthings.adf4j.options;
 
 import dev.nthings.adf4j.result.MarkdownResult;
+import dev.nthings.adf4j.result.UnknownNodeException;
 
 /// How the renderer treats ADF node types it does not recognise.
 public enum UnknownNodePolicy {
@@ -8,7 +9,7 @@ public enum UnknownNodePolicy {
   PLACEHOLDER,
   /// Drop the node from the output entirely.
   SKIP,
-  /// Abort the conversion with an {@link IllegalStateException}.
+  /// Abort the conversion with an {@link UnknownNodeException}.
   FAIL,
   /// Preserve an unknown node's original JSON (a fenced `json` block for a block node, an inline
   /// code span for an inline node) for a round-trippable archive. Covers node *types* only;

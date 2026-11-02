@@ -9,8 +9,9 @@ final class HtmlFragments {
 
   private HtmlFragments() {}
 
+  /// An empty `<a id>` target, or `""` without an id.
   static String anchor(@Nullable String anchor) {
-    if (anchor == null || anchor.isBlank()) {
+    if (anchor == null) {
       return "";
     }
 
@@ -20,10 +21,7 @@ final class HtmlFragments {
   }
 
   /// Escapes the HTML text-significant characters so an ADF string is safe inside element text.
-  static String escapeHtmlText(@Nullable String value) {
-    if (value == null) {
-      return "";
-    }
+  static String escapeHtmlText(String value) {
     return value
         .replace("&", "&amp;")
         .replace("<", "&lt;")

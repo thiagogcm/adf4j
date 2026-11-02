@@ -1,10 +1,9 @@
 package dev.nthings.adf4j.options;
 
-import dev.nthings.adf4j.AdfToMarkdown;
-
-import org.junit.jupiter.api.Test;
-
 import static org.assertj.core.api.Assertions.assertThat;
+
+import dev.nthings.adf4j.AdfToMarkdown;
+import org.junit.jupiter.api.Test;
 
 class TableFallbackOptionsTests {
 
@@ -86,8 +85,7 @@ class TableFallbackOptionsTests {
 
     assertThat(markdown)
         .isEqualTo(
-            "<table><tr><td>a1</td><td>a2</td></tr>"
-                + "<tr><td>b1</td><td>b2</td></tr></table>");
+            "<table><tr><td>a1</td><td>a2</td></tr>" + "<tr><td>b1</td><td>b2</td></tr></table>");
   }
 
   @Test
@@ -127,8 +125,10 @@ class TableFallbackOptionsTests {
 
   @Test
   void html_fallback_preserves_relative_and_http_links_in_a_cell() {
-    // The fallback re-parses cell Markdown to HTML; its URL sanitiser must keep safe/relative hrefs.
-    var adf = """
+    // The fallback re-parses cell Markdown to HTML; its URL sanitiser must keep safe/relative
+    // hrefs.
+    var adf =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -171,5 +171,22 @@ class TableFallbackOptionsTests {
     var markdown = AdfToMarkdown.create().toMarkdown(adf).strip();
 
     assertThat(markdown).contains("href=\"/wiki/page\"").contains("href=\"https://example.com/p\"");
+  }
+
+  @Test
+  void a_captioned_image_in_an_html_cell_keeps_balanced_paragraphs() {
+    var adf =
+        """
+        {"type": "doc", "version": 1, "content": [{"type": "table", "content": [{"type": "tableRow", "content": [
+          {"type": "tableCell", "attrs": {"colspan": 2}, "content": [{"type": "mediaSingle", "content": [
+            {"type": "media", "attrs": {"type": "external", "url": "https://a/1.png"}},
+            {"type": "caption", "content": [{"type": "text", "text": "cap"}]}
+          ]}]}
+        ]}]}]}
+        """;
+
+    var html = AdfToMarkdown.create().toMarkdown(adf);
+
+    assertThat(html).contains("<p>cap</p>").doesNotContain("<p></p>");
   }
 }

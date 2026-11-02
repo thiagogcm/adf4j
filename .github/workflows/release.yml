@@ -151,7 +151,7 @@ jobs:
           VERSION="${{ needs.prepare.outputs.releaseVersion }}"
           NAME="adf4j-cli-${VERSION}-${{ matrix.platform }}"
           mkdir -p "dist/${NAME}"
-          cp adf4j-cli/target/adf4j-cli "dist/${NAME}/adf4j-cli"
+          cp adf4j-cli/target/adf4j "dist/${NAME}/adf4j"
           cp LICENSE README.md "dist/${NAME}/"
           tar -C dist -czf "dist/${NAME}.tar.gz" "${NAME}"
           rm -rf "dist/${NAME}"
@@ -163,10 +163,10 @@ jobs:
           VERSION="${{ needs.prepare.outputs.releaseVersion }}"
           NAME="adf4j-cli-${VERSION}-${{ matrix.platform }}"
           mkdir -p "dist/${NAME}"
-          if [ -f adf4j-cli/target/adf4j-cli.exe ]; then
-            cp adf4j-cli/target/adf4j-cli.exe "dist/${NAME}/adf4j-cli.exe"
+          if [ -f adf4j-cli/target/adf4j.exe ]; then
+            cp adf4j-cli/target/adf4j.exe "dist/${NAME}/adf4j.exe"
           else
-            cp adf4j-cli/target/adf4j-cli "dist/${NAME}/adf4j-cli"
+            cp adf4j-cli/target/adf4j "dist/${NAME}/adf4j"
           fi
           cp LICENSE README.md "dist/${NAME}/"
           (cd dist && 7z a -tzip "${NAME}.zip" "${NAME}" >/dev/null)

@@ -1,5 +1,6 @@
 package dev.nthings.adf4j.internal.render;
 
+import dev.nthings.adf4j.internal.Strings;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -22,28 +23,33 @@ final class MarkdownText {
 
   private MarkdownText() {}
 
-  public static List<String> splitLines(@Nullable String value) {
-    if (value == null) {
-      return List.of();
-    }
+  public static List<String> splitLines(String value) {
     return Arrays.asList(LINE_BREAK_PATTERN.split(value, -1));
   }
 
-  /// Replaces every line break with a single space, reusing the shared precompiled pattern.
-  public static String collapseLineBreaks(String value) {
-    return LINE_BREAK_PATTERN.matcher(value).replaceAll(" ");
+  /// Whether text appended to `text` opens a line: only whitespace follows the last line break, or
+  /// there is no line break and `text` itself started a line.
+  public static boolean endsAtLineStart(CharSequence text, boolean startedAtLineStart) {
+    for (var i = text.length() - 1; i >= 0; i--) {
+      var c = text.charAt(i);
+      if (c == '\n') {
+        return true;
+      }
+      if (!Character.isWhitespace(c)) {
+        return false;
+      }
+    }
+    return startedAtLineStart;
   }
 
   /// A literal `[inner]` label token, fully inline-escaped so it can't parse as a link.
-  public static String labelToken(@Nullable String inner, boolean escapeParentheses) {
-    return escapeInlineText(
-        "[" + Objects.requireNonNullElse(inner, "") + "]", false, escapeParentheses);
+  public static String labelToken(String inner, boolean escapeParentheses) {
+    return escapeInlineText("[" + inner + "]", false, escapeParentheses);
   }
 
   /// A Markdown inline link `[label](url)` from raw operands: the label is inline-escaped and
   /// the destination is scheme-sanitized and escaped.
-  public static String link(
-      @Nullable String label, @Nullable String url, boolean escapeParentheses) {
+  public static String link(@Nullable String label, String url, boolean escapeParentheses) {
     return "["
         + escapeInlineText(label, false, escapeParentheses)
         + "]("
@@ -52,51 +58,44 @@ final class MarkdownText {
   }
 
   /// Like {@link #link} but the label is already-rendered Markdown, emitted verbatim.
-  public static String linkRendered(String label, @Nullable String url) {
+  public static String linkRendered(String label, String url) {
     return "[" + label + "](" + escapeUrlDestination(url) + ")";
   }
 
   /// Like {@link #linkRendered} with a sanitized, one-line, quote-escaped link title.
-  public static String linkRendered(String label, @Nullable String url, @Nullable String title) {
+  public static String linkRendered(String label, String url, String title) {
     return "[" + label + "](" + escapeUrlDestination(url) + " \"" + escapeLinkTitle(title) + "\")";
   }
 
   // A newline inside (... "title") would split the line and break the parse, so collapse breaks
   // first.
-  private static String escapeLinkTitle(@Nullable String title) {
-    return collapseLineBreaks(Objects.requireNonNullElse(title, ""))
-        .replace("\\", "\\\\")
-        .replace("\"", "\\\"");
+  private static String escapeLinkTitle(String title) {
+    return Strings.collapseLineBreaks(title).replace("\\", "\\\\").replace("\"", "\\\"");
   }
 
   /// A fenced code block whose fence is long enough to survive any backtick run in `content`
-  /// (minimum three), with `language` as the info string when non-blank. Null content is treated
-  /// as empty.
-  public static String fencedCodeBlock(@Nullable String content, @Nullable String language) {
-    var body = Objects.requireNonNullElse(content, "");
-    var ticks = "`".repeat(Math.max(3, longestBacktickRun(body) + 1));
+  /// (minimum three), with `language` as the info string when non-blank.
+  public static String fencedCodeBlock(String content, @Nullable String language) {
+    var ticks = "`".repeat(Math.max(3, longestBacktickRun(content) + 1));
     // Info string must be one clean token: backticks/newlines would break the fence.
-    var info = language == null ? "" : collapseLineBreaks(language.replace("`", "")).strip();
+    var info =
+        language == null ? "" : Strings.collapseLineBreaks(language.replace("`", "")).strip();
     var openingFence = (ticks + info).stripTrailing();
-    return "%s\n%s\n%s".formatted(openingFence, body, ticks).stripTrailing();
+    return "%s\n%s\n%s".formatted(openingFence, content, ticks).stripTrailing();
   }
 
   /// An inline code span whose fence exceeds the longest backtick run in `content`, padding a
   /// space each side when the content borders a backtick (CommonMark strips one space per side).
-  /// Null content is treated as empty.
-  public static String inlineCodeSpan(@Nullable String content) {
-    var value = Objects.requireNonNullElse(content, "");
-    var fence = "`".repeat(longestBacktickRun(value) + 1);
+  public static String inlineCodeSpan(String content) {
+    var fence = "`".repeat(longestBacktickRun(content) + 1);
     var needsPadding =
-        !value.isEmpty() && (value.charAt(0) == '`' || value.charAt(value.length() - 1) == '`');
-    return needsPadding ? fence + " " + value + " " + fence : fence + value + fence;
+        !content.isEmpty()
+            && (content.charAt(0) == '`' || content.charAt(content.length() - 1) == '`');
+    return needsPadding ? fence + " " + content + " " + fence : fence + content + fence;
   }
 
-  /// Length of the longest run of consecutive backticks in `value` (0 for null/empty).
-  public static int longestBacktickRun(@Nullable String value) {
-    if (value == null || value.isEmpty()) {
-      return 0;
-    }
+  /// Length of the longest run of consecutive backticks in `value`.
+  public static int longestBacktickRun(String value) {
     var longest = 0;
     var current = 0;
     for (var i = 0; i < value.length(); i++) {
@@ -233,20 +232,19 @@ final class MarkdownText {
     return count;
   }
 
-  /// Backslash-escapes `[` `]` in image alt text, and `(` `)` too when
-  /// `escapeParentheses` is set. Null is treated as empty.
-  public static String escapeAltText(@Nullable String alt, boolean escapeParentheses) {
-    var escaped = Objects.requireNonNullElse(alt, "").replace("[", "\\[").replace("]", "\\]");
+  /// Backslash-escapes `\` `[` `]` in image alt text, and `(` `)` too when
+  /// `escapeParentheses` is set.
+  public static String escapeAltText(String alt, boolean escapeParentheses) {
+    var escaped = alt.replace("\\", "\\\\").replace("[", "\\[").replace("]", "\\]");
     return escapeParentheses ? escaped.replace("(", "\\(").replace(")", "\\)") : escaped;
   }
 
   /// Makes a URL safe inside a markdown `(...)` destination: a dangerous scheme
   /// (javascript:, data:, …) is first defused, then the result is returned unchanged when clean,
   /// wrapped as `<url>` when it holds a space/control char or unbalanced parentheses, or with
-  /// space/parens percent-encoded when angle-wrapping is unavailable. Null/blank is returned
-  /// unchanged.
-  public static @Nullable String escapeUrlDestination(@Nullable String url) {
-    if (url == null || url.isBlank()) {
+  /// space/parens percent-encoded when angle-wrapping is unavailable. Blank is returned unchanged.
+  public static String escapeUrlDestination(String url) {
+    if (url.isBlank()) {
       return url;
     }
 

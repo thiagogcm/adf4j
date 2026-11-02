@@ -35,12 +35,11 @@ await writeFile(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
 
 const imagePath = resolve(root, 'adf4j-wasm/target/adf4j-wasm.js');
 const image = await readFile(imagePath, 'utf8');
-const needle = 'const config = new GraalVM.Config();\nGraalVM.run(load_cmd_args(),config).catch(console.error);';
-const replacement = `const config = new GraalVM.Config();
-if (typeof globalThis.__adf4jWasmPath === "string") {
+const needle = 'const config = new GraalVM.Config();\n';
+const replacement = `${needle}if (typeof globalThis.__adf4jWasmPath === "string") {
     config.wasm_path = globalThis.__adf4jWasmPath;
 }
-GraalVM.run(load_cmd_args(),config).catch(console.error);`;
+`;
 
 if (!image.includes(needle)) {
   throw new Error('could not patch generated GraalVM loader: bootstrap marker not found');

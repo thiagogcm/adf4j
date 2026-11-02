@@ -18,7 +18,7 @@ test('a late conversion cannot overwrite the newly copied page', async () => {
   await second;
   page.conversions[0].resolve({ ok: true, markdown: 'Body A' });
   await first;
-  assert.deepEqual(page.clipboard, ['# Page 456\n\nBody B']);
+  assert.deepEqual(page.clipboard, ['Body B']);
   assert.equal(page.button.dataset.state, 'copied');
 });
 
@@ -97,8 +97,31 @@ test('current conversion errors remain visible and allow a successful retry', as
   await tick();
   page.conversions[1].resolve({ ok: true, markdown: 'Recovered' });
   await retry;
-  assert.deepEqual(page.clipboard, ['# Page 123\n\nRecovered']);
+  assert.deepEqual(page.clipboard, ['Recovered']);
   assert.equal(page.button.dataset.state, 'copied');
+});
+
+test('the page title goes through the conversion context', async () => {
+  const page = browser();
+  const copy = page.click();
+  await tick();
+  assert.equal(page.conversions[0].message.context.title, 'Page 123');
+  assert.equal(page.conversions[0].message.context.attachments.length, 0);
+  page.conversions[0].resolve({ ok: true, markdown: '# Page 123\n\nBody' });
+  await copy;
+  assert.deepEqual(page.clipboard, ['# Page 123\n\nBody']);
+});
+
+test('a failed conversion shows the failure and leaves the clipboard alone', async () => {
+  const page = browser();
+  const copy = page.click();
+  await tick();
+  page.conversions[0].resolve({ ok: false, error: 'Failed to parse ADF JSON payload.' });
+  await copy;
+  assert.deepEqual(page.clipboard, []);
+  assert.equal(page.button.dataset.state, 'failed');
+  assert.equal(page.button.textContent, 'Failed');
+  assert.match(page.button.title, /Failed to parse ADF JSON payload/);
 });
 
 function browser(writeClipboard = async () => {}) {
@@ -156,9 +179,9 @@ function browser(writeClipboard = async () => {}) {
     },
     chrome: {
       runtime: {
-        sendMessage() {
+        sendMessage(message) {
           const conversion = Promise.withResolvers();
-          conversions.push(conversion);
+          conversions.push({ ...conversion, message });
           return conversion.promise;
         },
       },

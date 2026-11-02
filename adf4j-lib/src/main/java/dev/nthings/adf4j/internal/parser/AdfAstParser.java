@@ -69,7 +69,6 @@ import dev.nthings.adf4j.ast.UnknownBlock;
 import dev.nthings.adf4j.ast.UnknownInline;
 import dev.nthings.adf4j.ast.UnknownMark;
 import dev.nthings.adf4j.result.Diagnostic;
-import dev.nthings.adf4j.result.Diagnostic.Severity;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -91,8 +90,6 @@ import tools.jackson.databind.json.JsonMapper;
 /// reported as one `UNPRESERVED_JSON` warning, because writing the document back would drop it.
 /// Stateless and thread-safe; each parse keeps its own report.
 public final class AdfAstParser {
-
-  private static final String UNPRESERVED_JSON = "UNPRESERVED_JSON";
 
   private static final Logger log = LoggerFactory.getLogger(AdfAstParser.class);
   private static final Set<String> NODE_FIELDS = Set.of("attrs", "content", "marks");
@@ -135,13 +132,11 @@ public final class AdfAstParser {
       }
       return List.of(
           new Diagnostic(
-              UNPRESERVED_JSON,
+              Diagnostic.Code.UNPRESERVED_JSON,
               unpreserved
                   + " malformed JSON construct(s) have no place in the AST and would be lost when"
                   + " writing the document, first: "
-                  + firstUnpreserved,
-              null,
-              Severity.WARNING));
+                  + firstUnpreserved));
     }
 
     AdfDocument document(@Nullable JsonNode root) {

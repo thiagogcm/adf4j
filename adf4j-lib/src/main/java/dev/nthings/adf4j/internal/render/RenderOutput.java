@@ -11,7 +11,6 @@ public record RenderOutput(
     String body, List<Diagnostic> diagnostics, UnresolvedReferences unresolved) {
 
   public RenderOutput {
-    diagnostics = diagnostics == null ? List.of() : List.copyOf(diagnostics);
-    unresolved = unresolved == null ? UnresolvedReferences.empty() : unresolved;
+    diagnostics = List.copyOf(diagnostics);
   }
 }

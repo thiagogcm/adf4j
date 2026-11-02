@@ -1,15 +1,13 @@
 package dev.nthings.adf4j.options;
 
-import java.util.List;
-import java.util.Map;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.nthings.adf4j.AdfToMarkdown;
 import dev.nthings.adf4j.metadata.PageTreeMacro;
 import dev.nthings.adf4j.metadata.PageTreeReference;
-
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 class PageTreeResolverOptionsTests {
 
@@ -31,7 +29,8 @@ class PageTreeResolverOptionsTests {
       }
       """;
 
-  // The real-world structure Confluence emits: an inlineExtension nested in a paragraph. This is the
+  // The real-world structure Confluence emits: an inlineExtension nested in a paragraph. This is
+  // the
   // case that shipped as a literal {{pagetree}}; expansion must still produce a block list.
   private static final String INLINE_PAGETREE =
       """
@@ -142,12 +141,15 @@ class PageTreeResolverOptionsTests {
 
   @Test
   void resolver_expands_the_tree_resolving_each_page_node_id_via_the_page_link_resolver() {
-    var options = MarkdownOptions.defaults()
-        .withPageTreeResolver(request -> List.of(
-            new PageTreeEntry(0, "Getting Started", "111"),
-            new PageTreeEntry(1, "Install", "222"),
-            new PageTreeEntry(0, "API Reference", "333")))
-        .withPageLinkResolver(pageNodeId -> "pages/" + pageNodeId + ".md");
+    var options =
+        MarkdownOptions.defaults()
+            .withPageTreeResolver(
+                request ->
+                    List.of(
+                        new PageTreeEntry(0, "Getting Started", "111"),
+                        new PageTreeEntry(1, "Install", "222"),
+                        new PageTreeEntry(0, "API Reference", "333")))
+            .withPageLinkResolver(pageNodeId -> "pages/" + pageNodeId + ".md");
 
     assertThat(AdfToMarkdown.with(options).toMarkdown(PAGETREE))
         .isEqualTo(
@@ -159,28 +161,32 @@ class PageTreeResolverOptionsTests {
 
   @Test
   void resolver_expands_an_inline_pagetree_into_a_block_list() {
-    var options = MarkdownOptions.defaults()
-        .withPageTreeResolver(request -> List.of(new PageTreeEntry(0, "Home", "home")))
-        .withPageLinkResolver(pageNodeId -> "h.md");
+    var options =
+        MarkdownOptions.defaults()
+            .withPageTreeResolver(request -> List.of(new PageTreeEntry(0, "Home", "home")))
+            .withPageLinkResolver(pageNodeId -> "h.md");
 
     assertThat(AdfToMarkdown.with(options).toMarkdown(INLINE_PAGETREE)).isEqualTo("- [Home](h.md)");
   }
 
   @Test
   void resolver_escapes_entry_labels() {
-    var options = MarkdownOptions.defaults()
-        .withPageTreeResolver(request -> List.of(new PageTreeEntry(0, "A & B", "111")))
-        .withPageLinkResolver(pageNodeId -> "https://x/a");
+    var options =
+        MarkdownOptions.defaults()
+            .withPageTreeResolver(request -> List.of(new PageTreeEntry(0, "A & B", "111")))
+            .withPageLinkResolver(pageNodeId -> "https://x/a");
 
-    assertThat(AdfToMarkdown.with(options).toMarkdown(PAGETREE)).isEqualTo("- [A \\& B](https://x/a)");
+    assertThat(AdfToMarkdown.with(options).toMarkdown(PAGETREE))
+        .isEqualTo("- [A \\& B](https://x/a)");
   }
 
   @Test
   void resolver_destinations_are_scheme_sanitized() {
     // A resolved page destination is untrusted input — a dangerous scheme is neutralized.
-    var options = MarkdownOptions.defaults()
-        .withPageTreeResolver(request -> List.of(new PageTreeEntry(0, "x", "111")))
-        .withPageLinkResolver(pageNodeId -> "javascript:alert(1)");
+    var options =
+        MarkdownOptions.defaults()
+            .withPageTreeResolver(request -> List.of(new PageTreeEntry(0, "x", "111")))
+            .withPageLinkResolver(pageNodeId -> "javascript:alert(1)");
 
     assertThat(AdfToMarkdown.with(options).toMarkdown(PAGETREE))
         .isEqualTo("- [x](javascript%3Aalert(1))");
@@ -189,19 +195,22 @@ class PageTreeResolverOptionsTests {
   @Test
   void an_entry_without_a_resolvable_destination_renders_as_plain_text() {
     // A page node id with no PageLinkResolver to resolve it leaves the (escaped) title, not a link.
-    var options = MarkdownOptions.defaults()
-        .withPageTreeResolver(request -> List.of(new PageTreeEntry(0, "Orphan", "999")));
+    var options =
+        MarkdownOptions.defaults()
+            .withPageTreeResolver(request -> List.of(new PageTreeEntry(0, "Orphan", "999")));
 
     assertThat(AdfToMarkdown.with(options).toMarkdown(PAGETREE)).isEqualTo("- Orphan");
   }
 
   @Test
   void entry_depth_is_normalized_so_the_shallowest_entry_sits_at_column_zero() {
-    var options = MarkdownOptions.defaults()
-        .withPageTreeResolver(request -> List.of(
-            new PageTreeEntry(2, "Top", "top"),
-            new PageTreeEntry(3, "Child", "child")))
-        .withPageLinkResolver(pageNodeId -> pageNodeId.equals("top") ? "t" : "c");
+    var options =
+        MarkdownOptions.defaults()
+            .withPageTreeResolver(
+                request ->
+                    List.of(
+                        new PageTreeEntry(2, "Top", "top"), new PageTreeEntry(3, "Child", "child")))
+            .withPageLinkResolver(pageNodeId -> pageNodeId.equals("top") ? "t" : "c");
 
     assertThat(AdfToMarkdown.with(options).toMarkdown(PAGETREE))
         .isEqualTo(
@@ -213,10 +222,13 @@ class PageTreeResolverOptionsTests {
   @Test
   void the_request_carries_the_named_root_and_the_full_parameter_map() {
     var captured = new PageTreeReference[1];
-    var options = MarkdownOptions.defaults().withPageTreeResolver(request -> {
-      captured[0] = request;
-      return List.of(new PageTreeEntry(0, "x", "x"));
-    });
+    var options =
+        MarkdownOptions.defaults()
+            .withPageTreeResolver(
+                request -> {
+                  captured[0] = request;
+                  return List.of(new PageTreeEntry(0, "x", "x"));
+                });
 
     AdfToMarkdown.with(options).toMarkdown(ROOTED_PAGETREE);
 
@@ -230,10 +242,13 @@ class PageTreeResolverOptionsTests {
   @Test
   void the_request_root_is_null_for_a_keyword_root_but_the_keyword_stays_in_the_parameters() {
     var captured = new PageTreeReference[1];
-    var options = MarkdownOptions.defaults().withPageTreeResolver(request -> {
-      captured[0] = request;
-      return List.of();
-    });
+    var options =
+        MarkdownOptions.defaults()
+            .withPageTreeResolver(
+                request -> {
+                  captured[0] = request;
+                  return List.of();
+                });
 
     AdfToMarkdown.with(options).toMarkdown(SELF_ROOTED_PAGETREE);
 
@@ -256,7 +271,8 @@ class PageTreeResolverOptionsTests {
 
   @Test
   void an_empty_resolution_leaves_the_surrounding_blocks_clean() {
-    var adf = """
+    var adf =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -282,9 +298,12 @@ class PageTreeResolverOptionsTests {
   @Test
   void resolver_that_throws_is_contained_and_falls_back_to_the_token() {
     // A failing lookup must not abort the conversion; it degrades to the token (named root kept).
-    var options = MarkdownOptions.defaults().withPageTreeResolver(request -> {
-      throw new RuntimeException("lookup failed");
-    });
+    var options =
+        MarkdownOptions.defaults()
+            .withPageTreeResolver(
+                request -> {
+                  throw new RuntimeException("lookup failed");
+                });
 
     assertThat(AdfToMarkdown.with(options).toMarkdown(ROOTED_PAGETREE))
         .isEqualTo("{{pagetree:Docs Home}}");
@@ -299,11 +318,13 @@ class PageTreeResolverOptionsTests {
 
   @Test
   void the_same_resolver_expands_the_children_macro() {
-    var options = MarkdownOptions.defaults()
-        .withPageTreeResolver(request -> List.of(
-            new PageTreeEntry(0, "First", "1"),
-            new PageTreeEntry(0, "Second", "2")))
-        .withPageLinkResolver(pageNodeId -> pageNodeId + ".md");
+    var options =
+        MarkdownOptions.defaults()
+            .withPageTreeResolver(
+                request ->
+                    List.of(
+                        new PageTreeEntry(0, "First", "1"), new PageTreeEntry(0, "Second", "2")))
+            .withPageLinkResolver(pageNodeId -> pageNodeId + ".md");
 
     assertThat(AdfToMarkdown.with(options).toMarkdown(CHILDREN))
         .isEqualTo(
@@ -315,10 +336,13 @@ class PageTreeResolverOptionsTests {
   @Test
   void the_children_request_reports_the_macro_its_page_root_and_params() {
     var captured = new PageTreeReference[1];
-    var options = MarkdownOptions.defaults().withPageTreeResolver(request -> {
-      captured[0] = request;
-      return List.of(new PageTreeEntry(0, "x", "x"));
-    });
+    var options =
+        MarkdownOptions.defaults()
+            .withPageTreeResolver(
+                request -> {
+                  captured[0] = request;
+                  return List.of(new PageTreeEntry(0, "x", "x"));
+                });
 
     AdfToMarkdown.with(options).toMarkdown(ROOTED_CHILDREN);
 
@@ -337,15 +361,19 @@ class PageTreeResolverOptionsTests {
     assertThat(AdfToMarkdown.with(options).toMarkdown(ROOTED_CHILDREN)).isEqualTo("{{children:2}}");
   }
 
-  // --- typed request parameters -------------------------------------------------------------------
+  // --- typed request parameters
+  // -------------------------------------------------------------------
 
   @Test
   void the_request_parses_the_standard_depth_and_all_parameters() {
     var captured = new PageTreeReference[1];
-    var options = MarkdownOptions.defaults().withPageTreeResolver(request -> {
-      captured[0] = request;
-      return List.of();
-    });
+    var options =
+        MarkdownOptions.defaults()
+            .withPageTreeResolver(
+                request -> {
+                  captured[0] = request;
+                  return List.of();
+                });
 
     AdfToMarkdown.with(options).toMarkdown(ROOTED_CHILDREN);
 
@@ -376,5 +404,23 @@ class PageTreeResolverOptionsTests {
 
   private static PageTreeReference request(Map<String, String> parameters) {
     return new PageTreeReference(PageTreeMacro.CHILDREN, null, parameters);
+  }
+
+  @Test
+  void a_null_title_normalizes_to_empty() {
+    assertThat(new PageTreeEntry(0, null, "1").title()).isEmpty();
+  }
+
+  @Test
+  void a_null_title_from_a_resolver_does_not_abort_the_conversion() {
+    var options =
+        MarkdownOptions.defaults()
+            .withPageLinkResolver(id -> "https://page/" + id)
+            .withPageTreeResolver(
+                request ->
+                    List.of(new PageTreeEntry(0, null, "1"), new PageTreeEntry(0, null, null)));
+
+    assertThat(AdfToMarkdown.with(options).toMarkdown(PAGETREE))
+        .isEqualTo("- [https://page/1](https://page/1)");
   }
 }

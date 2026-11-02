@@ -43,15 +43,38 @@ check('version is reported', () => {
   }
 });
 
+// The Markdown of a conversion that must succeed.
+function markdown(adf, context) {
+  const result = adf4j.convert(adf, context);
+  assert.equal(result.ok, true, JSON.stringify(result));
+  return result.body;
+}
+
+function assertFails(result, error) {
+  assert.equal(result.ok, false);
+  assert.match(result.error, error);
+  assert.deepEqual(Object.keys(result), ['ok', 'body', 'wasLossy', 'diagnostics', 'error']);
+}
+
+const mediaDoc = (id) => doc([
+  { type: 'paragraph', content: [{ type: 'mediaInline', attrs: { id, collection: 'contentId-1' } }] },
+]);
+
+check('the API is convert and version', () => {
+  assert.equal(adf4j.convertJson, undefined);
+  assert.equal(typeof adf4j.convert, 'function');
+  assert.equal(typeof adf4j.version, 'function');
+});
+
 check('heading renders as ATX', () => {
-  const md = adf4j.convert(doc([
+  const md = markdown(doc([
     { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Title' }] },
   ]));
   assert.equal(md.trim(), '## Title');
 });
 
 check('strong + paragraph', () => {
-  const md = adf4j.convert(doc([
+  const md = markdown(doc([
     {
       type: 'paragraph', content: [
         { type: 'text', text: 'hello ' },
@@ -63,7 +86,7 @@ check('strong + paragraph', () => {
 });
 
 check('bullet list', () => {
-  const md = adf4j.convert(doc([
+  const md = markdown(doc([
     {
       type: 'bulletList', content: [
         { type: 'listItem', content: [para('one')] },
@@ -76,33 +99,35 @@ check('bullet list', () => {
 });
 
 check('code block keeps language fence', () => {
-  const md = adf4j.convert(doc([
+  const md = markdown(doc([
     { type: 'codeBlock', attrs: { language: 'js' }, content: [{ type: 'text', text: 'a=1' }] },
   ]));
   assert.match(md, /```js[\s\S]*a=1[\s\S]*```/);
 });
 
-check('convertJson reports a clean (non-lossy) doc', () => {
-  const r = adf4j.convertJson(doc([para('plain text')]));
+check('a clean document has the full result shape and no error', () => {
+  const r = adf4j.convert(doc([para('plain text')]));
+  assert.deepEqual(Object.keys(r), ['ok', 'body', 'wasLossy', 'diagnostics']);
   assert.equal(r.ok, true);
-  assert.equal(r.lossy, false);
+  assert.equal(r.wasLossy, false);
+  assert.deepEqual(r.diagnostics, []);
   assert.equal(r.body.trim(), 'plain text');
 });
 
-check('convertJson preserves quoted text in the body', () => {
-  const r = adf4j.convertJson(doc([para('say "hi"')]));
+check('quoted text survives in the body', () => {
+  assert.equal(markdown(doc([para('say "hi"')])).trim(), 'say "hi"');
+});
+
+check('a warning is lossy, stays ok, and lists its diagnostic', () => {
+  const r = adf4j.convert(doc([{ type: 'bogusBlock' }]));
   assert.equal(r.ok, true);
-  assert.equal(r.body.trim(), 'say "hi"');
+  assert.equal(r.wasLossy, true);
+  assert.equal(r.diagnostics[0].code, 'UNKNOWN_NODE_PLACEHOLDER');
+  assert.equal(r.diagnostics[0].severity, 'WARNING');
 });
 
 check('attachment context turns media file nodes into real links', () => {
-  const adf = doc([
-    {
-      type: 'paragraph', content: [
-        { type: 'mediaInline', attrs: { id: 'file-uuid-1', collection: 'contentId-1' } },
-      ]
-    },
-  ]);
+  const adf = mediaDoc('file-uuid-1');
   const context = {
     attachments: [{
       fileId: 'file-uuid-1',
@@ -111,49 +136,97 @@ check('attachment context turns media file nodes into real links', () => {
       downloadUrl: 'https://example.atlassian.net/wiki/rest/api/content/1/child/attachment/att9/download',
     }],
   };
-  const md = adf4j.convert(adf, context);
+  const md = markdown(adf, context);
   assert.equal(
     md.trim(),
     '[report.xlsx](https://example.atlassian.net/wiki/rest/api/content/1/child/attachment/att9/download)',
   );
   // The same context as a pre-encoded JSON string behaves identically.
-  assert.equal(adf4j.convert(adf, JSON.stringify(context)).trim(), md.trim());
+  assert.equal(markdown(adf, JSON.stringify(context)).trim(), md.trim());
   // Without context the synthetic placeholder remains.
-  assert.equal(adf4j.convert(adf).trim(), '[file](media:contentId-1/file-uuid-1)');
+  assert.equal(markdown(adf).trim(), '[file](media:contentId-1/file-uuid-1)');
 });
 
-check('convertJson accepts the attachment context too', () => {
-  const adf = doc([
-    {
-      type: 'paragraph', content: [
-        { type: 'mediaInline', attrs: { id: 'file-uuid-2', collection: 'contentId-1' } },
-      ]
-    },
-  ]);
-  const r = adf4j.convertJson(adf, {
-    attachments: [{ fileId: 'file-uuid-2', title: 'notes.pdf', mediaType: 'application/pdf', downloadUrl: '/wiki/download/notes.pdf' }],
-  });
-  assert.equal(r.ok, true);
-  assert.equal(r.body.trim(), '[notes.pdf](/wiki/download/notes.pdf)');
+check('an attachment entry needs only a fileId', () => {
+  assert.equal(
+    markdown(mediaDoc('file-uuid-2'), { attachments: [{ fileId: 'file-uuid-2' }] }).trim(),
+    '[file](media:contentId-1/file-uuid-2)',
+  );
 });
 
-check('invalid JSON degrades gracefully (diagnostics, no crash)', () => {
-  // The library does not throw on bad input; it returns an empty body plus error diagnostics.
-  const r = adf4j.convertJson('{not valid json');
-  assert.equal(r.ok, true);
+check('an empty attachments array is an authoritative inventory', () => {
+  assert.equal(markdown(doc([para('x')]), { attachments: [] }).trim(), 'x');
+});
+
+check('context title is a level-1 heading, escaped by the library', () => {
+  assert.equal(markdown(doc([para('body')]), { title: 'My *Page*' }), '# My \\*Page\\*\n\nbody');
+  assert.equal(markdown(doc([para('body')]), { title: '  ' }).trim(), 'body');
+  assert.equal(markdown(doc([para('body')]), { title: null }).trim(), 'body');
+});
+
+check('invalid JSON fails without throwing', () => {
+  const r = adf4j.convert('{not valid json');
+  assertFails(r, /Failed to parse/);
   assert.equal(r.body, '');
-  assert.ok(r.errors > 0, `expected error diagnostics, got ${JSON.stringify(r)}`);
+  assert.equal(r.wasLossy, true);
+  assert.deepEqual(Object.keys(r.diagnostics[0]), ['code', 'severity', 'message']);
+  assert.equal(r.diagnostics[0].code, 'INVALID_JSON');
+  assert.equal(r.diagnostics[0].severity, 'ERROR');
 });
+
+check('an invalid root fails', () => {
+  const r = adf4j.convert(JSON.stringify({ version: 1, type: 'paragraph' }));
+  assertFails(r, /doc/);
+  assert.equal(r.diagnostics[0].code, 'INVALID_ROOT_NODE');
+});
+
+check('blank input fails, with no diagnostic to show for it', () => {
+  const r = adf4j.convert('  ');
+  assertFails(r, /blank/);
+  assert.deepEqual(r.diagnostics, []);
+});
+
+check('a non-string input fails without throwing', () => {
+  assertFails(adf4j.convert(undefined), /blank/);
+  assertFails(adf4j.convert({ type: 'doc' }), /Failed to parse/);
+});
+
+check('a failed title-only conversion is still a failure', () => {
+  const r = adf4j.convert('{not valid json', { title: 'Page' });
+  assertFails(r, /Failed to parse/);
+  assert.equal(r.body.trim(), '# Page');
+});
+
+for (const [name, context, error] of [
+  ['a context that is not JSON', '{nope', /invalid context/],
+  ['a non-object context', [], /context must be an object/],
+  ['a function context', () => {}, /invalid context/],
+  ['an unknown context key', { attachment: [] }, /unknown key 'attachment'/],
+  ['non-array attachments', { attachments: { fileId: 'x' } }, /'attachments' must be an array/],
+  ['null attachments', { attachments: null }, /'attachments' must be an array/],
+  ['a non-object attachment', { attachments: ['x'] }, /attachments entry must be an object/],
+  ['an attachment without fileId', { attachments: [{ title: 't' }] }, /missing 'fileId'/],
+  ['a blank fileId', { attachments: [{ fileId: ' ' }] }, /missing 'fileId'/],
+  ['an unknown attachment key', { attachments: [{ fileId: 'x', url: 'u' }] }, /unknown key 'url'/],
+  ['a non-scalar attachment title', { attachments: [{ fileId: 'x', title: {} }] }, /'title'/],
+  ['a non-scalar context title', { title: ['t'] }, /'title'/],
+]) {
+  check(`invalid context fails: ${name}`, () => {
+    const r = adf4j.convert(doc([para('body')]), context);
+    assertFails(r, error);
+    assert.equal(r.body, '');
+    assert.deepEqual(r.diagnostics, []);
+  });
+}
 
 await checkSampleFile();
 async function checkSampleFile() {
   const adfJson = await readFile(resolve(here, 'sample.adf.json'), 'utf8');
   check('sample.adf.json converts and contains expected fragments', () => {
-    const r = adf4j.convertJson(adfJson);
-    assert.equal(r.ok, true);
-    assert.match(r.body, /# Release notes/);
-    assert.match(r.body, /\*\*WebAssembly\*\*/);
-    assert.match(r.body, /```bash[\s\S]*node run\.mjs convert/);
+    const body = markdown(adfJson);
+    assert.match(body, /# Release notes/);
+    assert.match(body, /\*\*WebAssembly\*\*/);
+    assert.match(body, /```bash[\s\S]*node run\.mjs convert/);
   });
 }
 

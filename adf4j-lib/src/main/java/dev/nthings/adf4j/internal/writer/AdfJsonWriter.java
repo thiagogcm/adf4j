@@ -3,6 +3,7 @@ package dev.nthings.adf4j.internal.writer;
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.ast.AdfMark;
 import dev.nthings.adf4j.ast.AdfNode;
+import dev.nthings.adf4j.ast.AdfUnknown;
 import dev.nthings.adf4j.ast.BlockCard;
 import dev.nthings.adf4j.ast.BlockTaskItem;
 import dev.nthings.adf4j.ast.Blockquote;
@@ -48,7 +49,6 @@ import dev.nthings.adf4j.ast.TaskList;
 import dev.nthings.adf4j.ast.Text;
 import dev.nthings.adf4j.ast.UnknownBlock;
 import dev.nthings.adf4j.ast.UnknownInline;
-import dev.nthings.adf4j.ast.UnknownMark;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.JsonNode;
@@ -76,11 +76,7 @@ public final class AdfJsonWriter {
   }
 
   private JsonNode node(AdfNode node) {
-    return switch (node) {
-      case UnknownBlock unknown -> raw(unknown.rawJson());
-      case UnknownInline unknown -> raw(unknown.rawJson());
-      default -> element(node);
-    };
+    return node instanceof AdfUnknown unknown ? raw(unknown.rawJson()) : element(node);
   }
 
   private ObjectNode element(AdfNode node) {
@@ -106,7 +102,7 @@ public final class AdfJsonWriter {
   }
 
   private JsonNode mark(AdfMark mark) {
-    if (mark instanceof UnknownMark unknown) {
+    if (mark instanceof AdfUnknown unknown) {
       return raw(unknown.rawJson());
     }
     var json = mapper.createObjectNode();

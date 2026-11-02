@@ -3,8 +3,8 @@ package dev.nthings.adf4j.cli;
 import org.aesh.command.option.Option;
 import org.jspecify.annotations.Nullable;
 
-/// Data-driven resolver options (URL templates plus JSON lookup tables) shared by `convert`
-/// and `analyze`, composed via `@Mixin`. {@link RenderConfig} turns these into library resolvers.
+/// Data-driven resolver options (URL templates plus JSON lookup tables) of `convert`, composed via
+/// `@Mixin`. {@link RenderConfig} turns these into library resolvers.
 final class ResolverOptions {
 
   @Option(
@@ -38,11 +38,6 @@ final class ResolverOptions {
       name = "excerpt-map",
       description = "excerpt-include content table file (emitted verbatim)")
   @Nullable String excerptMap;
-
-  @Option(
-      name = "attachments-map",
-      description = "Confluence attachment inventory file for this page")
-  @Nullable String attachmentsMap;
 
   @Option(
       name = "extension-map",

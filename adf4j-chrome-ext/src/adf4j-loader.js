@@ -12,8 +12,8 @@ export const adf4jReady = new Promise((resolve, reject) => {
   globalThis.__adf4jOnReady = () => {
     clearTimeout(timer);
     const api = globalThis.adf4j;
-    if (!api || typeof api.convertJson !== 'function') {
-      reject(new Error('adf4j wasm reported ready but exposed no convertJson().'));
+    if (!api || typeof api.convert !== 'function') {
+      reject(new Error('adf4j wasm reported ready but exposed no convert().'));
       return;
     }
     resolve(api);

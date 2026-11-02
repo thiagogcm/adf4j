@@ -7,7 +7,7 @@
     <parent>
         <groupId>dev.nthings</groupId>
         <artifactId>adf4j-parent</artifactId>
-        <version>1.1.0-SNAPSHOT</version>
+        <version>2.0.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>adf4j-cli</artifactId>
@@ -118,7 +118,7 @@
                             </execution>
                         </executions>
                         <configuration>
-                            <imageName>adf4j-cli</imageName>
+                            <imageName>adf4j</imageName>
                             <mainClass>dev.nthings.adf4j.cli.Main</mainClass>
                             <fallback>false</fallback>
                             <verbose>true</verbose>

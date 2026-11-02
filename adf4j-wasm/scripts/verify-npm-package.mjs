@@ -52,6 +52,8 @@ const doc = JSON.stringify({
   type: 'doc',
   content: [{ type: 'paragraph', content: [{ type: 'text', text: 'npm package' }] }],
 });
-assert.equal(adf4j.convert(doc).trim(), 'npm package', 'convert');
+const result = adf4j.convert(doc);
+assert.equal(result.ok, true, 'convert ok');
+assert.equal(result.body.trim(), 'npm package', 'convert body');
 
 console.log(`ok  ${pkg.name}@${pkg.version} verified at ${pkgDir}`);

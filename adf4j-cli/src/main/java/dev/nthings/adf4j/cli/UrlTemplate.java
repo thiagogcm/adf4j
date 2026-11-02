@@ -4,9 +4,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.UnaryOperator;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /// A resolver URL template such as `https://cdn/{collection}/{id}`. Placeholder names are
 /// validated against `allowed` at construction, so an unknown `{token}` is a usage error before any
@@ -14,41 +11,24 @@ import java.util.regex.Pattern;
 /// template survive), and the library still scheme-sanitizes the result.
 final class UrlTemplate {
 
-  static final Pattern PLACEHOLDER = Pattern.compile("\\{([^}]*)}");
   private static final char[] HEX = "0123456789ABCDEF".toCharArray();
 
   private final String template;
 
   UrlTemplate(String template, Set<String> allowed, String flag) {
     this.template = template;
-    var matcher = PLACEHOLDER.matcher(template);
-    while (matcher.find()) {
-      if (!allowed.contains(matcher.group(1))) {
+    for (var name : Placeholders.names(template)) {
+      if (!allowed.contains(name)) {
         throw CliException.usage(
-            "unknown placeholder '{"
-                + matcher.group(1)
-                + "}' in "
-                + flag
-                + "; allowed: "
-                + allowed);
+            "unknown placeholder '{" + name + "}' in " + flag + "; allowed: " + allowed);
       }
     }
   }
 
   /// Expands the template, percent-encoding each substituted value; an absent key becomes empty.
   String expand(Map<String, String> values) {
-    return render(template, name -> encode(Objects.requireNonNullElse(values.get(name), "")));
-  }
-
-  /// Substitutes `{name}` tokens via `lookup`; shared by URL and extension templates.
-  static String render(String template, UnaryOperator<String> lookup) {
-    var matcher = PLACEHOLDER.matcher(template);
-    var out = new StringBuilder();
-    while (matcher.find()) {
-      matcher.appendReplacement(out, Matcher.quoteReplacement(lookup.apply(matcher.group(1))));
-    }
-    matcher.appendTail(out);
-    return out.toString();
+    return Placeholders.render(
+        template, name -> encode(Objects.requireNonNullElse(values.get(name), "")));
   }
 
   // Encode everything outside the RFC 3986 unreserved set (uppercase hex), so

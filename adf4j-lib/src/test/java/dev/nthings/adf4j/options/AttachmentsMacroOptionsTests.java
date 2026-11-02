@@ -1,14 +1,13 @@
 package dev.nthings.adf4j.options;
 
-import java.util.List;
-
-import dev.nthings.adf4j.AdfToMarkdown;
-import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
-import dev.nthings.adf4j.metadata.AttachmentReference;
-
-import org.junit.jupiter.api.Test;
-
 import static org.assertj.core.api.Assertions.assertThat;
+
+import dev.nthings.adf4j.AdfJson;
+import dev.nthings.adf4j.AdfToMarkdown;
+import dev.nthings.adf4j.metadata.AttachmentReference;
+import dev.nthings.adf4j.result.Diagnostic;
+import java.util.List;
+import org.junit.jupiter.api.Test;
 
 class AttachmentsMacroOptionsTests {
 
@@ -30,13 +29,13 @@ class AttachmentsMacroOptionsTests {
       }
       """;
 
-  private static final List<AttachmentReference> INVENTORY = List.of(
-      new AttachmentReference("file-1", "spec.pdf", "application/pdf"),
-      new AttachmentReference("file-2", "diagram.png", "image/png"));
+  private static final List<AttachmentReference> INVENTORY =
+      List.of(
+          new AttachmentReference("file-1", "spec.pdf", "application/pdf"),
+          new AttachmentReference("file-2", "diagram.png", "image/png"));
 
   private static MarkdownOptions withInventory(List<AttachmentReference> references) {
-    return MarkdownOptions.defaults().withConfluenceContext(
-        ConfluenceRenderContext.empty().withAttachmentReferences(references));
+    return MarkdownOptions.defaults().withAttachments(references);
   }
 
   @Test
@@ -45,29 +44,31 @@ class AttachmentsMacroOptionsTests {
 
     assertThat(result.body())
         .contains("\\[Extension: com.atlassian.confluence.macro.core/attachments\\]");
-    assertThat(result.diagnostics()).anyMatch(d -> "UNSUPPORTED_MACRO".equals(d.code()));
+    assertThat(result.diagnostics()).anyMatch(d -> d.code() == Diagnostic.Code.UNSUPPORTED_MACRO);
   }
 
   @Test
   void a_supplied_inventory_expands_to_a_list_of_attachment_links() {
     var result = AdfToMarkdown.with(withInventory(INVENTORY)).convert(ATTACHMENTS_MACRO);
 
-    assertThat(result.body()).isEqualTo(
-        """
+    assertThat(result.body())
+        .isEqualTo(
+            """
         - [spec.pdf](attachment:file-1)
         - [diagram.png](attachment:file-2)""");
-    assertThat(result.diagnostics()).noneMatch(d -> "UNSUPPORTED_MACRO".equals(d.code()));
+    assertThat(result.diagnostics()).noneMatch(d -> d.code() == Diagnostic.Code.UNSUPPORTED_MACRO);
   }
 
   @Test
   void an_attachment_resolver_supplies_the_link_destinations() {
-    var options = withInventory(INVENTORY)
-        .withAttachmentResolver(reference -> "files/" + reference.title());
+    var options =
+        withInventory(INVENTORY).withAttachmentResolver(reference -> "files/" + reference.title());
 
     var result = AdfToMarkdown.with(options).convert(ATTACHMENTS_MACRO);
 
-    assertThat(result.body()).isEqualTo(
-        """
+    assertThat(result.body())
+        .isEqualTo(
+            """
         - [spec.pdf](files/spec.pdf)
         - [diagram.png](files/diagram.png)""");
   }
@@ -77,19 +78,55 @@ class AttachmentsMacroOptionsTests {
     var result = AdfToMarkdown.with(withInventory(List.of())).convert(ATTACHMENTS_MACRO);
 
     assertThat(result.body()).isEmpty();
-    assertThat(result.diagnostics()).noneMatch(d -> "UNSUPPORTED_MACRO".equals(d.code()));
+    assertThat(result.diagnostics()).noneMatch(d -> d.code() == Diagnostic.Code.UNSUPPORTED_MACRO);
   }
 
   @Test
   void a_supplied_inventory_is_referenced_in_metadata() {
-    var metadata = AdfToMarkdown.with(withInventory(INVENTORY)).analyze(ATTACHMENTS_MACRO);
+    var metadata =
+        AdfToMarkdown.with(withInventory(INVENTORY)).analyze(AdfJson.parse(ATTACHMENTS_MACRO));
 
     assertThat(metadata.referencedFileIds()).containsExactly("file-1", "file-2");
   }
 
   @Test
+  void a_title_less_entry_is_listed_and_referenced_under_its_file_id() {
+    var inventory =
+        List.of(
+            new AttachmentReference("file-1", null, null, "https://cdn.example.com/1"),
+            new AttachmentReference("file-2", "  ", null));
+    var converter = AdfToMarkdown.with(withInventory(inventory));
+
+    var result = converter.convert(ATTACHMENTS_MACRO);
+
+    assertThat(result.body())
+        .isEqualTo(
+            """
+            - [file-1](https://cdn.example.com/1)
+            - [file-2](attachment:file-2)""");
+    assertThat(result.metadata().referencedFileIds()).containsExactly("file-1", "file-2");
+  }
+
+  @Test
+  void attachments_sharing_a_title_are_both_listed() {
+    var inventory =
+        List.of(
+            new AttachmentReference("file-1", "report.pdf", "application/pdf"),
+            new AttachmentReference("file-2", " REPORT.pdf ", "application/pdf"));
+
+    var result = AdfToMarkdown.with(withInventory(inventory)).convert(ATTACHMENTS_MACRO);
+
+    assertThat(result.body())
+        .isEqualTo(
+            """
+            - [report.pdf](attachment:file-1)
+            - [ REPORT.pdf ](attachment:file-2)""");
+    assertThat(result.metadata().referencedFileIds()).containsExactly("file-1", "file-2");
+  }
+
+  @Test
   void without_a_context_the_macro_contributes_no_attachment_refs() {
-    var metadata = AdfToMarkdown.create().analyze(ATTACHMENTS_MACRO);
+    var metadata = AdfToMarkdown.create().analyze(AdfJson.parse(ATTACHMENTS_MACRO));
 
     assertThat(metadata.attachmentRefs()).isEmpty();
   }

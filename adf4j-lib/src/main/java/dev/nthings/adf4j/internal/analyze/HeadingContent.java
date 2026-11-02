@@ -3,7 +3,7 @@ package dev.nthings.adf4j.internal.analyze;
 import dev.nthings.adf4j.ast.AdfInline;
 import dev.nthings.adf4j.ast.HardBreak;
 import dev.nthings.adf4j.ast.InlineExtension;
-import dev.nthings.adf4j.internal.ConfluenceSupport;
+import dev.nthings.adf4j.internal.analyze.ConfluenceMacro.Anchor;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
@@ -16,11 +16,7 @@ public final class HeadingContent {
 
   /// The heading's significant inline nodes: leading/trailing {@link HardBreak}s trimmed and any
   /// Confluence `anchor` macro removed (its id is read separately via {@link #extractAnchorId}).
-  public static List<AdfInline> normalizedHeadingNodes(@Nullable List<AdfInline> content) {
-    if (content == null || content.isEmpty()) {
-      return List.of();
-    }
-
+  public static List<AdfInline> normalizedHeadingNodes(List<AdfInline> content) {
     var start = 0;
     while (start < content.size() && content.get(start) instanceof HardBreak) {
       start++;
@@ -36,37 +32,20 @@ public final class HeadingContent {
     return content.subList(start, end).stream().filter(node -> !isAnchorExtension(node)).toList();
   }
 
-  /// True iff the heading carries an explicit Confluence `anchor` macro with a non-blank id.
-  public static boolean hasExplicitAnchor(@Nullable List<AdfInline> content) {
-    // extractAnchorId only ever returns null or a non-blank id.
-    return extractAnchorId(content) != null;
-  }
-
-  /// The id of the heading's explicit Confluence `anchor` macro, or `null` if none.
-  public static @Nullable String extractAnchorId(@Nullable List<AdfInline> content) {
-    if (content == null || content.isEmpty()) {
-      return null;
-    }
+  /// The id of the heading's first Confluence `anchor` macro that has one, or `null` if none.
+  static @Nullable String extractAnchorId(List<AdfInline> content) {
     for (var node : content) {
-      if (!(node instanceof InlineExtension extension)) {
-        continue;
-      }
-      if (!isAnchorExtension(extension)) {
-        continue;
-      }
-      var anchorId = ConfluenceSupport.anchorId(extension.macroParams());
-      if (anchorId != null && !anchorId.isBlank()) {
-        return anchorId;
+      if (node instanceof InlineExtension extension
+          && ConfluenceMacro.of(extension) instanceof Anchor(var id)
+          && id != null) {
+        return id;
       }
     }
     return null;
   }
 
   private static boolean isAnchorExtension(AdfInline node) {
-    if (!(node instanceof InlineExtension extension)) {
-      return false;
-    }
-    return ConfluenceSupport.isConfluenceMacroExtension(extension.extensionType())
-        && "anchor".equals(extension.extensionKey());
+    return node instanceof InlineExtension extension
+        && ConfluenceMacro.of(extension) instanceof Anchor;
   }
 }

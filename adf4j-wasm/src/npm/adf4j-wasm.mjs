@@ -1,5 +1,5 @@
 // Loads the adf4j GraalVM Web Image (WebAssembly) and returns a small JS-native API. The generated
-// image script runs Java `main`, publishes `globalThis.adf4j = { convert, convertJson, version }`,
+// image script runs Java `main`, publishes `globalThis.adf4j = { convert, version }`,
 // then calls `globalThis.__adf4jOnReady()`. This wrapper installs that callback first and evaluates
 // the generated image, which self-detects its host (Node.js, Bun, Deno, or a browser).
 
@@ -17,8 +17,7 @@ let cached;
  *           imageUrl?: string | URL,
  *           wasmPath?: string,
  *           wasmUrl?: string | URL }} [opts]
- * @returns {Promise<{ convert(json: string, context?: object | string): string,
- *                     convertJson(json: string, context?: object | string): object,
+ * @returns {Promise<{ convert(json: string, context?: object | string): object,
  *                     version(): string }>}
  */
 export function loadAdf4j(opts = {}) {

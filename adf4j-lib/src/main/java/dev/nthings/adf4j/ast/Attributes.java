@@ -18,8 +18,8 @@ import org.jspecify.annotations.Nullable;
 /// numeric types are widened to these and anything else is rejected, so equal documents compare
 /// equal. Map keys and values are never null, but a nested list may contain null elements so a JSON
 /// `null` keeps its array index. This keeps the core AST free of any product-specific or
-/// JSON-library types. Product layers such as the `confluence` package read their extras from here,
-/// which keeps the dependency pointing from those layers to the AST and never the other way around.
+/// JSON-library types. Product-specific code reads its extras from here, which keeps the dependency
+/// pointing from that code to the AST and never the other way around.
 public record Attributes(Map<String, Object> values) {
 
   private static final Attributes EMPTY = new Attributes(Map.of());
@@ -166,7 +166,6 @@ public record Attributes(Map<String, Object> values) {
       case BigDecimal number -> normalized(number);
       case Map<?, ?> nested -> normalizedMap((Map<String, ?>) nested);
       case List<?> nested -> normalizedList(nested);
-      case Attributes nested -> nested.values();
       default ->
           throw new IllegalArgumentException("Not a JSON value: " + value.getClass().getName());
     };

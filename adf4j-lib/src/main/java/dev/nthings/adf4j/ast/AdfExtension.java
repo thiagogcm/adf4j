@@ -4,11 +4,8 @@ import org.jspecify.annotations.Nullable;
 
 /// The fields shared by the extension nodes ({@link Extension}, {@link BodiedExtension},
 /// {@link MultiBodiedExtension}, {@link InlineExtension}), read from their `attrs`.
-public sealed interface AdfExtension
+public sealed interface AdfExtension extends AdfNode
     permits Extension, BodiedExtension, MultiBodiedExtension, InlineExtension {
-
-  /// The node's raw ADF attributes.
-  Attributes attrs();
 
   /// The extension namespace, e.g. `com.atlassian.confluence.macro.core`.
   default @Nullable String extensionType() {

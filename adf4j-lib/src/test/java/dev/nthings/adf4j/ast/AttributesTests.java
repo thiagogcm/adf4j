@@ -47,7 +47,11 @@ class AttributesTests {
     list.add(2);
 
     assertThat(attributes.object("k").values().get("list")).isEqualTo(Arrays.asList(1L, null));
-    assertThat(one(one(1)).object("k")).isEqualTo(one(1));
+  }
+
+  @Test
+  void attributes_are_not_a_json_value() {
+    assertThatThrownBy(() -> one(one(1))).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test

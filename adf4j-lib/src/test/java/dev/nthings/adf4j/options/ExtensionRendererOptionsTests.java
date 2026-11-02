@@ -1,12 +1,14 @@
 package dev.nthings.adf4j.options;
 
-import java.util.List;
+import static dev.nthings.adf4j.testing.AdfSnippets.doc;
+import static dev.nthings.adf4j.testing.AdfSnippets.macro;
+import static dev.nthings.adf4j.testing.AdfSnippets.paragraph;
+import static dev.nthings.adf4j.testing.AdfSnippets.text;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.nthings.adf4j.AdfToMarkdown;
-
+import java.util.List;
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 class ExtensionRendererOptionsTests {
 
@@ -58,7 +60,7 @@ class ExtensionRendererOptionsTests {
     return extension -> {
       if ("com.acme.macros".equals(extension.extensionType())
           && "jira-issue".equals(extension.extensionKey())) {
-        return body.formatted(extension.parameter("key"));
+        return body.formatted(extension.macroParams().value("key"));
       }
       return null;
     };
@@ -75,7 +77,8 @@ class ExtensionRendererOptionsTests {
   void a_custom_renderer_renders_a_block_extension() {
     var options =
         MarkdownOptions.defaults()
-            .withExtensionRenderers(List.of(jiraIssue("[%1$s](https://jira.example.com/browse/%1$s)")));
+            .withExtensionRenderers(
+                List.of(jiraIssue("[%1$s](https://jira.example.com/browse/%1$s)")));
     var markdown = AdfToMarkdown.with(options).toMarkdown(BLOCK_EXTENSION).strip();
 
     assertThat(markdown).isEqualTo("[PROJ-42](https://jira.example.com/browse/PROJ-42)");
@@ -100,9 +103,10 @@ class ExtensionRendererOptionsTests {
 
   @Test
   void a_renderer_that_throws_is_contained_and_falls_through_to_the_default() {
-    ExtensionRenderer throwing = extension -> {
-      throw new RuntimeException("boom");
-    };
+    ExtensionRenderer throwing =
+        extension -> {
+          throw new RuntimeException("boom");
+        };
     var options = MarkdownOptions.defaults().withExtensionRenderers(List.of(throwing));
     var markdown = AdfToMarkdown.with(options).toMarkdown(BLOCK_EXTENSION).strip();
 
@@ -117,5 +121,24 @@ class ExtensionRendererOptionsTests {
     var markdown = AdfToMarkdown.with(options).toMarkdown(BLOCK_EXTENSION).strip();
 
     assertThat(markdown).isEqualTo("first:PROJ-42");
+  }
+
+  @Test
+  void a_custom_renderer_sees_a_bodied_excerpt_and_the_engine_still_renders_its_body() {
+    var excerpt = doc(macro("bodiedExtension", "excerpt", "{}", paragraph(text("Body"))));
+    var options =
+        MarkdownOptions.defaults()
+            .withExtensionRenderers(
+                List.of(node -> "excerpt".equals(node.extensionKey()) ? "Header" : null));
+
+    assertThat(AdfToMarkdown.with(options).toMarkdown(excerpt)).isEqualTo("Header\n\nBody");
+  }
+
+  @Test
+  void a_bodied_excerpt_stays_transparent_when_every_renderer_declines() {
+    var excerpt = doc(macro("bodiedExtension", "excerpt", "{}", paragraph(text("Body"))));
+    var options = MarkdownOptions.defaults().withExtensionRenderers(List.of(_ -> null));
+
+    assertThat(AdfToMarkdown.with(options).toMarkdown(excerpt)).isEqualTo("Body");
   }
 }

@@ -7,6 +7,7 @@ import org.jspecify.annotations.Nullable;
 public final class Strings {
 
   private static final Pattern WHITESPACE_RUN = Pattern.compile("\\s+");
+  private static final Pattern LINE_BREAK = Pattern.compile("\\R");
 
   private Strings() {}
 
@@ -38,6 +39,11 @@ public final class Strings {
       }
     }
     return null;
+  }
+
+  /// Every line break replaced by a single space.
+  public static String collapseLineBreaks(String value) {
+    return LINE_BREAK.matcher(value).replaceAll(" ");
   }
 
   /// Every whitespace run (including line breaks) replaced by a single space.

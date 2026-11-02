@@ -14,7 +14,6 @@ import dev.nthings.adf4j.ast.UnknownInline;
 import dev.nthings.adf4j.ast.UnknownMark;
 import dev.nthings.adf4j.options.UnknownNodePolicy;
 import dev.nthings.adf4j.result.Diagnostic;
-import dev.nthings.adf4j.result.Diagnostic.Severity;
 import java.util.ArrayList;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
@@ -73,10 +72,8 @@ final class AdfLossinessCollector implements NodeVisitor {
     if (unknownMarks > 0) {
       issues.add(
           new Diagnostic(
-              "UNKNOWN_MARK_DROPPED",
-              unknownMarks + " unsupported mark(s) dropped from the output.",
-              null,
-              Severity.WARNING));
+              Diagnostic.Code.UNKNOWN_MARK_DROPPED,
+              unknownMarks + " unsupported mark(s) dropped from the output."));
     }
     return List.copyOf(issues);
   }
@@ -85,23 +82,17 @@ final class AdfLossinessCollector implements NodeVisitor {
     return switch (policy) {
       case PLACEHOLDER ->
           new Diagnostic(
-              "UNKNOWN_NODE_PLACEHOLDER",
+              Diagnostic.Code.UNKNOWN_NODE_PLACEHOLDER,
               unknownNodes
-                  + " unsupported node(s) rendered as placeholders; original content not represented.",
-              null,
-              Severity.WARNING);
+                  + " unsupported node(s) rendered as placeholders; original content not represented.");
       case SKIP ->
           new Diagnostic(
-              "UNKNOWN_NODE_SKIPPED",
-              unknownNodes + " unsupported node(s) dropped from the output.",
-              null,
-              Severity.WARNING);
+              Diagnostic.Code.UNKNOWN_NODE_SKIPPED,
+              unknownNodes + " unsupported node(s) dropped from the output.");
       case PRESERVE_RAW ->
           new Diagnostic(
-              "UNKNOWN_NODE_PRESERVED",
-              unknownNodes + " unsupported node(s) preserved as raw JSON.",
-              null,
-              Severity.INFO);
+              Diagnostic.Code.UNKNOWN_NODE_PRESERVED,
+              unknownNodes + " unsupported node(s) preserved as raw JSON.");
       // FAIL aborts the render with an exception, so there is no result to diagnose.
       case FAIL -> null;
     };

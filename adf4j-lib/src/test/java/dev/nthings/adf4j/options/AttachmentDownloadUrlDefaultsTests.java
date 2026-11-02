@@ -3,7 +3,6 @@ package dev.nthings.adf4j.options;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.nthings.adf4j.AdfToMarkdown;
-import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
 import dev.nthings.adf4j.metadata.AttachmentReference;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -79,9 +78,7 @@ class AttachmentDownloadUrlDefaultsTests {
       """;
 
   private static MarkdownOptions withInventory(AttachmentReference... references) {
-    return MarkdownOptions.defaults()
-        .withConfluenceContext(
-            ConfluenceRenderContext.empty().withAttachmentReferences(List.of(references)));
+    return MarkdownOptions.defaults().withAttachments(List.of(references));
   }
 
   @Test
@@ -93,6 +90,52 @@ class AttachmentDownloadUrlDefaultsTests {
     var markdown = AdfToMarkdown.with(options).toMarkdown(VIEWPDF).strip();
 
     assertThat(markdown).isEqualTo("[PDF: guide.pdf](" + DOWNLOAD_URL + ")");
+  }
+
+  @Test
+  void a_title_less_entry_supplies_its_download_url_to_media_by_file_id() {
+    var options =
+        withInventory(
+            new AttachmentReference(
+                "cd01b020-40c6-4e88-acf8-ddc6dcce835c", null, "image/png", DOWNLOAD_URL));
+
+    var markdown = AdfToMarkdown.with(options).toMarkdown(MEDIA_SINGLE).strip();
+
+    assertThat(markdown).isEqualTo("![media](" + DOWNLOAD_URL + ")");
+  }
+
+  @Test
+  void a_macro_reaches_a_title_less_entry_by_file_id() {
+    var viewPdf =
+        """
+        {"type": "doc", "version": 1, "content": [
+          {"type": "extension", "attrs": {
+            "extensionType": "com.atlassian.confluence.macro.core",
+            "extensionKey": "viewpdf",
+            "parameters": {"macroParams": {
+              "name": {"value": "guide.pdf"}, "fileId": {"value": "file-pdf-1"}
+            }}
+          }}
+        ]}
+        """;
+    var options = withInventory(new AttachmentReference("file-pdf-1", null, null, DOWNLOAD_URL));
+
+    var markdown = AdfToMarkdown.with(options).toMarkdown(viewPdf).strip();
+
+    assertThat(markdown).isEqualTo("[PDF: guide.pdf](" + DOWNLOAD_URL + ")");
+  }
+
+  @Test
+  void the_second_attachment_sharing_a_title_keeps_its_download_url() {
+    var first = new AttachmentReference("first", "report.png", "image/png", "https://x/first");
+    var second =
+        new AttachmentReference(
+            "cd01b020-40c6-4e88-acf8-ddc6dcce835c", "report.png", "image/png", DOWNLOAD_URL);
+
+    var markdown =
+        AdfToMarkdown.with(withInventory(first, second)).toMarkdown(MEDIA_SINGLE).strip();
+
+    assertThat(markdown).isEqualTo("![report.png](" + DOWNLOAD_URL + ")");
   }
 
   @Test

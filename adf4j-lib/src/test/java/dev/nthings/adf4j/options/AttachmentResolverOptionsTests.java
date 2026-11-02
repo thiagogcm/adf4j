@@ -1,14 +1,11 @@
 package dev.nthings.adf4j.options;
 
-import java.util.List;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.nthings.adf4j.AdfToMarkdown;
-import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
 import dev.nthings.adf4j.metadata.AttachmentReference;
-
+import java.util.List;
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 class AttachmentResolverOptionsTests {
 
@@ -33,10 +30,8 @@ class AttachmentResolverOptionsTests {
 
   private static MarkdownOptions withAttachmentContext(AttachmentResolver resolver) {
     return MarkdownOptions.defaults()
-        .withConfluenceContext(
-            ConfluenceRenderContext.empty()
-                .withAttachmentReferences(
-                    List.of(new AttachmentReference("file-pdf-1", "guide.pdf", "application/pdf"))))
+        .withAttachments(
+            List.of(new AttachmentReference("file-pdf-1", "guide.pdf", "application/pdf")))
         .withAttachmentResolver(resolver);
   }
 
@@ -51,8 +46,7 @@ class AttachmentResolverOptionsTests {
 
   @Test
   void resolver_turns_the_resolved_attachment_into_a_local_path() {
-    var options =
-        withAttachmentContext(reference -> "files/" + reference.title());
+    var options = withAttachmentContext(reference -> "files/" + reference.title());
 
     var markdown = AdfToMarkdown.with(options).toMarkdown(VIEWPDF).strip();
 
@@ -67,8 +61,7 @@ class AttachmentResolverOptionsTests {
 
     var markdown = AdfToMarkdown.with(options).toMarkdown(VIEWPDF).strip();
 
-    assertThat(markdown)
-        .isEqualTo("[PDF: guide.pdf](/blobs/file-pdf-1?type=application/pdf)");
+    assertThat(markdown).isEqualTo("[PDF: guide.pdf](/blobs/file-pdf-1?type=application/pdf)");
   }
 
   @Test
@@ -101,12 +94,10 @@ class AttachmentResolverOptionsTests {
         """;
     var options =
         MarkdownOptions.defaults()
-            .withConfluenceContext(
-                ConfluenceRenderContext.empty()
-                    .withAttachmentReferences(
-                        List.of(
-                            new AttachmentReference(
-                                "file-pdf-1", "Report [final]*.pdf", "application/pdf"))));
+            .withAttachments(
+                List.of(
+                    new AttachmentReference(
+                        "file-pdf-1", "Report [final]*.pdf", "application/pdf")));
 
     var markdown = AdfToMarkdown.with(options).toMarkdown(hostileViewpdf).strip();
 

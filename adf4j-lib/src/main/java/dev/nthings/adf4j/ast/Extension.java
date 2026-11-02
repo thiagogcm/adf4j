@@ -8,8 +8,8 @@ import java.util.List;
 /// `macroParams` is the flattened `parameters.macroParams` value map that most macros use, while
 /// `parameters` is the full raw `parameters` envelope. Some extensions keep their data outside
 /// `macroParams`, and that is the only place it surfaces. Consumers extend rendering through an
-/// `ExtensionRenderer`, which sees this same data via an `ExtensionContext`. For an extension
-/// with body content see {@link BodiedExtension}/{@link MultiBodiedExtension}; for the inline
+/// `ExtensionRenderer`, which receives the node itself. For an extension with body content see
+// {@link BodiedExtension}/{@link MultiBodiedExtension}; for the inline
 /// form see {@link InlineExtension}.
 public record Extension(Attributes attrs, List<AdfMark> marks)
     implements AdfBlock,

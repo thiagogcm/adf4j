@@ -1,24 +1,23 @@
 package dev.nthings.adf4j;
 
-import java.util.List;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
 import dev.nthings.adf4j.metadata.AttachmentReference;
 import dev.nthings.adf4j.metadata.ContentMetadata;
 import dev.nthings.adf4j.options.MarkdownOptions;
 import dev.nthings.adf4j.options.UnknownNodePolicy;
-
+import dev.nthings.adf4j.result.UnknownNodeException;
+import java.util.List;
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class AdfToMarkdownRenderingTests {
 
   private final AdfTestSupport testSupport = AdfTestSupport.create();
   private final AdfToMarkdown processor = testSupport.processor();
 
-  private static final String ONE_PARAGRAPH = """
+  private static final String ONE_PARAGRAPH =
+      """
       {
         "type": "doc",
         "version": 1,
@@ -28,7 +27,8 @@ class AdfToMarkdownRenderingTests {
       }
       """;
 
-  private static final String EMPTY_DOC = """
+  private static final String EMPTY_DOC =
+      """
       { "type": "doc", "version": 1, "content": [] }
       """;
 
@@ -66,11 +66,10 @@ class AdfToMarkdownRenderingTests {
   @Test
   void convert_resolves_viewpdf_macros_with_attachment_context() throws Exception {
     var rawPayload = testSupport.caseInput("viewpdf-macros");
-    var options = MarkdownOptions.defaults()
-        .withConfluenceContext(
-            ConfluenceRenderContext.empty()
-                .withAttachmentReferences(
-                    List.of(new AttachmentReference("file-pdf-1", "guide.pdf", "application/pdf"))));
+    var options =
+        MarkdownOptions.defaults()
+            .withAttachments(
+                List.of(new AttachmentReference("file-pdf-1", "guide.pdf", "application/pdf")));
 
     var result = AdfToMarkdown.with(options).convert(rawPayload);
 
@@ -85,27 +84,31 @@ class AdfToMarkdownRenderingTests {
     var rawPayload = testSupport.caseInput("unknown-node-policy");
 
     assertThat(
-        AdfToMarkdown.with(
-                MarkdownOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.PLACEHOLDER))
-            .toMarkdown(rawPayload))
+            AdfToMarkdown.with(
+                    MarkdownOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.PLACEHOLDER))
+                .toMarkdown(rawPayload))
         .contains("\\[Unsupported: mysteryBlock\\]");
     assertThat(
-        AdfToMarkdown.with(MarkdownOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.SKIP))
-            .toMarkdown(rawPayload))
+            AdfToMarkdown.with(
+                    MarkdownOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.SKIP))
+                .toMarkdown(rawPayload))
         .isEmpty();
     assertThatThrownBy(
-        () -> AdfToMarkdown.with(
-                MarkdownOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.FAIL))
-            .toMarkdown(rawPayload))
-        .isInstanceOf(IllegalStateException.class)
+            () ->
+                AdfToMarkdown.with(
+                        MarkdownOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.FAIL))
+                    .toMarkdown(rawPayload))
+        .isInstanceOfSatisfying(
+            UnknownNodeException.class,
+            failure -> assertThat(failure.nodeType()).isEqualTo("mysteryBlock"))
         .hasMessageContaining("mysteryBlock");
   }
 
   @Test
   void convert_supports_generic_options_without_context() throws Exception {
-    var markdown = AdfToMarkdown.with(
-            MarkdownOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.SKIP))
-        .toMarkdown(testSupport.caseInput("unknown-node-policy"));
+    var markdown =
+        AdfToMarkdown.with(MarkdownOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.SKIP))
+            .toMarkdown(testSupport.caseInput("unknown-node-policy"));
 
     assertThat(markdown).isEmpty();
   }
@@ -119,33 +122,37 @@ class AdfToMarkdownRenderingTests {
 
   @Test
   void convert_resolves_db_derived_viewpdf_cases_with_attachment_context() throws Exception {
-    var options = MarkdownOptions.defaults()
-        .withConfluenceContext(
-            ConfluenceRenderContext.empty()
-                .withAttachmentReferences(
-                    List.of(
-                        new AttachmentReference(
-                            "file-pdf-123",
-                            "Open_Finance_cadastro_diretorio_passo_a_passo.pdf",
-                            "application/pdf"))));
+    var options =
+        MarkdownOptions.defaults()
+            .withAttachments(
+                List.of(
+                    new AttachmentReference(
+                        "file-pdf-123",
+                        "Open_Finance_cadastro_diretorio_passo_a_passo.pdf",
+                        "application/pdf")));
 
-    var result = AdfToMarkdown.with(options).convert(testSupport.caseInput("lista-participantes-viewpdf"));
+    var result =
+        AdfToMarkdown.with(options).convert(testSupport.caseInput("lista-participantes-viewpdf"));
 
     assertThat(result.body())
-        .contains("[PDF: Open_Finance_cadastro_diretorio_passo_a_passo.pdf](attachment:file-pdf-123)");
+        .contains(
+            "[PDF: Open_Finance_cadastro_diretorio_passo_a_passo.pdf](attachment:file-pdf-123)");
     assertThat(result.metadata().attachmentRefs())
         .singleElement()
-        .satisfies(ref -> {
-          assertThat(ref.fileId()).isEqualTo("file-pdf-123");
-          assertThat(ref.title()).isEqualTo("Open_Finance_cadastro_diretorio_passo_a_passo.pdf");
-        });
+        .satisfies(
+            ref -> {
+              assertThat(ref.fileId()).isEqualTo("file-pdf-123");
+              assertThat(ref.title())
+                  .isEqualTo("Open_Finance_cadastro_diretorio_passo_a_passo.pdf");
+            });
   }
 
   @Test
   void convert_renders_bodied_extension_header_then_body_and_escapes_marker_text() {
     // bodiedExtension requires a body in the local schema; unknown macro text is still
     // attribute-derived text and must not promote to a Markdown heading.
-    var adf = """
+    var adf =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -172,7 +179,8 @@ class AdfToMarkdownRenderingTests {
 
   @Test
   void convert_renders_confluence_excerpt_bodied_extension_as_body_only() {
-    var adf = """
+    var adf =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -199,9 +207,11 @@ class AdfToMarkdownRenderingTests {
 
   @Test
   void convert_renders_bodied_sync_block_label_then_body() {
-    // docs/spec/adf-schema.json requires resourceId/localId for sync blocks; the renderer should keep
+    // docs/spec/adf-schema.json requires resourceId/localId for sync blocks; the renderer should
+    // keep
     // the resource id visible and then salvage the block body.
-    var adf = """
+    var adf =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -219,14 +229,16 @@ class AdfToMarkdownRenderingTests {
 
     var markdown = processor.toMarkdown(adf);
 
-    assertThat(markdown).isEqualToNormalizingNewlines("\\[Sync block: abc-123\\]\n\nSynced paragraph");
+    assertThat(markdown)
+        .isEqualToNormalizingNewlines("\\[Sync block: abc-123\\]\n\nSynced paragraph");
   }
 
   @Test
   void convert_renders_card_variants_without_losing_identity_or_escaping() {
     // Most cases mirror docs/spec card shapes; the final embedCard omits its schema-required url to
     // pin the malformed fallback instead of letting bad producer data throw.
-    var adf = """
+    var adf =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -284,12 +296,14 @@ class AdfToMarkdownRenderingTests {
             \\[Card: source-1\\]
 
             \\[Embed card\\]
-            """.strip());
+            """
+                .strip());
   }
 
   @Test
   void convert_escapes_text_after_hard_break_as_a_new_line_start() {
-    var adf = """
+    var adf =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -313,7 +327,8 @@ class AdfToMarkdownRenderingTests {
 
   @Test
   void collapse_hard_breaks_renders_a_soft_break_without_trailing_spaces() {
-    var adf = """
+    var adf =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -330,8 +345,7 @@ class AdfToMarkdownRenderingTests {
         }
         """;
 
-    var collapsing =
-        AdfToMarkdown.with(MarkdownOptions.defaults().withCollapseHardBreaks(true));
+    var collapsing = AdfToMarkdown.with(MarkdownOptions.defaults().withCollapseHardBreaks(true));
     var markdown = collapsing.toMarkdown(adf);
 
     assertThat(markdown).isEqualToNormalizingNewlines("alpha\n\\# beta");
@@ -392,12 +406,14 @@ class AdfToMarkdownRenderingTests {
 
   @Test
   void convert_defuses_a_javascript_iframe_macro_src() {
-    assertThat(processor.toMarkdown(iframeMacro("javascript:alert(1)"))).doesNotContain("](javascript:");
+    assertThat(processor.toMarkdown(iframeMacro("javascript:alert(1)")))
+        .doesNotContain("](javascript:");
   }
 
   @Test
   void convert_escapes_a_toc_anchor_containing_spaces() {
-    var adf = """
+    var adf =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -444,7 +460,8 @@ class AdfToMarkdownRenderingTests {
 
   @Test
   void convert_surfaces_a_named_pagetree_root() {
-    assertThat(processor.toMarkdown(pageTreeMacro("Getting Started"))).isEqualTo("{{pagetree:Getting Started}}");
+    assertThat(processor.toMarkdown(pageTreeMacro("Getting Started")))
+        .isEqualTo("{{pagetree:Getting Started}}");
   }
 
   @Test
@@ -455,8 +472,10 @@ class AdfToMarkdownRenderingTests {
 
   @Test
   void convert_keeps_a_nested_ordered_list_that_starts_above_one() {
-    // A start != 1 sublist must get the blank line CommonMark needs, or it folds into the paragraph.
-    var adf = """
+    // A start != 1 sublist must get the blank line CommonMark needs, or it folds into the
+    // paragraph.
+    var adf =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -493,7 +512,8 @@ class AdfToMarkdownRenderingTests {
 
   @Test
   void convert_collapses_a_link_title_newline_to_a_space() {
-    var adf = """
+    var adf =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -598,14 +618,16 @@ class AdfToMarkdownRenderingTests {
 
   @Test
   void document_title_is_unaffected_by_html_visual_marks() {
-    var titled = AdfToMarkdown.with(
-        MarkdownOptions.defaults().withDocumentTitle("My Page").withHtmlVisualMarks(true));
+    var titled =
+        AdfToMarkdown.with(
+            MarkdownOptions.defaults().withDocumentTitle("My Page").withHtmlVisualMarks(true));
     assertThat(titled.toMarkdown(ONE_PARAGRAPH)).isEqualToNormalizingNewlines("# My Page\n\nbody");
   }
 
   @Test
   void document_title_is_not_deduplicated_against_an_existing_leading_heading() {
-    var adf = """
+    var adf =
+        """
         {
           "type": "doc",
           "version": 1,
@@ -641,7 +663,8 @@ class AdfToMarkdownRenderingTests {
             }
           ]
         }
-        """.formatted(href);
+        """
+        .formatted(href);
   }
 
   private static String inlineCardParagraph(String url) {
@@ -658,7 +681,8 @@ class AdfToMarkdownRenderingTests {
             }
           ]
         }
-        """.formatted(url);
+        """
+        .formatted(url);
   }
 
   // A pagetree extension; a null root omits the macroParams, otherwise it sets the "root" param.
@@ -695,7 +719,8 @@ class AdfToMarkdownRenderingTests {
             }
           ]
         }
-        """.formatted(root);
+        """
+        .formatted(root);
   }
 
   private static String iframeMacro(String src) {
@@ -714,7 +739,8 @@ class AdfToMarkdownRenderingTests {
             }
           ]
         }
-        """.formatted(src);
+        """
+        .formatted(src);
   }
 
   private static String codeBlock(String language) {
@@ -730,7 +756,8 @@ class AdfToMarkdownRenderingTests {
             }
           ]
         }
-        """.formatted(language);
+        """
+        .formatted(language);
   }
 
   private static String subSupMark(String type) {
@@ -751,6 +778,7 @@ class AdfToMarkdownRenderingTests {
             }
           ]
         }
-        """.formatted(type);
+        """
+        .formatted(type);
   }
 }

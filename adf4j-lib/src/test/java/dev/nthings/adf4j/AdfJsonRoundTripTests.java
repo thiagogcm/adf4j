@@ -24,7 +24,7 @@ import tools.jackson.databind.node.ObjectNode;
 /// says otherwise with an `UNPRESERVED_JSON` warning.
 class AdfJsonRoundTripTests {
 
-  private static final String UNPRESERVED = "UNPRESERVED_JSON";
+  private static final Diagnostic.Code UNPRESERVED = Diagnostic.Code.UNPRESERVED_JSON;
   private static final Set<String> MARK_TYPES =
       Set.of(
           "strong",
@@ -82,7 +82,7 @@ class AdfJsonRoundTripTests {
   @FieldSource("corpus")
   void off_spec_input_round_trips_or_says_it_did_not(String input) {
     var parsed = AdfJson.parse(input);
-    if (!parsed.validAdfRoot()) {
+    if (!parsed.isValid()) {
       return;
     }
 
@@ -102,8 +102,8 @@ class AdfJsonRoundTripTests {
             ]}
             """);
 
-    assertThat(parsed.validAdfRoot()).isTrue();
-    assertThat(parsed.issues())
+    assertThat(parsed.isValid()).isTrue();
+    assertThat(parsed.diagnostics())
         .singleElement()
         .satisfies(
             issue -> {
@@ -140,6 +140,6 @@ class AdfJsonRoundTripTests {
   }
 
   private static boolean unpreserved(ParseResult parsed) {
-    return parsed.issues().stream().anyMatch(issue -> issue.code().equals(UNPRESERVED));
+    return parsed.diagnostics().stream().anyMatch(issue -> issue.code() == UNPRESERVED);
   }
 }

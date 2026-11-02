@@ -96,6 +96,42 @@ class AdfContentModelTests {
     assertThat(fromModel).isEqualTo(fromSchema);
   }
 
+  // The interfaces sharing accessors are not containers, so the schema derivation above never
+  // reaches them; the types they name still have to exist in the schema, which predates
+  // multiBodiedExtension.
+  @Test
+  void the_shared_accessor_interfaces_cover_their_node_types() throws IOException {
+    var schema =
+        AdfJsonComparison.MAPPER.readTree(
+            Files.readString(Path.of("../docs/spec/adf-schema.json")));
+    var schemaTypes = new TreeSet<String>();
+    schema.get("definitions").properties().forEach(e -> definitions.put(e.getKey(), e.getValue()));
+    definitions.values().forEach(d -> schemaTypes.addAll(ownTypes(d, new HashSet<>())));
+
+    var fromModel =
+        Map.of(
+            AdfCard.class, types(AdfCard.class),
+            AdfExtension.class, types(AdfExtension.class),
+            AdfMedia.class, types(AdfMedia.class));
+
+    assertThat(fromModel.get(AdfCard.class))
+        .containsExactly("blockCard", "embedCard", "inlineCard");
+    assertThat(fromModel.get(AdfExtension.class))
+        .containsExactly("bodiedExtension", "extension", "inlineExtension", "multiBodiedExtension");
+    assertThat(fromModel.get(AdfMedia.class)).containsExactly("media", "mediaInline");
+    fromModel.values().forEach(types -> assertThat(schemaTypes).containsAll(without(types)));
+    assertThat(AdfNode.class.getPermittedSubclasses())
+        .contains(fromModel.keySet().toArray(new Class<?>[0]));
+    assertThat(AdfUnknown.class.getPermittedSubclasses())
+        .containsExactlyInAnyOrder(UnknownBlock.class, UnknownInline.class, UnknownMark.class);
+  }
+
+  private static Set<String> without(Set<String> types) {
+    var known = new TreeSet<>(types);
+    known.remove("multiBodiedExtension");
+    return known;
+  }
+
   // The JSON types a slot stands for. TableCell is one record for two types.
   private static Set<String> types(Class<?> type) {
     var classes =

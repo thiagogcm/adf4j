@@ -18,5 +18,4 @@ module dev.nthings.adf4j {
   exports dev.nthings.adf4j.options;
   exports dev.nthings.adf4j.result;
   exports dev.nthings.adf4j.metadata;
-  exports dev.nthings.adf4j.confluence;
 }

@@ -10,7 +10,7 @@ public record DocumentAnalysis(
     HeadingOutline outline, ContentMetadata metadata, List<Diagnostic> diagnostics) {
 
   public DocumentAnalysis {
-    diagnostics = diagnostics == null ? List.of() : List.copyOf(diagnostics);
+    diagnostics = List.copyOf(diagnostics);
   }
 
   public static DocumentAnalysis empty() {

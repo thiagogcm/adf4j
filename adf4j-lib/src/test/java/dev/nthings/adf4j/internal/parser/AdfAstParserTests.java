@@ -400,10 +400,10 @@ class AdfAstParserTests {
     var document = parser.parse(mapper.readTree(raw)).document();
 
     var card = (BlockCard) document.content().getFirst();
-    assertThat(card.cardAttrs().url()).isEqualTo("https://example.com/top-level");
-    assertThat(card.cardAttrs().title()).isEqualTo("Data title");
-    assertThat(card.cardAttrs().localId()).isEqualTo("card-1");
-    assertThat(card.cardAttrs().datasourceId()).isEqualTo("source-1");
+    assertThat(card.url()).isEqualTo("https://example.com/top-level");
+    assertThat(card.title()).isEqualTo("Data title");
+    assertThat(card.localId()).isEqualTo("card-1");
+    assertThat(card.datasourceId()).isEqualTo("source-1");
     assertThat(card.attrs().object("data").string("url")).isEqualTo("https://example.com/data");
   }
 
@@ -439,8 +439,8 @@ class AdfAstParserTests {
     assertThat(paragraph.content()).hasSize(2);
     var embed = (EmbedCard) paragraph.content().get(0);
     var block = (BlockCard) paragraph.content().get(1);
-    assertThat(embed.cardAttrs().url()).isEqualTo("https://example.com/embed");
+    assertThat(embed.url()).isEqualTo("https://example.com/embed");
     assertThat(embed.attrs().string("layout")).isEqualTo("center");
-    assertThat(block.cardAttrs().url()).isEqualTo("https://example.com/block");
+    assertThat(block.url()).isEqualTo("https://example.com/block");
   }
 }

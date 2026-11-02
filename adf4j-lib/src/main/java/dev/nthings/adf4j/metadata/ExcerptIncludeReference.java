@@ -7,7 +7,7 @@ import org.jspecify.annotations.Nullable;
 /// document embeds content owned by another page, so it depends on that page) and the request an
 /// `ExcerptResolver` is asked to expand. `page` is the source page as the macro stores it:
 /// its *title* (optionally prefixed `SPACEKEY:` for a cross-space include), never a page
-/// node id. That is why these references live here and not in `ContentMetadata.pageRefs()`.
+/// node id. That is why these references live here and not in `ContentMetadata.pageIds()`.
 /// `excerptName` is the named-excerpt selector (`name` parameter), or `null` when
 /// the macro targets the page's unnamed excerpt. `parameters` is the macro's full parameter map
 /// (e.g. `nopanel`).

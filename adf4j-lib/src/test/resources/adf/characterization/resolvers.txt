@@ -2,8 +2,8 @@
 body: [x](https://page.example/42)\n\n[http://b](https://page.example/43)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: [PageReference{pageNodeId=42}, PageReference{pageNodeId=43}]
-externalRefs: []
+pageIds: [42, 43]
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -13,8 +13,8 @@ outline: []
 body: [Draft link](https://page.example/12345)[ Metadata link](https://page.example/67890)[ Duplicate draft](https://page.example/12345)[ External link](https://external.example.com/docs)\n\n<https://external.example.com/docs>\n\n![diagram.png](https://media.example/asset-22)\n\n![diagram.png](https://media.example/asset-22)\n\n![Diagram](https://cdn.example.com/diagram.png)\n\n\\[PDF: guide.pdf\\]\n\n\\[PDF: guide.pdf\\]
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: [PageReference{pageNodeId=12345}, PageReference{pageNodeId=67890}]
-externalRefs: [ExternalReference{url=https://external.example.com/docs}, ExternalReference{url=https://cdn.example.com/diagram.png}]
+pageIds: [12345, 67890]
+externalUrls: [https://external.example.com/docs, https://cdn.example.com/diagram.png]
 mentionRefs: []
 attachmentRefs: [AttachmentReference{fileId=asset-22, title=diagram.png, mediaType=image/png, downloadUrl=null}]
 pageTreeRefs: []
@@ -24,10 +24,10 @@ outline: []
 body: # [Reporting icon](https://media.example/children-reporting-icon) **Reporting Specifications**\n\n- [Child](https://page.example/1)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
-attachmentRefs: [AttachmentReference{fileId=children-reporting-icon, title=Reporting icon, mediaType=image, downloadUrl=null}]
+attachmentRefs: [AttachmentReference{fileId=children-reporting-icon, title=Reporting icon, mediaType=null, downloadUrl=null}]
 pageTreeRefs: [PageTreeReference{macro=CHILDREN, root=null, parameters={allChildren=true}}]
 excerptRefs: []
 outline: [HeadingReference{level=1, text=Reporting icon Reporting Specifications, anchor=reporting-icon-reporting-specifications}]
@@ -35,8 +35,8 @@ outline: [HeadingReference{level=1, text=Reporting icon Reporting Specifications
 body: Download [bundle.zip](https://media.example/media-zip)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: [AttachmentReference{fileId=media-zip, title=bundle.zip, mediaType=application/zip, downloadUrl=null}]
 pageTreeRefs: []
@@ -46,8 +46,8 @@ outline: []
 body: See badge ![badge.png](https://media.example/media-1)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: [AttachmentReference{fileId=media-1, title=badge.png, mediaType=image/png, downloadUrl=null}]
 pageTreeRefs: []
@@ -57,8 +57,8 @@ outline: []
 body: [https://example.atlassian.net/wiki/spaces/OF/pages/12345](https://page.example/12345)\n\n[https://example.atlassian.net/wiki/spaces/OF/pages/edit-v2/54321?draftShareId=abc](https://page.example/54321)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: [PageReference{pageNodeId=12345}, PageReference{pageNodeId=54321}]
-externalRefs: []
+pageIds: [12345, 54321]
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -68,8 +68,8 @@ outline: []
 body: [PDF: 99999999999](https://attach.example/99999999999)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: [AttachmentReference{fileId=99999999999, title=99999999999, mediaType=null, downloadUrl=null}]
 pageTreeRefs: []
@@ -79,8 +79,8 @@ outline: []
 body: [PDF: true](https://attach.example/true)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: [AttachmentReference{fileId=true, title=true, mediaType=null, downloadUrl=null}]
 pageTreeRefs: []
@@ -90,8 +90,8 @@ outline: []
 body: [PDF: 2.7](https://attach.example/2.7)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: [AttachmentReference{fileId=2.7, title=2.7, mediaType=null, downloadUrl=null}]
 pageTreeRefs: []
@@ -101,8 +101,8 @@ outline: []
 body: [PDF: 99](https://attach.example/99)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: [AttachmentReference{fileId=99, title=99, mediaType=null, downloadUrl=null}]
 pageTreeRefs: []
@@ -112,8 +112,8 @@ outline: []
 body: [PDF: -3](https://attach.example/-3)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: [AttachmentReference{fileId=-3, title=-3, mediaType=null, downloadUrl=null}]
 pageTreeRefs: []
@@ -123,8 +123,8 @@ outline: []
 body: [PDF: abc](https://attach.example/abc)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: [AttachmentReference{fileId=abc, title=abc, mediaType=null, downloadUrl=null}]
 pageTreeRefs: []
@@ -134,10 +134,10 @@ outline: []
 body: [PDF: 1](https://attach.example/1)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
-attachmentRefs: [AttachmentReference{fileId=1, title=1, mediaType=null, downloadUrl=null}]
+attachmentRefs: [AttachmentReference{fileId=1, title=a.pdf, mediaType=application/pdf, downloadUrl=null}]
 pageTreeRefs: []
 excerptRefs: []
 outline: []
@@ -145,8 +145,8 @@ outline: []
 body: [PDF: 2](https://attach.example/2)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: [AttachmentReference{fileId=2, title=2, mediaType=null, downloadUrl=null}]
 pageTreeRefs: []
@@ -156,8 +156,8 @@ outline: []
 body: [PDF: false](https://attach.example/false)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: [AttachmentReference{fileId=false, title=false, mediaType=null, downloadUrl=null}]
 pageTreeRefs: []
@@ -167,8 +167,8 @@ outline: []
 body: [PDF: true](https://attach.example/true)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: [AttachmentReference{fileId=true, title=true, mediaType=null, downloadUrl=null}]
 pageTreeRefs: []
@@ -178,8 +178,8 @@ outline: []
 body: [PDF: 0](https://attach.example/0)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: [AttachmentReference{fileId=0, title=0, mediaType=null, downloadUrl=null}]
 pageTreeRefs: []
@@ -189,10 +189,10 @@ outline: []
 body: @1[[a.pdf](https://media.example/1)](http://kept)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: [ExternalReference{url=http://kept}]
+pageIds: []
+externalUrls: [http://kept]
 mentionRefs: [MentionReference{id=1, text=}]
-attachmentRefs: [AttachmentReference{fileId=1, title=null, mediaType=null, downloadUrl=null}]
+attachmentRefs: [AttachmentReference{fileId=1, title=a.pdf, mediaType=application/pdf, downloadUrl=null}]
 pageTreeRefs: []
 excerptRefs: []
 outline: []
@@ -200,8 +200,8 @@ outline: []
 body: Boxed ![Bordered](https://media.example/media-bordered)\n\nOut of range ![Clamped](https://media.example/media-clamped)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: [AttachmentReference{fileId=media-bordered, title=bordered.png, mediaType=image/png, downloadUrl=null}, AttachmentReference{fileId=media-clamped, title=clamped.png, mediaType=image/png, downloadUrl=null}]
 pageTreeRefs: []
@@ -211,8 +211,8 @@ outline: []
 body: [null](https://media.example/null)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -222,8 +222,8 @@ outline: []
 body: [file](https://media.example/)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -233,8 +233,8 @@ outline: []
 body: [null](https://media.example/null)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -244,8 +244,8 @@ outline: []
 body: [99999999999](https://media.example/99999999999)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: [AttachmentReference{fileId=99999999999, title=99999999999, mediaType=99999999999, downloadUrl=null}]
 pageTreeRefs: []
@@ -255,8 +255,8 @@ outline: []
 body: [file](https://media.example/)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -266,8 +266,8 @@ outline: []
 body: [true](https://media.example/true)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: [AttachmentReference{fileId=true, title=true, mediaType=true, downloadUrl=null}]
 pageTreeRefs: []
@@ -277,8 +277,8 @@ outline: []
 body: [2.7](https://media.example/2.7)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: [AttachmentReference{fileId=2.7, title=2.7, mediaType=2.7, downloadUrl=null}]
 pageTreeRefs: []
@@ -288,8 +288,8 @@ outline: []
 body: [99](https://media.example/99)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: [AttachmentReference{fileId=99, title=99, mediaType=99, downloadUrl=null}]
 pageTreeRefs: []
@@ -299,8 +299,8 @@ outline: []
 body: [-3](https://media.example/-3)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: [AttachmentReference{fileId=-3, title=-3, mediaType=-3, downloadUrl=null}]
 pageTreeRefs: []
@@ -310,8 +310,8 @@ outline: []
 body: [abc](https://media.example/abc)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: [AttachmentReference{fileId=abc, title=abc, mediaType=abc, downloadUrl=null}]
 pageTreeRefs: []
@@ -321,8 +321,8 @@ outline: []
 body: [null](https://media.example/null)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -332,8 +332,8 @@ outline: []
 body: [null](https://media.example/null)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -343,8 +343,8 @@ outline: []
 body: [1](https://media.example/1)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: [AttachmentReference{fileId=1, title=1, mediaType=1, downloadUrl=null}]
 pageTreeRefs: []
@@ -354,8 +354,8 @@ outline: []
 body: [2](https://media.example/2)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: [AttachmentReference{fileId=2, title=2, mediaType=2, downloadUrl=null}]
 pageTreeRefs: []
@@ -365,8 +365,8 @@ outline: []
 body: [false](https://media.example/false)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: [AttachmentReference{fileId=false, title=false, mediaType=false, downloadUrl=null}]
 pageTreeRefs: []
@@ -376,8 +376,8 @@ outline: []
 body: [true](https://media.example/true)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: [AttachmentReference{fileId=true, title=true, mediaType=true, downloadUrl=null}]
 pageTreeRefs: []
@@ -387,8 +387,8 @@ outline: []
 body: [0](https://media.example/0)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: [AttachmentReference{fileId=0, title=0, mediaType=0, downloadUrl=null}]
 pageTreeRefs: []
@@ -398,8 +398,8 @@ outline: []
 body: [null](https://media.example/null)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -409,19 +409,30 @@ outline: []
 body: [null](https://media.example/null)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
 excerptRefs: []
 outline: []
-### multi-bodied
-body: ExtensionContext{extensionType=x, extensionKey=k, text=t, parameters={}, rawParameters=Attributes{values={}}}\n\nx
+### media-one
+body: [1](1)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: [AttachmentReference{fileId=1, title=1, mediaType=application/pdf, downloadUrl=null}]
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### multi-bodied
+body: ExtensionView{extensionType=x, extensionKey=k, text=t, macroParams={}, parameters=Attributes{values={}}}\n\nx
+lossy: false
+unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -431,8 +442,8 @@ outline: []
 body: [/wiki/spaces/DEV/pages/123](https://page.example/123)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: [PageReference{pageNodeId=123}]
-externalRefs: []
+pageIds: [123]
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -442,8 +453,8 @@ outline: []
 body: # ![icon](https://media.example/icon-1) Title
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: [AttachmentReference{fileId=icon-1, title=icon.png, mediaType=image/png, downloadUrl=null}]
 pageTreeRefs: []
@@ -453,10 +464,10 @@ outline: [HeadingReference{level=1, text=icon Title, anchor=icon-title}]
 body: [Local image](https://media.example/file-abc)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
-attachmentRefs: [AttachmentReference{fileId=file-abc, title=Local image, mediaType=file, downloadUrl=null}]
+attachmentRefs: [AttachmentReference{fileId=file-abc, title=Local image, mediaType=null, downloadUrl=null}]
 pageTreeRefs: []
 excerptRefs: []
 outline: []
@@ -464,8 +475,8 @@ outline: []
 body: ![Screenshot](https://media.example/file-png)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: [AttachmentReference{fileId=file-png, title=screenshot.png, mediaType=image/png, downloadUrl=null}]
 pageTreeRefs: []
@@ -475,8 +486,8 @@ outline: []
 body: [report.pdf](https://media.example/file-pdf)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: [AttachmentReference{fileId=file-pdf, title=report.pdf, mediaType=application/pdf, downloadUrl=null}]
 pageTreeRefs: []
@@ -486,19 +497,19 @@ outline: []
 body: ![media](https://media.example/123)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: [AttachmentReference{fileId=123, title=null, mediaType=image, downloadUrl=null}]
 pageTreeRefs: []
 excerptRefs: []
 outline: []
 ### params-null-in-array
-body: ExtensionContext{extensionType=x, extensionKey=k, text=null, parameters={}, rawParameters=Attributes{values={a=[null, 1, {}], macroParams={e={}}}}}
+body: ExtensionView{extensionType=x, extensionKey=k, text=null, macroParams={}, parameters=Attributes{values={a=[null, 1, {}], macroParams={e={}}}}}
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: []
-externalRefs: []
+pageIds: []
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []
@@ -508,8 +519,8 @@ outline: []
 body: [https://x.atlassian.net/wiki/spaces/A/pages/123/P](https://page.example/123)
 lossy: false
 unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageRefs: [PageReference{pageNodeId=123}]
-externalRefs: []
+pageIds: [123]
+externalUrls: []
 mentionRefs: []
 attachmentRefs: []
 pageTreeRefs: []

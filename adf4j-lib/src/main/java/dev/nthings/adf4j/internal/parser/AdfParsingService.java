@@ -1,6 +1,7 @@
 package dev.nthings.adf4j.internal.parser;
 
 import dev.nthings.adf4j.result.Diagnostic;
+import dev.nthings.adf4j.result.Diagnostic.Severity;
 import dev.nthings.adf4j.result.ParseResult;
 import java.util.List;
 import java.util.stream.Stream;
@@ -52,31 +53,31 @@ public final class AdfParsingService {
   public ParseResult parse(@Nullable String rawAdf) {
     if (rawAdf == null || rawAdf.isBlank()) {
       log.debug("parse called with null or blank input – returning empty result");
-      return ParseResult.empty();
+      return new ParseResult(null, List.of());
     }
 
     log.debug("Parsing ADF payload ({} chars)", rawAdf.length());
     try {
       var jsonRoot = mapper.readTree(rawAdf);
       var issues = RootValidator.validate(jsonRoot);
-      var fatal = issues.stream().anyMatch(issue -> !"UNSUPPORTED_VERSION".equals(issue.code()));
+      var fatal = issues.stream().anyMatch(issue -> issue.severity() == Severity.ERROR);
       issues.forEach(
-          issue -> log.warn("ADF validation issue [{}]: {}", issue.code(), issue.message()));
+          issue -> log.debug("ADF validation issue [{}]: {}", issue.code(), issue.message()));
       if (fatal) {
-        return new ParseResult(null, issues, false);
+        return new ParseResult(null, issues);
       }
-      // Only UNSUPPORTED_VERSION (or nothing): parse best-effort, keeping the warning in
-      // diagnostics.
+      // Warnings at most: parse best-effort, keeping them in diagnostics.
       var parsed = astParser.parse(jsonRoot);
       var allIssues = Stream.concat(issues.stream(), parsed.issues().stream()).toList();
-      return new ParseResult(parsed.document(), allIssues, true);
+      return new ParseResult(parsed.document(), allIssues);
     } catch (JacksonException | NumberFormatException exception) {
       // A number beyond what the reader can hold surfaces as NumberFormatException.
-      log.error("Failed to parse ADF JSON payload: {}", exception.getMessage(), exception);
+      log.debug("Failed to parse ADF JSON payload: {}", exception.getMessage());
       return new ParseResult(
           null,
-          List.of(new Diagnostic("INVALID_JSON", "Failed to parse ADF JSON payload.", exception)),
-          false);
+          List.of(
+              new Diagnostic(
+                  Diagnostic.Code.INVALID_JSON, "Failed to parse ADF JSON payload.", exception)));
     }
   }
 }

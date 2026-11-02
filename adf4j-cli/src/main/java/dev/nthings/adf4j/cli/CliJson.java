@@ -1,10 +1,9 @@
 package dev.nthings.adf4j.cli;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.core.JacksonException;
@@ -15,11 +14,13 @@ import tools.jackson.core.util.DefaultPrettyPrinter;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
 /// Tree-mode-only JSON for the CLI (no record databind), so it adds no reflection surface to the
-/// native/wasm image. The mapper is hardened with {@link StreamReadConstraints} so a hostile map
-/// file fails cleanly instead of overflowing the stack.
+/// native image. The mapper is hardened with {@link StreamReadConstraints} so a hostile map file
+/// fails cleanly instead of overflowing the stack. Every shape problem in a map file is a usage
+/// error (exit 2), named after its flag.
 final class CliJson {
 
   // Shallow lookup tables: 64 levels is far beyond any real file yet caps a hostile one.
@@ -47,12 +48,17 @@ final class CliJson {
     this.mapper = JsonMapper.builder(factory).build();
   }
 
-  ObjectNode object() {
-    return mapper.createObjectNode();
+  static ObjectNode object() {
+    return JsonNodeFactory.instance.objectNode();
   }
 
-  ArrayNode array() {
-    return mapper.createArrayNode();
+  static ArrayNode array() {
+    return JsonNodeFactory.instance.arrayNode();
+  }
+
+  /// The CLI spelling of a library enum constant, in option values and JSON output alike.
+  static String kebabCase(Enum<?> constant) {
+    return constant.name().toLowerCase(Locale.ROOT).replace('_', '-');
   }
 
   /// Serializes a tree node: `pretty` two-space-indents (forcing `\n` newlines so output is
@@ -67,16 +73,7 @@ final class CliJson {
   /// error (exit 1); malformed JSON is a usage error (exit 2). Neither leaks a stack trace to
   /// stdout.
   JsonNode readFile(Path path, String flag) {
-    String raw;
-    try {
-      raw = Files.readString(path, StandardCharsets.UTF_8);
-    } catch (NoSuchFileException exception) {
-      throw CliException.io(
-          "failed to read " + flag + " file '" + path + "': not found", exception);
-    } catch (IOException exception) {
-      throw CliException.io(
-          "failed to read " + flag + " file '" + path + "': " + exception.getMessage(), exception);
-    }
+    var raw = CliIo.read(path, flag + " file");
     try {
       return mapper.readTree(raw);
     } catch (JacksonException exception) {
@@ -85,20 +82,32 @@ final class CliJson {
     }
   }
 
-  /// The node as an object, or a usage error naming `flag`.
-  static ObjectNode requireObject(JsonNode node, String flag) {
+  /// Reads a map file holding an array of entries; see {@link #entries}.
+  List<ObjectNode> readEntries(String path, String flag, Set<String> allowedKeys) {
+    return entries(readFile(Path.of(path), flag), flag, allowedKeys);
+  }
+
+  /// The elements of `array`, each an object with no keys outside `allowedKeys`. `context` names
+  /// the array in errors.
+  static List<ObjectNode> entries(JsonNode array, String context, Set<String> allowedKeys) {
+    if (!(array instanceof ArrayNode elements)) {
+      throw CliException.usage(context + " must be a JSON array");
+    }
+    var entries = new ArrayList<ObjectNode>(elements.size());
+    for (var element : elements) {
+      var entry = requireObject(element, context + " entry");
+      rejectUnknownKeys(entry, allowedKeys, context + " entry");
+      entries.add(entry);
+    }
+    return entries;
+  }
+
+  /// The node as an object, or a usage error naming `context`.
+  static ObjectNode requireObject(JsonNode node, String context) {
     if (node instanceof ObjectNode object) {
       return object;
     }
-    throw CliException.usage(flag + " file must be a JSON object");
-  }
-
-  /// The node as an array, or a usage error naming `flag`.
-  static ArrayNode requireArray(JsonNode node, String flag) {
-    if (node instanceof ArrayNode array) {
-      return array;
-    }
-    throw CliException.usage(flag + " file must be a JSON array");
+    throw CliException.usage(context + " must be a JSON object");
   }
 
   /// Rejects unknown keys on a CLI-owned schema object so a typo'd key fails loudly (exit 2).
@@ -112,16 +121,36 @@ final class CliJson {
 
   /// A required, non-blank string field, or a usage error.
   static String requireString(JsonNode object, String field, String context) {
-    var value = string(object, field);
+    var value = string(object, field, context);
     if (value == null || value.isBlank()) {
       throw CliException.usage("missing '" + field + "' in " + context);
     }
     return value;
   }
 
-  /// A string field, or `null` when absent or JSON null.
-  static @Nullable String string(JsonNode object, String field) {
+  /// A scalar field as a string (a number keeps its JSON spelling), `null` when absent or JSON
+  /// null, or a usage error when it is an object or array.
+  static @Nullable String string(JsonNode object, String field, String context) {
     var value = object.get(field);
-    return value == null || value.isNull() ? null : value.asString();
+    if (value == null || value.isNull()) {
+      return null;
+    }
+    if (value.isContainer()) {
+      throw CliException.usage("'" + field + "' in " + context + " must be a scalar value");
+    }
+    return value.asString();
+  }
+
+  /// An integer field, `0` when absent or JSON null, or a usage error.
+  static int integer(JsonNode object, String field, String context) {
+    var value = string(object, field, context);
+    if (value == null) {
+      return 0;
+    }
+    try {
+      return Integer.parseInt(value.strip());
+    } catch (NumberFormatException exception) {
+      throw CliException.usage("'" + field + "' in " + context + " must be an integer");
+    }
   }
 }

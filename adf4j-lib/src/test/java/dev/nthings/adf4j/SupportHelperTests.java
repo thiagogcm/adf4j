@@ -1,19 +1,22 @@
 package dev.nthings.adf4j;
 
-import java.util.List;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.params.provider.Arguments.argumentSet;
 
-import dev.nthings.adf4j.confluence.ConfluenceRenderContext;
+import dev.nthings.adf4j.ast.Attributes;
+import dev.nthings.adf4j.ast.Extension;
+import dev.nthings.adf4j.internal.AttachmentInventory;
 import dev.nthings.adf4j.internal.AttachmentReferences;
 import dev.nthings.adf4j.internal.ConfluenceSupport;
+import dev.nthings.adf4j.internal.analyze.ConfluenceMacro;
+import dev.nthings.adf4j.internal.analyze.ConfluenceMacro.Anchor;
 import dev.nthings.adf4j.metadata.AttachmentReference;
-
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.FieldSource;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.params.provider.Arguments.argumentSet;
 
 class SupportHelperTests {
 
@@ -30,9 +33,7 @@ class SupportHelperTests {
           argumentSet(
               "relative URL with fragment",
               new PageIdCase("/wiki/spaces/OF/pages/54321/Runbook#details", "54321")),
-          argumentSet(
-              "external URL",
-              new PageIdCase("https://external.example.com/docs", null)));
+          argumentSet("external URL", new PageIdCase("https://external.example.com/docs", null)));
   private static final List<Arguments> anchor_macro_shapes =
       List.of(
           argumentSet(
@@ -64,7 +65,8 @@ class SupportHelperTests {
   private static final List<Arguments> media_type_inference =
       List.of(
           argumentSet("plain filename", new MediaTypeCase("diagram.png", "image/png")),
-          argumentSet("clean url", new MediaTypeCase("https://example.com/diagram.png", "image/png")),
+          argumentSet(
+              "clean url", new MediaTypeCase("https://example.com/diagram.png", "image/png")),
           argumentSet(
               "url with query string",
               new MediaTypeCase("https://example.com/diagram.png?width=200&v=2", "image/png")),
@@ -96,13 +98,10 @@ class SupportHelperTests {
   }
 
   @Test
-  void attachment_references_prefers_normalized_title_matches_over_raw_ids()
-      throws Exception {
-    var context =
-        ConfluenceRenderContext.empty()
-            .withAttachmentReferences(
-                List.of(
-                    new AttachmentReference("resolved-id", "Guide.PDF", "application/pdf")));
+  void attachment_references_prefers_normalized_title_matches_over_raw_ids() throws Exception {
+    var inventory =
+        AttachmentInventory.from(
+            List.of(new AttachmentReference("resolved-id", "Guide.PDF", "application/pdf")));
     var macroParams =
         testSupport.macroParams(
             """
@@ -116,11 +115,44 @@ class SupportHelperTests {
             }
             """);
 
-    var resolved = AttachmentReferences.resolve(macroParams, context);
+    var resolved = AttachmentReferences.resolve(macroParams, inventory);
 
     assertThat(resolved.fileId()).isEqualTo("resolved-id");
     assertThat(resolved.title()).isEqualTo("Guide.PDF");
     assertThat(resolved.mediaType()).isEqualTo("application/pdf");
+  }
+
+  @Test
+  void attachment_references_prefer_the_file_id_when_titles_collide() throws Exception {
+    var inventory =
+        AttachmentInventory.from(
+            List.of(
+                new AttachmentReference("first", "report.pdf", "application/pdf"),
+                new AttachmentReference("second", "report.pdf", "application/pdf")));
+    var macroParams =
+        testSupport.macroParams(
+            """
+            { "name": { "value": "report.pdf" }, "fileId": { "value": "second" } }
+            """);
+
+    assertThat(AttachmentReferences.resolve(macroParams, inventory).fileId()).isEqualTo("second");
+  }
+
+  @Test
+  void attachment_references_give_a_title_less_entry_the_macro_name() throws Exception {
+    var inventory =
+        AttachmentInventory.from(
+            List.of(new AttachmentReference("file-1", null, null, "https://cdn.example.com/1")));
+    var macroParams =
+        testSupport.macroParams(
+            """
+            { "name": { "value": "guide.pdf" }, "fileId": { "value": "file-1" } }
+            """);
+
+    assertThat(AttachmentReferences.resolve(macroParams, inventory))
+        .isEqualTo(
+            new AttachmentReference(
+                "file-1", "guide.pdf", "application/pdf", "https://cdn.example.com/1"));
   }
 
   @Test
@@ -139,7 +171,7 @@ class SupportHelperTests {
             }
             """);
 
-    var resolved = AttachmentReferences.resolve(macroParams, null);
+    var resolved = AttachmentReferences.resolve(macroParams, AttachmentInventory.from(null));
 
     assertThat(resolved.fileId()).isEqualTo("file-99");
     assertThat(resolved.title()).isEqualTo("diagram.png");
@@ -148,9 +180,18 @@ class SupportHelperTests {
 
   @ParameterizedTest(name = "{argumentSetName}")
   @FieldSource("anchor_macro_shapes")
-  void confluence_support_resolves_supported_anchor_macro_shapes(AnchorCase input) throws Exception {
-    assertThat(ConfluenceSupport.anchorId(testSupport.macroParams(input.macroParamsJson())))
-        .isEqualTo(input.anchorId());
+  void confluence_macro_resolves_supported_anchor_macro_shapes(AnchorCase input) throws Exception {
+    var macroParams = testSupport.attributes(input.macroParamsJson()).values();
+    var extension =
+        new Extension(
+            new Attributes(
+                Map.of(
+                    "extensionType", "com.atlassian.confluence.macro.core",
+                    "extensionKey", "anchor",
+                    "parameters", Map.of("macroParams", macroParams))),
+            List.of());
+
+    assertThat(ConfluenceMacro.of(extension)).isEqualTo(new Anchor(input.anchorId()));
   }
 
   @ParameterizedTest(name = "{argumentSetName}")
