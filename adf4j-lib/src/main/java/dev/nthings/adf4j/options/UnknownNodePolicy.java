@@ -5,6 +5,6 @@ public enum UnknownNodePolicy {
   PLACEHOLDER,
   SKIP,
   PRESERVE_RAW,
-  /// Return a failed conversion with UNKNOWN_NODE_REJECTED and the source location.
+  /// Fails the conversion with UNKNOWN_NODE_REJECTED, citing the source location.
   FAIL
 }

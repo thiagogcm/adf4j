@@ -39,8 +39,7 @@ class AnalyzeApiTests {
   void analyze_extracts_referenced_file_ids_without_rendering() {
     var metadata = AdfToMarkdown.create().analyze(AdfJson.parse(MEDIA_AND_MACRO)).metadata();
 
-    // Media ids are collected unconditionally; the macro id is absent without an attachment
-    // context.
+    // Media ids are always collected; the macro id needs an attachment context.
     assertThat(metadata.referencedFileIds()).containsExactly("asset-1");
   }
 
@@ -53,7 +52,6 @@ class AnalyzeApiTests {
 
     var metadata = AdfToMarkdown.with(options).analyze(AdfJson.parse(MEDIA_AND_MACRO)).metadata();
 
-    // With the context seeded, the macro's attachment is now part of the referenced set.
     assertThat(metadata.referencedFileIds()).containsExactly("asset-1", "file-pdf-1");
   }
 

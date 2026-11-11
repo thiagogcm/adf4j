@@ -26,19 +26,18 @@ import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
-/// Shared JSON projection for library, CLI, and WASM results.
-/// Throwable causes and excerpt AST content remain Java-only.
+/// JSON projection shared by library, CLI and WASM results. Throwable causes and excerpt AST
+/// content stay Java-only.
 public final class ResultJson {
 
   private static final JsonMapper JSON = JsonMapper.builder().build();
 
-  // Two-space indent with `\n` newlines (Jackson defaults to System.lineSeparator()), so pretty
-  // output is byte-identical across platforms.
+  // `\n` newlines, not System.lineSeparator(), so pretty output matches across platforms.
   private static final DefaultPrettyPrinter PRETTY =
       new DefaultPrettyPrinter().withObjectIndenter(new DefaultIndenter("  ", "\n"));
 
-  /// Keys follow the documented order: `ok`, `body`, `hasWarnings`, `diagnostics`, `metadata`,
-  /// `effects`, `unresolved`, `error`, each present only for the result types that carry it.
+  /// Keys in documented order: `ok`, `body`, `hasWarnings`, `diagnostics`, `metadata`,
+  /// `effects`, `unresolved`, `error`; each only for result types that carry it.
   public static String write(OperationResult result, boolean pretty) {
     var output = JSON.createObjectNode();
     output.put("ok", result.isSuccess());
@@ -75,7 +74,6 @@ public final class ResultJson {
 
   private record Section(String name, Function<ContentMetadata, JsonNode> project) {}
 
-  // The `metadata` object of every result: one row per section, in output order.
   private static final List<Section> SECTIONS =
       List.of(
           new Section("pageIds", metadata -> strings(metadata.pageIds())),
@@ -89,7 +87,7 @@ public final class ResultJson {
           new Section("excerpts", metadata -> nodes(metadata.excerpts(), ResultJson::node)),
           new Section("outline", metadata -> nodes(metadata.outline(), ResultJson::node)));
 
-  /// Every key of the `metadata` object, in output order.
+  /// Keys of the `metadata` object, in output order.
   public static final List<String> SECTION_NAMES = SECTIONS.stream().map(Section::name).toList();
 
   private ResultJson() {}

@@ -11,14 +11,12 @@ import java.util.Map;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
 
-/// Generic, immutable view over a node's raw ADF `attrs`, iterating in the source document's
-/// attribute order. Every value is plain JSON at any depth: String, Boolean, Long, BigInteger
-/// (beyond long), Double, BigDecimal (not exactly a double), or a nested `Map`/`List`. Other
-/// numeric types are widened to these and anything else is rejected, so equal documents compare
-/// equal. Map keys and values are never null, but a nested list may contain null elements so a JSON
-/// `null` keeps its array index. This keeps the core AST free of any product-specific or
-/// JSON-library types. Product-specific code reads its extras from here, which keeps the dependency
-/// pointing from that code to the AST and never the other way around.
+/// Immutable view over a node's raw ADF `attrs`, iterating in source order. Values are plain JSON
+/// at any depth: String, Boolean, Long, BigInteger (beyond long), Double, BigDecimal (not exactly a
+/// double), or a nested `Map`/`List`. Other numeric types are widened to these and anything else is
+/// rejected, so equal documents compare equal. Map keys and values are never null, but a nested
+/// list may hold nulls so a JSON `null` keeps its array index. The core AST stays free of
+/// product-specific and JSON-library types, so product code reads its extras from here.
 public record Attributes(Map<String, Object> values) {
 
   private static final Attributes EMPTY = new Attributes(Map.of());
@@ -40,7 +38,7 @@ public record Attributes(Map<String, Object> values) {
     return values.get(key) instanceof String value ? value : null;
   }
 
-  /// The scalar at `key` as text (a number or boolean in its JSON form), or `null` when absent or
+  /// The scalar at `key` as text (a number or boolean in JSON form), or `null` when absent or
   /// not a scalar.
   public @Nullable String text(String key) {
     return switch (values.get(key)) {
@@ -67,8 +65,7 @@ public record Attributes(Map<String, Object> values) {
     };
   }
 
-  /// The value at `key` as a double: a number, or a string holding one. Anything else yields
-  /// `fallback`.
+  /// A number, or a string holding one, as a double; anything else yields `fallback`.
   public double number(String key, double fallback) {
     return switch (values.get(key)) {
       case Number value -> value.doubleValue();
@@ -77,8 +74,8 @@ public record Attributes(Map<String, Object> values) {
     };
   }
 
-  /// The value at `key` as a boolean: a boolean, the string `true` or `false`, or an integer
-  /// (non-zero is true). Anything else yields `fallback`.
+  /// A boolean, a `"true"`/`"false"` string, or an integer (non-zero is true); anything else
+  /// yields `fallback`.
   public boolean bool(String key, boolean fallback) {
     return switch (values.get(key)) {
       case Boolean value -> value;
@@ -90,7 +87,7 @@ public record Attributes(Map<String, Object> values) {
     };
   }
 
-  /// These attributes with `value` at `key`, replacing any value already there. New keys go last.
+  /// A copy with `key` set to `value`, replacing any existing value. New keys go last.
   public Attributes with(String key, Object value) {
     var copy = new LinkedHashMap<String, Object>(values);
     copy.put(key, value);

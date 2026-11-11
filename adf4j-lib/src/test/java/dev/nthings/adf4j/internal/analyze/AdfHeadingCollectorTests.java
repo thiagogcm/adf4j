@@ -259,7 +259,6 @@ class AdfHeadingCollectorTests {
     var document = AdfJson.parse(TOC_WITH_HEADINGS).document();
     var outline = outlineOf(document);
 
-    // The toc covers levels 1..2, so both the level-1 and level-2 headings are referenced.
     assertThat(tocReferencedFlags(document, outline)).containsExactly(true, true);
   }
 
@@ -268,7 +267,6 @@ class AdfHeadingCollectorTests {
     var document = AdfJson.parse(TOC_LEVEL_1_ONLY).document();
     var outline = outlineOf(document);
 
-    // minLevel=maxLevel=1, so only the level-1 heading is referenced.
     assertThat(tocReferencedFlags(document, outline)).containsExactly(true, false);
   }
 

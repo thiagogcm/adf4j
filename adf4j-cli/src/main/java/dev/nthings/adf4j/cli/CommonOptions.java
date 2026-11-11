@@ -3,8 +3,8 @@ package dev.nthings.adf4j.cli;
 import org.aesh.command.option.Option;
 import org.jspecify.annotations.Nullable;
 
-/// Options shared by every subcommand, composed into commands via `@Mixin`. Fields are
-/// package-private so the aesh annotation processor can generate reflection-free accessors.
+/// Options shared by every subcommand, via `@Mixin`. Package-private fields let the aesh
+/// annotation processor generate reflection-free accessors.
 final class CommonOptions {
 
   @Option(

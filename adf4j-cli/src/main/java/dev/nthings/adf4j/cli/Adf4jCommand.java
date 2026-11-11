@@ -8,8 +8,7 @@ import org.aesh.command.CommandResult;
 import org.aesh.command.invocation.CommandInvocation;
 import org.aesh.command.option.Option;
 
-/// The root `adf4j` group command. Subcommands do the work; invoking the root prints the
-/// version when asked and the generated help otherwise.
+/// The root `adf4j` group command: `-V` prints the version, otherwise the generated help.
 @CommandDefinition(
     name = "adf4j",
     description = "Atlassian Document Format (ADF) processing. Input is read from FILE or stdin.",

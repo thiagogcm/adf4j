@@ -4,13 +4,12 @@ import dev.nthings.adf4j.ast.AdfNode;
 import java.util.ArrayList;
 import java.util.List;
 
-/// A node with its JSON Pointer in the source document. Pointers follow position, never object
-/// identity, so one node instance reused in several places gets each place's own pointer.
+/// A node and its JSON Pointer in the source. Pointers follow position, not identity, so a node
+/// reused in two places gets two pointers.
 public record Located<T extends AdfNode>(T node, String path) {
 
-  /// The children of `parent`, which sits at `path`, that are a `type`, each with its
-  /// `/content/<index>` pointer. Typed views such as `items()` filter `content`, so the index comes
-  /// from `content` itself.
+  /// The `type` children of `parent` (at `path`), each with its `/content/<index>` pointer. The
+  /// index is into `content`, not into a filtered typed view.
   public static <T extends AdfNode> List<Located<T>> children(
       AdfNode parent, String path, Class<T> type) {
     var content = parent.content();
@@ -23,7 +22,6 @@ public record Located<T extends AdfNode>(T node, String path) {
     return children;
   }
 
-  /// The pointer of the mark at `index` on the node at `path`.
   public static String mark(String path, int index) {
     return path + "/marks/" + index;
   }

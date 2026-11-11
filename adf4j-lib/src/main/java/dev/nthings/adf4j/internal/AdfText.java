@@ -16,8 +16,8 @@ import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
-/// Phase-neutral helpers interpreting raw ADF values, shared by the analyze and render phases so
-/// both agree on what a node says. The labels are plain text; the renderer adds the escaping.
+/// Shared by analyze and render so both agree on what a node says. Labels are plain text; the
+/// renderer adds escaping.
 public final class AdfText {
 
   /// What an inline card with neither a title nor a URL renders as.
@@ -25,12 +25,10 @@ public final class AdfText {
 
   private AdfText() {}
 
-  /// An emoji's glyph, else its short name, else empty.
   public static String emojiLabel(Emoji emoji) {
     return Objects.requireNonNullElse(Strings.firstNonBlank(emoji.text(), emoji.shortName()), "");
   }
 
-  /// A mention's display name, else `@` plus its account id (or local id), else `@unknown`.
   public static String mentionLabel(Mention mention) {
     var text = mention.text();
     if (!text.isBlank()) {
@@ -40,14 +38,11 @@ public final class AdfText {
     return id != null ? "@" + id : "@unknown";
   }
 
-  /// A status lozenge's text, else `status`.
   public static String statusLabel(Status status) {
     var text = status.text();
     return text == null || text.isBlank() ? "status" : text;
   }
 
-  /// The name an extension goes by in placeholders and diagnostics: `type/key`, the key alone, or
-  /// `Extension` without one.
   public static String extensionLabel(
       @Nullable String extensionType, @Nullable String extensionKey) {
     if (extensionType != null && extensionKey != null) {
@@ -56,21 +51,20 @@ public final class AdfText {
     return extensionKey != null ? extensionKey : "Extension";
   }
 
-  /// The inner text of the `[Extension: …]` placeholder.
   public static String extensionPlaceholder(AdfExtension extension) {
     var label = extensionLabel(extension.extensionType(), extension.extensionKey());
     return "Extension".equals(label) ? label : "Extension: " + label;
   }
 
-  /// The inner text of an unknown node's `[Unsupported: …]` placeholder. A node with a blank type
-  /// gets the generic form, so it still leaves a mark in the output.
+  /// Inner text of the `[Unsupported: …]` placeholder. A blank type keeps the generic form, so
+  /// the node still leaves a mark.
   public static String unsupportedLabel(AdfUnknown node) {
     var kind = node instanceof UnknownBlock ? "Unsupported" : "Unsupported inline";
     return node.type().isBlank() ? kind : kind + ": " + node.type();
   }
 
-  /// The link mark that applies to a node: the last one, even if it has no `href` and so leaves the
-  /// node unlinked. Rendering and metadata both go through this, so they agree.
+  /// The last link mark, even one without an `href` (which leaves the node unlinked). Rendering
+  /// and metadata both use this, so they agree.
   public static @Nullable Link effectiveLink(List<AdfMark> marks) {
     Link link = null;
     for (var mark : marks) {
@@ -81,7 +75,6 @@ public final class AdfText {
     return link;
   }
 
-  /// Alt text for an image embed: the description if given, else the file name, else `"media"`.
   public static String mediaAlt(AdfMedia media) {
     var label = Strings.firstNonBlank(media.alt(), media.fileName(), media.name());
     return label == null ? "media" : label;
@@ -91,8 +84,7 @@ public final class AdfText {
     return Math.clamp(level, 1, 6);
   }
 
-  // Values under 10^11 are read as epoch seconds, larger ones as epoch milliseconds; a blank or
-  // non-numeric timestamp is returned as-is.
+  // Under 10^11 is epoch seconds, else epoch milliseconds. Non-numeric input is returned as-is.
   public static String dateFromTimestamp(@Nullable String timestamp) {
     if (timestamp == null || timestamp.isBlank()) {
       return "";
@@ -100,7 +92,7 @@ public final class AdfText {
 
     try {
       var value = Long.parseLong(timestamp);
-      // Guard Long.MIN_VALUE before the split: Math.abs would stay negative and steer it wrong.
+      // Math.abs(Long.MIN_VALUE) stays negative, so it is excluded explicitly.
       var instant =
           value != Long.MIN_VALUE && Math.abs(value) < 100_000_000_000L
               ? Instant.ofEpochSecond(value)

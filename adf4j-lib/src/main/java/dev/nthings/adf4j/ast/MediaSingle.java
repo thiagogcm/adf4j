@@ -3,14 +3,9 @@ package dev.nthings.adf4j.ast;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
-/// A single piece of media laid out on its own: the outer wrapper around exactly one
-/// {@link Media} child (plus an optional {@link Caption}), read through {@link #media()} and
-/// {@link #captions()}, which hide any off-schema child. The actual file/external attributes live
-/// on that child's {@link AdfMedia} fields. `layout` is the editor placement
-/// (e.g. `center`, `align-start`, `wide`, `full-width`); `width` with `widthType` is the editor
-/// resize hint (e.g. a percentage when `widthType` is `percentage`). These wrapper layout fields
-/// are not reflected in the Markdown output. `marks` on the wrapper decorate the whole embed, most
-/// notably a {@link Link} making the image clickable.
+/// A single media item laid out alone: wraps exactly one {@link Media} and an optional {@link
+/// Caption}. `layout` and `width`/`widthType` are editor hints not reflected in Markdown. `marks`
+/// decorate the whole embed, e.g. a {@link Link} making it clickable.
 public record MediaSingle(Attributes attrs, List<AdfBlock> content, List<AdfMark> marks)
     implements AdfBlock,
         BlockquoteContent,
@@ -34,13 +29,12 @@ public record MediaSingle(Attributes attrs, List<AdfBlock> content, List<AdfMark
     return "mediaSingle";
   }
 
-  /// The {@link Media} children: exactly one in schema-shaped ADF, but off-schema input can hold
-  /// more.
+  /// The {@link Media} children: exactly one in schema-shaped ADF; off-schema input can hold more.
   public List<Media> media() {
     return ChildNodes.ofType(content, Media.class);
   }
 
-  /// The {@link Caption} children: at most one in schema-shaped ADF, but off-schema input can hold
+  /// The {@link Caption} children: at most one in schema-shaped ADF; off-schema input can hold
   /// more.
   public List<Caption> captions() {
     return ChildNodes.ofType(content, Caption.class);
@@ -58,23 +52,20 @@ public record MediaSingle(Attributes attrs, List<AdfBlock> content, List<AdfMark
     return attrs.text("width");
   }
 
-  /// This node with `layout`.
   public MediaSingle withLayout(Adf.MediaLayout layout) {
     return new MediaSingle(attrs.with("layout", layout.value()), content, marks);
   }
 
-  /// This node taking `width` percent of the page.
+  /// `width` is a percentage of the page.
   public MediaSingle withWidth(double width) {
     return new MediaSingle(
         attrs.with("width", width).with("widthType", "percentage"), content, marks);
   }
 
-  /// This node `width` pixels wide.
   public MediaSingle withPixelWidth(int width) {
     return new MediaSingle(attrs.with("width", width).with("widthType", "pixel"), content, marks);
   }
 
-  /// This node linking to `link`'s destination.
   public MediaSingle withLink(Link link) {
     return new MediaSingle(attrs, content, List.of(link));
   }

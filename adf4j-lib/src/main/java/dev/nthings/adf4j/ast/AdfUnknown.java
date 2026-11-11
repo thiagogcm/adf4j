@@ -5,9 +5,7 @@ package dev.nthings.adf4j.ast;
 /// and writing without loss.
 public sealed interface AdfUnknown permits UnknownBlock, UnknownInline, UnknownMark {
 
-  /// The original ADF `type`.
   String type();
 
-  /// The original JSON of the whole node or mark.
   String rawJson();
 }

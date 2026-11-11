@@ -1,4 +1,4 @@
-/// The internal parse/analyze/convert pipeline orchestration. {@link NullMarked}.
+/// Internal parse, analyze and convert orchestration.
 @NullMarked
 package dev.nthings.adf4j.internal.engine;
 

@@ -4,14 +4,13 @@ import dev.nthings.adf4j.ast.Attributes;
 import java.util.Map;
 import tools.jackson.databind.JsonNode;
 
-/// Readers for the structural JSON values the parser reads directly (`type`, `text`). Attribute
-/// values go through {@link Attributes} instead.
+/// Reads the structural values (`type`, `text`) directly. Attribute values go through
+/// {@link Attributes}.
 final class JsonFields {
 
   private JsonFields() {}
 
-  // The scalar's text, formatted as Attributes formats it, or "" for an absent or null field or an
-  // object/array.
+  // Scalar text as Attributes formats it; "" for absent, null or container.
   static String text(JsonNode node, String field) {
     var value = node.get(field);
     if (value == null || value.isNull() || value.isContainer()) {

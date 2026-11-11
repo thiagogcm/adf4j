@@ -12,12 +12,11 @@ final class MarkdownText {
 
   private static final Pattern LINE_BREAK_PATTERN = Pattern.compile("\\R");
 
-  // Both CommonMark ordered-list delimiters, "1." and "1)" — the latter reaches here only when
-  // parentheses are left unescaped (otherwise inline escaping already defused it).
+  // Both ordered-list delimiters; ")" reaches here only when parentheses are not escaped.
   private static final Pattern LEADING_ORDERED_MARKER = Pattern.compile("^(\\d+)([.)])");
 
-  // Schemes safe to emit as a link destination; anything else is defused by escapeUrlDestination.
-  // "media"/"attachment" are the library's own inert placeholder schemes.
+  // Schemes safe as link destinations; others are defused by escapeUrlDestination.
+  // "media"/"attachment" are the library's inert placeholder schemes.
   private static final Set<String> SAFE_URL_SCHEMES =
       Set.of("http", "https", "mailto", "tel", "ftp", "ftps", "media", "attachment");
 
@@ -27,8 +26,8 @@ final class MarkdownText {
     return Arrays.asList(LINE_BREAK_PATTERN.split(value, -1));
   }
 
-  /// Whether text appended to `text` opens a line: only whitespace follows the last line break, or
-  /// there is no line break and `text` itself started a line.
+  /// Whether text appended to `text` opens a line: only whitespace after the last break, or no
+  /// break and `startedAtLineStart`.
   public static boolean endsAtLineStart(CharSequence text, boolean startedAtLineStart) {
     for (var i = text.length() - 1; i >= 0; i--) {
       var c = text.charAt(i);
@@ -47,8 +46,7 @@ final class MarkdownText {
     return escapeInlineText("[" + inner + "]", false, escapeParentheses);
   }
 
-  /// A Markdown inline link `[label](url)` from raw operands: the label is inline-escaped and
-  /// the destination is scheme-sanitized and escaped.
+  /// Link `[label](url)` from raw operands: inline-escaped label, sanitized destination.
   public static String link(@Nullable String label, String url, boolean escapeParentheses) {
     return "["
         + escapeInlineText(label, false, escapeParentheses)
@@ -57,35 +55,33 @@ final class MarkdownText {
         + ")";
   }
 
-  /// Like {@link #link} but the label is already-rendered Markdown, emitted verbatim.
+  /// Like {@link #link} with an already-rendered label, emitted verbatim.
   public static String linkRendered(String label, String url) {
     return "[" + label + "](" + escapeUrlDestination(url) + ")";
   }
 
-  /// Like {@link #linkRendered} with a sanitized, one-line, quote-escaped link title.
+  /// Like {@link #linkRendered} with a one-line, quote-escaped title.
   public static String linkRendered(String label, String url, String title) {
     return "[" + label + "](" + escapeUrlDestination(url) + " \"" + escapeLinkTitle(title) + "\")";
   }
 
-  // A newline inside (... "title") would split the line and break the parse, so collapse breaks
-  // first.
+  // A newline inside the title would break the parse.
   private static String escapeLinkTitle(String title) {
     return Strings.collapseLineBreaks(title).replace("\\", "\\\\").replace("\"", "\\\"");
   }
 
-  /// A fenced code block whose fence is long enough to survive any backtick run in `content`
-  /// (minimum three), with `language` as the info string when non-blank.
+  /// Fenced code block; the fence outlasts any backtick run in `content` (minimum three).
   public static String fencedCodeBlock(String content, @Nullable String language) {
     var ticks = "`".repeat(Math.max(3, longestBacktickRun(content) + 1));
-    // Info string must be one clean token: backticks/newlines would break the fence.
+    // One clean token: backticks or newlines would break the fence.
     var info =
         language == null ? "" : Strings.collapseLineBreaks(language.replace("`", "")).strip();
     var openingFence = (ticks + info).stripTrailing();
     return "%s\n%s\n%s".formatted(openingFence, content, ticks).stripTrailing();
   }
 
-  /// An inline code span whose fence exceeds the longest backtick run in `content`, padding a
-  /// space each side when the content borders a backtick (CommonMark strips one space per side).
+  /// Inline code span whose fence outlasts the longest backtick run. Pads a space each side when
+  /// the content borders a backtick (CommonMark strips one).
   public static String inlineCodeSpan(String content) {
     var fence = "`".repeat(longestBacktickRun(content) + 1);
     var needsPadding =
@@ -94,7 +90,6 @@ final class MarkdownText {
     return needsPadding ? fence + " " + content + " " + fence : fence + content + fence;
   }
 
-  /// Length of the longest run of consecutive backticks in `value`.
   public static int longestBacktickRun(String value) {
     var longest = 0;
     var current = 0;
@@ -109,13 +104,10 @@ final class MarkdownText {
     return longest;
   }
 
-  /// Backslash-escapes CommonMark inline punctuation (`\`, `` ` ``, `*`, `_`, `[`, `]`, `(`, `)`,
-  /// `~`, `<`, `&`, `!`) in literal text, and neutralises a leading block marker
-  /// (#, >, -, +, ordered "1." or "1)", indented-code run) on each line: the first line only when
-  /// `atLineStart`, every later line unconditionally. An intra-word `_` (one flanked by word
-  /// characters on both sides) is left literal, since CommonMark never treats it as emphasis there.
-  /// `(` and `)` are escaped only when `escapeParentheses` is true (a leading "1)" marker is
-  /// neutralised regardless). Null is treated as empty.
+  /// Backslash-escapes CommonMark inline punctuation in literal text, and neutralises a leading
+  /// block marker per line: the first line only when `atLineStart`, later lines always. An
+  /// intra-word `_` stays literal (never emphasis in CommonMark). `(`/`)` are escaped only when
+  /// `escapeParentheses`; a leading "1)" is neutralised regardless. Null is empty.
   public static String escapeInlineText(
       @Nullable String text, boolean atLineStart, boolean escapeParentheses) {
     var value = Objects.requireNonNullElse(text, "");
@@ -128,8 +120,7 @@ final class MarkdownText {
       return atLineStart ? neutralizeLeadingBlock(escaped) : escaped;
     }
 
-    // Each line after an embedded break starts at column 0, so neutralise every line's leading
-    // marker (line endings normalise to \n).
+    // Each line after a break starts at column 0; neutralise each (endings normalise to \n).
     var lines = LINE_BREAK_PATTERN.split(escaped, -1);
     var result = new StringBuilder(escaped.length() + 8);
     for (var i = 0; i < lines.length; i++) {
@@ -141,9 +132,7 @@ final class MarkdownText {
     return result.toString();
   }
 
-  // Backslash-escapes CommonMark inline punctuation in one pass, allocating only when an escapable
-  // character is present (the common no-special-char case returns value unchanged). An intra-word
-  // '_' is left literal — CommonMark never reads it as emphasis there.
+  // One pass; allocates only when something is escaped. An intra-word '_' stays literal.
   private static String escapeInlinePunctuation(String value, boolean escapeParentheses) {
     StringBuilder escaped = null;
     for (var i = 0; i < value.length(); i++) {
@@ -178,7 +167,7 @@ final class MarkdownText {
   private static boolean isInlinePunctuation(char c, boolean escapeParentheses) {
     return switch (c) {
       case '\\', '`', '*', '[', ']', '~', '<', '&', '!' -> true;
-      // Parentheses only parse specially inside a link destination, so escaping them is opt-in.
+      // Parentheses parse specially only in link destinations, so escaping is opt-in.
       case '(', ')' -> escapeParentheses;
       default -> false;
     };
@@ -190,7 +179,7 @@ final class MarkdownText {
       return s;
     }
 
-    // Leading tab or 4+ spaces = indented code; break the run by emitting the first space as &#32;.
+    // Leading tab or 4+ spaces is indented code; break the run with &#32;.
     if (s.charAt(0) == '\t') {
       return "&#32;" + s.substring(1);
     }
@@ -199,21 +188,19 @@ final class MarkdownText {
       return "&#32;" + s.substring(1);
     }
 
-    // Up to 3 leading spaces still permit a block marker, so neutralise at the first non-space
-    // char.
+    // Up to 3 leading spaces may precede a block marker; check at the first non-space.
     var prefix = s.substring(0, lead);
     var rest = s.substring(lead);
     if (rest.isEmpty()) {
       return s;
     }
 
-    // '*' bullets are already inline-escaped, so only '-' and '+' remain to handle here.
+    // '*' is already inline-escaped; only '-' and '+' remain.
     var first = rest.charAt(0);
     if (first == '#' || first == '>' || first == '-' || first == '+') {
       return prefix + "\\" + rest;
     }
-    // Ordered marker: escape whichever delimiter matched ("." or ")") so the digits can't open a
-    // list.
+    // Escape whichever delimiter matched, so the digits can't open a list.
     var ordered = LEADING_ORDERED_MARKER.matcher(rest);
     if (ordered.find()) {
       var digits = ordered.group(1);
@@ -232,17 +219,16 @@ final class MarkdownText {
     return count;
   }
 
-  /// Backslash-escapes `\` `[` `]` in image alt text, and `(` `)` too when
-  /// `escapeParentheses` is set.
+  /// Backslash-escapes `\`, `[`, `]` in alt text, and `(`, `)` when `escapeParentheses`.
   public static String escapeAltText(String alt, boolean escapeParentheses) {
     var escaped = alt.replace("\\", "\\\\").replace("[", "\\[").replace("]", "\\]");
     return escapeParentheses ? escaped.replace("(", "\\(").replace(")", "\\)") : escaped;
   }
 
-  /// Makes a URL safe inside a markdown `(...)` destination: a dangerous scheme
-  /// (javascript:, data:, …) is first defused, then the result is returned unchanged when clean,
-  /// wrapped as `<url>` when it holds a space/control char or unbalanced parentheses, or with
-  /// space/parens percent-encoded when angle-wrapping is unavailable. Blank is returned unchanged.
+  /// Makes a URL safe in a `(...)` destination. An unsafe scheme (javascript:, data:, …) is
+  /// defused first. The URL is then kept when clean, wrapped as `<url>` when it has a space,
+  /// control char or unbalanced parens, or percent-encoded when angle brackets or newlines rule
+  /// out wrapping. Blank is unchanged.
   public static String escapeUrlDestination(String url) {
     if (url.isBlank()) {
       return url;
@@ -263,8 +249,7 @@ final class MarkdownText {
       return url;
     }
 
-    // Angle-wrapping is unavailable (the URL holds '<'/'>'/newline), so percent-encode the
-    // characters that would otherwise break the bare CommonMark destination.
+    // No angle-wrapping here (URL has '<', '>' or a newline): percent-encode the breakers.
     return url.replace(" ", "%20")
         .replace("(", "%28")
         .replace(")", "%29")
@@ -274,15 +259,12 @@ final class MarkdownText {
         .replace("\r", "%0D");
   }
 
-  // Defuse a non-safe scheme (javascript:, data:, …) by percent-encoding its colon; safe and
-  // relative
-  // URLs pass through. Allocates only on the rare neutralise path.
+  // Defuse an unsafe scheme by percent-encoding its colon; safe and relative URLs pass through.
   private static String sanitizeScheme(String url) {
     if (hasSafeOrNoScheme(url)) {
       return url;
     }
-    // Drop the C0 controls/DEL a browser would ignore (the tab/newline tricks that smuggle a scheme
-    // past a naive check), then defuse the colon.
+    // Drop C0 controls and DEL, which browsers ignore: they can hide a scheme from a naive check.
     var cleaned = new StringBuilder(url.length());
     for (var i = 0; i < url.length(); i++) {
       var c = url.charAt(i);
@@ -297,8 +279,8 @@ final class MarkdownText {
     return cleaned.toString();
   }
 
-  // True when url is relative (no scheme) or its scheme is in SAFE_URL_SCHEMES. An intra-scheme
-  // tab/CR/LF — which a browser strips before re-reading the scheme — counts as unsafe.
+  // Relative, or a SAFE_URL_SCHEMES scheme. A tab/CR/LF inside the scheme is unsafe: browsers
+  // strip it before re-reading the scheme.
   private static boolean hasSafeOrNoScheme(String url) {
     var i = 0;
     while (i < url.length() && url.charAt(i) <= ' ') {
@@ -314,7 +296,7 @@ final class MarkdownText {
       if (c == '\t' || c == '\n' || c == '\r') {
         dirty = true;
       } else if (!isSchemeChar(c, i == start)) {
-        return true; // no scheme prefix before ':' → nothing to exploit
+        return true; // no scheme before ':'
       }
     }
     return true;

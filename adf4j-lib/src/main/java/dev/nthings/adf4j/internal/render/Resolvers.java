@@ -15,8 +15,8 @@ import java.util.List;
 import java.util.function.Supplier;
 import org.jspecify.annotations.Nullable;
 
-/// Invokes caller hooks and reports callback failures. Renderers record missing dependencies
-/// after trying every applicable fallback.
+/// Invokes caller hooks, reporting callback failures. Renderers record missing dependencies after
+/// every fallback.
 final class Resolvers {
 
   private final RenderEvents events;
@@ -27,23 +27,21 @@ final class Resolvers {
     this.events = events;
   }
 
-  /// The caller-resolved destination for an internal page href, or the original href when there is
-  /// no `PageLinkResolver`, the href is not a page reference, or the resolver declines.
+  /// Resolved destination for an internal page href; the original href if there is no
+  /// `PageLinkResolver`, it is not a page reference, or the resolver declines.
   String pageHref(String href, Attributes attrs, String path) {
     var resolved = pageId(linkedPageId(href, attrs), path);
     return resolved == null ? href : resolved;
   }
 
-  /// The page node id {@link #pageHref} would look up for this link, or `null` when it looks up
-  /// nothing. Reads no hook, so it is free to call for comparing links.
+  /// Page node id {@link #pageHref} looks up, or `null`. Calls no hook, so safe to compare links.
   @Nullable String linkedPageId(String href, Attributes attrs) {
     return options.pageLinkResolver() == null
         ? null
         : ConfluenceSupport.pageNodeId(href, ConfluenceMetadata.from(attrs));
   }
 
-  /// The resolver's destination for a page node id, or `null` when there is no id or resolver or it
-  /// declines.
+  /// Resolver destination for a page node id; `null` when absent or declined.
   @Nullable String pageId(@Nullable String pageNodeId, String path) {
     var resolver = options.pageLinkResolver();
     if (resolver == null || pageNodeId == null || pageNodeId.isBlank()) {
@@ -94,7 +92,7 @@ final class Resolvers {
         : events.call("ExcerptResolver", path, () -> resolver.resolve(reference));
   }
 
-  /// The first non-deferred answer in order, then the built-in handler.
+  /// First non-deferred answer; `null` falls through to the built-in handler.
   @Nullable ExtensionOutput extension(AdfExtension node, String path) {
     for (var renderer : options.extensionRenderers()) {
       var rendered = events.call("ExtensionRenderer", path, () -> renderer.render(node));

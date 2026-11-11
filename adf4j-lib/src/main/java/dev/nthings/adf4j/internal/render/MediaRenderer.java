@@ -24,8 +24,7 @@ final class MediaRenderer {
   }
 
   String renderMediaSingle(MediaSingle node, RenderContext context) {
-    // A wrapper link mark wraps each image alone: a link can't span the blank line between two, and
-    // any caption stays a separate block.
+    // A link can't span the blank line between images, so each wrapper covers one image.
     var blocks = new ArrayList<String>();
     for (var media : context.children(node, Media.class)) {
       var image = renderMedia(media.node(), context.at(media));
@@ -41,7 +40,7 @@ final class MediaRenderer {
   }
 
   String renderMediaGroup(MediaGroup node, RenderContext context) {
-    // Single soft break: a media group renders as one visual cluster.
+    // Single newline: one visual cluster.
     return String.join(
         "\n",
         context.children(node, Media.class).stream()
@@ -71,9 +70,9 @@ final class MediaRenderer {
           "Media URL unresolved");
     }
 
-    // Non-image attachments (PDF, video, archive, …) render as a link; an image embed would break.
+    // Non-images (PDF, video, archive, …) become links; an image embed would break.
     if (!isImage(media, attachment, resolvedSource)) {
-      // Prefer the inventory title: a downloadUrl's last segment may be a route word ("download").
+      // Inventory title first: a downloadUrl's last segment may be "download".
       var destinationFileName =
           attachment != null && notBlank(attachment.title())
               ? attachment.title()
@@ -81,7 +80,7 @@ final class MediaRenderer {
       return context.session().writer().link(fileLabel(media, destinationFileName), destination);
     }
 
-    // The {width= height=} suffix is non-GFM; emit only when opted in.
+    // {width= height=} is non-GFM: opt-in only.
     var source = MarkdownText.escapeUrlDestination(destination);
     var attributeSuffix =
         context.session().options().imageSizeAttributes()
@@ -93,7 +92,7 @@ final class MediaRenderer {
             context.session().writer().alt(imageAlt(media, attachment)), source, attributeSuffix);
   }
 
-  // The name, file name, alt, or destination's file name, else "file".
+  // Name, file name, alt, then destination file name; else "file".
   private String fileLabel(AdfMedia media, @Nullable String destinationFileName) {
     var label =
         Strings.firstNonBlank(media.name(), media.fileName(), media.alt(), destinationFileName);
@@ -109,8 +108,7 @@ final class MediaRenderer {
     return title == null || title.isBlank() ? alt : title;
   }
 
-  // Classifies a file node whose own attrs omit the type — as Confluence's do — via the
-  // attachment inventory's mediaType/title or the resolved destination's filename extension.
+  // Type missing from the node (as in Confluence): fall back to the inventory or the extension.
   private boolean isImage(
       AdfMedia media, @Nullable AttachmentReference attachment, @Nullable String resolvedSource) {
     var mimeOrType = Strings.firstNonBlank(media.fileMimeType(), media.mediaType());
@@ -128,8 +126,7 @@ final class MediaRenderer {
         resolvedSource);
   }
 
-  // A url attr, media resolver, or inventory downloadUrl, never the synthetic placeholder: null
-  // so the label and image-ness are decided only by genuine filenames.
+  // Real sources only, never the synthetic placeholder, so label and image-ness use real names.
   private @Nullable String resolveMediaSource(
       AdfMedia media, @Nullable AttachmentReference attachment, RenderContext context) {
     var url = media.url();
@@ -150,7 +147,7 @@ final class MediaRenderer {
     return value != null && !value.isBlank();
   }
 
-  // The synthetic media:collection/id reference, or "media" when even the id is absent.
+  // Synthetic media:collection/id reference; "media" when the id is absent.
   private String placeholder(AdfMedia media) {
     var id = media.id();
     if (id == null || id.isBlank()) {

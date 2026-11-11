@@ -3,7 +3,7 @@ package dev.nthings.adf4j.internal;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
 
-/// Null-safe string helpers shared across the AST, analyze and render layers.
+/// Null-safe string helpers.
 public final class Strings {
 
   private static final Pattern WHITESPACE_RUN = Pattern.compile("\\s+");
@@ -11,7 +11,7 @@ public final class Strings {
 
   private Strings() {}
 
-  /// The stripped value, or `null` when it is null or blank.
+  /// Stripped, or `null` when null or blank.
   public static @Nullable String trimToNull(@Nullable String value) {
     if (value == null) {
       return null;
@@ -20,7 +20,7 @@ public final class Strings {
     return stripped.isEmpty() ? null : stripped;
   }
 
-  /// The first non-blank candidate as given (not stripped), or `null` when all are blank.
+  /// First non-blank candidate, unstripped.
   public static @Nullable String firstNonBlank(@Nullable String... candidates) {
     for (var candidate : candidates) {
       if (candidate != null && !candidate.isBlank()) {
@@ -30,7 +30,6 @@ public final class Strings {
     return null;
   }
 
-  /// The first non-blank candidate, stripped, or `null` when all are blank.
   public static @Nullable String firstNonBlankStripped(@Nullable String... candidates) {
     for (var candidate : candidates) {
       var stripped = trimToNull(candidate);
@@ -41,17 +40,15 @@ public final class Strings {
     return null;
   }
 
-  /// Every line break replaced by a single space.
   public static String collapseLineBreaks(String value) {
     return LINE_BREAK.matcher(value).replaceAll(" ");
   }
 
-  /// Every whitespace run (including line breaks) replaced by a single space.
   public static String collapseWhitespace(String value) {
     return WHITESPACE_RUN.matcher(value).replaceAll(" ");
   }
 
-  /// One JSON Pointer reference token (RFC 6901): `~` and `/` escaped as `~0` and `~1`.
+  /// RFC 6901 token escaping; `~` must be escaped before `/`.
   public static String pointerToken(String value) {
     return value.replace("~", "~0").replace("/", "~1");
   }

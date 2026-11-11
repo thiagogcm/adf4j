@@ -30,14 +30,13 @@ import java.util.TreeMap;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
 
-/// Applies marks to rendered text, and the block marks (indentation, alignment) to a whole block.
+/// Applies inline marks to text, and block marks (indentation, alignment) to whole blocks.
 final class TextMarkRenderer {
 
-  // U+00A0 per indent step; ASCII spaces are unreliable as leading indent (4+ become a code block).
+  // NBSP per indent step: 4+ leading ASCII spaces would make a code block.
   private static final String INDENT_UNIT = "    ";
 
-  // Hex and rgb()/hsl() colors, keywords (`red`, `x-small`) and sizes (`20px`, `1.5em`, `120%`):
-  // none can end a declaration or the attribute, or load anything.
+  // Colors and sizes only: none can end the declaration or attribute, or load anything.
   private static final Pattern SAFE_CSS_VALUE =
       Pattern.compile(
           "#\\p{XDigit}{3,8}"
@@ -47,31 +46,26 @@ final class TextMarkRenderer {
 
   private static final Pattern CSS_NUMBER = Pattern.compile("\\d+(?:\\.\\d+)?");
 
-  /// What one mark does to rendered text, applied in `rank` order.
+  /// A mark's effect on text, applied in `rank` order.
   private sealed interface MarkEffect {
 
     int rank();
   }
 
-  /// Wraps the text in `open` and `close`.
   private record Wrap(int rank, String open, String close) implements MarkEffect {}
 
-  /// One declaration of the opt-in visual `<span style>`.
   private record Css(int rank, String declaration) implements MarkEffect {}
 
-  /// The link around a run. `pageNodeId` is what a `PageLinkResolver` will look up, so two links
-  /// that could resolve differently differ here without asking the resolver.
+  /// `pageNodeId` is what a `PageLinkResolver` looks up, so links that could resolve differently
+  /// differ here without calling it.
   private record LinkTarget(String href, @Nullable String title, @Nullable String pageNodeId) {}
 
-  /// What a mark list renders to under the active options, holding nothing that doesn't render:
-  /// `effects` are the formatting by rank, a later mark replacing an earlier one of the same rank.
-  /// A code mark makes the text literal, superseding them. Two mark lists render identically
-  /// exactly when their styles are equal.
+  /// Effective style: `effects` by rank (a later mark replaces an earlier one of the same rank).
+  /// A code mark makes text literal and drops them. Equal styles render identically.
   private record Style(boolean code, Map<Integer, MarkEffect> effects, @Nullable LinkTarget link) {}
 
-  // Inside-out: format marks (canonical order), then a combined visual <span>, then the link
-  // outermost.
-  // `context` sits at the node that carries `marks`.
+  // Inside-out: format marks (canonical order), visual <span>, then the link outermost.
+  // `context` sits at the node carrying `marks`.
   String applyMarks(String value, List<AdfMark> marks, RenderContext context) {
     if (marks.isEmpty()) {
       return value;
@@ -85,15 +79,14 @@ final class TextMarkRenderer {
     return link == null ? rendered : applyLink(rendered, link, linkPath(marks, context), context);
   }
 
-  /// Whether text runs with these marks render identically, and so must merge into one run. Asks no
-  /// resolver: two different hrefs stay apart even when a `PageLinkResolver` maps them to one page.
+  /// Whether runs with these marks render alike and so merge. Calls no resolver: different hrefs
+  /// stay apart even if a `PageLinkResolver` maps them to one page.
   boolean rendersAlike(List<AdfMark> left, List<AdfMark> right, RenderSession session) {
     return left.equals(right) || style(left, session).equals(style(right, session));
   }
 
-  /// Whether a visual-only mark leaves no trace in the output: always without `htmlVisualMarks`,
-  /// and with it whenever its value is unsafe to emit. Alignment is a block mark; only the default
-  /// alignment goes unwrapped, which loses nothing.
+  /// Whether a visual mark leaves no trace: always without `htmlVisualMarks`, else when its value
+  /// is unsafe. Alignment is a block mark, omitted only without `htmlVisualMarks`.
   static boolean omitsVisual(AdfMark mark, boolean htmlVisualMarks) {
     return switch (mark) {
       case TextColor _, BackgroundColor _, FontSize _, Border _ ->
@@ -129,8 +122,8 @@ final class TextMarkRenderer {
       case TextColor color when visual -> css(6, "color", color.color());
       case BackgroundColor color when visual -> css(7, "background-color", color.color());
       case Border border when visual -> border(8, border);
-      // An unknown subsup type is left unwrapped rather than guessed; code and links are not
-      // formatting (see style); the rest never touch the text.
+      // Unknown subsup type stays unwrapped, not guessed. Code and links are not formatting
+      // (see style); the rest never touch the text.
       case SubSup _,
           FontSize _,
           TextColor _,
@@ -161,7 +154,7 @@ final class TextMarkRenderer {
         session.resolvers().linkedPageId(href, link.attrs()));
   }
 
-  // The pointer of the effective (last) link mark, which the PageLinkResolver call reports.
+  // Pointer of the effective (last) link mark, reported with the resolver call.
   private static String linkPath(List<AdfMark> marks, RenderContext context) {
     var index = marks.size() - 1;
     while (index > 0 && !(marks.get(index) instanceof Link)) index--;
@@ -177,7 +170,7 @@ final class TextMarkRenderer {
         case Css css -> declarations.add(css.declaration());
       }
     }
-    // Opt-in: preserve visual-only marks as one combined <span style> instead of dropping them.
+    // Opt-in: visual-only marks become one combined <span style>, not dropped.
     if (!declarations.isEmpty()) {
       var style = String.join("; ", declarations);
       rendered = wrap(rendered, "<span style=\"" + style + "\">", "</span>");
@@ -185,9 +178,8 @@ final class TextMarkRenderer {
     return rendered;
   }
 
-  // Wraps formatted text in a Markdown link. A PageLinkResolver rewrites an internal page href to
-  // the caller's destination; the visible label (the original text, or the original href when the
-  // text is blank) is left untouched.
+  // A PageLinkResolver rewrites the destination only; the visible label is untouched (the href
+  // when the text is blank).
   private String applyLink(
       String rendered, LinkTarget link, String linkPath, RenderContext context) {
     var session = context.session();
@@ -200,8 +192,7 @@ final class TextMarkRenderer {
         : MarkdownText.linkRendered(label, destination, title);
   }
 
-  // The values are arbitrary JSON from untrusted ADF, so one that isn't a known-safe shape drops
-  // the declaration.
+  // Values are untrusted ADF JSON: anything outside a known-safe shape drops the declaration.
   private static @Nullable MarkEffect css(int rank, String property, @Nullable String value) {
     var safe = safeCssValue(value);
     return safe == null ? null : new Css(rank, property + ":" + safe);
@@ -221,7 +212,7 @@ final class TextMarkRenderer {
     return stripped != null && SAFE_CSS_VALUE.matcher(stripped).matches() ? stripped : null;
   }
 
-  // Wraps a block in <div align> for a center/end Alignment mark when htmlVisualMarks is on.
+  // <div align> for center/end alignment, when htmlVisualMarks is on.
   String alignmentWrap(String body, List<AdfMark> marks, boolean htmlVisualMarks) {
     if (!htmlVisualMarks || body.isBlank()) {
       return body;
@@ -235,7 +226,7 @@ final class TextMarkRenderer {
               case null, default -> null;
             };
         if (align != null) {
-          // Blank lines around the body so CommonMark parses it as markdown, not a raw-HTML block.
+          // Blank lines let CommonMark parse the body as markdown, not raw HTML.
           return "<div align=\"" + align + "\">\n\n" + body + "\n\n</div>";
         }
       }
@@ -243,8 +234,7 @@ final class TextMarkRenderer {
     return body;
   }
 
-  // A run of non-breaking spaces for the block's first Indentation mark that indents (level clamped
-  // to 6), or "" when there is none.
+  // NBSP run for the first indenting Indentation mark (level clamped to 6), else "".
   String indentationPrefix(List<AdfMark> marks) {
     for (var mark : marks) {
       if (mark instanceof Indentation indentation && indentation.level() > 0) {
@@ -254,8 +244,7 @@ final class TextMarkRenderer {
     return "";
   }
 
-  // Wraps value's non-whitespace core with the open/close affixes, leaving any surrounding
-  // whitespace outside; a blank value is returned unchanged.
+  // Wraps the non-whitespace core; surrounding whitespace stays outside. Blank is unchanged.
   private String wrap(String value, String open, String close) {
     if (value.isBlank()) {
       return value;

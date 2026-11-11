@@ -31,10 +31,8 @@ import java.util.Objects;
 import java.util.Set;
 import org.commonmark.ext.heading.anchor.IdGenerator;
 
-/// Records every {@link Heading}, the union of toc-macro level ranges and every explicit anchor as
-/// the {@link AdfNodeWalker} visits each node, then turns them into a {@link HeadingOutline}
-/// ({@link #build()} derives the slug/anchor). Holds the accumulation for one document; create a
-/// fresh instance per document.
+/// Collects headings, toc level ranges and explicit anchors during the {@link AdfNodeWalker}
+/// pass. {@link #build()} derives each slug. One instance per document.
 final class AdfHeadingCollector implements NodeVisitor {
 
   private final UnknownNodePolicy unknownNodePolicy;
@@ -62,10 +60,8 @@ final class AdfHeadingCollector implements NodeVisitor {
     }
   }
 
-  // Clamp level, extract text (skipping blank headings), derive an anchor (explicit Confluence
-  // anchor, else a commonmark slug). The slug generator is per-build, giving repeated headings
-  // stable suffixes. Explicit anchors are all known by now, so a slug avoids them wherever they sit
-  // in the document.
+  // Slugs avoid every explicit anchor, wherever it sits. Repeated headings get stable suffixes
+  // from the per-build generator.
   HeadingOutline build() {
     var references = new ArrayList<HeadingReference>();
     var idGenerator = IdGenerator.builder().defaultId("section").build();
@@ -92,7 +88,7 @@ final class AdfHeadingCollector implements NodeVisitor {
     return HeadingOutline.of(references, headingsByNode, tocReferencedLevels);
   }
 
-  // The generator only suffixes repeats of the same text, so step it past any other taken id.
+  // The generator suffixes only repeats of the same text, so skip ids already taken.
   private static String uniqueSlug(IdGenerator idGenerator, String text, Set<String> taken) {
     var slug = idGenerator.generateId(text);
     while (!taken.add(slug)) {
@@ -121,8 +117,7 @@ final class AdfHeadingCollector implements NodeVisitor {
     return Strings.collapseLineBreaks(builder.toString()).trim();
   }
 
-  // The plain text of what the node renders. What a custom extension renderer or a resolver would
-  // answer isn't known before the render, so a macro counts with its fallback label.
+  // Macros count with their fallback label; a custom renderer's answer is unknown here.
   private String plainText(AdfInline node) {
     return switch (node) {
       case Text text -> textLabel(text);
@@ -164,9 +159,8 @@ final class AdfHeadingCollector implements NodeVisitor {
         : "[" + AdfText.extensionPlaceholder(extension) + "]";
   }
 
-  /// Appends a heading-text fragment, inserting one space only when two sources would otherwise
-  /// fuse with no whitespace (so an image alt before `"Title"` slugs to `icon-title`, not
-  /// `icontitle`). Boundaries that already have whitespace are untouched.
+  /// Appends a fragment, adding one space only where two sources would fuse without whitespace
+  /// (so an image alt before `"Title"` slugs to `icon-title`). Existing whitespace is left alone.
   private static void appendPlainText(StringBuilder builder, String fragment) {
     if (fragment.isEmpty()) {
       return;

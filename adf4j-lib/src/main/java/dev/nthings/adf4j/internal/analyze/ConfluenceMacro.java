@@ -12,10 +12,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
-/// What an extension node means to adf4j, read from its type, key and parameters: the single place
-/// a macro's parameters are normalized, shared by rendering and metadata extraction. The two phases
-/// deliberately react to different subsets, and the render phase consults custom renderers before
-/// classifying.
+/// What an extension node means, read from its type, key and parameters. The one place macro
+/// parameters are normalized. Render and metadata react to different subsets, and render consults
+/// custom renderers before classifying.
 public sealed interface ConfluenceMacro {
 
   /// The media node equivalent to an editor-migration `inline-media-image` macro.
@@ -24,30 +23,24 @@ public sealed interface ConfluenceMacro {
   /// The modern chart app (`com.atlassian.chart`), with any key.
   record Chart() implements ConfluenceMacro {}
 
-  /// The `pagetree` or `children` macro.
   record PageTree(PageTreeReference reference) implements ConfluenceMacro {}
 
-  /// The `toc` macro.
   record Toc(TocLevelRange range) implements ConfluenceMacro {}
 
   /// The `anchor` macro; `id` is non-blank, or `null` when the macro carries none.
   record Anchor(@Nullable String id) implements ConfluenceMacro {}
 
-  /// The `iframe` macro with its raw `src`.
   record Iframe(@Nullable String src) implements ConfluenceMacro {}
 
-  /// The `viewpdf` macro.
   record ViewPdf() implements ConfluenceMacro {}
 
-  /// The legacy `chart` or `chart:*` macro. With a body, any of these is a caption over its data
-  /// table. Without one, `labelled` (the `chart:default` key) renders a label, and the rest fall
-  /// back like an unsupported macro.
+  /// Legacy `chart` or `chart:*`. With a body it captions its data table. Without one, only
+  /// `chart:default` (labelled) renders a label; the rest fall back like an unsupported macro.
   record LegacyChart(boolean labelled) implements ConfluenceMacro {}
 
   /// The `excerpt-include` macro with a source page.
   record ExcerptInclude(ExcerptIncludeReference reference) implements ConfluenceMacro {}
 
-  /// The `attachments` macro.
   record Attachments() implements ConfluenceMacro {}
 
   /// The `excerpt` macro; `name` is `null` for the unnamed excerpt.
@@ -111,9 +104,8 @@ public sealed interface ConfluenceMacro {
     return new ExcerptInclude(new ExcerptIncludeReference(page, name, params.values()));
   }
 
-  // This migration macro stores the media identity directly under `parameters` (`id`, `collection`,
-  // `width`, `height`), not under `macroParams`; it always wraps an image, so the media type is
-  // fixed.
+  // Migration macros keep the media identity under `parameters`, not `macroParams`. It always
+  // wraps an image, so the media type is fixed.
   private static ConfluenceMacro inlineMediaImage(Attributes parameters) {
     var id = stringValue(parameters, "id");
     if (id == null) {

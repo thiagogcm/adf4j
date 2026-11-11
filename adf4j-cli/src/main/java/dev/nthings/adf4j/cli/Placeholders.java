@@ -6,8 +6,8 @@ import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/// The `{name}` tokens of a template, shared by the URL templates, which encode what they
-/// substitute, and the `--extension-map` templates, which emit it verbatim.
+/// The `{name}` tokens of a template. URL templates encode substitutions; `--extension-map`
+/// templates emit them verbatim.
 final class Placeholders {
 
   private static final Pattern PLACEHOLDER = Pattern.compile("\\{([^}]*)}");
@@ -19,7 +19,6 @@ final class Placeholders {
     return PLACEHOLDER.matcher(template).results().map(token -> token.group(1)).toList();
   }
 
-  /// Replaces each token with `lookup` of its name.
   static String render(String template, UnaryOperator<String> lookup) {
     return PLACEHOLDER
         .matcher(template)

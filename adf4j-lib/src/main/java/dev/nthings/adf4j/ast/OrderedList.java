@@ -2,8 +2,7 @@ package dev.nthings.adf4j.ast;
 
 import java.util.List;
 
-/// An `orderedList`: a numbered list of {@link ListItem} entries. `order` is the starting number
-/// of the first item (`1` for a plain list, e.g. `5` to begin at 5).
+/// A numbered list of {@link ListItem}s; `order` is the number of the first item.
 public record OrderedList(Attributes attrs, List<AdfBlock> content, List<AdfMark> marks)
     implements AdfBlock,
         BlockquoteContent,
@@ -31,12 +30,11 @@ public record OrderedList(Attributes attrs, List<AdfBlock> content, List<AdfMark
     return attrs.integer("order", 1);
   }
 
-  /// The {@link ListItem} children; `content` keeps any other child.
+  /// The {@link ListItem} children; other children stay only in `content`.
   public List<ListItem> items() {
     return ChildNodes.ofType(content, ListItem.class);
   }
 
-  /// This list numbered from `order`.
   public OrderedList withOrder(int order) {
     return new OrderedList(attrs.with("order", order), content, marks);
   }

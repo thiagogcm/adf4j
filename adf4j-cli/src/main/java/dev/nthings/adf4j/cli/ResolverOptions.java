@@ -3,8 +3,8 @@ package dev.nthings.adf4j.cli;
 import org.aesh.command.option.Option;
 import org.jspecify.annotations.Nullable;
 
-/// Data-driven resolver options (URL templates plus JSON lookup tables) of `convert`, composed via
-/// `@Mixin`. {@link RenderConfig} turns these into library resolvers.
+/// Resolver options of `convert` (URL templates and JSON lookup tables), via `@Mixin`.
+/// {@link RenderConfig} turns them into library resolvers.
 final class ResolverOptions {
 
   @Option(
@@ -44,8 +44,7 @@ final class ResolverOptions {
       description = "Custom-extension templates file by key (emitted verbatim)")
   @Nullable String extensionMap;
 
-  /// Warns on stderr about flags whose file content is emitted verbatim into the Markdown,
-  /// unless `--quiet` was given.
+  /// Warns on stderr that verbatim-emitted files are not HTML-sanitized, unless `--quiet`.
   void warnVerbatim(boolean quiet) {
     if (quiet) {
       return;

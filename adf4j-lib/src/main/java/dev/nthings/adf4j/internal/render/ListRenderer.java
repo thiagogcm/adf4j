@@ -28,13 +28,11 @@ final class ListRenderer {
     this.inlineRenderer = inlineRenderer;
   }
 
-  /// The ways the two block-holding items differ.
   private enum ItemStyle {
-    // The first paragraph is at the content column (block start), so leading markers are escaped.
-    // Nested sublists stay tight.
+    // First paragraph at block start, so leading markers are escaped. Sublists stay tight.
     LIST_ITEM(true, false, true),
-    // The checkbox belongs to the paragraph, so the text after it is mid-line. An ordered list
-    // opening the item needs a blank line to keep a start other than 1.
+    // Checkbox precedes the text (mid-line). An ordered list opening the item needs a blank line
+    // to keep a start other than 1.
     TASK_ITEM(false, true, false);
 
     private final boolean paragraphAtLineStart;
@@ -115,7 +113,7 @@ final class ListRenderer {
     var lines = new ArrayList<String>();
     for (var index = 0; index < items.size(); index++) {
       var itemMarker = marker.apply(index);
-      // Each subtree renders locally. Its parent adds the marker's width exactly once.
+      // Subtrees render locally; the marker width is added once, here.
       var indent = " ".repeat(itemMarker.length() + 1);
       lines.addAll(
           renderItem(
@@ -128,8 +126,7 @@ final class ListRenderer {
     return String.join("\n", lines);
   }
 
-  // The item's lines: `prefix` opens the first one and `indent` aligns the rest to its content
-  // column. `context` sits at `item`.
+  // `prefix` opens the first line, `indent` aligns the rest. `context` sits at `item`.
   private List<String> renderItem(
       String prefix, String indent, AdfNode item, ItemStyle style, RenderContext context) {
     var blocks = context.children(item, AdfBlock.class);
@@ -164,9 +161,9 @@ final class ListRenderer {
       if (rendered.isEmpty()) {
         continue;
       }
-      // A continuation block needs a blank line so it isn't soft-wrapped into the previous
-      // paragraph. Right after a bare marker a blank line would end the item instead, so the first
-      // block to render takes none, unless a checkbox precedes it: that is a paragraph.
+      // Continuation blocks need a blank line, or they soft-wrap into the previous paragraph. After
+      // a bare marker a blank line would end the item, so the first block takes none, unless a
+      // checkbox precedes it (then it is a paragraph).
       if (MarkdownBlocks.needsListSeparator(previous, rendered)) {
         lines.addAll(separatorLines(indent));
       } else if (!style.tightNesting || (!previous.isEmpty() && !isNestedListBlock(block))) {
@@ -179,10 +176,9 @@ final class ListRenderer {
     return lines;
   }
 
-  // List blocks nest as tight, marker-aligned sub-lists; other continuation blocks get a blank
-  // line. An ordered list starting != 1 is the exception: CommonMark only lets it interrupt a
-  // paragraph tightly when it starts at 1, so otherwise it needs the blank line or it (and its
-  // order) are lost.
+  // Lists nest tight and marker-aligned; other blocks get a blank line. An ordered list not
+  // starting at 1 is the exception: CommonMark interrupts a paragraph only from 1, so it needs
+  // the blank line or it (and its number) is lost.
   private static boolean isNestedListBlock(AdfBlock block) {
     return block instanceof BulletList
         || (block instanceof OrderedList orderedList && orderedList.order() == 1)
@@ -219,8 +215,7 @@ final class ListRenderer {
     return "- [" + ("DONE".equalsIgnoreCase(state) ? "x" : " ") + "] ";
   }
 
-  // continuationIndent aligns the wrapped lines of the first paragraph to the item's content
-  // column.
+  // Wrapped lines align to the item's content column.
   private List<String> prefixParagraph(String prefix, String text, String continuationIndent) {
     if (text.isBlank()) {
       return List.of(prefix.stripTrailing());

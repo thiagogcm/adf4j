@@ -3,10 +3,9 @@ package dev.nthings.adf4j.ast;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
-/// A reference to a synced block whose content is defined elsewhere: this node carries only the
-/// `resourceId` pointing at the source, not the synced blocks themselves. `resourceId` is `null`
-/// when the document omitted it. For the variant that also embeds a copy of the content see
-/// {@link BodiedSyncBlock}.
+/// A reference to a synced block defined elsewhere: carries only the source `resourceId`, not its
+/// content. `resourceId` is `null` when omitted. For the embedded-copy variant see {@link
+/// BodiedSyncBlock}.
 public record SyncBlock(Attributes attrs, List<AdfMark> marks) implements AdfBlock, DocContent {
 
   public SyncBlock {

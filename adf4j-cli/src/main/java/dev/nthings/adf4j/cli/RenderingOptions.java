@@ -3,8 +3,7 @@ package dev.nthings.adf4j.cli;
 import org.aesh.command.option.Option;
 import org.jspecify.annotations.Nullable;
 
-/// Markdown rendering options of `convert`, composed via `@Mixin`.
-/// A `null` value keeps the library default, so the CLI never overrides what it was not asked to.
+/// Rendering options of `convert`, via `@Mixin`. A `null` keeps the library default.
 final class RenderingOptions {
 
   @Option(

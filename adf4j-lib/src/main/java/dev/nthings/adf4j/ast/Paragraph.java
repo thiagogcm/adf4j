@@ -2,9 +2,8 @@ package dev.nthings.adf4j.ast;
 
 import java.util.List;
 
-/// A `paragraph` block: a run of inline `content` (text and atoms). `marks` are block-level marks
-/// applied to the whole paragraph (e.g. `alignment`, `indentation`), distinct from the inline marks
-/// carried on each {@link Text}.
+/// A paragraph of inline `content`. Block-level `marks` (e.g. `alignment`, `indentation`) apply to
+/// the whole paragraph; inline marks sit on each {@link Text}.
 public record Paragraph(Attributes attrs, List<AdfInline> content, List<AdfMark> marks)
     implements AdfBlock,
         BlockTaskItemContent,

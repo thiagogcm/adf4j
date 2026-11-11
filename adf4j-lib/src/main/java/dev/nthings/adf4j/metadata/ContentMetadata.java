@@ -5,10 +5,9 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-/// Source references and outline, restricted to supported document content.
-/// Attachment inventories enrich references by file ID or title. Custom renderer output is not
-/// analyzed, so metadata can include references in a body replaced by a callback.
-/// Excerpts retain their source AST for callers that need to render or index them separately.
+/// Source references and outline. Attachment inventories enrich references by file ID or title.
+/// Custom renderer output is not analyzed, so references in a body replaced by a callback can
+/// still appear. Excerpts keep their source AST.
 public record ContentMetadata(
     List<String> pageIds,
     List<String> externalUrls,
@@ -38,11 +37,10 @@ public record ContentMetadata(
     return EMPTY;
   }
 
-  /// The distinct, non-blank attachment file ids the body references
-  /// ({@link #attachmentRefs()} keys), in first-seen order: fetch these and skip attachments that
-  /// are attached but never embedded. Coverage depends on the options used (see the class note):
-  /// for attachment macros this is exactly what `AttachmentResolver` is asked to resolve; media
-  /// ids are always included, even when a media node's own `url` bypasses `MediaResolver`.
+  /// Distinct non-blank file IDs from {@link #attachmentRefs()}, in first-seen order. Skip
+  /// attachments not listed here, as they are never embedded. Attachment-macro IDs are those
+  /// `AttachmentResolver` is asked to resolve; media IDs are always included, even when a media
+  /// node's `url` bypasses `MediaResolver`.
   public Set<String> referencedFileIds() {
     var ids = new LinkedHashSet<String>();
     for (var attachment : attachmentRefs) {

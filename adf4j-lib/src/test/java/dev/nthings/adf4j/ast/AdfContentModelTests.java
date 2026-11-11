@@ -20,13 +20,12 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 
-/// Checks the `*Content` interfaces against `docs/spec/adf-schema.json`: for every container,
-/// the `type`s its interface permits are exactly the `type`s the schema's `content` rules name.
-/// A schema refresh that changes those rules fails here, so the API change is reviewed, not
-/// implied. Where the schema leaves content open, the model stays with the named types:
-/// `blockTaskItem` children after the second, and a `mediaSingle` inside a `bodiedSyncBlock`. A
-/// rule narrowed only in one `allOf` branch is out of reach, because this compares the union
-/// across a container's variants.
+/// Checks the `*Content` interfaces against `docs/spec/adf-schema.json`: each container's permitted
+/// `type`s must equal those its schema `content` rules name, so a schema refresh that changes them
+/// fails here and the API change gets reviewed. Where the schema leaves content open, the model
+/// keeps the named types: `blockTaskItem` children after the second, and a `mediaSingle` inside a
+/// `bodiedSyncBlock`. A rule narrowed in one `allOf` branch is out of reach: this compares the
+/// union across a container's variants.
 class AdfContentModelTests {
 
   private static final Map<String, Class<?>> CHILDREN_OF =
@@ -98,9 +97,8 @@ class AdfContentModelTests {
     assertThat(fromModel).isEqualTo(fromSchema);
   }
 
-  // The interfaces sharing accessors are not containers, so the schema derivation above never
-  // reaches them; the types they name still have to exist in the schema, which predates
-  // multiBodiedExtension.
+  // Interfaces sharing accessors are not containers, so the derivation above never reaches
+  // them. Their named types must still exist in the schema, which predates multiBodiedExtension.
   @Test
   void the_shared_accessor_interfaces_cover_their_node_types() throws IOException {
     var schema =

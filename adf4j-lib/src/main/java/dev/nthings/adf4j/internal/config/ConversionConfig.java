@@ -23,8 +23,8 @@ public final class ConversionConfig {
 
   private ConversionConfig() {}
 
-  /// Blank configuration is the defaults. Malformed JSON, unknown keys and wrong value types throw
-  /// an {@link AdfException} carrying one `INVALID_OPTIONS` diagnostic.
+  /// Blank input means defaults. Malformed JSON, unknown keys or wrong types throw an
+  /// {@link AdfException} with one `INVALID_OPTIONS` diagnostic.
   public static ConversionOptions read(String json) {
     if (json.isBlank()) return ConversionOptions.defaults();
     try {
@@ -109,8 +109,7 @@ public final class ConversionConfig {
         throw new IllegalArgumentException("Unknown configuration key: " + key);
   }
 
-  // The constant spelled in kebab case, e.g. "preserve-raw". Takes the constants, not the Class,
-  // so native images need no reflection.
+  // Kebab-case names. Takes the constants, not the Class, to avoid reflection in native images.
   private static <E extends Enum<E>> E constant(E[] constants, JsonNode node, String key) {
     var value = requiredString(node, key);
     for (var constant : constants) {

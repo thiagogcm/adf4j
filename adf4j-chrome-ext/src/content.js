@@ -106,7 +106,7 @@
         throw new Error('Could not identify a Confluence page id.');
       }
 
-      // The attachment inventory is best-effort: without it, links fall back to placeholders.
+      // Best-effort: without the inventory, links fall back to placeholders.
       const [page, attachments] = await Promise.all([
         fetchJson(helpers.buildPageApiUrl(pageId, href), controller.signal),
         fetchAttachments(pageId, href, controller.signal).catch((error) => {
@@ -155,7 +155,7 @@
   async function fetchAttachments(pageId, href, signal) {
     const attachments = [];
     let url = helpers.buildAttachmentsApiUrl(pageId, href);
-    // The cap only guards against a pathological pagination loop.
+    // Cap guards only against a runaway pagination loop.
     for (let fetched = 0; url && fetched < 20; fetched++) {
       const inventoryPage = await fetchJson(url, signal);
       attachments.push(...helpers.extractAttachments(inventoryPage, href));
@@ -165,7 +165,7 @@
   }
 
   function sendConvertMessage(adfJson, context) {
-    // Promise-form sendMessage rejects where the callback form would set chrome.runtime.lastError.
+    // Promise form rejects; the callback form would set chrome.runtime.lastError instead.
     return chrome.runtime.sendMessage({ type: MESSAGE_TYPE, adfJson, context });
   }
 

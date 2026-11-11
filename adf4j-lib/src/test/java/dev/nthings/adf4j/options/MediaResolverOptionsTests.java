@@ -34,9 +34,7 @@ class MediaResolverOptionsTests {
       }
       """;
 
-  // A file media node with no intrinsic type (no fileName/mediaType), as Confluence file media
-  // arrive: its
-  // image-ness is known only from the path the resolver supplies.
+  // File media with no intrinsic type (no fileName/mediaType): image-ness comes from the path.
   private static final String UNTYPED_FILE_MEDIA =
       """
       {
@@ -54,9 +52,7 @@ class MediaResolverOptionsTests {
       }
       """;
 
-  // A file media node with no intrinsic label (no name/fileName/alt): its file name lives only in
-  // the
-  // resolved path.
+  // File media with no intrinsic label: the file name lives only in the resolved path.
   private static final String UNLABELLED_FILE_MEDIA =
       """
       {

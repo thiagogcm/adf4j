@@ -118,7 +118,7 @@
     return new URL(next, origin).href;
   }
 
-  // The v2 downloadLink is relative to the /wiki context path (unlike _links.next).
+  // v2 downloadLink is relative to /wiki, unlike _links.next.
   function absoluteDownloadUrl(downloadLink, origin) {
     const link = typeof downloadLink === 'string' ? downloadLink.trim() : '';
     if (!link || !origin) {

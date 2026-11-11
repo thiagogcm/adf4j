@@ -1,11 +1,6 @@
-// Loads the adf4j GraalVM Web Image (WebAssembly) and returns a small JS-native API. The generated
-// image script runs Java `main`, publishes `globalThis.adf4j = { convert, analyze, version }`,
-// then calls `globalThis.__adf4jOnReady()`. This wrapper installs that callback first and evaluates
-// the generated image, which self-detects its host (Node.js, Bun, Deno, or a browser).
+// Loads the GraalVM Web Image. The image publishes globalThis.adf4j, then calls __adf4jOnReady.
 
-// Static, bundler-visible asset references: Vite/webpack/Rollup emit and rewrite these to hashed
-// output assets; Node/Bun/Deno resolve them as file URLs next to this module. Keep them the only
-// built-in candidates so the loader never names a path absent from a consumer's bundler build.
+// Kept as literal new URL(...) so bundlers can emit and rewrite them.
 const localImageUrl = new URL('./adf4j-wasm.js', import.meta.url);
 const localWasmUrl = new URL('./adf4j-wasm.js.wasm', import.meta.url);
 
@@ -35,7 +30,7 @@ export function loadAdf4j(opts = {}) {
       timeoutMs,
     );
 
-    // Java's signalReady() invokes this once the bridge functions are registered.
+    // Invoked by the image once globalThis.adf4j is installed.
     globalThis.__adf4jOnReady = () => {
       clearTimeout(timer);
       const api = globalThis.adf4j;
@@ -102,7 +97,7 @@ function runtimeWasmPath(wasm) {
       return decodeURIComponent(url.pathname);
     }
   } catch {
-    // Plain filesystem paths are already in the format Node's fs.readFile expects.
+    // Not a URL: already a plain filesystem path.
   }
   return String(wasm);
 }

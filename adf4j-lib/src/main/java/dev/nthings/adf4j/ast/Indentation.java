@@ -1,7 +1,7 @@
 package dev.nthings.adf4j.ast;
 
-/// Indentation (`indentation`) mark. `level` is the indent depth (default `0`, clamped to 0..6
-/// when rendered), emitted as a leading run of four spaces per level on the paragraph or heading.
+/// Indentation mark. `level` (default `0`) is clamped to 0..6 on render; each level is four leading
+/// spaces.
 public record Indentation(Attributes attrs) implements ParagraphMark, HeadingMark {
 
   @Override

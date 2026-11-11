@@ -21,10 +21,10 @@ import java.util.function.Supplier;
 import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
 
-/// What one render reports: callback failures, conversion effects in document order, unresolved
-/// dependencies, and the lossiness of the content it visits.
+/// What one render reports: callback failures, effects in document order, unresolved
+/// dependencies, and content lossiness.
 final class RenderEvents {
-  // Callback failures only, so its size counts them (see reasonSince).
+  // Failures only; their count drives reasonSince.
   private final List<Diagnostic> failures = new ArrayList<>();
   private final List<ConversionEffect> effects = new ArrayList<>();
   private final List<UnresolvedResource> unresolved = new ArrayList<>();
@@ -36,8 +36,7 @@ final class RenderEvents {
     this.options = options;
   }
 
-  /// Records what rendering the node at `path` changes. Each source position counts once, however
-  /// often the renderers reach it.
+  /// Records what the node at `path` changes; each source position counts once.
   void observe(AdfNode node, String path) {
     if (!observed.add(path)) return;
     if (node instanceof AdfBlock block) unknowns.visitBlock(block, path);
@@ -113,8 +112,7 @@ final class RenderEvents {
     effects.add(new ConversionEffect(kind, path, message));
   }
 
-  /// Records a dependency that is missing after every fallback, plus a `PLACEHOLDER` effect when
-  /// `placeholder` describes one.
+  /// Records a dependency missing after every fallback; a non-null `placeholder` adds an effect.
   void unresolved(
       UnresolvedResource.Kind kind,
       @Nullable String id,

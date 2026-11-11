@@ -290,9 +290,7 @@ class AdfAstParserTests {
 
   @Test
   void parses_bodied_extension_with_macro_params_and_nested_body() throws Exception {
-    // The local schema requires extensionType, extensionKey, and at least one block content item
-    // for
-    // bodiedExtension nodes.
+    // Schema requires extensionType, extensionKey and a block content item for bodiedExtension.
     var raw =
         """
         {
@@ -335,9 +333,8 @@ class AdfAstParserTests {
 
   @Test
   void parses_bodied_sync_block_resource_id_and_skips_non_object_content_items() throws Exception {
-    // The schema constrains bodiedSyncBlock content to block nodes. Parser tolerance still skips
-    // null
-    // and scalar array entries without losing valid block siblings.
+    // Schema limits bodiedSyncBlock content to blocks; the parser still skips null and scalar
+    // entries and keeps the valid siblings.
     var raw =
         """
         {
@@ -409,10 +406,8 @@ class AdfAstParserTests {
 
   @Test
   void inline_positioned_embed_and_block_cards_degrade_to_inline_cards() throws Exception {
-    // docs/spec/structure.md lists inlineCard as the card inline node; legacy payloads can still
-    // put
-    // embedCard/blockCard inline, and the parser degrades them to InlineCard instead of dropping
-    // them.
+    // structure.md lists inlineCard as the card inline node; legacy payloads put embedCard or
+    // blockCard inline, and the parser degrades them to InlineCard rather than dropping them.
     var raw =
         """
         {

@@ -19,19 +19,17 @@ import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
-/// Tree-mode-only JSON for the CLI (no record databind), so it adds no reflection surface to the
-/// native image. The mapper is hardened with {@link StreamReadConstraints} so a hostile map file
-/// fails cleanly instead of overflowing the stack. Every shape problem in a map file is a usage
-/// error (exit 2), named after its flag.
+/// Tree-mode JSON only (no record databind), so the native image gets no reflection surface. The
+/// mapper is hardened with {@link StreamReadConstraints} so a hostile map file fails cleanly.
+/// Shape errors in map files are usage errors (exit 2).
 final class CliJson {
 
-  // Shallow lookup tables: 64 levels is far beyond any real file yet caps a hostile one.
+  // Lookup tables are shallow: 64 levels is far beyond any real file, yet caps a hostile one.
   private static final int MAX_NESTING_DEPTH = 64;
   private static final int MAX_STRING_LENGTH = 20_000_000;
   private static final int MAX_NUMBER_LENGTH = 1_000;
 
-  // Pin the pretty-printer newline to '\n' (Jackson defaults to System.lineSeparator()) so JSON
-  // output is byte-identical across platforms.
+  // Pin newlines to '\n' (Jackson uses the platform separator) for byte-identical output.
   private static final DefaultPrettyPrinter PRETTY_LF =
       new DefaultPrettyPrinter().withObjectIndenter(new DefaultIndenter("  ", "\n"));
 
@@ -67,17 +65,14 @@ final class CliJson {
     return constant.name().toLowerCase(Locale.ROOT).replace('_', '-');
   }
 
-  /// Serializes a tree node: `pretty` two-space-indents (forcing `\n` newlines so output is
-  /// byte-identical across platforms), else single-line.
+  /// Serializes a tree node: two-space indent when `pretty`, else single-line.
   String write(JsonNode node, boolean pretty) {
     return pretty
         ? mapper.writer().with(PRETTY_LF).writeValueAsString(node)
         : mapper.writeValueAsString(node);
   }
 
-  /// Reads and parses a map/data file supplied via `flag`. A missing/unreadable file is an I/O
-  /// error (exit 1); malformed JSON is a usage error (exit 2). Neither leaks a stack trace to
-  /// stdout.
+  /// Reads a map file for `flag`. Missing or unreadable is exit 1; malformed JSON is exit 2.
   JsonNode readFile(Path path, String flag) {
     var raw = CliIo.read(path, flag + " file");
     try {
@@ -93,8 +88,7 @@ final class CliJson {
     return entries(readFile(Path.of(path), flag), flag, allowedKeys);
   }
 
-  /// The elements of `array`, each an object with no keys outside `allowedKeys`. `context` names
-  /// the array in errors.
+  /// The elements of `array`, each an object with no keys outside `allowedKeys`.
   static List<ObjectNode> entries(JsonNode array, String context, Set<String> allowedKeys) {
     if (!(array instanceof ArrayNode elements)) {
       throw CliException.usage(context + " must be a JSON array");
@@ -116,7 +110,7 @@ final class CliJson {
     throw CliException.usage(context + " must be a JSON object");
   }
 
-  /// Rejects unknown keys on a CLI-owned schema object so a typo'd key fails loudly (exit 2).
+  /// Rejects keys outside `allowed`, so a typo fails loudly (exit 2).
   static void rejectUnknownKeys(ObjectNode object, Set<String> allowed, String context) {
     for (var entry : object.properties()) {
       if (!allowed.contains(entry.getKey())) {
@@ -134,8 +128,8 @@ final class CliJson {
     return value;
   }
 
-  /// A scalar field as a string (a number keeps its JSON spelling), `null` when absent or JSON
-  /// null, or a usage error when it is an object or array.
+  /// A scalar field as a string (numbers keep their JSON spelling); `null` when absent or JSON
+  /// null; a usage error for an object or array.
   static @Nullable String string(JsonNode object, String field, String context) {
     var value = object.get(field);
     if (value == null || value.isNull()) {

@@ -94,7 +94,7 @@ class ConversionDiagnosticsTests {
   void a_dropped_unknown_mark_is_flagged_lossy_even_when_the_text_renders() {
     var result = AdfToMarkdown.create().convert(UNKNOWN_MARK);
 
-    // The text still renders; the unsupported mark is dropped but reported, not silently lost.
+    // Text still renders; the unsupported mark is dropped but reported.
     assertThat(result.body()).isEqualTo("hi");
     assertThat(result.hasWarnings()).isTrue();
     assertThat(result.diagnostics())
@@ -118,7 +118,7 @@ class ConversionDiagnosticsTests {
 
     var result = AdfToMarkdown.with(options).convert(json);
 
-    // The node is preserved (INFO) but the mark is still dropped (WARNING), so the doc is lossy.
+    // Node kept (INFO) but mark dropped (WARNING): the doc is lossy.
     assertThat(result.diagnostics())
         .extracting(Diagnostic::code)
         .containsExactly(

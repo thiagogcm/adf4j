@@ -2,8 +2,7 @@ package dev.nthings.adf4j.ast;
 
 import java.util.List;
 
-/// A `taskList` (action/checklist): `content` holds its {@link TaskItem} / {@link BlockTaskItem}
-/// entries, and may also contain nested {@link TaskList}s.
+/// A checklist (action) list of {@link TaskItem}s, {@link BlockTaskItem}s and nested lists.
 public record TaskList(Attributes attrs, List<AdfBlock> content, List<AdfMark> marks)
     implements AdfBlock,
         BodiedExtensionContent,
@@ -27,13 +26,13 @@ public record TaskList(Attributes attrs, List<AdfBlock> content, List<AdfMark> m
     return "taskList";
   }
 
-  /// The {@link TaskItem}, {@link BlockTaskItem} and nested {@link TaskList} children; `content`
-  /// keeps any other child.
+  /// The {@link TaskItem}, {@link BlockTaskItem} and nested {@link TaskList} children; other
+  /// children stay only in `content`.
   public List<TaskListContent> items() {
     return ChildNodes.ofType(content, TaskListContent.class);
   }
 
-  /// This node with a fixed `localId` in place of the generated one.
+  /// Sets a fixed `localId` instead of the generated one.
   public TaskList withLocalId(String localId) {
     return new TaskList(attrs.with("localId", localId), content, marks);
   }

@@ -9,8 +9,7 @@ import org.junit.jupiter.api.Test;
 
 class InlineMediaImageRenderingTests {
 
-  // The editor-migration macro shape observed in the wild: the media identity sits directly under
-  // parameters, not under macroParams.
+  // Editor-migration shape: media identity sits directly under parameters, not macroParams.
   private static final String INLINE_MEDIA_IMAGE =
       """
       {

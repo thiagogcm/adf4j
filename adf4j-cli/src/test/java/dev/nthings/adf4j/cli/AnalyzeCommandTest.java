@@ -17,7 +17,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 class AnalyzeCommandTest {
 
-  // One excerpt, plus a reference for every section that a plain document leaves empty.
+  // One excerpt, plus a reference for each section a plain document leaves empty.
   private static final String RICH_DOC =
       """
       {"type":"doc","version":1,"content":[

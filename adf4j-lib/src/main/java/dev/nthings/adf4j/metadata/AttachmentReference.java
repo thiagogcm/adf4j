@@ -2,20 +2,17 @@ package dev.nthings.adf4j.metadata;
 
 import org.jspecify.annotations.Nullable;
 
-/// One attachment the document embeds or links: the durable `fileId` (what a download API
-/// needs), the human `title` (file name, when known), the `mediaType` (an explicit or
-/// extension-inferred MIME type, or `null` when neither is available), and the `downloadUrl`
-/// (the attachment's real URL or path, or `null` when unknown). A non-null `downloadUrl` is the
-/// default link destination, so no resolver callback is needed to produce working links. Supplied
-/// through `ConversionOptions.withAttachments`, this is also one entry of a page's attachment
-/// inventory, identified by its `fileId`; its `title` is optional there.
+/// An attachment the document embeds or links. `fileId` is the durable download ID; `title` is the
+/// file name when known; `mediaType` is explicit or extension-inferred (null if unknown);
+/// `downloadUrl` is the real URL or path (null if unknown). A non-null `downloadUrl` is the default
+/// link destination, so no resolver is needed for working links. In a page's attachment inventory
+/// (see `ConversionOptions.withAttachments`), entries are keyed by `fileId`; `title` is optional.
 public record AttachmentReference(
     String fileId,
     @Nullable String title,
     @Nullable String mediaType,
     @Nullable String downloadUrl) {
 
-  /// A reference without a known `downloadUrl`.
   public AttachmentReference(String fileId, @Nullable String title, @Nullable String mediaType) {
     this(fileId, title, mediaType, null);
   }

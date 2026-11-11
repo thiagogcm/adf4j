@@ -2,6 +2,6 @@ package dev.nthings.adf4j.metadata;
 
 import org.jspecify.annotations.Nullable;
 
-/// A user mention: the first non-blank of the mention's account id / local id, and its display
-/// `text` (usually `@Name`), either of which may be `null` when the source omits it.
+/// A user mention. `id` is the first non-blank of the account ID or local ID; `text` is usually
+/// `@Name`. Either may be null.
 public record MentionReference(@Nullable String id, @Nullable String text) {}

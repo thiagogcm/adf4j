@@ -39,8 +39,7 @@ public final class CommonMarkSupport {
   }
 
   static CellHtmlRenderer cellHtmlRenderer() {
-    // Defence-in-depth for the HTML-table fallback (destinations are already scheme-sanitized
-    // upstream).
+    // Defence in depth: destinations are already scheme-sanitized upstream.
     return new CellHtmlRenderer(parser(), htmlRenderer(true));
   }
 }

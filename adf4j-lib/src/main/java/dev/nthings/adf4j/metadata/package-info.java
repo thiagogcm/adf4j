@@ -1,5 +1,4 @@
-/// Extracted document metadata: references, attachments, outline, and macro
-/// descriptors. {@link NullMarked}.
+/// Document metadata: references, attachments, outline, and macro descriptors.
 
 @NullMarked
 package dev.nthings.adf4j.metadata;

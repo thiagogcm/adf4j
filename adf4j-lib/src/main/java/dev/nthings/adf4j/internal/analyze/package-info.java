@@ -1,4 +1,4 @@
-/// The internal metadata-extraction (analyze) pass over the AST. {@link NullMarked}.
+/// Internal analyze pass over the AST.
 @NullMarked
 package dev.nthings.adf4j.internal.analyze;
 

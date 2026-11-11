@@ -50,8 +50,7 @@ class ChartMacroRenderingTests {
       }
       """;
 
-  // The modern chart app shape observed in the wild: a bodyless extension whose data is a table
-  // elsewhere in the document, referenced by a dataConsumer source.
+  // Modern chart shape: bodyless extension; the data table sits elsewhere via a dataConsumer.
   private static final String MODERN_CHART =
       """
       {
@@ -138,8 +137,7 @@ class ChartMacroRenderingTests {
   void a_modern_chart_renders_an_italic_caption_from_its_nested_title() {
     var result = AdfToMarkdown.create().convert(MODERN_CHART);
 
-    // The chart's table is a separate document node (already rendered where it sits), so the chart
-    // itself contributes only the caption — never a placeholder hole.
+    // The table is a separate node already rendered in place: the chart adds only the caption.
     assertThat(result.body()).isEqualTo("*Chart: Resoluções por mês*");
     assertThat(result.diagnostics()).noneMatch(d -> d.code() == Diagnostic.Code.UNSUPPORTED_MACRO);
   }

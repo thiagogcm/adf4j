@@ -2,10 +2,9 @@ package dev.nthings.adf4j.ast;
 
 import java.util.List;
 
-/// A block-level smart link: a URL or datasource rendered as its own block (a rich link card).
-/// All of its data is read through {@link AdfCard}: a `url`-backed card links out, a
-/// `datasourceId`-backed card references a datasource by id. See {@link InlineCard} for the in-text
-/// form and {@link EmbedCard} for the iframe-style embed.
+/// A block-level smart link, rendered as its own block. Its data is read through {@link AdfCard}: a
+/// `url` card links out, a `datasourceId` card references a datasource. See {@link InlineCard} and
+/// {@link EmbedCard} for the other forms.
 public record BlockCard(Attributes attrs, List<AdfMark> marks)
     implements AdfBlock,
         AdfInline,

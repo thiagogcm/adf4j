@@ -16,9 +16,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.IntStream;
 
-/// Renders ADF tables as GFM pipe tables and routes to {@link HtmlTableRenderer} when a table
-/// can't be expressed as one. Owns the routing and the pipe-table layout (column widths, header,
-/// separator).
+/// Renders ADF tables as GFM pipe tables, routing to {@link HtmlTableRenderer} when a table
+/// can't be expressed as one.
 final class TableRenderer {
 
   private final BlockRenderer blockRenderer;
@@ -36,8 +35,7 @@ final class TableRenderer {
     }
 
     var numberColumn = node.numberColumnEnabled();
-    // Number column, colspan/rowspan, non-GFM cell content, or a non-canonical header placement
-    // (header column, or header row that isn't first) can't be a GFM table.
+    // Not GFM: number column, colspan/rowspan, non-GFM cell content, or a non-canonical header.
     if (numberColumn
         || requiresHtmlTableFallback(rows)
         || (hasHeaderCell(rows) && !firstRowIsHeader(rows))) {
@@ -46,8 +44,8 @@ final class TableRenderer {
     if (firstRowIsHeader(rows)) {
       return renderGfmTable(node, context, false);
     }
-    // GFM-safe but headerless: apply the fallback policy. Promoting the first row needs no extra
-    // step, because the first emitted row always sits above the separator.
+    // GFM-safe but headerless: apply the fallback policy. Promoting the first row needs no
+    // extra step; it always sits above the separator.
     if (context.session().options().tableFallback() != TableFallback.HTML) {
       context
           .session()
@@ -83,7 +81,7 @@ final class TableRenderer {
       return "";
     }
 
-    // GFM requires a header row, so give a headerless table an empty one.
+    // GFM requires a header row.
     if (syntheticEmptyHeader) {
       renderedRows.addFirst(Collections.nCopies(maxColumns, ""));
     }
@@ -91,7 +89,7 @@ final class TableRenderer {
     final int columns = maxColumns;
     var normalizedRows = renderedRows.stream().map(row -> withPadding(row, columns)).toList();
 
-    // GFM's delimiter row needs at least three dashes per column; cells pad to the same width.
+    // Delimiter row needs at least three dashes per column.
     var widths = new int[columns];
     Arrays.fill(widths, 3);
     for (var row : normalizedRows) {
@@ -189,7 +187,7 @@ final class TableRenderer {
         || block instanceof Media;
   }
 
-  // Shared with HtmlTableRenderer: true when every cell in the row is a header cell.
+  // Shared with HtmlTableRenderer: every cell is a header cell.
   static boolean isHeaderRow(List<TableCell> cells) {
     if (cells.isEmpty()) {
       return false;

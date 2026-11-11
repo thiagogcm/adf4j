@@ -2,8 +2,8 @@ package dev.nthings.adf4j.ast;
 
 import java.util.List;
 
-/// A `tableRow`: `content` is its {@link TableCell}s left to right. A cell may be a header or data
-/// cell; the row does not distinguish the two (see {@link TableCell#header()}).
+/// A row: `content` is its {@link TableCell}s, left to right. The row does not distinguish header
+/// from data cells (see {@link TableCell#header()}).
 public record TableRow(Attributes attrs, List<AdfBlock> content, List<AdfMark> marks)
     implements AdfBlock {
 
@@ -17,7 +17,7 @@ public record TableRow(Attributes attrs, List<AdfBlock> content, List<AdfMark> m
     return "tableRow";
   }
 
-  /// The {@link TableCell} children; `content` keeps any other child.
+  /// The {@link TableCell} children; other children stay only in `content`.
   public List<TableCell> cells() {
     return ChildNodes.ofType(content, TableCell.class);
   }

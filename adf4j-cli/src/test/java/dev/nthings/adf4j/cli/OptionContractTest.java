@@ -8,9 +8,8 @@ import java.util.Arrays;
 import org.aesh.command.option.Option;
 import org.junit.jupiter.api.Test;
 
-/// Annotation values must be compile-time constants, so the `allowedValues` lists are literals
-/// that can silently drift from their sources of truth. These tests pin them together: a new enum
-/// constant in the library fails here until the annotation catches up.
+/// `allowedValues` must be literals, so they can drift from the enums. These tests pin them: a new
+/// enum constant fails here until the annotation catches up.
 class OptionContractTest {
 
   @Test

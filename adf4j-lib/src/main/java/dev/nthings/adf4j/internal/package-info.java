@@ -1,4 +1,4 @@
-/// Internal support utilities, not part of the public API. {@link NullMarked}.
+/// Internal support utilities, not part of the public API.
 @NullMarked
 package dev.nthings.adf4j.internal;
 

@@ -2,7 +2,7 @@ package dev.nthings.adf4j.ast;
 
 import java.util.List;
 
-/// A `rule` block: a horizontal divider. Carries no content.
+/// A horizontal divider block with no content.
 public record Rule(Attributes attrs, List<AdfMark> marks)
     implements AdfBlock,
         BodiedExtensionContent,

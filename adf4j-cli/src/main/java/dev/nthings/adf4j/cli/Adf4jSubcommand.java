@@ -13,11 +13,10 @@ import org.aesh.command.option.Mixin;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.simple.SimpleLogger;
 
-/// Base of every subcommand: the shared options, the input argument, and the exit-code contract.
-/// {@link #execute} maps {@link #run}'s outcome onto it: a {@link CliException} is a handled
-/// failure reported as `error:` on stderr, anything else is a bug reported as `internal error:`.
-/// Stdout stays reserved for the deliverable. Both the aesh runtime and the annotation processor
-/// pick up the fields declared here through their superclass walks.
+/// Base of every subcommand: shared options, the input argument, and the exit-code contract.
+/// A {@link CliException} is reported as `error:` on stderr; any other exception is a bug,
+/// reported as `internal error:`. Stdout is reserved for the deliverable. The aesh annotation
+/// processor finds the fields here through superclass walks.
 abstract class Adf4jSubcommand implements Command<CommandInvocation> {
 
   @Mixin CommonOptions common = new CommonOptions();
@@ -48,16 +47,15 @@ abstract class Adf4jSubcommand implements Command<CommandInvocation> {
     }
   }
 
-  // The library logs through slf4j-simple, which would otherwise print warnings and their stack
-  // traces to stderr whatever --quiet says. It reads this property once, when the first logger is
-  // created, so this must run before anything touches the library; that also holds in the native
-  // image, where the logger is initialized at run time.
+  // slf4j-simple prints library warnings to stderr regardless of --quiet. It reads this property
+  // once, at the first logger's creation, so set it before the library is touched (also in the
+  // native image, where loggers initialize at run time).
   private void configureLogging() {
     System.setProperty(SimpleLogger.DEFAULT_LOG_LEVEL_KEY, common.verbose ? "debug" : "off");
   }
 
-  /// Reads and parses the input. Bad content is not an exception: the result is invalid and the
-  /// command still writes its stdout, then exits {@link ExitCodes#CONTENT_FAILURE}.
+  /// Parses the input. Invalid content is not thrown: the command still writes stdout, then exits
+  /// {@link ExitCodes#CONTENT_FAILURE}.
   ParseResult parseInput() {
     return AdfJson.parse(readInput());
   }
@@ -74,7 +72,6 @@ abstract class Adf4jSubcommand implements Command<CommandInvocation> {
     }
   }
 
-  /// One diagnostic as a line of text.
   static String describe(Diagnostic diagnostic) {
     return "[%s] %s: %s".formatted(diagnostic.severity(), diagnostic.code(), diagnostic.message());
   }

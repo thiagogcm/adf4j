@@ -9,11 +9,10 @@ import java.util.Locale;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
 
-/// The attachment inventory of one render or analyze, built from
-/// `ConversionOptions.attachments()`. `fileId` is an entry's identity: a blank one is dropped, the
-/// first entry per id wins, and an id matches trimmed and case-insensitively. Titles are a separate
-/// index for macros that name a file: optional, matched the same way, and when two entries share
-/// one the first wins the lookup while both stay reachable by id.
+/// Attachments for one render or analyze, from `ConversionOptions.attachments()`. `fileId` is the
+/// identity: blank ids are dropped, the first entry per id wins, and matching ignores case and
+/// surrounding whitespace. Titles index separately; on a clash the first entry wins the title, but
+/// both stay reachable by id.
 public final class AttachmentInventory {
 
   private static final AttachmentInventory UNKNOWN =
@@ -32,7 +31,7 @@ public final class AttachmentInventory {
     this.byTitle = byTitle;
   }
 
-  /// The inventory for a caller's list, where `null` means it is unknown.
+  /// `null` means the caller gave no inventory.
   public static AttachmentInventory from(@Nullable List<AttachmentReference> attachments) {
     if (attachments == null) {
       return UNKNOWN;
@@ -51,7 +50,7 @@ public final class AttachmentInventory {
     return new AttachmentInventory(true, byFileId, byTitle);
   }
 
-  /// Whether the caller supplied an inventory, which is then authoritative even when empty.
+  /// True when the caller supplied an inventory, authoritative even when empty.
   public boolean isKnown() {
     return known;
   }

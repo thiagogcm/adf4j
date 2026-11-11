@@ -1,13 +1,11 @@
 package dev.nthings.adf4j.ast;
 
-/// The fallback for a block-level ADF `type` the parser does not recognize: it preserves the
-/// node's original ADF `type` string and its full `rawJson` so an unsupported or newer node
-/// survives parsing without data loss. How the renderer emits it is governed by an
-/// `UnknownNodePolicy`. Consumers matching on {@link AdfBlock} should keep a `default`/handle
-/// this case. See {@link UnknownInline} and {@link UnknownMark} for the inline/mark equivalents.
+/// Fallback for a block `type` the parser does not recognize. Keeps the original `type` and full
+/// `rawJson`, so newer nodes survive parsing. Emission is governed by an `UnknownNodePolicy`.
+/// Consumers matching on {@link AdfBlock} should handle this case.
 public record UnknownBlock(String type, String rawJson) implements AdfBlock, AdfUnknown {
 
-  /// Always empty: the node's attributes are inside `rawJson`.
+  /// Always empty; attributes are inside `rawJson`.
   @Override
   public Attributes attrs() {
     return Attributes.empty();

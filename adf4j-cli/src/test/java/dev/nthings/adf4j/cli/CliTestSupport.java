@@ -8,9 +8,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-/// Drives {@link Main#run} with swapped system streams so tests can assert exit code, stdout, and
-/// stderr. The aesh runtime and the commands both resolve `System.in/out/err` at call time, so a
-/// swap around the run captures everything.
+/// Runs {@link Main#run} with swapped system streams to capture exit code, stdout and stderr.
+/// Streams are resolved at call time, so the swap captures everything.
 final class CliTestSupport {
 
   /// The captured outcome of one CLI invocation.
@@ -23,14 +22,14 @@ final class CliTestSupport {
         {"type":"paragraph","content":[{"type":"text","text":"World"}]}
       ]}""";
 
-  // Drops an unknown mark -> a WARNING diagnostic -> hasWarnings() is true.
+  // Unknown mark: dropped with a WARNING, so hasWarnings() is true.
   static final String LOSSY_DOC =
       """
       {"version":1,"type":"doc","content":[
         {"type":"paragraph","content":[{"type":"text","text":"hi","marks":[{"type":"bogusMark"}]}]}
       ]}""";
 
-  // An unknown block node -> aborts under --unknown-nodes fail.
+  // Aborts under --unknown-nodes fail.
   static final String UNKNOWN_NODE_DOC =
       """
       {"version":1,"type":"doc","content":[{"type":"bogusBlock"}]}""";
@@ -70,7 +69,6 @@ final class CliTestSupport {
         err.toString(StandardCharsets.UTF_8));
   }
 
-  /// Runs the `convert` subcommand with the given stdin and extra args.
   static Result convert(String stdin, String... args) {
     var full = new String[args.length + 1];
     full[0] = "convert";
@@ -78,7 +76,7 @@ final class CliTestSupport {
     return run(stdin, full);
   }
 
-  /// Runs with empty stdin; for invocations (help/version) that don't read input.
+  /// Empty stdin, for help and version, which read no input.
   static Result runNoInput(String... args) {
     return run("", args);
   }

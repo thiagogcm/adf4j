@@ -2,10 +2,8 @@ package dev.nthings.adf4j.ast;
 
 import java.util.List;
 
-/// A cluster of attachments shown together: the outer wrapper around one or more {@link Media}
-/// children, typically the non-image files (PDFs, archives, …) of a page. Unlike
-/// {@link MediaSingle} it carries no layout or width and takes no `marks`; per-item attributes
-/// live on each child's {@link AdfMedia} fields.
+/// A cluster of attachments shown together, typically non-image files. Unlike {@link MediaSingle}
+/// it has no layout, width or `marks`; per-item attributes live on each child.
 public record MediaGroup(Attributes attrs, List<AdfBlock> content, List<AdfMark> marks)
     implements AdfBlock,
         BlockquoteContent,
@@ -28,7 +26,7 @@ public record MediaGroup(Attributes attrs, List<AdfBlock> content, List<AdfMark>
     return "mediaGroup";
   }
 
-  /// The {@link Media} children; any off-schema child stays in `content` only.
+  /// The {@link Media} children; other children stay only in `content`.
   public List<Media> items() {
     return ChildNodes.ofType(content, Media.class);
   }

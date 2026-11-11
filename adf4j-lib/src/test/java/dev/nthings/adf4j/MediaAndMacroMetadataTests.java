@@ -14,8 +14,8 @@ import java.util.List;
 import org.jsoup.Jsoup;
 import org.junit.jupiter.api.Test;
 
-/// Metadata reports what renders: references inside a subtree the renderer drops, or behind a macro
-/// it leaves as a placeholder, are not references.
+/// Metadata reports what renders: references in a subtree the renderer drops, or behind a
+/// placeholder macro, are not references.
 class MediaAndMacroMetadataTests {
 
   private static final AdfToMarkdown CONVERTER = AdfToMarkdown.create();

@@ -115,8 +115,7 @@ class TableFallbackOptionsTests {
 
   @Test
   void html_fallback_preserves_relative_and_http_links_in_a_cell() {
-    // The fallback re-parses cell Markdown to HTML; its URL sanitiser must keep safe/relative
-    // hrefs.
+    // The fallback re-parses cell Markdown to HTML; its URL sanitiser must keep safe hrefs.
     var adf =
         """
         {

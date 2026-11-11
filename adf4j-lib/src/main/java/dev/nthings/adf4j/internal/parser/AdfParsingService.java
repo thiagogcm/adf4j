@@ -15,18 +15,15 @@ import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/// The parse phase: reads ADF JSON, validates the root, and maps it to an {@link AdfDocument}
-/// with diagnostics. Owns its JSON hardening (nesting-depth cap) and mapper behind
-/// {@link #createDefault()}.
+/// Reads and validates ADF JSON, then maps it to an {@link AdfDocument}. Owns the JSON
+/// hardening behind {@link #createDefault()}.
 public final class AdfParsingService {
 
   private static final Logger log = LoggerFactory.getLogger(AdfParsingService.class);
 
-  // Cap JSON nesting so a deep payload surfaces as a caught INVALID_JSON instead of overflowing the
-  // stack (parse, AST build, analyze and render all recurse per level). ~2 JSON levels per ADF
-  // block,
-  // so 100 admits ~50 nested blocks — far beyond any real document, yet safe on small thread
-  // stacks.
+  // Caps nesting so a deep payload fails as INVALID_JSON rather than overflowing the stack:
+  // every phase recurses per level. ~2 JSON levels per ADF block, so 100 admits ~50 nested
+  // blocks.
   private static final int MAX_NESTING_DEPTH = 100;
 
   private final JsonMapper mapper;
@@ -43,7 +40,7 @@ public final class AdfParsingService {
             .streamReadConstraints(
                 StreamReadConstraints.builder().maxNestingDepth(MAX_NESTING_DEPTH).build())
             .build();
-    // Big decimals keep every digit of a float, which a double would round or overflow.
+    // BigDecimal keeps every float digit; a double would round or overflow.
     var mapper =
         JsonMapper.builder(factory)
             .enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
@@ -82,7 +79,7 @@ public final class AdfParsingService {
       return new ParseResult(null, tree.diagnostics());
     }
     try {
-      // Warnings at most: parse best-effort, keeping them in diagnostics.
+      // Best-effort: issues stay in diagnostics as warnings.
       var parsed = astParser.parse(root);
       var allIssues = Stream.concat(tree.diagnostics().stream(), parsed.issues().stream()).toList();
       return new ParseResult(parsed.document(), allIssues);

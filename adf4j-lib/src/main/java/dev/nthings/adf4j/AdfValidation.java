@@ -16,7 +16,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import tools.jackson.databind.JsonNode;
 
-/// Checks the original JSON against the bundled ADF schema. Parsing remains tolerant.
+/// Validates against the bundled ADF schema. The string overload checks the original JSON; the
+/// document overload checks its serialized form.
 public final class AdfValidation {
   private static final AdfParsingService PARSER = AdfParsingService.createDefault();
   private static final AdfJsonWriter WRITER = AdfJsonWriter.createDefault();
@@ -47,6 +48,7 @@ public final class AdfValidation {
     return new ValidationResult(diagnostics);
   }
 
+  /// Returns the document, or throws AdfException on schema violations.
   public static AdfDocument requireValid(AdfDocument document) {
     validate(document).requireSuccess();
     return document;

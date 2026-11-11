@@ -1,4 +1,4 @@
-/// The internal AST-to-Markdown rendering machinery. {@link NullMarked}.
+/// Internal AST-to-Markdown rendering.
 @NullMarked
 package dev.nthings.adf4j.internal.render;
 

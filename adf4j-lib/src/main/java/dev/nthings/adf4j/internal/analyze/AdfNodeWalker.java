@@ -42,9 +42,7 @@ import dev.nthings.adf4j.ast.UnknownBlock;
 import dev.nthings.adf4j.internal.Located;
 import java.util.List;
 
-/// The analyze phase's one tree-walk: descends a document in order, handing every block and inline
-/// with its JSON Pointer to each {@link NodeVisitor}. The single home for "what are a node's
-/// children".
+/// The one tree walk of the analyze phase. The only place that knows a node's children.
 final class AdfNodeWalker {
 
   private final List<NodeVisitor> visitors;
@@ -80,7 +78,7 @@ final class AdfNodeWalker {
       case Table node -> blocks(node, path, TableRow.class);
       case TableRow node -> blocks(node, path, TableCell.class);
       case LayoutSection node -> blocks(node, path, LayoutColumn.class);
-      // Only the children that render: a stray child would feed references the body doesn't have.
+      // Only children that render: a stray one would add references the body lacks.
       case MediaSingle node -> {
         blocks(node, path, Media.class);
         blocks(node, path, Caption.class);
@@ -99,8 +97,8 @@ final class AdfNodeWalker {
           ExtensionFrame _,
           BodiedSyncBlock _ ->
           blocks(block, path, AdfBlock.class);
-      // Leaf blocks: no children to analyze (a code block's text is literal, so its marks don't
-      // count). Exhaustive (no default) so new block types must be triaged here.
+      // Leaves: a code block's text is literal, so its marks don't count. No default, so new
+      // block types must be triaged here.
       case CodeBlock _,
           Rule _,
           Media _,

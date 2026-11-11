@@ -2,8 +2,8 @@ package dev.nthings.adf4j.ast;
 
 import java.util.List;
 
-/// A `layoutColumn` within a {@link LayoutSection}. `width` is the column's intended width as a
-/// percentage of the row (not reflected in the Markdown output); `content` is the column's blocks.
+/// A column of a {@link LayoutSection}. `width` is its intended percentage of the row and is not
+/// reflected in Markdown.
 public record LayoutColumn(Attributes attrs, List<AdfBlock> content, List<AdfMark> marks)
     implements AdfBlock {
 
@@ -17,7 +17,6 @@ public record LayoutColumn(Attributes attrs, List<AdfBlock> content, List<AdfMar
     return "layoutColumn";
   }
 
-  /// The percentage of the section this column takes.
   public double width() {
     return attrs.number("width", 0);
   }

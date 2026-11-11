@@ -87,11 +87,10 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/// Maps ADF JSON onto the AST without interpreting it: each record keeps its node's `attrs`,
-/// `content` and `marks`, and an unrecognized `type` keeps its raw JSON. What the AST has no place
-/// for (non-object elements, unknown keys, a non-array `content`, a non-string `text`, ...) is
-/// reported as one `UNPRESERVED_JSON` warning, because writing the document back would drop it.
-/// Stateless and thread-safe; each parse keeps its own report.
+/// Maps ADF JSON onto the AST without interpreting it. Records keep `attrs`, `content` and `marks`;
+/// an unknown `type` keeps its raw JSON. Anything the AST cannot hold (non-object elements, unknown
+/// keys, non-array `content`, non-string `text`) becomes one `UNPRESERVED_JSON` warning, since
+/// writing back would drop it. Stateless and thread-safe; each parse keeps its own report.
 public final class AdfAstParser {
 
   private static final Logger log = LoggerFactory.getLogger(AdfAstParser.class);
@@ -117,11 +116,11 @@ public final class AdfAstParser {
     return new ParsedDocument(document, run.issues());
   }
 
-  // One document's traversal, so the report never crosses threads or documents.
+  // Per-parse traversal, so the report never crosses documents or threads.
   private final class Run {
 
     private final @Nullable JsonNode root;
-    // Built on the first unpreserved construct: well-formed documents never need a path.
+    // Built lazily: well-formed documents never need paths.
     private @Nullable Map<JsonNode, String> locations;
     private final List<String> paths = new ArrayList<>();
     private @Nullable String firstUnpreserved;
@@ -195,7 +194,7 @@ public final class AdfAstParser {
       return children(parent, parentType, "marks", this::mark);
     }
 
-    // The field's object elements through fn; the single place array traversal lives.
+    // Maps the field's object elements through fn. The only array traversal.
     private <T> List<T> children(
         JsonNode parent, String parentType, String field, Function<JsonNode, T> fn) {
       var arrayNode = parent.get(field);
@@ -373,23 +372,22 @@ public final class AdfAstParser {
     }
   }
 
-  // The canonical constructor of a block with `content` of C.
   @FunctionalInterface
   private interface ContainerFactory<C> {
     AdfBlock create(Attributes attrs, List<C> content, List<AdfMark> marks);
   }
 
-  // Null and an empty container mean the same as a missing attrs, content or marks.
+  // Null and empty mean the same as absent.
   private static boolean isAbsent(JsonNode node) {
     return node.isNull() || (node.isContainer() && node.isEmpty());
   }
 
-  // Attributes drops null values, so these attrs write back as no attrs at all.
+  // Attributes drops nulls, so these write back with no attrs.
   private static boolean hasOnlyNulls(JsonNode attrs) {
     return attrs.isObject() && attrs.valueStream().allMatch(JsonNode::isNull);
   }
 
-  // JSON nulls drop out of objects, leaving the key absent, but stay in arrays to keep indices.
+  // Nulls drop out of objects but stay in arrays, to keep indices.
   private static LinkedHashMap<String, Object> plainObject(JsonNode object) {
     var map = LinkedHashMap.<String, Object>newLinkedHashMap(object.size());
     for (var entry : object.properties()) {

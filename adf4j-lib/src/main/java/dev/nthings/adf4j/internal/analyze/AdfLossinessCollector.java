@@ -18,10 +18,9 @@ import dev.nthings.adf4j.result.Diagnostic;
 import java.util.ArrayList;
 import java.util.List;
 
-/// Records where the unmodelled constructs it visits sit, so the conversion can report whether
-/// rendering them was lossy: unknown node types (governed by the active {@link UnknownNodePolicy})
-/// and unknown marks (always dropped: the AST has no way to render a mark type it does not model).
-/// Holds one document's findings; create a fresh instance per document.
+/// Records paths of unmodelled nodes and marks so the conversion can report lossiness. Unknown
+/// nodes follow the active {@link UnknownNodePolicy}; unknown marks are always dropped.
+/// One instance per document.
 public final class AdfLossinessCollector implements NodeVisitor {
 
   private final List<String> nodePaths = new ArrayList<>();
@@ -33,7 +32,7 @@ public final class AdfLossinessCollector implements NodeVisitor {
       case UnknownBlock _ -> nodePaths.add(path);
       case Paragraph _, Heading _, MediaSingle _, Media _ -> unknownMarks(block, path);
       default -> {
-        // Other blocks keep their marks in the AST, but rendering ignores them by design.
+        // Rendering ignores marks on other blocks by design.
       }
     }
   }
@@ -44,7 +43,7 @@ public final class AdfLossinessCollector implements NodeVisitor {
       case UnknownInline _ -> nodePaths.add(path);
       case Text _, MediaInline _ -> unknownMarks(inline, path);
       default -> {
-        // Other inlines keep their marks in the AST, but rendering ignores them by design.
+        // Rendering ignores marks on other inlines by design.
       }
     }
   }
@@ -57,9 +56,8 @@ public final class AdfLossinessCollector implements NodeVisitor {
     }
   }
 
-  /// Diagnostics describing how the unknown constructs fared (empty when none). The unknown-node
-  /// count is an upper bound: it counts every parsed unknown node, including any the renderer
-  /// would also have dropped because it sits in a subtree dropped by design.
+  /// The unknown-node count is an upper bound: it includes nodes inside subtrees the renderer
+  /// drops by design.
   public List<Diagnostic> build(UnknownNodePolicy policy) {
     var issues = new ArrayList<Diagnostic>(2);
     var nodes = nodePaths.size();
@@ -79,7 +77,7 @@ public final class AdfLossinessCollector implements NodeVisitor {
               new Diagnostic(
                   Diagnostic.Code.UNKNOWN_NODE_PRESERVED,
                   nodes + " unsupported node(s) preserved as raw JSON.");
-          // FAIL aborts the render with an exception, so there is no result to diagnose.
+          // FAIL throws instead of rendering, so there is nothing to diagnose.
           case FAIL -> null;
         };
     if (nodes > 0 && nodeIssue != null) {

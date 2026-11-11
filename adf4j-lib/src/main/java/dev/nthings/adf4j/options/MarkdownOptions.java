@@ -2,7 +2,7 @@ package dev.nthings.adf4j.options;
 
 import java.util.Objects;
 
-/// Serializable Markdown rendering policy. Headerless tables retain every original data row.
+/// Serializable rendering policy. Headerless tables keep every original data row.
 public record MarkdownOptions(
     UnknownNodePolicy unknownNodePolicy,
     boolean imageSizeAttributes,

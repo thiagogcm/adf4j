@@ -11,15 +11,13 @@ import java.nio.file.StandardCopyOption;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
-/// The CLI's one read path, for the ADF input and every map file, and its output path. A file
-/// output goes through a temp file + atomic rename so a crash mid-write can't leave a truncated
-/// file.
+/// The CLI's read and write path for all input and file output. File output goes through a temp
+/// file and atomic rename, so a crash can't leave a truncated file.
 final class CliIo {
 
   private CliIo() {}
 
-  /// Reads `path`, or stdin when it is `null`, as strict UTF-8. `label` names the source in errors.
-  /// A missing, unreadable or undecodable source is an I/O error (exit 1).
+  /// Reads `path` (or stdin when `null`) as strict UTF-8. Failures are I/O errors (exit 1).
   static String read(@Nullable Path path, String label) {
     try {
       var bytes = path == null ? System.in.readAllBytes() : Files.readAllBytes(path);
@@ -52,7 +50,7 @@ final class CliIo {
       var target = existing ? requested.toRealPath() : requested;
       temp = createTemp(target, existing);
       Files.writeString(temp, content, StandardCharsets.UTF_8);
-      // Only now: a read-only target's permissions would have refused the write.
+      // After the write: a read-only target's mode would have refused it.
       if (existing && target.getFileSystem().supportedFileAttributeViews().contains("posix")) {
         Files.setPosixFilePermissions(temp, Files.getPosixFilePermissions(target));
       }
@@ -70,8 +68,8 @@ final class CliIo {
     }
   }
 
-  // Replacing a file keeps createTempFile's private 0600 until the content is complete. A new file
-  // has no permissions to keep, and createFile leaves its mode to the umask, as for any new file.
+  // Replacing keeps createTempFile's private 0600 until the content is complete. A new file takes
+  // the umask default.
   private static Path createTemp(Path target, boolean existing) throws IOException {
     var absolute = target.toAbsolutePath();
     return existing
@@ -86,7 +84,7 @@ final class CliIo {
     try {
       Files.deleteIfExists(path);
     } catch (IOException ignored) {
-      // best-effort temp cleanup; the rename already succeeded or the write already failed
+      // best effort: the rename or the write already settled the outcome
     }
   }
 }

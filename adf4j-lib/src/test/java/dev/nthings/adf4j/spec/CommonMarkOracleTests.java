@@ -7,11 +7,10 @@ import dev.nthings.adf4j.options.ConversionOptions;
 import org.jsoup.Jsoup;
 import org.junit.jupiter.api.Test;
 
-/// Independent structural oracle: rather than re-comparing against a converter-produced snapshot,
-/// each case parses the converter's Markdown with `commonmark` (production's extension
-/// list), renders to HTML, and asserts structural invariants — catching output that looks plausible
-/// but parses into the wrong tree (a stray heading, a list escaping a paragraph, a leaked HTML
-/// tag).
+/// Independent structural oracle: each case parses the converter's Markdown with `commonmark`
+/// (production's extension list), renders HTML, and asserts structural invariants. This catches
+/// output that looks plausible but parses into the wrong tree, such as a stray heading, a list
+/// escaping a paragraph, or a leaked HTML tag.
 class CommonMarkOracleTests {
 
   private static final AdfToMarkdown CONVERTER = AdfToMarkdown.create();
@@ -57,8 +56,7 @@ class CommonMarkOracleTests {
 
   @Test
   void indented_paragraph_stays_a_paragraph_and_does_not_promote_to_a_code_block() {
-    // The nbsp indent run is plain text, so a deeply-indented paragraph must stay a <p>, never a
-    // 4-space indented <pre><code> block.
+    // The nbsp indent run is plain text: a deep indent must stay <p>, not an indented code block.
     var adf =
         """
         {
@@ -125,7 +123,6 @@ class CommonMarkOracleTests {
 
   @Test
   void expand_title_with_inline_html_does_not_introduce_a_live_b_element() {
-    // The title "A <b>B</b> & C" must be HTML-escaped, so no live <b> appears in the summary.
     var adf =
         """
         {
@@ -149,7 +146,6 @@ class CommonMarkOracleTests {
 
   @Test
   void single_text_node_with_embedded_markers_stays_one_paragraph() {
-    // A single text node "intro\n# heading\n- item" stays one paragraph, no heading/list.
     var adf =
         """
         {
@@ -174,7 +170,7 @@ class CommonMarkOracleTests {
 
   @Test
   void inline_card_from_json_ld_data_keeps_both_url_and_name() {
-    // An inlineCard carrying only JSON-LD data{name,url} must linkify with the name as the text.
+    // JSON-LD-only inlineCard: linkify, using data.name as the link text.
     var adf =
         """
         {
@@ -199,7 +195,7 @@ class CommonMarkOracleTests {
 
   @Test
   void link_on_whitespace_with_bracket_in_href_stays_a_real_anchor() {
-    // A link mark on whitespace-only text whose href contains ']' must remain a parseable anchor.
+    // A ']' in a whitespace-only link href must still yield a parseable anchor.
     var adf =
         """
         {
@@ -223,7 +219,6 @@ class CommonMarkOracleTests {
 
   @Test
   void placeholder_with_link_and_emphasis_metacharacters_stays_inert_text() {
-    // A placeholder carrying "[label](http://evil) *x*" must not parse into an anchor or emphasis.
     var adf =
         """
         {
@@ -270,7 +265,6 @@ class CommonMarkOracleTests {
 
   @Test
   void mention_as_first_inline_starting_with_dash_does_not_become_a_list() {
-    // A mention's "- ..." text at line start must not promote to a bullet list item.
     var adf =
         """
         {
@@ -293,7 +287,7 @@ class CommonMarkOracleTests {
 
   @Test
   void non_numeric_date_as_first_inline_starting_with_gt_does_not_become_a_blockquote() {
-    // A non-numeric date timestamp passes through verbatim; a leading ">" must not start a quote.
+    // Non-numeric date passes through verbatim; a leading ">" must not start a quote.
     var adf =
         """
         {
@@ -373,10 +367,8 @@ class CommonMarkOracleTests {
 
   @Test
   void toc_referenced_heading_emits_an_anchor_that_matches_its_toc_link() {
-    // A duplicate heading name slugs to "dup" / "dup-1"; the injected <a id> for each must equal
-    // the
-    // toc link target so the link resolves on any consumer, not just a commonmark-compatible
-    // slugger.
+    // Duplicate heading slugs ("dup", "dup-1"): each injected <a id> must match its toc link
+    // target, so links resolve in any consumer, not just commonmark-slugging ones.
     var adf =
         """
         {
@@ -404,9 +396,8 @@ class CommonMarkOracleTests {
 
   @Test
   void header_column_table_keeps_the_header_cells_in_the_left_column_of_both_rows() {
-    // A header COLUMN (first cell of each row is a tableHeader) must not be promoted to a GFM
-    // header
-    // row: the fallback routes to raw HTML, so the <th> stay in the left column of both rows.
+    // A header COLUMN (first cell of each row is tableHeader) must not become a GFM header row:
+    // the fallback routes to raw HTML, keeping the <th> in the left column.
     var adf =
         """
         {
@@ -674,8 +665,7 @@ class CommonMarkOracleTests {
 
   @Test
   void inline_card_label_with_metacharacters_stays_inert_link_text() {
-    // An inlineCard whose data.name carries '*', backtick and '!' must escape into the link text
-    // without spawning emphasis, code, or an image.
+    // data.name with '*', backtick and '!' must escape in the link text, not spawn markup.
     var adf =
         """
         {
@@ -703,8 +693,8 @@ class CommonMarkOracleTests {
 
   @Test
   void aligned_block_wraps_in_a_div_whose_markdown_still_renders() {
-    // Under htmlVisualMarks an aligned heading + bold text must sit inside <div align> AND keep
-    // being parsed as markdown — i.e. the div must not swallow it as a raw-HTML block.
+    // Under htmlVisualMarks, the <div align> must not swallow the heading and bold text
+    // as raw HTML.
     var adf =
         """
         {

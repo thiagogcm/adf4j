@@ -1,10 +1,6 @@
 #!/usr/bin/env node
-// Convert one ADF JSON document to Markdown using the adf4j wasm build.
-//
-//   node run.mjs [path-to-adf.json]
-//
-// Defaults to sample.adf.json. ADF is read with Node's own fs (the wasm image has no host
-// filesystem access), then handed to the in-wasm converter as a plain string.
+// Converts one ADF JSON file to Markdown with the wasm build. Usage: node run.mjs [path].
+// Node reads the file, since the wasm image has no filesystem access.
 
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -22,7 +18,7 @@ try {
   process.exit(2);
 }
 
-// Running from the source tree: load the freshly built image under target/.
+// Source-tree run: use the image built under target/.
 const targetDir = new URL('../../../target/', import.meta.url);
 const adf4j = await loadAdf4j({
   imageUrl: new URL('adf4j-wasm.js', targetDir),

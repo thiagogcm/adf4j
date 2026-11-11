@@ -3,8 +3,7 @@ package dev.nthings.adf4j.cli;
 import org.aesh.AeshRuntimeRunner;
 import org.aesh.command.validator.OptionValidatorException;
 
-/// Entry point. The aesh runtime parses argv against the {@link Adf4jCommand} group and runs the
-/// matching subcommand; parse failures print the message plus generated help and exit 2.
+/// Entry point: runs the {@link Adf4jCommand} group through aesh. Parse failures exit 2.
 public final class Main {
 
   public static void main(String[] args) {
@@ -22,8 +21,7 @@ public final class Main {
           .execute()
           .getExitCode();
     } catch (RuntimeException exception) {
-      // The aesh runtime rethrows populate-time failures (an allowedValues violation among them)
-      // wrapped in a bare RuntimeException instead of surfacing them as usage errors.
+      // aesh wraps populate-time failures (such as allowedValues) in a bare RuntimeException.
       if (exception.getCause() instanceof OptionValidatorException cause) {
         System.err.println("error: " + cause.getMessage());
         return ExitCodes.USAGE;

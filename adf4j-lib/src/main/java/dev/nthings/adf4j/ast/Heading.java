@@ -2,9 +2,8 @@ package dev.nthings.adf4j.ast;
 
 import java.util.List;
 
-/// A `heading` block. `level` is the ADF heading level (1 to 6); out-of-range values are kept
-/// as-is here and clamped to the 1 to 6 range only when rendered. `content` is the heading's inline
-/// text; `marks` are block-level marks on the whole heading.
+/// A `heading` block. `level` is the ADF level (1 to 6); out-of-range values are kept as-is and
+/// clamped to 1 to 6 only when rendered. `marks` are block-level marks on the whole heading.
 public record Heading(Attributes attrs, List<AdfInline> content, List<AdfMark> marks)
     implements AdfBlock,
         BodiedExtensionContent,
@@ -30,8 +29,8 @@ public record Heading(Attributes attrs, List<AdfInline> content, List<AdfMark> m
     return attrs.integer("level", 1);
   }
 
-  /// This heading with `marks` in place of any it has. Most containers refuse them, and the
-  /// schema refuses alignment with indentation. See {@link HeadingMark}.
+  /// Replaces this heading's `marks`. The schema refuses alignment with indentation; see
+  /// {@link HeadingMark}.
   public Heading withMarks(HeadingMark... marks) {
     return new Heading(attrs, content, List.<AdfMark>of(marks));
   }

@@ -12,7 +12,6 @@ class ValidateCommandTest {
   private static final String UNSUPPORTED_VERSION_DOC =
       "{\"version\":999,\"type\":\"doc\",\"content\":[]}";
 
-  // Not a doc root -> not a valid ADF root.
   private static final String INVALID_ROOT_DOC = "{\"version\":1,\"type\":\"paragraph\"}";
 
   @Test

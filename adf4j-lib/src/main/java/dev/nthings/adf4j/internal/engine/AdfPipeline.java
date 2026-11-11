@@ -17,9 +17,8 @@ import java.util.ArrayList;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
-/// Assembles and runs the `parse → analyze → render` pipeline behind
-/// {@link AdfToMarkdown}. Stateless and thread-safe, so one instance serves the whole process; each
-/// phase owns its own construction via `createDefault()`.
+/// Runs the `parse → analyze → render` pipeline behind {@link AdfToMarkdown}. Stateless and
+/// thread-safe, so one instance serves the process.
 public final class AdfPipeline {
 
   private final AdfParsingService parsingService;

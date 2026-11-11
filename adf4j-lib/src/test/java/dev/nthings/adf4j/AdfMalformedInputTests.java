@@ -6,20 +6,17 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import dev.nthings.adf4j.result.Diagnostic;
 import org.junit.jupiter.api.Test;
 
-/// Degradation tests for structurally-malformed ADF. The converter is expected to be lenient: a
-/// misplaced child, a missing body, a stray inline, or a JSON `null` in a content array must
-/// never throw — it should drop the offending bit and keep rendering whatever is salvageable. Each
-/// case asserts both that `toMarkdown` returns (no exception) and that the surviving output is
-/// sensible.
+/// Degradation tests for structurally-malformed ADF: a misplaced child, a missing body, a stray
+/// inline or a JSON `null` in content must never throw. Each case drops the bad part and checks
+/// that the rest still renders.
 class AdfMalformedInputTests {
 
   private final AdfToMarkdown processor = AdfToMarkdown.create();
 
   @Test
   void table_row_with_a_non_cell_child_does_not_throw() {
-    // A paragraph where a tableCell belongs: the bogus child is dropped, leaving no renderable
-    // cells
-    // (under the default promote-first-row fallback an all-empty table renders nothing).
+    // A paragraph where a tableCell belongs: dropped, leaving no cells. An all-empty table
+    // renders nothing under the default promote-first-row fallback.
     var adf =
         """
         {
@@ -63,9 +60,7 @@ class AdfMalformedInputTests {
 
   @Test
   void table_row_with_a_stray_text_node_does_not_throw() {
-    // Loose inline text directly under a tableRow (where cells belong) is dropped, leaving no
-    // renderable cells (the default promote-first-row fallback renders an all-empty table as
-    // nothing).
+    // Loose text directly under a tableRow is dropped, leaving no cells to render.
     var adf =
         """
         {
@@ -132,8 +127,8 @@ class AdfMalformedInputTests {
 
   @Test
   void json_nested_past_the_parse_depth_cap_degrades_to_an_invalid_json_diagnostic() {
-    // 700 blockquote frames (~1400 JSON levels) exceed the nesting cap; the parser catches it and
-    // degrades to an empty body with an INVALID_JSON diagnostic instead of throwing.
+    // 700 blockquote frames (~1400 JSON levels) exceed the nesting cap: the parser degrades to an
+    // empty body with an INVALID_JSON diagnostic instead of throwing.
     var depth = 700;
     var json = new StringBuilder("{\"type\":\"doc\",\"version\":1,\"content\":[");
     for (var i = 0; i < depth; i++) {
@@ -175,8 +170,7 @@ class AdfMalformedInputTests {
 
   @Test
   void date_with_an_out_of_range_timestamp_does_not_throw() {
-    // Long.MIN_VALUE drives Math.abs negative; the conversion must degrade, not throw a
-    // DateTimeException.
+    // Long.MIN_VALUE makes Math.abs negative: degrade rather than throw DateTimeException.
     var adf =
         """
         {
@@ -196,8 +190,7 @@ class AdfMalformedInputTests {
 
   @Test
   void node_with_an_unknown_type_does_not_throw_and_keeps_known_siblings() {
-    // An unrecognised block degrades (placeholder under the default policy) and never derails the
-    // known paragraph beside it.
+    // An unknown block degrades to a placeholder and does not derail the paragraph beside it.
     var adf =
         """
         {

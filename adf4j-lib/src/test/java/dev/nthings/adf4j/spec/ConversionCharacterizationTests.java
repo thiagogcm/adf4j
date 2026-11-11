@@ -117,7 +117,6 @@ class ConversionCharacterizationTests {
     return builder.toString();
   }
 
-  // Fixture files and the off-spec corpus, keyed by a stable name.
   private static Map<String, String> cases() throws IOException {
     var cases = new TreeMap<String, String>();
     for (var file : TestResources.specFixtures()) {
@@ -183,8 +182,7 @@ class ConversionCharacterizationTests {
     builder.append('\n');
   }
 
-  // A deterministic rendering of records, maps and lists: some maps use salted iteration order, so
-  // default toString would differ between JVM runs.
+  // Deterministic rendering: some maps use salted iteration order, so toString varies per JVM.
   private static String describe(Object value) {
     return switch (value) {
       case null -> "null";

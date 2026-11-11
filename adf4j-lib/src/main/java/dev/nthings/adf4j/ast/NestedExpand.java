@@ -2,9 +2,8 @@ package dev.nthings.adf4j.ast;
 
 import java.util.List;
 
-/// A `nestedExpand`: the {@link Expand} variant permitted inside other blocks (e.g. a table cell or
-/// layout column), where a top-level `expand` is not. `title` is the toggle summary (empty when
-/// none); `content` is the revealed blocks.
+/// The {@link Expand} variant allowed inside other blocks (e.g. a table cell), where a top-level
+/// `expand` is not. `title()` is empty when none is set.
 public record NestedExpand(Attributes attrs, List<AdfBlock> content, List<AdfMark> marks)
     implements AdfBlock, ExpandContent, TableCellContent {
 

@@ -5,15 +5,13 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
 
-/// A macro's flattened parameter map (each ADF `macroParams` entry's `value`), iterating in the
-/// source document's parameter order and keeping the AST independent of the raw parameter
-/// envelope.
+/// A macro's flattened parameter map (each `macroParams` entry's `value`), in source order.
 public record MacroParams(Map<String, String> values) {
 
   private static final MacroParams EMPTY = new MacroParams(Map.of());
 
   public MacroParams {
-    // Not Map.copyOf: its per-JVM-run salted iteration order would lose the document order.
+    // Not Map.copyOf: its salted iteration order would lose the document order.
     values = Collections.unmodifiableMap(new LinkedHashMap<>(values));
   }
 
@@ -21,8 +19,8 @@ public record MacroParams(Map<String, String> values) {
     return EMPTY;
   }
 
-  /// Flattens a raw `macroParams` object: each entry's scalar, or the scalar in its
-  /// `{"value": scalar}` envelope, as text. Non-scalars are dropped.
+  /// Flattens a raw `macroParams` object: each entry is a scalar, or the scalar in its `value`
+  /// envelope, as text. Non-scalars are dropped.
   public static MacroParams from(Attributes macroParams) {
     var values = new LinkedHashMap<String, String>();
     for (var key : macroParams.values().keySet()) {

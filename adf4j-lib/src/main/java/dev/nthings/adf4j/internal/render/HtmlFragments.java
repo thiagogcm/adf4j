@@ -20,7 +20,7 @@ final class HtmlFragments {
     return outerHtml(element);
   }
 
-  /// Escapes the HTML text-significant characters so an ADF string is safe inside element text.
+  /// Escapes HTML text-significant characters.
   static String escapeHtmlText(String value) {
     return value
         .replace("&", "&amp;")

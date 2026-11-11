@@ -2,8 +2,8 @@ package dev.nthings.adf4j.ast;
 
 import java.util.List;
 
-/// A `table`: `content` is its {@link TableRow}s in top-to-bottom order. When `numberColumnEnabled`
-/// is set, the source asked for a leading 1-based row-number column.
+/// A table whose `content` is its {@link TableRow}s, top to bottom. `numberColumnEnabled` asks for
+/// a leading 1-based row-number column.
 public record Table(Attributes attrs, List<AdfBlock> content, List<AdfMark> marks)
     implements AdfBlock,
         BodiedExtensionContent,
@@ -26,22 +26,19 @@ public record Table(Attributes attrs, List<AdfBlock> content, List<AdfMark> mark
     return attrs.bool("isNumberColumnEnabled", false);
   }
 
-  /// The {@link TableRow} children; `content` keeps any other child.
+  /// The {@link TableRow} children; other children stay only in `content`.
   public List<TableRow> rows() {
     return ChildNodes.ofType(content, TableRow.class);
   }
 
-  /// This table with `layout`.
   public Table withLayout(Adf.TableLayout layout) {
     return new Table(attrs.with("layout", layout.value()), content, marks);
   }
 
-  /// This table `width` pixels wide.
   public Table withWidth(int width) {
     return new Table(attrs.with("width", width), content, marks);
   }
 
-  /// This table with a leading row-number column.
   public Table withNumberColumn() {
     return new Table(attrs.with("isNumberColumnEnabled", true), content, marks);
   }

@@ -1,5 +1,4 @@
-// Must be evaluated before adf4j-wasm.js: the image reads __adf4jWasmPath as it evaluates,
-// and __adf4jOnReady is its only ready handshake.
+// Must run before adf4j-wasm.js: the image reads __adf4jWasmPath and calls __adf4jOnReady while it evaluates.
 const READY_TIMEOUT_MS = 30_000;
 
 globalThis.__adf4jWasmPath = chrome.runtime.getURL('adf4j-wasm.js.wasm');

@@ -55,9 +55,8 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
-/// Writes an {@link AdfDocument} as ADF JSON in Jackson tree mode. Empty `attrs` and `marks` are
-/// omitted, and a container always writes `content` because several nodes require it. Stateless
-/// and thread-safe.
+/// Writes an {@link AdfDocument} as ADF JSON. Empty `attrs` and `marks` are omitted; containers
+/// always write `content`, which several nodes require. Stateless and thread-safe.
 public final class AdfJsonWriter {
 
   private final JsonMapper mapper;
@@ -75,7 +74,6 @@ public final class AdfJsonWriter {
     return mapper.writeValueAsString(tree(document));
   }
 
-  /// The document as a JSON tree, without serializing it.
   public JsonNode tree(AdfDocument document) {
     return element(document);
   }

@@ -2,10 +2,8 @@ package dev.nthings.adf4j.ast;
 
 import org.jspecify.annotations.Nullable;
 
-/// A hyperlink (`link`) mark wrapping its text in a Markdown link. `href` is the destination; a
-/// `null`/blank `href` leaves the text unlinked. `title` becomes the link title when present. The
-/// surviving ADF attributes (`attrs`) carry the link metadata (e.g. an internal Confluence page
-/// reference) used to resolve the href; see {@link Attributes}.
+/// A hyperlink mark wrapping its text in a Markdown link. A `null`/blank `href` leaves the text
+/// unlinked. `attrs` holds metadata (e.g. an internal page reference) used to resolve the href.
 public record Link(Attributes attrs) implements TextMark, MediaMark {
 
   @Override

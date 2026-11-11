@@ -44,9 +44,8 @@ import dev.nthings.adf4j.internal.analyze.HeadingContent;
 import java.util.Locale;
 import org.jspecify.annotations.Nullable;
 
-/// Renders the block level: dispatches each block to its delegate and renders the simple
-/// containers itself. The hub of the renderer ⇄ delegate cycle: it builds its delegates at
-/// construction and hands them `this`, so they can recurse into nested blocks.
+/// Renders blocks: dispatches each to its delegate and renders simple containers itself.
+/// Builds its delegates in the constructor, handing them `this` to recurse into nested blocks.
 final class BlockRenderer {
 
   private final TextMarkRenderer markRenderer;
@@ -68,8 +67,8 @@ final class BlockRenderer {
     this.tableRenderer = new TableRenderer(this, cellHtmlRenderer);
   }
 
-  // Blocks are right-trimmed here so a custom renderer's trailing newline can't add blank lines to
-  // an indented or joined parent. `context` sits at the block, as everywhere below.
+  // Right-trim so a custom renderer's trailing newline adds no blank lines to a parent.
+  // `context` sits at the block, as everywhere below.
   String renderBlock(AdfBlock block, RenderContext context) {
     context.session().events().observe(block, context.path());
     return dispatchBlock(block, context).stripTrailing();
@@ -77,8 +76,7 @@ final class BlockRenderer {
 
   private String dispatchBlock(AdfBlock block, RenderContext context) {
     return switch (block) {
-      // Paragraphs start at column 0, so the first inline is at line start (the promotion-prone
-      // case).
+      // Column 0: the first inline is at line start.
       case Paragraph paragraph -> renderParagraph(paragraph, context, true);
       case Heading heading -> renderHeading(heading, context);
       case Blockquote blockquote -> renderBlockQuote(blockquote, context);
@@ -116,7 +114,7 @@ final class BlockRenderer {
     };
   }
 
-  /// The block children of `parent`, the node `context` sits at, joined.
+  /// Block children of `parent` (which `context` sits at), joined.
   String renderBlocks(AdfNode parent, RenderContext context) {
     var rendered =
         context.children(parent, AdfBlock.class).stream()
@@ -127,12 +125,12 @@ final class BlockRenderer {
         : MarkdownBlocks.join(rendered);
   }
 
-  // A caption renders as its own block at column 0, so its first inline is at a block start.
+  // A caption is its own block at column 0.
   String renderCaption(Caption node, RenderContext context) {
     return inlineRenderer.renderInlineNodes(context.children(node, AdfInline.class), context, true);
   }
 
-  // `atLineStart` is false only for text following a checkbox on its line.
+  // False only after a checkbox on the same line.
   String renderParagraph(Paragraph paragraph, RenderContext context, boolean atLineStart) {
     context.session().events().observe(paragraph, context.path());
     var rendered =
@@ -141,7 +139,7 @@ final class BlockRenderer {
     if (rendered.isBlank()) {
       return rendered;
     }
-    // Prefix after escaping, so the nbsp indent run isn't itself marker-neutralised.
+    // Prefix after escaping, so the nbsp indent isn't neutralised.
     var prefixed = markRenderer.indentationPrefix(paragraph.marks()) + rendered;
     var styled = markRenderer.applyMarks(prefixed, paragraph.marks(), context);
     return markRenderer.alignmentWrap(
@@ -170,7 +168,7 @@ final class BlockRenderer {
         HeadingContent.normalized(context.children(heading, AdfInline.class), Located::node);
     var headingContext = context.withSite(InlineSite.HEADING);
     var rendered = inlineRenderer.renderInlineNodes(headingNodes, headingContext, false);
-    // An ATX heading is one line, whatever line breaks its inlines carry.
+    // ATX heading is one line: collapse any breaks.
     return Strings.collapseLineBreaks(rendered).strip();
   }
 
@@ -187,8 +185,7 @@ final class BlockRenderer {
     return header + "\n" + toBlockQuote(content);
   }
 
-  /// Maps an Atlassian panel type to a GFM alert keyword: warning -> WARNING, error -> CAUTION,
-  /// tip/success -> TIP, everything else (info/note/custom/unknown) -> NOTE.
+  /// Panel type to GFM alert: warning -> WARNING, error -> CAUTION, tip/success -> TIP, else NOTE.
   private static String gfmAlert(@Nullable String panelType) {
     if (panelType == null) {
       return "NOTE";

@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test;
 
 class ExcerptMetadataTests {
 
-  // A source page defining a named excerpt plus surrounding content.
   private static final String SOURCE_PAGE_WITH_EXCERPT =
       """
       {
@@ -138,8 +137,7 @@ class ExcerptMetadataTests {
 
   @Test
   void a_definition_converts_into_resolver_ready_markdown() {
-    // The documented recipe: index the source page's excerpts, render one as its own document, and
-    // answer an excerpt-include on another page with the result.
+    // Documented recipe: index excerpts, render one standalone, answer includes elsewhere.
     var converter = AdfToMarkdown.create();
     var excerpt =
         converter.analyze(AdfJson.parse(SOURCE_PAGE_WITH_EXCERPT)).metadata().excerpts().getFirst();

@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
 
-/// The analyze phase's heading model, consumed by the render phase.
+/// Heading model built by analyze and consumed by render.
 public final class HeadingOutline {
 
   private static final HeadingOutline EMPTY =
@@ -17,8 +17,7 @@ public final class HeadingOutline {
 
   private final List<HeadingReference> headings;
   private final Map<Heading, HeadingReference> headingsByNode;
-  // Clamped heading levels covered by at least one toc macro; their headings get an injected
-  // anchor.
+  // Clamped levels covered by a toc macro; their headings get an injected anchor.
   private final Set<Integer> tocReferencedLevels;
 
   private HeadingOutline(
@@ -34,7 +33,7 @@ public final class HeadingOutline {
     return EMPTY;
   }
 
-  // Takes ownership of headingsByNode; the sole caller builds it fresh and never touches it again.
+  // Takes ownership of headingsByNode; callers must not reuse it.
   static HeadingOutline of(
       List<HeadingReference> headings,
       IdentityHashMap<Heading, HeadingReference> headingsByNode,
@@ -49,11 +48,10 @@ public final class HeadingOutline {
     return headings;
   }
 
-  /// The id of the `<a id>` to emit with a heading, or `null` for none. A heading always keeps its
-  /// explicit anchor, even one that rendered to nothing, where it is all that is left of it. Any
-  /// other non-blank heading in the outline gets its generated anchor when a toc macro covers its
-  /// level, so toc links don't depend on the consumer's slugger matching commonmark's.
-  /// `renderedBlank` comes from the renderer because options decide what renders.
+  /// Anchor id to emit for a heading, or `null`. An explicit anchor is always kept, even when
+  /// the heading rendered blank. Other headings get their generated anchor only when a toc macro
+  /// covers their level, so toc links don't depend on the consumer's slugger matching commonmark.
+  /// `renderedBlank` comes from the renderer, since options decide what renders.
   public @Nullable String anchorToInject(Heading heading, boolean renderedBlank) {
     var explicit = HeadingContent.extractAnchorId(heading.content());
     if (explicit != null || renderedBlank) {

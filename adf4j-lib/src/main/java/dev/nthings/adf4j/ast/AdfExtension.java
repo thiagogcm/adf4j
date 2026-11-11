@@ -22,7 +22,6 @@ public sealed interface AdfExtension extends AdfNode
     return attrs().text("text");
   }
 
-  /// The full raw `parameters` envelope.
   default Attributes parameters() {
     return attrs().object("parameters");
   }

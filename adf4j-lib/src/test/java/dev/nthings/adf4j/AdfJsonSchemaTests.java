@@ -18,8 +18,8 @@ import org.junit.jupiter.api.Test;
 /// Checks written documents against the published schema (`docs/spec/adf-schema.json`).
 class AdfJsonSchemaTests {
 
-  // Fixtures that model what products emit or tolerate beyond the published schema. Each still
-  // round-trips; see adf/README.md.
+  // Fixtures modelling product output beyond the published schema; each still round-trips.
+  // See adf/README.md.
   private static final Set<String> OFF_SCHEMA =
       Set.of(
           "inline/embed-card-as-inline-link.json", // embedCard inside a paragraph

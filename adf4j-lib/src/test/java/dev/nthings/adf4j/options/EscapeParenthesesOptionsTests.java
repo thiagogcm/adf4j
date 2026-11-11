@@ -93,8 +93,7 @@ class EscapeParenthesesOptionsTests {
 
   @Test
   void unescaped_parentheses_still_cannot_form_a_link_because_brackets_stay_escaped() {
-    // The bracket escaping (not the paren escaping) is what defuses the link, so the default output
-    // is still inert text rather than an anchor.
+    // Bracket escaping, not paren escaping, defuses the link: default output stays inert text.
     var markdown = AdfToMarkdown.create().toMarkdown(LINK_LOOKALIKE).strip();
 
     assertThat(markdown).isEqualTo("\\[Done\\](see ref)");
@@ -102,8 +101,7 @@ class EscapeParenthesesOptionsTests {
 
   @Test
   void a_leading_ordered_paren_marker_is_neutralised_even_when_parentheses_are_not_escaped() {
-    // "1)" at column 0 would otherwise open an ordered list, so the delimiter is backslash-escaped
-    // regardless of the parentheses setting.
+    // "1)" at column 0 would open an ordered list, so it is escaped whatever this option is.
     var defaultOutput = AdfToMarkdown.create().toMarkdown(LEADING_ORDERED_PAREN).strip();
     var escapedOutput =
         AdfToMarkdown.with(ConversionOptions.defaults().withEscapeParentheses(true))

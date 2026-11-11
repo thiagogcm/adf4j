@@ -12,9 +12,8 @@ import java.util.ArrayList;
 import org.jsoup.nodes.Element;
 import org.jsoup.parser.Tag;
 
-/// The HTML table-fallback renderer: builds a jsoup `<table>` for ADF tables GFM pipe syntax can't
-/// express (colspan/rowspan, a number column, non-paragraph cell content, non-canonical header
-/// placement). Split out of {@link TableRenderer} so the GFM and HTML paths are separate concerns.
+/// HTML table fallback: a jsoup `<table>` for ADF tables GFM pipe syntax can't express (colspan,
+/// rowspan, number column, non-paragraph cell content, non-canonical header placement).
 final class HtmlTableRenderer {
 
   private final BlockRenderer blockRenderer;
@@ -72,7 +71,7 @@ final class HtmlTableRenderer {
     return element;
   }
 
-  // The block children of `parent`, the node `context` sits at, as cell HTML.
+  // Block children of `parent`, which `context` sits at, as cell HTML.
   private String joinCellBlocks(AdfNode parent, RenderContext context) {
     var renderedBlocks = new ArrayList<String>();
     for (var block : context.children(parent, AdfBlock.class)) {

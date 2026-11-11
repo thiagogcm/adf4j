@@ -149,8 +149,8 @@ class AdfToMarkdownRenderingTests {
 
   @Test
   void convert_renders_bodied_extension_header_then_body_and_escapes_marker_text() {
-    // bodiedExtension requires a body in the local schema; unknown macro text is still
-    // attribute-derived text and must not promote to a Markdown heading.
+    // bodiedExtension needs a body in the local schema; its attribute-derived text must not
+    // become a Markdown heading.
     var adf =
         """
         {
@@ -207,9 +207,7 @@ class AdfToMarkdownRenderingTests {
 
   @Test
   void convert_renders_bodied_sync_block_label_then_body() {
-    // docs/spec/adf-schema.json requires resourceId/localId for sync blocks; the renderer should
-    // keep
-    // the resource id visible and then salvage the block body.
+    // Schema requires resourceId/localId on sync blocks: keep the id visible, salvage the body.
     var adf =
         """
         {
@@ -235,8 +233,8 @@ class AdfToMarkdownRenderingTests {
 
   @Test
   void convert_renders_card_variants_without_losing_identity_or_escaping() {
-    // Most cases mirror docs/spec card shapes; the final embedCard omits its schema-required url to
-    // pin the malformed fallback instead of letting bad producer data throw.
+    // Cases mirror docs/spec card shapes; the last embedCard omits its required url to pin the
+    // malformed fallback instead of throwing on bad producer data.
     var adf =
         """
         {

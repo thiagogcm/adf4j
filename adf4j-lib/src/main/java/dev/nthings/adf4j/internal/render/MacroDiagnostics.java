@@ -8,15 +8,14 @@ import java.util.List;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
 
-/// Collects the extensions a render emitted as bare `[Extension: …]` placeholders: unsupported
-/// Confluence macros (e.g. `detailssummary`) whose content is lost. Fresh per render and driven by
-/// a single-threaded traversal, so the {@link LinkedHashSet} needs no synchronization.
+/// Unsupported macros rendered as `[Extension: …]` placeholders, whose content is lost.
+/// Fresh per render and single-threaded, so no synchronization.
 final class MacroDiagnostics {
 
   private final List<String> paths = new ArrayList<>();
   private final Set<String> unsupportedMacros = new LinkedHashSet<>();
 
-  /// Records one unsupported macro, returning whether this render had not seen its label yet.
+  /// Records one unsupported macro; true if its label is new to this render.
   boolean recordUnsupported(
       @Nullable String extensionType, @Nullable String extensionKey, String path) {
     paths.add(path);

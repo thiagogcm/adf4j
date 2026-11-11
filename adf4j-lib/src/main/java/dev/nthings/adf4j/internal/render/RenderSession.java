@@ -4,11 +4,8 @@ import dev.nthings.adf4j.internal.AttachmentInventory;
 import dev.nthings.adf4j.internal.analyze.HeadingOutline;
 import dev.nthings.adf4j.options.ConversionOptions;
 
-/// Per-render state shared by the whole traversal: the precomputed outline, the conversion's
-/// {@link ConversionOptions} and the {@link AttachmentInventory} built from them, the mutable
-/// per-render sinks ({@link MacroDiagnostics}, {@link RenderEvents}), the {@link Resolvers} that
-/// report into {@link RenderEvents}, and the {@link MarkdownWriter} holding the escaping options.
-// The moving part lives in {@link RenderContext}.
+/// Per-render state shared by the traversal: outline, options, attachments, the per-render sinks,
+/// resolvers, and the writer holding the escaping options.
 record RenderSession(
     HeadingOutline headingOutline,
     ConversionOptions options,

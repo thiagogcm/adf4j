@@ -116,7 +116,6 @@ class ConversionOptionsTests {
     assertThat(pageLink.pageLinkResolver()).isNotNull();
     assertThat(pageLink.withTableFallback(TableFallback.HTML).pageLinkResolver())
         .isSameAs(pageLink.pageLinkResolver());
-    // The two resolvers are independent and coexist.
     var both = attachment.withPageLinkResolver(pageNodeId -> "pages/" + pageNodeId);
     assertThat(both.attachmentResolver()).isSameAs(attachment.attachmentResolver());
     assertThat(both.pageLinkResolver()).isNotNull();

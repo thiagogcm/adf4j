@@ -1,7 +1,7 @@
 package dev.nthings.adf4j.ast;
 
-/// The marks the ADF schema allows on {@link Text}. `AdfContentModelTests` checks this against the
-/// schema. The schema also limits `code` to `link` and `annotation`, which this doesn't cover.
+/// Marks the ADF schema allows on {@link Text}. The schema also limits `code` to `link` and
+/// `annotation`; not enforced here.
 public sealed interface TextMark extends AdfMark
     permits Annotation,
         BackgroundColor,

@@ -3,9 +3,8 @@ package dev.nthings.adf4j.ast;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
-/// A `taskItem` whose `content` is block-level rather than inline (the {@link TaskItem} variant
-/// carrying blocks). `state` follows the same convention: `DONE` (case-insensitive) is checked,
-/// anything else or `null` unchecked.
+/// A `taskItem` with block-level `content` (the block variant of {@link TaskItem}). `DONE`
+/// (case-insensitive) is checked; any other `state`, or `null`, is unchecked.
 public record BlockTaskItem(Attributes attrs, List<AdfBlock> content, List<AdfMark> marks)
     implements AdfBlock, TaskListContent {
 

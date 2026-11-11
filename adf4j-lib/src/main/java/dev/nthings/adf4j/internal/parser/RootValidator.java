@@ -33,7 +33,7 @@ final class RootValidator {
           new Diagnostic(Code.INVALID_VERSION, "ADF root must contain integer version.")
               .at("/version"));
     } else if (version != 1) {
-      // Non-fatal: the document still parses and renders best-effort, so flag it as a warning.
+      // Non-fatal: the document still renders best-effort, so a warning.
       issues.add(new Diagnostic(Code.UNSUPPORTED_VERSION, "ADF version must be 1.").at("/version"));
     }
 
@@ -46,7 +46,7 @@ final class RootValidator {
     return List.copyOf(issues);
   }
 
-  // Accept the version as a whole JSON number or a numeric string ("1"); anything else yields null.
+  // Accepts a whole number or numeric string; anything else is null.
   private static @Nullable Integer versionOf(JsonNode versionNode) {
     if (versionNode.isNumber()) {
       return versionNode.canConvertToExactIntegral() ? versionNode.asInt() : null;

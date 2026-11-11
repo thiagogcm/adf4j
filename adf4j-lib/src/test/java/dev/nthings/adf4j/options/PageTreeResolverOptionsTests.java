@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Test;
 
 class PageTreeResolverOptionsTests {
 
-  // A block-level pagetree macro with no parameters.
   private static final String PAGETREE =
       """
       {
@@ -29,9 +28,8 @@ class PageTreeResolverOptionsTests {
       }
       """;
 
-  // The real-world structure Confluence emits: an inlineExtension nested in a paragraph. This is
-  // the
-  // case that shipped as a literal {{pagetree}}; expansion must still produce a block list.
+  // Real Confluence shape: inlineExtension in a paragraph. This shipped as a literal
+  // {{pagetree}}; expansion must still yield a block list.
   private static final String INLINE_PAGETREE =
       """
       {
@@ -55,7 +53,6 @@ class PageTreeResolverOptionsTests {
       }
       """;
 
-  // A pagetree rooted at the named page "Docs Home" with a startDepth parameter.
   private static final String ROOTED_PAGETREE =
       """
       {
@@ -76,7 +73,6 @@ class PageTreeResolverOptionsTests {
       }
       """;
 
-  // A pagetree whose root is the @self keyword.
   private static final String SELF_ROOTED_PAGETREE =
       """
       {
@@ -95,7 +91,6 @@ class PageTreeResolverOptionsTests {
       }
       """;
 
-  // A children macro with no parameters (immediate children of the current page).
   private static final String CHILDREN =
       """
       {
@@ -113,7 +108,6 @@ class PageTreeResolverOptionsTests {
       }
       """;
 
-  // A children macro rooted at the named page "Guides" with a depth of 2.
   private static final String ROOTED_CHILDREN =
       """
       {
@@ -182,7 +176,7 @@ class PageTreeResolverOptionsTests {
 
   @Test
   void resolver_destinations_are_scheme_sanitized() {
-    // A resolved page destination is untrusted input — a dangerous scheme is neutralized.
+    // A resolved destination is untrusted: a dangerous scheme is neutralized.
     var options =
         ConversionOptions.defaults()
             .withPageTreeResolver(request -> List.of(new PageTreeEntry(0, "x", "111")))
@@ -309,8 +303,6 @@ class PageTreeResolverOptionsTests {
         .isEqualTo("{{pagetree:Docs Home}}");
   }
 
-  // --- children macro ---------------------------------------------------------------------------
-
   @Test
   void default_leaves_the_children_token() {
     assertThat(AdfToMarkdown.create().toMarkdown(CHILDREN)).isEqualTo("{{children}}");
@@ -360,9 +352,6 @@ class PageTreeResolverOptionsTests {
 
     assertThat(AdfToMarkdown.with(options).toMarkdown(ROOTED_CHILDREN)).isEqualTo("{{children:2}}");
   }
-
-  // --- typed request parameters
-  // -------------------------------------------------------------------
 
   @Test
   void the_request_parses_the_standard_depth_and_all_parameters() {

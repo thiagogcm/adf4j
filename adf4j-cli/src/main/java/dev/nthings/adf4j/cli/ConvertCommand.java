@@ -8,7 +8,8 @@ import org.aesh.command.CommandDefinition;
 import org.aesh.command.option.Mixin;
 import org.aesh.command.option.Option;
 
-/// `adf4j convert`: renders ADF JSON as Markdown, or as a full JSON result envelope.
+/// `adf4j convert`: renders ADF JSON as Markdown, or a JSON result with `-f json`. Exits 3 on
+/// invalid content (stdout is still written) and 4 when a `--fail-on-*` gate trips.
 @CommandDefinition(
     name = "convert",
     description = "Convert ADF JSON to Markdown",

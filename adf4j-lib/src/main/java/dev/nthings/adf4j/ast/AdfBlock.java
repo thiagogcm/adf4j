@@ -1,9 +1,8 @@
 package dev.nthings.adf4j.ast;
 
-/// A block-level ADF node. A `type` the parser does not recognize parses as {@link UnknownBlock}
-/// with its raw JSON preserved. The permits list grows with ADF (see the {@link AdfNode} note).
-/// {@link BlockCard} and {@link EmbedCard} are also {@link AdfInline}, because they occur inside
-/// paragraphs too.
+/// A block-level ADF node. An unrecognized `type` parses as {@link UnknownBlock}, keeping its raw
+/// JSON. The permits list grows with ADF (see {@link AdfNode}). {@link BlockCard} and
+/// {@link EmbedCard} are also {@link AdfInline}, since they occur inside paragraphs.
 public sealed interface AdfBlock extends AdfNode
     permits Paragraph,
         Heading,

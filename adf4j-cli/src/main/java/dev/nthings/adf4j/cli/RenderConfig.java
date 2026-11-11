@@ -26,10 +26,9 @@ import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
-/// Translates the rendering/resolver flags of `convert` into a {@link ConversionOptions}. Resolvers
-/// are data-driven (URL templates plus JSON lookup tables) and preserve the library's
-/// decline-vs-answer contract: an absent key/entry declines, a present entry answers (an empty
-/// value being a valid empty answer).
+/// Turns the rendering and resolver flags of `convert` into a {@link ConversionOptions}. Resolvers
+/// keep the library's decline-vs-answer contract: an absent key declines; a present entry answers,
+/// even with an empty value.
 final class RenderConfig {
 
   private static final Set<String> MEDIA_PLACEHOLDERS = Set.of("id", "collection", "localId");
@@ -76,11 +75,8 @@ final class RenderConfig {
     return options;
   }
 
-  // ---- enum options -------------------------------------------------------
-
-  // Takes the constants (not the Class) so the native image stays reflection-free. The parser
-  // already validated the value against the option's allowedValues, so a miss here is a bug (the
-  // annotation list drifted from the enum; OptionContractTest pins them together).
+  // Takes constants, not the Class, to stay reflection-free. The parser already checked
+  // allowedValues, so a miss here is a bug. OptionContractTest pins the lists to the enums.
   private static <E extends Enum<E>> E enumOption(E[] constants, String value) {
     for (var constant : constants) {
       if (CliJson.kebabCase(constant).equals(value)) {
@@ -89,8 +85,6 @@ final class RenderConfig {
     }
     throw new IllegalStateException("option value '" + value + "' missing from the enum");
   }
-
-  // ---- URL-rewriting resolvers (template + map, map wins) -----------------
 
   private static @Nullable MediaResolver mediaResolver(ResolverOptions resolvers, CliJson json) {
     var lookup =
@@ -135,16 +129,15 @@ final class RenderConfig {
         : pageNodeId -> lookup.resolve(pageNodeId, Map.of("pageId", pageNodeId));
   }
 
-  // A file map backed by a URL template. Unset when neither flag was given, so the resolver stays
-  // null and the library keeps its default behavior.
+  // Unset when neither flag is given: the resolver stays null (library default).
   private record UrlLookup(Map<String, String> map, @Nullable UrlTemplate template) {
 
     boolean isUnset() {
       return map.isEmpty() && template == null;
     }
 
-    // The map wins on a non-blank hit, else the template expands. Nothing to look up declines, so
-    // an id-less node keeps the library's placeholder instead of a URL with an empty segment.
+    // Map wins on a non-blank hit, else the template expands. No key declines, so an id-less node
+    // keeps the library placeholder instead of an empty URL segment.
     @Nullable String resolve(@Nullable String key, Map<String, String> values) {
       if (key == null || key.isBlank()) {
         return null;
@@ -156,8 +149,6 @@ final class RenderConfig {
       return template == null ? null : template.expand(values);
     }
   }
-
-  // ---- structured-data resolvers ------------------------------------------
 
   private static @Nullable PageTreeResolver pageTreeResolver(
       ResolverOptions resolvers, CliJson json) {
@@ -178,7 +169,7 @@ final class RenderConfig {
 
     return reference -> {
       var key = reference.root() == null ? "" : reference.root();
-      // absent key -> null (decline); present (even empty) -> authoritative
+      // Absent key declines (null); a present bucket, even empty, answers.
       return byMacro.getOrDefault(reference.macro(), Map.of()).get(key);
     };
   }
@@ -216,7 +207,7 @@ final class RenderConfig {
     var byKey = new LinkedHashMap<ExcerptKey, String>();
     for (var entry : json.readEntries(path, flag, EXCERPT_KEYS)) {
       var page = CliJson.requireString(entry, "page", context);
-      var excerptName = CliJson.string(entry, "name", context); // null == the unnamed excerpt
+      var excerptName = CliJson.string(entry, "name", context); // null: the unnamed excerpt
       byKey.put(
           new ExcerptKey(page, excerptName),
           requireNonNullElse(CliJson.string(entry, "markdown", context), ""));
@@ -255,8 +246,6 @@ final class RenderConfig {
           return ExtensionOutput.defer();
         });
   }
-
-  // ---- helpers ------------------------------------------------------------
 
   private static @Nullable UrlTemplate template(
       @Nullable String value, Set<String> allowed, String flag) {

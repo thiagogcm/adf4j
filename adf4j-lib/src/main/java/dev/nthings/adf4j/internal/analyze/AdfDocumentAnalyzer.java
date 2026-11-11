@@ -6,8 +6,7 @@ import dev.nthings.adf4j.options.ConversionOptions;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
-/// The analyze phase: one {@link AdfNodeWalker} pass drives the heading and content-metadata
-/// collectors together into a {@link DocumentAnalysis}. Sits between parsing and rendering.
+/// Analyze phase: one {@link AdfNodeWalker} pass feeds the heading and metadata collectors.
 /// Stateless and thread-safe.
 public final class AdfDocumentAnalyzer {
 
@@ -22,8 +21,7 @@ public final class AdfDocumentAnalyzer {
     return analyze(document, options, attachments, true);
   }
 
-  /// As {@link #analyze(AdfDocument, ConversionOptions, AttachmentInventory)}; without
-  /// `lossiness` the diagnostics are left empty, for a render that reports what it visits itself.
+  /// Without `lossiness`, diagnostics stay empty: the render reports what it visits itself.
   public DocumentAnalysis analyze(
       @Nullable AdfDocument document,
       ConversionOptions options,

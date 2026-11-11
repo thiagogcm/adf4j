@@ -1,6 +1,5 @@
 package dev.nthings.adf4j.ast;
 
-/// The marks the ADF schema can allow on a {@link Paragraph}. `AdfContentModelTests` checks this
-/// against the schema. Which of them apply depends on where the paragraph is, and alignment and
-/// indentation exclude each other, which this doesn't cover.
+/// Marks the ADF schema allows on a {@link Paragraph}. Which apply depends on the container;
+/// alignment and indentation are mutually exclusive, not enforced here.
 public sealed interface ParagraphMark extends AdfMark permits Alignment, FontSize, Indentation {}

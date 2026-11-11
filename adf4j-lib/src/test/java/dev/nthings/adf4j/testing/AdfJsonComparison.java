@@ -10,10 +10,9 @@ import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/// Renders ADF JSON in the canonical form the lossless contract of `AdfJson` is stated in: keys
-/// sorted, numbers compared by value, null-valued keys dropped, and an empty `attrs`, `content` or
-/// `marks` on a node treated as absent. `attrs` values stay strict: inside them an empty container
-/// is data.
+/// Canonical form for the `AdfJson` lossless contract: keys sorted, numbers compared by value,
+/// null-valued keys dropped, and an empty `attrs`, `content` or `marks` on a node treated as
+/// absent. Inside `attrs` values an empty container is data, so it stays.
 public final class AdfJsonComparison {
 
   private static final Set<String> NODE_KEYS = Set.of("attrs", "content", "marks");

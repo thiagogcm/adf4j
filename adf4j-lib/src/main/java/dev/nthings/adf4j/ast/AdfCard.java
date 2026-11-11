@@ -13,17 +13,15 @@ public sealed interface AdfCard extends AdfNode permits InlineCard, BlockCard, E
     return url == null || url.isBlank() ? attrs().object("data").text("url") : url;
   }
 
-  /// The id of the datasource backing the card.
   default @Nullable String datasourceId() {
     return attrs().object("datasource").text("id");
   }
 
-  /// The editor's local id for this node.
   default @Nullable String localId() {
     return attrs().text("localId");
   }
 
-  /// The card's title, from `data.name`.
+  /// From `data.name`.
   default @Nullable String title() {
     return attrs().object("data").text("name");
   }

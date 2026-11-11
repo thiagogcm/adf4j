@@ -8,9 +8,8 @@ import dev.nthings.adf4j.options.ConversionOptions;
 import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
 
-/// The render phase: turns a document into a Markdown body, with the optional title heading, plus
-/// the diagnostics and unresolved lookups the render raised. Stateless and thread-safe, since each
-/// call gets a fresh {@link RenderSession}.
+/// Turns a document into a Markdown body, plus the diagnostics and unresolved lookups raised.
+/// Stateless: each call gets a fresh {@link RenderSession}.
 public final class AdfRenderer {
 
   private final BlockRenderer blockRenderer;
@@ -19,8 +18,7 @@ public final class AdfRenderer {
     this.blockRenderer = blockRenderer;
   }
 
-  /// Assembles a renderer with its default delegates, keeping the CommonMark dependency a render
-  /// detail.
+  /// Keeps the CommonMark wiring out of callers.
   public static AdfRenderer createDefault() {
     return new AdfRenderer(new BlockRenderer(CommonMarkSupport.cellHtmlRenderer()));
   }
@@ -42,7 +40,6 @@ public final class AdfRenderer {
         session.events().effects());
   }
 
-  // Prepends the optional documentTitle as a level-1 heading, blank-line separated from the body.
   private static String prependTitle(
       String body, @Nullable String rawTitle, MarkdownWriter writer) {
     var heading = titleHeading(rawTitle, writer);
@@ -52,8 +49,7 @@ public final class AdfRenderer {
     return body.isEmpty() ? heading : heading + "\n\n" + body;
   }
 
-  // Formats the title like renderHeading's plain level-1 case: collapsed to one line, punctuation
-  // escaped (atLineStart=false, since the text follows "# "). Null/blank yields no heading.
+  // Like renderHeading's level-1 case: one line, punctuation escaped (not at line start).
   private static @Nullable String titleHeading(@Nullable String rawTitle, MarkdownWriter writer) {
     if (rawTitle == null) {
       return null;

@@ -10,9 +10,9 @@ import dev.nthings.adf4j.result.ParseResult;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
-/// Converts ADF to Markdown and extracts source metadata. Immutable and cheap to create.
-/// Expected input failures return diagnostics; string-only and explicitly throwing methods
-/// raise AdfException on failure. Callback thread safety is the caller's responsibility.
+/// Converts ADF to Markdown and analyzes its metadata. Immutable and cheap to create. Expected
+/// input failures return diagnostics; `convertOrThrow` and `toMarkdown` throw AdfException.
+/// Callback thread safety is the caller's responsibility.
 public final class AdfToMarkdown {
   private static final AdfPipeline PIPELINE = AdfPipeline.createDefault();
   private final ConversionOptions options;
@@ -29,12 +29,12 @@ public final class AdfToMarkdown {
     return new AdfToMarkdown(options);
   }
 
-  /// Expected input failures have an empty body and error diagnostics.
+  /// Blank or invalid input yields an empty body and error diagnostics.
   public MarkdownResult convert(@Nullable String json) {
     return PIPELINE.convert(json, options);
   }
 
-  /// Reuses a parsed document while preserving its parse diagnostics.
+  /// Keeps the parse diagnostics in the result.
   public MarkdownResult convert(ParseResult parsed) {
     return PIPELINE.convert(Objects.requireNonNull(parsed), options);
   }
@@ -43,12 +43,12 @@ public final class AdfToMarkdown {
     return PIPELINE.convert(Objects.requireNonNull(document), options);
   }
 
-  /// Renders excerpt content without the document's title.
+  /// Renders excerpt content without the document title.
   public MarkdownResult convert(ExcerptDefinition excerpt) {
     return PIPELINE.convert(new AdfDocument(1, excerpt.content()), options.withDocumentTitle(null));
   }
 
-  /// Extracts source references and outline without invoking render callbacks.
+  /// Extracts metadata without invoking render callbacks.
   public AnalysisResult analyze(String json) {
     return analyze(AdfJson.parse(json));
   }
@@ -67,7 +67,7 @@ public final class AdfToMarkdown {
     return result;
   }
 
-  /// The Markdown body, or AdfException when conversion failed.
+  /// The Markdown body; throws AdfException on failure.
   public String toMarkdown(@Nullable String json) {
     return convert(json).requireBody();
   }

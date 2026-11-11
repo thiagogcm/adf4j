@@ -12,10 +12,8 @@ import org.aesh.command.option.OptionList;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ObjectNode;
 
-/// `adf4j analyze`: extracts references, attachments, and the outline without rendering, so the
-/// attachment inventory is its only input besides the document. Sections come from
-/// {@link AdfJson#METADATA_SECTIONS}, in its order. `-f text` is a plain walk of the same JSON, so
-/// the two formats carry the same data. Diagnostics go to stderr.
+/// `adf4j analyze`: extracts references, attachments, and the outline without rendering. Exits 3
+/// on invalid content, still printing the output. `-f text` walks the same JSON.
 @CommandDefinition(
     name = "analyze",
     description = "Extract references, attachments, and outline",
@@ -29,8 +27,7 @@ public class AnalyzeCommand extends Adf4jSubcommand {
       allowedValues = {"json", "text"})
   String format = "json";
 
-  // Not allowedValues: an annotation can't read the section table, and aesh's help doesn't show
-  // them. selectedSections() validates instead.
+  // Not allowedValues: annotations can't read the section table. selectedSections() validates.
   @OptionList(
       name = "select",
       description = "Comma-separated subset of sections to emit; defaults to every section")

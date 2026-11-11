@@ -2,7 +2,7 @@ package dev.nthings.adf4j.options;
 
 import java.util.Objects;
 
-/// Explicit ownership of custom extension output. Markdown is inserted verbatim.
+/// Custom extension output and its ownership `mode`. Markdown is inserted verbatim.
 public record ExtensionOutput(Mode mode, String markdown) {
   public enum Mode {
     DEFER,

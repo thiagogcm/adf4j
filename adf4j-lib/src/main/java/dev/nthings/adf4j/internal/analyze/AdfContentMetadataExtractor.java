@@ -40,17 +40,15 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
-/// Harvests a document's references (page, external, mention, attachment, page-tree, excerpt) and
-/// its own excerpt definitions as the {@link AdfNodeWalker} visits each node, then materializes a
-/// {@link ContentMetadata}. Holds the accumulation for one document; create a fresh instance per
-/// document.
+/// Collects references and excerpt definitions during the {@link AdfNodeWalker} pass. One
+/// instance per document.
 final class AdfContentMetadataExtractor implements NodeVisitor {
 
   private final LinkedHashSet<String> pageIds = new LinkedHashSet<>();
   private final LinkedHashSet<String> externalUrls = new LinkedHashSet<>();
   private final LinkedHashSet<MentionReference> mentionRefs = new LinkedHashSet<>();
   private final LinkedHashMap<String, AttachmentFacts> attachmentRefs = new LinkedHashMap<>();
-  // Occurrences, not sets: the counts of tree/excerpt macros are themselves a signal.
+  // Occurrences, not sets: repeated tree and excerpt macros are themselves a signal.
   private final ArrayList<PageTreeReference> pageTreeRefs = new ArrayList<>();
   private final ArrayList<ExcerptIncludeReference> excerptRefs = new ArrayList<>();
   private final ArrayList<ExcerptDefinition> excerpts = new ArrayList<>();
@@ -64,16 +62,13 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
   public void visitBlock(AdfBlock block, String path) {
     switch (block) {
       case Media media -> collectMedia(media);
-      // A wrapper's link wraps its media, so without any it renders nothing.
+      // Without media, the wrapper's link renders nothing.
       case MediaSingle single when !single.media().isEmpty() -> collectLinkMarks(single.marks());
       case Extension extension -> collectExtension(extension);
-      // A macro with a body renders a placeholder over it and never expands, so only an excerpt
-      // counts, as a definition.
+      // Bodied macros never expand, so only an excerpt counts, as a definition.
       case BodiedExtension bodied -> collectExcerptDefinition(bodied);
       case AdfCard card -> collectLink(card.url(), card.attrs());
-      default -> {
-        // Other blocks' references (inline/child) arrive via the walk.
-      }
+      default -> {}
     }
   }
 
@@ -85,9 +80,7 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
       case MediaInline media -> collectMedia(media);
       case InlineExtension extension -> collectExtension(extension);
       case Mention mention -> collectMention(mention);
-      default -> {
-        // Plain inline content carries no references.
-      }
+      default -> {}
     }
   }
 
@@ -163,8 +156,7 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
       case InlineMediaImage(var media) -> collectMedia(media);
       case PageTree(var reference) -> pageTreeRefs.add(reference);
       case ExcerptInclude(var reference) -> excerptRefs.add(reference);
-      // The macro expands to the supplied inventory, so each entry is referenced; without one the
-      // expansion is unknown and contributes nothing (the same caveat as viewpdf).
+      // Expands to the inventory, so each entry counts; with none it adds nothing (as viewpdf).
       case Attachments _ -> inventory.entries().forEach(this::upsertAttachmentRef);
       case ViewPdf _ -> {
         var reference = AttachmentReferences.resolve(extension.macroParams(), inventory);
@@ -172,13 +164,11 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
           upsertAttachmentRef(reference);
         }
       }
-      default -> {
-        // Other macros reference nothing the metadata tracks.
-      }
+      default -> {}
     }
   }
 
-  // The marked region an `excerpt` macro defines, exposed so resolvers can index source pages.
+  // Exposed so resolvers can index source pages by excerpt name.
   private void collectExcerptDefinition(BodiedExtension bodied) {
     if (ConfluenceMacro.of(bodied) instanceof Excerpt(var name)) {
       excerpts.add(new ExcerptDefinition(name, bodied.content()));
@@ -194,16 +184,15 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
             null));
   }
 
-  // One entry per file, under the inventory's spelling of the id when the file is inventoried.
+  // One entry per file, keyed by the inventory's spelling of the id when there is one.
   private void mergeAttachmentRef(String fileId, AttachmentFacts facts) {
     var entry = inventory.byFileId(fileId);
     attachmentRefs.merge(
         entry == null ? fileId : entry.fileId(), facts, AttachmentFacts::updatedWith);
   }
 
-  // What the document says about a file, each fact null or non-blank. The latest mention of a fact
-  // wins. At the end they complete from the file's inventory entry: the document wins, but an
-  // entry's explicit media type beats a guess from the name.
+  // Facts the document states about a file, each null or non-blank. The latest mention wins. The
+  // inventory entry fills gaps, but its explicit media type beats a guess from the name.
   private record AttachmentFacts(
       @Nullable String title, @Nullable String mediaType, @Nullable String guessedMediaType) {
 

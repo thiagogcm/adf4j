@@ -30,7 +30,7 @@ public final class AttachmentReferences {
 
   private AttachmentReferences() {}
 
-  /// Classifies media by MIME/type, falling back to each name/URL extension; unknown is non-image.
+  /// Classifies by MIME or type, then by each name's extension. Unknown counts as non-image.
   public static boolean isImage(@Nullable String mimeOrType, @Nullable String... fileNames) {
     var classification = classify(mimeOrType);
     for (var fileName : fileNames) {
@@ -53,9 +53,8 @@ public final class AttachmentReferences {
     return normalized.indexOf('/') >= 0 ? Boolean.FALSE : null;
   }
 
-  /// The attachment an attachment macro names: its inventory entry by file id, since titles can
-  /// collide, else by title, else a reference built from the macro itself when it carries a file
-  /// id. A title-less entry takes the macro's name.
+  /// Resolves by file id first (titles can collide), then by title, else from the macro itself.
+  /// A title-less entry takes the macro's name.
   public static @Nullable AttachmentReference resolve(
       MacroParams macroParams, AttachmentInventory attachments) {
     var name = macroParams.value("name");
@@ -82,7 +81,6 @@ public final class AttachmentReferences {
             entry.downloadUrl());
   }
 
-  /// The file name a URL or path carries: its last path segment, or null when none is present.
   public static @Nullable String fileName(@Nullable String urlOrPath) {
     if (urlOrPath == null) {
       return null;
@@ -95,13 +93,13 @@ public final class AttachmentReferences {
     if (fileNameOrUrl == null) {
       return null;
     }
-    // A URL's query/fragment must not corrupt (or spuriously supply) the extension.
+    // Query and fragment must not supply or corrupt the extension.
     var name = lastPathSegment(fileNameOrUrl.strip());
     if (name.isEmpty()) {
       return null;
     }
 
-    // Curated map first: URLConnection's answer varies with the JVM's content-types.properties.
+    // Curated map first: URLConnection's answer depends on the JVM's content types.
     var dotIdx = name.lastIndexOf('.');
     if (dotIdx >= 0) {
       var extension = name.substring(dotIdx + 1);

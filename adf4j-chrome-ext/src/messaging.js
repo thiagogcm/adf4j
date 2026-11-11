@@ -1,5 +1,4 @@
-// Conversion-request validation and the onMessage listener, kept chrome-free so tests can
-// import it directly.
+// Chrome-free request validation and listener, so tests can import it directly.
 import './confluence.js';
 
 const { isConfluenceCloudUrl } = globalThis.Adf4jChromeExt;
@@ -27,8 +26,8 @@ export function createListener(convert) {
   };
 }
 
-// Maps an adf4j.convert() result onto the message the content script gets back. A failed result's
-// body is never forwarded: it can still hold the title, which must not reach the clipboard alone.
+// Maps an adf4j.convert() result to the content script's reply. A failed body is never forwarded:
+// it may still hold the title, which must not reach the clipboard alone.
 export function conversionResponse(result) {
   return result?.ok
     ? { ok: true, markdown: String(result.body ?? '') }

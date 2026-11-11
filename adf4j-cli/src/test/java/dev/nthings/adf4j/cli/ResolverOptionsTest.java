@@ -47,8 +47,7 @@ class ResolverOptionsTest {
 
   @Test
   void unknownPlaceholderForFlagIsAUsageError() {
-    var result =
-        convert(MEDIA_DOC, "--media-url", "https://cdn/{pageId}"); // pageId invalid for media
+    var result = convert(MEDIA_DOC, "--media-url", "https://cdn/{pageId}");
     assertThat(result.exitCode()).isEqualTo(ExitCodes.USAGE);
     assertThat(result.err()).contains("unknown placeholder '{pageId}'");
   }
@@ -57,8 +56,8 @@ class ResolverOptionsTest {
   void templateValueIsPercentEncodedToDefuseTraversal() {
     var doc = MEDIA_DOC.replace("\"FILE_ID\"", "\"../escape\"");
     var result = convert(doc, "--media-url", "https://cdn/{collection}/{id}");
-    assertThat(result.out()).contains("col/..%2Fescape"); // the '/' in the id is encoded
-    assertThat(result.out()).doesNotContain("col/../escape"); // no live traversal segment
+    assertThat(result.out()).contains("col/..%2Fescape"); // '/' is encoded
+    assertThat(result.out()).doesNotContain("col/../escape");
   }
 
   @Test

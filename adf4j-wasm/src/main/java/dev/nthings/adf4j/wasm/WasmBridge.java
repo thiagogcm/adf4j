@@ -15,9 +15,8 @@ import java.util.function.Supplier;
 import org.graalvm.webimage.api.JS;
 import org.graalvm.webimage.api.JSString;
 
-/// Installs convert, analyze, and version on globalThis.adf4j and signals readiness.
-/// Configuration contains portable rendering policy and document context.
-/// Input failures use the same result projection as the library and CLI.
+/// Installs convert, analyze and version on globalThis.adf4j, then signals readiness.
+/// Invalid configuration yields the same result shape as the library and CLI.
 public final class WasmBridge {
 
   private static final String UNKNOWN_VERSION = "unknown";

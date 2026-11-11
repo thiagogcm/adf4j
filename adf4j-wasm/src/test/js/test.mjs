@@ -1,6 +1,5 @@
 #!/usr/bin/env node
-// Smoke-tests the adf4j wasm build with a handful of cases and asserts the Markdown output.
-// Exits non-zero on any failure (used as the CI smoke test). Run: node test.mjs
+// Smoke-tests the wasm build; exits non-zero on failure (CI smoke test).
 
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -9,8 +8,7 @@ import assert from 'node:assert/strict';
 import { loadAdf4j } from '../../npm/adf4j-wasm.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
-// Running from the source tree: point the loader at the freshly built image under target/.
-// A published install instead resolves the assets sitting next to adf4j-wasm.mjs.
+// Source-tree run: use the image under target/. Published installs resolve assets beside the loader.
 const targetDir = new URL('../../../target/', import.meta.url);
 const adf4j = await loadAdf4j({
   imageUrl: new URL('adf4j-wasm.js', targetDir),
@@ -43,7 +41,7 @@ check('version is reported', () => {
   }
 });
 
-// The Markdown of a conversion that must succeed.
+// Body of a conversion that must succeed; fails the check otherwise.
 function markdown(adf, context) {
   const result = adf4j.convert(adf, context === undefined ? undefined : { context });
   assert.equal(result.ok, true, JSON.stringify(result));
@@ -142,7 +140,6 @@ check('attachment context turns media file nodes into real links', () => {
     '[report.xlsx](https://example.atlassian.net/wiki/rest/api/content/1/child/attachment/att9/download)',
   );
 
-  // Without context the synthetic placeholder remains.
   assert.equal(markdown(adf).trim(), '[file](media:contentId-1/file-uuid-1)');
 });
 

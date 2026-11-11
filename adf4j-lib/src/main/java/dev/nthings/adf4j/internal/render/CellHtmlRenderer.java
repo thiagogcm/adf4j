@@ -5,7 +5,7 @@ import org.commonmark.parser.Parser;
 import org.commonmark.renderer.html.HtmlRenderer;
 import org.jsoup.nodes.Entities;
 
-/// Renders Markdown fragments to inline HTML for table cells GFM can't express (colspan/rowspan).
+/// Markdown fragments to inline HTML, for cells GFM can't express (colspan/rowspan).
 final class CellHtmlRenderer {
 
   private final Parser markdownParser;
@@ -16,7 +16,7 @@ final class CellHtmlRenderer {
     this.htmlRenderer = htmlRenderer;
   }
 
-  /// The HTML for a non-blank fragment, without the `<p>` wrapper of a lone paragraph.
+  /// Inline HTML for a fragment; a lone paragraph loses its `<p>` wrapper.
   String render(String markdown) {
     var cleaned = MarkdownInputCleaner.clean(markdown);
     var document = markdownParser.parse(cleaned);

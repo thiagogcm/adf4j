@@ -51,18 +51,16 @@ final class MacroRenderer {
     this.blockRenderer = blockRenderer;
   }
 
-  // `atLineStart` is where the output lands: true for a block, whose fallback text sits at column
-  // 0.
+  // `atLineStart`: true for block output, whose fallback text sits at column 0.
   String renderExtension(AdfExtension node, RenderContext context, boolean atLineStart) {
     var custom = context.session().resolvers().extension(node, context.path());
     if (custom != null) {
       return custom.markdown();
     }
     return switch (ConfluenceMacro.of(node)) {
-      // A media node in disguise: the media path's resolver and placeholder semantics apply as-is.
+      // Media in disguise: same resolver and placeholder semantics.
       case InlineMediaImage(var media) -> mediaRenderer.renderMedia(media, context);
-      // Its data table lives elsewhere in the same document, so a caption loses nothing —
-      // Confluence's own export renders a sourceless chart as nothing at all.
+      // Data lives elsewhere in the document, so a caption loses nothing.
       case Chart _ -> chartCaption(node, context);
       case PageTree(var reference) -> renderPageTreeMacro(reference, context);
       case Toc(var range) -> renderTocMacro(range, context);
@@ -81,9 +79,9 @@ final class MacroRenderer {
 
   String renderBodiedExtension(BodiedExtension node, RenderContext context) {
     return switch (ConfluenceMacro.of(node)) {
-      // The excerpt is transparent: without a custom header, only its body renders.
+      // Excerpt is transparent: only its body renders.
       case Excerpt _ -> headerThenBodies(node, context, (_, _) -> "");
-      // The body holds the data table; keep the numbers under a caption, not a placeholder.
+      // Keep the body's data table as a caption, not a placeholder.
       case Chart _, LegacyChart _ -> headerThenBodies(node, context, this::chartCaption);
       case InlineMediaImage _,
           PageTree _,
@@ -99,11 +97,11 @@ final class MacroRenderer {
   }
 
   String renderMultiBodiedExtension(MultiBodiedExtension node, RenderContext context) {
-    // The schema predates this node; salvage the frame bodies.
+    // Schema predates this node; salvage the frame bodies.
     return headerThenBodies(node, context, this::blockFallback);
   }
 
-  // Header (custom renderer, else defaultHeader) then the body blocks.
+  // Header (custom, else default), then body blocks.
   private String headerThenBodies(
       AdfExtension node,
       RenderContext context,
@@ -121,7 +119,7 @@ final class MacroRenderer {
   private String extensionFallback(AdfExtension node, RenderContext context, boolean atLineStart) {
     var text = node.text();
     if (text != null && !text.isBlank()) {
-      // Attribute-derived text, escaped like literal text for where it lands.
+      // Attribute text escapes like literal text.
       return context.session().writer().text(text, atLineStart);
     }
     context
@@ -152,7 +150,7 @@ final class MacroRenderer {
     return context.session().writer().label(label);
   }
 
-  // Expand via the resolver, else the macro's placeholder token (recorded as unresolved).
+  // Resolver expansion, else the placeholder token (recorded as unresolved).
   private String renderPageTreeMacro(PageTreeReference reference, RenderContext context) {
     int failures = context.session().events().callbackFailures();
     var expanded = expandPageTree(reference, context);
@@ -183,17 +181,15 @@ final class MacroRenderer {
     return fallback;
   }
 
-  // The resolver's entries as an indented bullet list ("" for an authoritative empty answer), or
-  // null to fall back to the token (no resolver, a null return, or a throw — recorded as
-  // unresolved).
+  // Entries as an indented bullet list (empty when the answer is empty). Null falls back to the
+  // token: no resolver, null return, or throw.
   private @Nullable String expandPageTree(PageTreeReference reference, RenderContext context) {
     var entries = context.session().resolvers().pageTree(reference, context.path());
     if (entries == null) {
       return null;
     }
 
-    // Shift the shallowest entry to column 0 so a deeper-rooted list does not over-indent into
-    // code.
+    // Shallowest entry at column 0, so a deeper root doesn't over-indent into code.
     var baseDepth = entries.stream().mapToInt(PageTreeEntry::depth).min().orElse(0);
     var lines = new ArrayList<String>();
     for (var entry : entries) {
@@ -205,8 +201,7 @@ final class MacroRenderer {
     return String.join("\n", lines);
   }
 
-  // A link when the page id resolves, else the escaped (single-line) title; null when nothing
-  // renders.
+  // Link when the page id resolves, else the escaped one-line title; null if nothing renders.
   private @Nullable String pageTreeLabel(PageTreeEntry entry, RenderContext context) {
     var label = Strings.collapseWhitespace(entry.title()).strip();
     int failures = context.session().events().callbackFailures();
@@ -227,8 +222,7 @@ final class MacroRenderer {
     return label.isEmpty() ? null : context.session().writer().text(label, false);
   }
 
-  // The {{pagetree:<root>}} token root: the request root with whitespace collapsed and braces
-  // dropped.
+  // Root for the {{pagetree:<root>}} token: whitespace collapsed, braces dropped.
   private @Nullable String pageTreeRoot(@Nullable String root) {
     if (root == null) {
       return null;
@@ -237,7 +231,7 @@ final class MacroRenderer {
     return flattened.isEmpty() ? null : flattened;
   }
 
-  // Expand via the resolver, else the labelled placeholder (recorded as unresolved).
+  // Resolver expansion, else the labelled placeholder (recorded as unresolved).
   private String renderExcerptInclude(ExcerptIncludeReference reference, RenderContext context) {
     int failures = context.session().events().callbackFailures();
     var resolved = context.session().resolvers().excerpt(reference, context.path());
@@ -260,9 +254,8 @@ final class MacroRenderer {
     return fallback;
   }
 
-  // The supplied attachment inventory as a bullet list of links ("" for an authoritative empty
-  // inventory); only a missing inventory keeps the placeholder. A title-less entry is labelled by
-  // its file id.
+  // Inventory as a bullet list of links ("" when authoritatively empty); only a missing inventory
+  // keeps the placeholder. Untitled entries are labelled by file id.
   private String renderAttachmentsMacro(
       AdfExtension node, RenderContext context, boolean atLineStart) {
     var attachments = context.session().attachments();
@@ -339,7 +332,7 @@ final class MacroRenderer {
     return writer.link(label, resolveAttachment(attachmentReference, context));
   }
 
-  // Resolver, then the reference's own downloadUrl, else the attachment:<fileId> placeholder.
+  // Resolver, then the reference's downloadUrl, else the attachment:<fileId> placeholder.
   private String resolveAttachment(AttachmentReference reference, RenderContext context) {
     int failures = context.session().events().callbackFailures();
     var resolved = context.session().resolvers().attachment(reference, context.path());
@@ -362,8 +355,7 @@ final class MacroRenderer {
     return fallback;
   }
 
-  // The bodyless legacy chart macro: nothing recoverable in the document, so a labelled
-  // placeholder.
+  // Bodyless legacy chart: nothing recoverable, so a labelled placeholder.
   private String renderChartMacro(MacroParams macroParams, RenderContext context) {
     return context.session().writer().label(chartLabel(macroParams.value("title")));
   }
@@ -374,7 +366,7 @@ final class MacroRenderer {
     return "*" + context.session().writer().text(chartLabel(title), false) + "*";
   }
 
-  // One line, so a label token or the emphasis around a caption survives any title.
+  // One line, so a label token or caption emphasis survives any title.
   private static String chartLabel(@Nullable String title) {
     var oneLine = title == null ? "" : Strings.collapseLineBreaks(title).strip();
     return oneLine.isEmpty() ? "Chart" : "Chart: " + oneLine;

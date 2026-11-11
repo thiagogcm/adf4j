@@ -5,11 +5,9 @@ import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
-/// The outcome of parsing ADF JSON: the parsed `document`, or `null` when the input was blank or
-/// not a valid ADF root, and the `diagnostics` raised (never null). A valid result can still carry
-/// warnings: `UNSUPPORTED_VERSION` means the document parsed best effort, and `UNPRESERVED_JSON`
-/// means part of the JSON is malformed in a way the document cannot hold, so writing it back would
-/// lose that part.
+/// Parsed ADF JSON. `document` is null when the input is blank or not a valid ADF root. Warnings
+/// can accompany a document: UNSUPPORTED_VERSION (parsed best effort) or UNPRESERVED_JSON (lost on
+/// write).
 public record ParseResult(@Nullable AdfDocument document, List<Diagnostic> diagnostics)
     implements OperationResult {
 
@@ -22,7 +20,7 @@ public record ParseResult(@Nullable AdfDocument document, List<Diagnostic> diagn
     return Objects.requireNonNull(document);
   }
 
-  /// Whether parsing produced a document.
+  /// Whether a document was produced; warnings do not count.
   public boolean isSuccess() {
     return document != null;
   }

@@ -7,8 +7,7 @@ import java.util.Set;
 import org.aesh.command.option.Option;
 import org.jspecify.annotations.Nullable;
 
-/// The attachment inventory, the one option `convert` and `analyze` share beyond
-/// {@link CommonOptions}, since it decides which references a document has; composed via `@Mixin`.
+/// Attachment inventory option shared by `convert` and `analyze`, via `@Mixin`.
 final class AttachmentOptions {
 
   private static final String FLAG = "--attachments";
@@ -17,8 +16,7 @@ final class AttachmentOptions {
   @Option(name = "attachments", description = "Confluence attachment inventory file for this page")
   @Nullable String path;
 
-  /// The inventory file's entries, or `null` without the flag. A supplied inventory, even an empty
-  /// one, is authoritative.
+  /// Inventory entries, or `null` without the flag. An empty inventory is still authoritative.
   @Nullable List<AttachmentReference> read(CliJson json) {
     if (path == null) {
       return null;

@@ -1,7 +1,7 @@
 package dev.nthings.adf4j.ast;
 
-/// An inline-comment (`annotation`) mark on text the editor has a comment attached to. Carries no
-/// visible formatting and is dropped from the output, leaving the underlying text intact.
+/// An inline-comment (`annotation`) mark. It has no visible formatting, so it is dropped from the
+/// output and the underlying text kept.
 public record Annotation(Attributes attrs) implements TextMark, MediaMark {
 
   @Override

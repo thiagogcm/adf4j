@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Test;
 
 class ExtensionRendererOptionsTests {
 
-  // A block extension for a non-Confluence macro carrying one macro param.
   private static final String BLOCK_EXTENSION =
       """
       {
@@ -31,7 +30,6 @@ class ExtensionRendererOptionsTests {
       }
       """;
 
-  // An inline extension for the same macro, sitting inside a paragraph.
   private static final String INLINE_EXTENSION =
       """
       {

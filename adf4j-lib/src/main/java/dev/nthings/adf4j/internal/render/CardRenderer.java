@@ -5,7 +5,6 @@ import dev.nthings.adf4j.internal.AdfText;
 import dev.nthings.adf4j.internal.Strings;
 import org.jspecify.annotations.Nullable;
 
-/// Renders smart-link nodes (block/inline/embed cards) to Markdown links.
 final class CardRenderer {
 
   String renderBlockCard(AdfCard card, RenderContext context) {
@@ -32,11 +31,9 @@ final class CardRenderer {
     return link != null ? link : context.session().writer().label("Embed card");
   }
 
-  /// Shared url/title rendering for all three card kinds, or `null` when the card has neither:
-  /// url+title -> `[title](url)`; url only -> `<url>` (or `[url](url)` if not clean); title only ->
-  /// the escaped title as plain text. A `PageLinkResolver` rewrites an internal page card's
-  /// destination; a url-only card whose destination is rewritten keeps the original url as its
-  /// visible label.
+  /// Shared by all card kinds; `null` when the card has neither url nor title. url+title ->
+  /// `[title](url)`; url only -> `<url>` (or `[url](url)` if not clean); title only -> plain text.
+  /// A rewritten page destination keeps the original url as the visible label.
   private @Nullable String renderCardLink(AdfCard card, RenderContext context) {
     var session = context.session();
     var url = card.url();
@@ -48,8 +45,7 @@ final class CardRenderer {
       if (hasTitle) {
         return session.writer().link(title, resolvedUrl);
       }
-      // url-only: an autolink needs an untouched url (not rewritten, not escaped); otherwise fall
-      // back to a labelled link that keeps the original url visible.
+      // Autolink only an untouched url; otherwise a labelled link keeps the original visible.
       var rewritten = !resolvedUrl.equals(url);
       var destination = MarkdownText.escapeUrlDestination(resolvedUrl);
       return !rewritten && url.equals(destination) && isAbsoluteUri(url)
@@ -64,7 +60,7 @@ final class CardRenderer {
     return null;
   }
 
-  /// A CommonMark absolute-URI scheme: a letter, then letters/digits/+/-/., then ':' (min 2 chars).
+  /// CommonMark absolute URI: a 2+ character scheme, then ':'.
   private static boolean isAbsoluteUri(String url) {
     var colon = url.indexOf(':');
     if (colon < 2 || !Character.isLetter(url.charAt(0))) {

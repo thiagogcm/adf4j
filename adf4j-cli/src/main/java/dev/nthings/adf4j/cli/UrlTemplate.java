@@ -5,10 +5,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-/// A resolver URL template such as `https://cdn/{collection}/{id}`. Placeholder names are
-/// validated against `allowed` at construction, so an unknown `{token}` is a usage error before any
-/// input is read. Only the substituted value is percent-encoded (literal separators in the
-/// template survive), and the library still scheme-sanitizes the result.
+/// A resolver URL template, such as `https://cdn/{collection}/{id}`. Placeholder names are checked
+/// against `allowed` at construction, before any input is read. Only substituted values are
+/// percent-encoded; the library still scheme-sanitizes the result.
 final class UrlTemplate {
 
   private static final char[] HEX = "0123456789ABCDEF".toCharArray();
@@ -31,11 +30,8 @@ final class UrlTemplate {
         template, name -> encode(Objects.requireNonNullElse(values.get(name), "")));
   }
 
-  // Encode everything outside the RFC 3986 unreserved set (uppercase hex), so
-  // traversal/query/fragment
-  // metacharacters in an untrusted value can't change the URL's structure. Works on the UTF-8
-  // bytes of the whole string (the unreserved set is pure ASCII), so surrogate pairs encode as
-  // their real code point instead of two replacement bytes.
+  // Encode all bytes outside the RFC 3986 unreserved set (uppercase hex), so metacharacters in an
+  // untrusted value can't alter the URL. Encoding UTF-8 bytes keeps surrogate pairs whole.
   private static String encode(String value) {
     var out = new StringBuilder(value.length());
     for (var b : value.getBytes(StandardCharsets.UTF_8)) {

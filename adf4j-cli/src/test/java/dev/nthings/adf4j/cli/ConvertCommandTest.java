@@ -45,7 +45,7 @@ class ConvertCommandTest {
   void jsonFormatEmitsFullResultPrettyByDefault() {
     var result = convert(SIMPLE_DOC, "-f", "json");
     assertThat(result.exitCode()).isZero();
-    assertThat(result.out()).contains("\n  \"body\""); // pretty-printed (indented)
+    assertThat(result.out()).contains("\n  \"body\"");
     assertThat(result.out()).contains("\"hasWarnings\" : false");
     assertThat(result.out()).contains("\"diagnostics\"");
     assertThat(result.out()).contains("\"metadata\"");
@@ -119,7 +119,7 @@ class ConvertCommandTest {
   @Test
   void outputFileGetsTheUmaskDefaultMode(@TempDir Path dir) throws Exception {
     assumePosix(dir);
-    // A file created without an explicit mode shows what the umask leaves.
+    // A file made without an explicit mode shows the umask default.
     var expected = Files.getPosixFilePermissions(Files.createFile(dir.resolve("reference")));
     var out = dir.resolve("out.md");
     var result = convert(SIMPLE_DOC, "-o", out.toString());
@@ -144,7 +144,7 @@ class ConvertCommandTest {
 
   @Test
   void outputThroughASymlinkKeepsTheLink(@TempDir Path dir) throws Exception {
-    assumePosix(dir); // creating symlinks takes a privilege on Windows
+    assumePosix(dir); // symlinks need a privilege on Windows
     var elsewhere = Files.createDirectory(dir.resolve("elsewhere"));
     var real = CliTestSupport.write(elsewhere, "real.md", "old");
     var link = Files.createSymbolicLink(dir.resolve("link.md"), real);
@@ -236,7 +236,7 @@ class ConvertCommandTest {
   void jsonDiagnosticsNeverLeakStackFramesOrCause() {
     var result = convert("{ definitely not valid json", "-f", "json");
     assertThat(result.out()).contains("INVALID_JSON");
-    assertThat(result.out()).doesNotContain("\tat "); // no stack frames
+    assertThat(result.out()).doesNotContain("\tat ");
     assertThat(result.out()).doesNotContain("Exception");
   }
 

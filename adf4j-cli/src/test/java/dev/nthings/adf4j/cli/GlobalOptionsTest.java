@@ -61,7 +61,7 @@ class GlobalOptionsTest {
 
   @Test
   void lowercaseVIsVerboseNotVersion() {
-    // -v is verbose, not version (case-sensitive short flags)
+    // -v is verbose; -V is the version (flags are case-sensitive).
     var result = convert(SIMPLE_DOC, "-v");
     assertThat(result.out()).isEqualTo("# Hello\n\nWorld");
   }
@@ -96,7 +96,7 @@ class GlobalOptionsTest {
     assertThat(verbose.err()).contains("WARN").contains("bogusBlock");
   }
 
-  // slf4j-simple reads its level once per JVM, so only a fresh process can pin the logging.
+  // slf4j-simple reads its level once per JVM, so logging needs a fresh process.
   private static CliTestSupport.Result runProcess(String stdin, String... args) throws Exception {
     var command = new ArrayList<String>();
     command.add(Path.of(System.getProperty("java.home"), "bin", "java").toString());
@@ -160,7 +160,7 @@ class GlobalOptionsTest {
 
   @Test
   void doubleDashEndsOptionParsingWithinACommand() {
-    // `convert -- -weird.json` treats -weird.json as the input path, not a flag
+    // After `--`, -weird.json is the input path, not a flag.
     var result = convert(SIMPLE_DOC, "--", "-weird.json");
     assertThat(result.exitCode()).isEqualTo(ExitCodes.IO);
     assertThat(result.err()).contains("input file not found: -weird.json");

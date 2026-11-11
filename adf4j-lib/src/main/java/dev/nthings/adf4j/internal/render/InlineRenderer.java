@@ -25,8 +25,7 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/// Renders inline nodes to one string: coalesces adjacent text, tracks whether the next node sits
-/// at a line start, and spaces images apart inside a heading.
+/// Renders inline nodes to one string, tracking line starts and spacing images in headings.
 final class InlineRenderer {
 
   private static final Logger log = LoggerFactory.getLogger(InlineRenderer.class);
@@ -47,13 +46,10 @@ final class InlineRenderer {
     this.cardRenderer = cardRenderer;
   }
 
-  /// Renders `nodes` in order. `startAtLineStart` enables leading-block escaping for inlines at
-  /// output column 0 (paragraphs, a list item's first paragraph, a caption); false for mid-line
-  /// text (headings, task/decision items). Every later node gets the position it really lands on,
-  /// whitespace-only inlines included. {@link InlineSite#HEADING} and {@link InlineSite#GFM_CELL}
-  /// are one output line, so nothing in them starts a line. A heading also keeps a hard break on
-  /// its line and inserts one space between an inline image and adjacent text so they don't glue
-  /// (e.g. `![icon](src) Title`); all-text headings are unaffected.
+  /// `startAtLineStart` enables leading-block escaping at output column 0 (paragraphs, captions),
+  /// not mid-line (headings, task items). Later nodes get their real column, whitespace-only
+  /// inlines included. HEADING and GFM_CELL are one line, so nothing in them starts a line. In a
+  /// heading an image gets a space from adjacent text (`![icon](src) Title`).
   String renderInlineNodes(
       List<Located<AdfInline>> nodes, RenderContext context, boolean startAtLineStart) {
     var inHeading = context.site() == InlineSite.HEADING;
@@ -78,9 +74,8 @@ final class InlineRenderer {
     return builder.toString();
   }
 
-  /// Merges consecutive {@link Text} inlines whose marks render identically into one node, so an
-  /// adjacent run gets a single set of delimiters instead of one per node. Non-Text inlines break a
-  /// run. A merged run keeps its first node's pointer.
+  /// Merges adjacent {@link Text} runs that render alike, so they share one set of delimiters.
+  /// A merged run keeps its first pointer.
   private List<Located<AdfInline>> coalesceAdjacentText(
       List<Located<AdfInline>> nodes, RenderSession session) {
     var result = new ArrayList<Located<AdfInline>>(nodes.size());
@@ -107,7 +102,7 @@ final class InlineRenderer {
       case HardBreak _ -> hardBreakMarker(context);
       case AdfCard card -> cardRenderer.renderInlineCard(card, context);
       case MediaInline media -> mediaRenderer.renderMedia(media, context);
-      // Attribute-derived text is escaped like literal text, honouring atLineStart.
+      // Attribute text escapes like literal text.
       case Date date -> writer.text(AdfText.dateFromTimestamp(date.timestamp()), atLineStart);
       case Emoji emoji -> writer.text(AdfText.emojiLabel(emoji), atLineStart);
       case Mention mention -> writer.text(AdfText.mentionLabel(mention), atLineStart);
@@ -132,7 +127,7 @@ final class InlineRenderer {
   }
 
   private String renderText(Text text, RenderContext context, boolean atLineStart) {
-    // Code-marked text is literal (applyMarks wraps it in backticks), so it must not be escaped.
+    // Code is literal (applyMarks wraps it in backticks), so it is not escaped.
     var hasCodeMark = text.marks().stream().anyMatch(Code.class::isInstance);
     if (hasCodeMark) {
       return markRenderer.applyMarks(text.text(), text.marks(), context);
@@ -143,17 +138,16 @@ final class InlineRenderer {
 
   private String hardBreakMarker(RenderContext context) {
     return switch (context.site()) {
-      // An interior break would terminate an ATX heading, so collapse it to a space.
+      // A break would end the ATX heading.
       case HEADING -> " ";
-      // In any table cell a break is a single "\n" (one <br> after unwrap), not the two-space form.
+      // Cells: one "\n" (a <br> after unwrap), not the two-space form.
       case GFM_CELL, HTML_CELL -> "\n";
-      // collapseHardBreaks downgrades the two-space GFM hard break to a soft break (a plain
-      // newline).
+      // collapseHardBreaks turns the two-space break into a plain newline.
       case BODY -> context.session().options().collapseHardBreaks() ? "\n" : "  \n";
     };
   }
 
-  // One policy for both kinds of unknown node, which differ only in wording and raw form.
+  // Block and inline unknowns share one policy; only wording and raw form differ.
   String renderUnknown(AdfUnknown node, RenderContext context) {
     var isBlock = node instanceof UnknownBlock;
     var kind = isBlock ? "block" : "inline";

@@ -16,8 +16,8 @@ import java.util.TreeMap;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
-/// Builds ADF documents in code. Every factory returns the immutable AST record for its node, so a
-/// built document works with everything a parsed one does.
+/// Builds ADF documents in code. Each factory returns the immutable AST record for its node, so
+/// a built document works like a parsed one.
 ///
 /// {@snippet :
 /// import static dev.nthings.adf4j.ast.Adf.*;
@@ -32,25 +32,23 @@ import org.jspecify.annotations.Nullable;
 /// var json = AdfJson.write(document);
 /// }
 ///
-/// The signatures carry as much of the schema as types can. Parameters name the `*Content` type a
-/// container allows, so a heading in a `listItem` doesn't compile, and `TextMark` and its siblings
-/// do the same for marks. A container the schema requires to be non-empty takes its first child
-/// separately, and `mediaSingle` and `layoutSection` take exactly the children they may hold.
-/// Closed attribute sets are enums.
+/// Signatures encode the schema: a parameter names the `*Content` type its container allows, so
+/// a heading in a `listItem` doesn't compile, and marks are typed alike. A container the schema
+/// requires to be non-empty takes its first child separately. Closed attribute sets are enums.
 ///
-/// Every container also takes a `List`, for content built from data. These overloads throw
-/// `IllegalArgumentException` when a required child is missing, because an empty query result is
-/// ordinary data and the alternative is a rejected document.
+/// Every container also takes a `List`, for data-driven content. Those overloads throw
+/// `IllegalArgumentException` when a required child is missing, since an empty query result is
+/// ordinary data.
 ///
-/// Attributes a node doesn't require are set through `withX` methods on the record, such as
-/// {@link TableCell#withColspan(int)}. Empty text is no node at all, wherever it appears, because
-/// the schema forbids it and Jira rejects a document containing it.
+/// Optional attributes are set through `withX` methods on the record, such as
+/// {@link TableCell#withColspan(int)}. Empty text is no node at all, since the schema forbids it
+/// and Jira rejects it.
 ///
-/// `doc` fills in the `localId`s the schema requires, deriving each from the node rather than at
-/// random, so rebuilding the same content writes the same JSON. A task or decision's id comes from
-/// its content, not its state or position, and identical items are told apart by their order. A
-/// list's id comes from its order among lists. A `withLocalId` value is kept, and generated ids
-/// avoid every other id on a known node. Nodes outside a `doc` have no id.
+/// `doc` fills in the `localId`s the schema requires, derived from content so rebuilding the same
+/// content writes the same JSON. A task or decision id depends on its content, not its state or
+/// position; identical items are told apart by order. A list id depends on its order among lists.
+/// A `withLocalId` value is kept. Generated ids avoid every other id in the document. Nodes outside
+/// a `doc` have no id.
 public final class Adf {
 
   private static final int VERSION = 1;
@@ -131,8 +129,6 @@ public final class Adf {
     }
   }
 
-  // ---- document and text blocks ----
-
   public static AdfDocument doc(DocContent... content) {
     return doc(List.of(content));
   }
@@ -158,12 +154,10 @@ public final class Adf {
     return heading(level, List.of(content));
   }
 
-  /// A heading of `level` 1 to 6.
   public static Heading heading(int level, List<? extends InlineContent> content) {
     return new Heading(level(level), inlines(content), List.of());
   }
 
-  /// A heading of `level` 1 to 6.
   public static Heading heading(int level, String text) {
     return new Heading(level(level), inlines(text), List.of());
   }
@@ -224,18 +218,14 @@ public final class Adf {
     return new NestedExpand(title(title), blocks(first, rest), List.of());
   }
 
-  /// An {@link Expand} for inside a table cell, or another expand's content.
   public static NestedExpand nestedExpand(String title, String text) {
     return nestedExpand(title, paragraph(text));
   }
 
-  /// An {@link Expand} for inside a table cell, or another expand's content.
   public static NestedExpand nestedExpand(
       String title, List<? extends NestedExpandContent> content) {
     return new NestedExpand(title(title), required("nestedExpand", content), List.of());
   }
-
-  // ---- lists ----
 
   public static BulletList bulletList(ListItem first, ListItem... rest) {
     return new BulletList(Attributes.empty(), blocks(first, rest), List.of());
@@ -315,8 +305,6 @@ public final class Adf {
     return new DecisionItem(decided(), inlines(text), List.of());
   }
 
-  // ---- tables ----
-
   public static Table table(TableRow first, TableRow... rest) {
     return new Table(Attributes.empty(), blocks(first, rest), List.of());
   }
@@ -357,14 +345,11 @@ public final class Adf {
     return new TableCell(true, Attributes.empty(), required("tableHeader", content), List.of());
   }
 
-  // ---- media and cards ----
-
   /// A centered image or file.
   public static MediaSingle mediaSingle(Media media) {
     return new MediaSingle(center(), List.of(media), List.of());
   }
 
-  /// A centered image or file with a caption.
   public static MediaSingle mediaSingle(Media media, Caption caption) {
     return new MediaSingle(center(), List.of(media, caption), List.of());
   }
@@ -377,12 +362,11 @@ public final class Adf {
     return new MediaGroup(Attributes.empty(), required("mediaGroup", items), List.of());
   }
 
-  /// A file held by the media service.
+  /// A file held by the media service, identified by `id` within `collection`.
   public static Media media(String id, String collection) {
     return new Media(file(id, collection), List.of());
   }
 
-  /// An image at a URL.
   public static Media externalMedia(String url) {
     return new Media(Attributes.empty().with("type", "external").with("url", url), List.of());
   }
@@ -415,8 +399,6 @@ public final class Adf {
     return new InlineCard(url(url), List.of());
   }
 
-  // ---- layout, extensions and sync blocks ----
-
   public static LayoutSection layoutSection(LayoutColumn first, LayoutColumn second) {
     return new LayoutSection(Attributes.empty(), List.of(first, second), List.of());
   }
@@ -426,7 +408,7 @@ public final class Adf {
     return new LayoutSection(Attributes.empty(), List.of(first, second, third), List.of());
   }
 
-  /// A section of two or three columns, the only counts the schema allows.
+  /// Two or three columns, the only counts the schema allows.
   public static LayoutSection layoutSection(List<LayoutColumn> columns) {
     if (columns.size() < 2 || columns.size() > 3) {
       throw new IllegalArgumentException(
@@ -441,7 +423,6 @@ public final class Adf {
     return new LayoutColumn(width(width), blocks(first, rest), List.of());
   }
 
-  /// A column taking `width` percent of its section.
   public static LayoutColumn layoutColumn(
       double width, List<? extends LayoutColumnContent> content) {
     return new LayoutColumn(width(width), required("layoutColumn", content), List.of());
@@ -451,8 +432,8 @@ public final class Adf {
     return new Extension(extensionAttrs(type, key), List.of());
   }
 
-  /// An extension without a body. `parameters` are written with their keys sorted, so a `Map.of`
-  /// writes the same JSON on every run. See {@link #macroParameters(Map)} for a Confluence macro.
+  /// An extension without a body. `parameters` keys are sorted, so a `Map.of` writes the same JSON
+  /// on every run. See {@link #macroParameters(Map)} for Confluence macros.
   public static Extension extension(String type, String key, Map<String, ?> parameters) {
     return new Extension(extensionAttrs(type, key, parameters), List.of());
   }
@@ -490,8 +471,8 @@ public final class Adf {
     return new InlineExtension(extensionAttrs(type, key, parameters), List.of());
   }
 
-  /// The `parameters` of a Confluence macro, which keeps each value in a `{"value": ...}` envelope
-  /// under `macroParams`.
+  /// Parameters of a Confluence macro: each value is wrapped in a `{"value": ...}` envelope under
+  /// `macroParams`.
   public static Map<String, Object> macroParameters(Map<String, String> values) {
     var macroParams = LinkedHashMap.<String, Object>newLinkedHashMap(values.size());
     values.forEach((name, value) -> macroParams.put(name, Map.of("value", value)));
@@ -512,9 +493,7 @@ public final class Adf {
     return new BodiedSyncBlock(sync(resourceId), required("bodiedSyncBlock", content), List.of());
   }
 
-  // ---- inline nodes ----
-
-  /// A run of text. The schema allows `code` only alongside `link` and `annotation`.
+  /// The schema allows `code` only alongside `link` and `annotation`.
   public static Text text(String text, TextMark... marks) {
     if (Arrays.stream(marks).anyMatch(Code.class::isInstance)
         && Arrays.stream(marks)
@@ -554,8 +533,6 @@ public final class Adf {
   public static Placeholder placeholder(String text) {
     return new Placeholder(Attributes.empty().with("text", text), List.of());
   }
-
-  // ---- marks ----
 
   public static Strong strong() {
     return new Strong(Attributes.empty());
@@ -631,9 +608,7 @@ public final class Adf {
         Attributes.empty().with("id", id).with("annotationType", "inlineComment"));
   }
 
-  // ---- attributes and children ----
-
-  // The schema forbids empty text, and Jira rejects it, so empty text is no node at all.
+  // Empty text is no node: the schema forbids it and Jira rejects it.
   private static List<AdfInline> inlines(String text) {
     return text.isEmpty() ? List.of() : List.of(text(text));
   }
@@ -733,8 +708,8 @@ public final class Adf {
     return ids.assign(added);
   }
 
-  // One document's id assignment, in document order so an item's occurrence is stable. Each node is
-  // rebuilt, because records are immutable and only the document sees every item.
+  // Assigns ids in document order, so an item's occurrence is stable. Nodes are rebuilt because
+  // records are immutable and only the document sees every item.
   private static final class LocalIds {
 
     private final Set<String> used = new HashSet<>();
@@ -792,7 +767,7 @@ public final class Adf {
       return node.attrs().with("localId", id);
     }
 
-    // What an item says: its children, not its own state, which ticking it changes.
+    // Identity is the children, not the state, which ticking an item changes.
     private static String identity(AdfNode node) {
       var identity = new StringBuilder(node.type());
       node.content().forEach(child -> describe(child, identity));

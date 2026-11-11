@@ -4,15 +4,10 @@ import java.util.Map;
 import java.util.OptionalInt;
 import org.jspecify.annotations.Nullable;
 
-/// One `pagetree` or `children` macro occurrence in a document, both a metadata fact
-/// (a document with any of these depends on the page hierarchy, not just its own content) and the
-/// request a `PageTreeResolver` is asked to expand. `root` is the page the list is rooted
-/// at: the `pagetree` macro's `root` parameter or the `children` macro's
-/// `page` parameter, trimmed. It is `null` when absent, blank, or an `@keyword`
-/// (e.g. `@self`), meaning the current page; the raw value stays reachable via
-/// `parameters`. `parameters` is the macro's full parameter map (e.g. `depth`,
-/// `all`, `startDepth`); the standard `depth` and `all` parameters are also
-/// exposed pre-parsed via {@link #depth()} and {@link #all()}.
+/// A `pagetree` or `children` macro occurrence: a metadata fact (the document depends on the page
+/// hierarchy) and the request a {@link PageTreeResolver} expands. `root` is the trimmed root page
+/// parameter, or null when absent, blank, or an `@keyword` such as `@self` (the current page). The
+/// raw value stays in `parameters`; {@link #depth()} and {@link #all()} are pre-parsed from it.
 public record PageTreeReference(
     PageTreeMacro macro, @Nullable String root, Map<String, String> parameters) {
 
@@ -20,8 +15,8 @@ public record PageTreeReference(
     parameters = parameters == null ? Map.of() : Map.copyOf(parameters);
   }
 
-  /// The macro's `depth` parameter as a positive level count, or empty when it is absent, blank,
-  /// non-numeric, or not positive.
+  /// The `depth` parameter as a positive count; empty if absent, blank, non-numeric or not
+  /// positive.
   public OptionalInt depth() {
     var raw = parameters.get("depth");
     if (raw == null || raw.isBlank()) {
@@ -35,9 +30,7 @@ public record PageTreeReference(
     }
   }
 
-  /// Whether the macro asks for the whole subtree: the `all` parameter (falling back to its
-  /// legacy `allChildren` spelling when `all` is absent or blank) equals `"true"`,
-  /// case-insensitively.
+  /// Whether `all` (or legacy `allChildren`, when `all` is absent or blank) is `true`, any case.
   public boolean all() {
     var raw = parameters.get("all");
     if (raw == null || raw.isBlank()) {

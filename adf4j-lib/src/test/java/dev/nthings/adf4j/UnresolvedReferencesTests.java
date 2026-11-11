@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Test;
 /// Covers `MarkdownResult.unresolved()`: the lookups a render's resolvers declined.
 class UnresolvedReferencesTests {
 
-  // A paragraph linking to Confluence page 12345 by URL.
   private static final String PAGE_LINK =
       """
       {
@@ -32,7 +31,6 @@ class UnresolvedReferencesTests {
       }
       """;
 
-  // A pagetree macro rooted at "Docs Home".
   private static final String ROOTED_PAGETREE =
       """
       {
@@ -79,7 +77,7 @@ class UnresolvedReferencesTests {
 
   @Test
   void a_tree_macro_that_falls_back_to_the_placeholder_is_reported() {
-    // No resolver at all: the {{pagetree:Docs Home}} token leaks, and the result says so.
+    // No resolver: the {{pagetree:...}} token leaks and is reported.
     var result = AdfToMarkdown.create().convert(ROOTED_PAGETREE);
 
     assertThat(result.unresolved()).extracting(UnresolvedResource::id).containsExactly("Docs Home");
