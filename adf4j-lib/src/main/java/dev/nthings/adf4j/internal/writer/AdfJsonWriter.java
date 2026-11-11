@@ -72,7 +72,12 @@ public final class AdfJsonWriter {
   }
 
   public String write(AdfDocument document) {
-    return mapper.writeValueAsString(element(document));
+    return mapper.writeValueAsString(tree(document));
+  }
+
+  /// The document as a JSON tree, without serializing it.
+  public JsonNode tree(AdfDocument document) {
+    return element(document);
   }
 
   private JsonNode node(AdfNode node) {

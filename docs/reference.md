@@ -4,7 +4,7 @@ Lookup tables for options, ADF to Markdown rendering, diagnostics, URL safety, C
 
 ## Options (ConversionOptions)
 
-`ConversionOptions` groups immutable `MarkdownOptions`, `DocumentContext`, and `ResolverHooks`. Start from `ConversionOptions.defaults()` and chain `withX(...)`, each of which returns a new instance. Bind options with `AdfToMarkdown.with(options)`; there are no per-call overloads, and a converter is cheap to create.
+`ConversionOptions` groups immutable `MarkdownOptions`, `DocumentContext`, and `ResolverHooks`. Start from `ConversionOptions.defaults()` and chain `withX(...)`, each of which returns a new instance. `ConversionOptions.fromJson(json)` reads the portable `{ markdown, context }` configuration; blank input is the defaults, and invalid input throws `AdfException` with one `INVALID_OPTIONS` diagnostic. Bind options with `AdfToMarkdown.with(options)`; there are no per-call overloads, and a converter is cheap to create.
 
 | Option | Default | Effect |
 | --- | --- | --- |
@@ -129,7 +129,7 @@ Conversion codes:
 | `UNKNOWN_MARK_DROPPED` | `WARNING` | Unknown marks on text, media, paragraphs, or headings were dropped. |
 | `UNSUPPORTED_MACRO` | `WARNING` | Extensions rendered as `[Extension: ...]` placeholders. |
 
-Diagnostics include JSON Pointer `paths` and structured `details`; aggregated unknown-node and parser issues include a count. `UnknownNodePolicy.FAIL` returns `UNKNOWN_NODE_REJECTED`. `toMarkdown()` and explicitly throwing conveniences raise `AdfException` on failure.
+Diagnostics include JSON Pointer `paths` and structured `details`; aggregated unknown-node, unknown-mark, macro, and parser issues carry one path per occurrence. `UnknownNodePolicy.FAIL` returns `UNKNOWN_NODE_REJECTED`. `toMarkdown()` and explicitly throwing conveniences raise `AdfException` on failure.
 
 ## Lossy and by-design behaviours
 

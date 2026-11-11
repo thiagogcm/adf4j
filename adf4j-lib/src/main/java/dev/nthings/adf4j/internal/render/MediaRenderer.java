@@ -1,13 +1,14 @@
 package dev.nthings.adf4j.internal.render;
 
 import dev.nthings.adf4j.ast.AdfMedia;
+import dev.nthings.adf4j.ast.Caption;
+import dev.nthings.adf4j.ast.Media;
 import dev.nthings.adf4j.ast.MediaGroup;
 import dev.nthings.adf4j.ast.MediaSingle;
 import dev.nthings.adf4j.internal.AdfText;
 import dev.nthings.adf4j.internal.AttachmentReferences;
 import dev.nthings.adf4j.internal.Strings;
 import dev.nthings.adf4j.metadata.AttachmentReference;
-import dev.nthings.adf4j.result.ConversionEffect;
 import dev.nthings.adf4j.result.UnresolvedResource;
 import java.util.ArrayList;
 import org.jspecify.annotations.Nullable;
@@ -26,12 +27,12 @@ final class MediaRenderer {
     // A wrapper link mark wraps each image alone: a link can't span the blank line between two, and
     // any caption stays a separate block.
     var blocks = new ArrayList<String>();
-    for (var media : node.media()) {
-      var image = renderMedia(media, context);
-      blocks.add(markRenderer.applyMarks(image, node.marks(), context.session()));
+    for (var media : context.children(node, Media.class)) {
+      var image = renderMedia(media.node(), context.at(media));
+      blocks.add(markRenderer.applyMarks(image, node.marks(), context));
     }
-    for (var caption : node.captions()) {
-      var rendered = blockRenderer.renderCaption(caption, context);
+    for (var caption : context.children(node, Caption.class)) {
+      var rendered = blockRenderer.renderCaption(caption.node(), context.at(caption));
       if (!rendered.isBlank()) {
         blocks.add(rendered);
       }
@@ -42,14 +43,16 @@ final class MediaRenderer {
   String renderMediaGroup(MediaGroup node, RenderContext context) {
     // Single soft break: a media group renders as one visual cluster.
     return String.join(
-        "\n", node.items().stream().map(media -> renderMedia(media, context)).toList());
+        "\n",
+        context.children(node, Media.class).stream()
+            .map(media -> renderMedia(media.node(), context.at(media)))
+            .toList());
   }
 
   String renderMedia(AdfMedia node, RenderContext context) {
-    context = context.at(node);
-    context.session().events().observe(node);
+    context.session().events().observe(node, context.path());
     var rendered = renderEmbedOrLink(node, context);
-    return markRenderer.applyMarks(rendered, node.marks(), context.session());
+    return markRenderer.applyMarks(rendered, node.marks(), context);
   }
 
   private String renderEmbedOrLink(AdfMedia media, RenderContext context) {
@@ -58,21 +61,14 @@ final class MediaRenderer {
     var resolvedSource = resolveMediaSource(media, attachment, context);
     var destination = resolvedSource != null ? resolvedSource : placeholder(media);
     if (resolvedSource == null) {
-      var path = context.at(media).path();
-      context
-          .session()
-          .unresolvedTracker()
-          .recordResource(
-              new UnresolvedResource(
-                  UnresolvedResource.Kind.MEDIA,
-                  media.id() == null ? "" : media.id(),
-                  path,
-                  context.session().events().reasonSince(failures),
-                  destination));
-      context
-          .session()
-          .events()
-          .effect(ConversionEffect.Kind.PLACEHOLDER, path, "Media URL unresolved");
+      var events = context.session().events();
+      events.unresolved(
+          UnresolvedResource.Kind.MEDIA,
+          media.id(),
+          context.path(),
+          events.reasonSince(failures),
+          destination,
+          "Media URL unresolved");
     }
 
     // Non-image attachments (PDF, video, archive, …) render as a link; an image embed would break.
@@ -141,7 +137,7 @@ final class MediaRenderer {
       return url;
     }
 
-    var resolved = context.session().resolvers().media(media, context.at(media).path());
+    var resolved = context.session().resolvers().media(media, context.path());
     if (resolved != null) {
       return resolved;
     }

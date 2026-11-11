@@ -19,19 +19,35 @@ public final class AdfDocumentAnalyzer {
 
   public DocumentAnalysis analyze(
       @Nullable AdfDocument document, ConversionOptions options, AttachmentInventory attachments) {
+    return analyze(document, options, attachments, true);
+  }
+
+  /// As {@link #analyze(AdfDocument, ConversionOptions, AttachmentInventory)}; without
+  /// `lossiness` the diagnostics are left empty, for a render that reports what it visits itself.
+  public DocumentAnalysis analyze(
+      @Nullable AdfDocument document,
+      ConversionOptions options,
+      AttachmentInventory attachments,
+      boolean lossiness) {
     if (document == null) {
       return DocumentAnalysis.empty();
     }
 
     var headingCollector = new AdfHeadingCollector(options.unknownNodePolicy());
     var metadataExtractor = new AdfContentMetadataExtractor(attachments);
-    var lossinessCollector = new AdfLossinessCollector(document);
-    AdfNodeWalker.walk(document, List.of(headingCollector, metadataExtractor, lossinessCollector));
+    var lossinessCollector = lossiness ? new AdfLossinessCollector() : null;
+    AdfNodeWalker.walk(
+        document,
+        lossinessCollector == null
+            ? List.of(headingCollector, metadataExtractor)
+            : List.of(headingCollector, metadataExtractor, lossinessCollector));
 
     var outline = headingCollector.build();
     return new DocumentAnalysis(
         outline,
         metadataExtractor.build(outline.headings()),
-        lossinessCollector.build(options.unknownNodePolicy()));
+        lossinessCollector == null
+            ? List.of()
+            : lossinessCollector.build(options.unknownNodePolicy()));
   }
 }

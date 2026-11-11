@@ -3,7 +3,8 @@ package dev.nthings.adf4j.result;
 import java.util.List;
 
 /// An operation's outcome. Expected input failures are diagnostics; programming errors still throw.
-public interface OperationResult {
+public sealed interface OperationResult
+    permits AnalysisResult, MarkdownResult, ParseResult, ValidationResult {
   List<Diagnostic> diagnostics();
 
   default boolean isSuccess() {

@@ -53,7 +53,7 @@ Authoring factories reject out-of-range heading/indentation levels, border sizes
 - `effects()` records supported changes such as omitted visual styling, dropped unknown content, placeholders, flattened columns, and synthesized/promoted table headers. It is not a proof of visual equivalence.
 - `unresolved()` reports missing output dependencies, including files, attachment inventories, page-tree entries, and excerpts. A declined rewrite of an existing usable page URL is not an unresolved dependency.
 
-Diagnostics expose `paths` as JSON Pointers and `details` for structured context. Java exceptions remain available through `cause()` but never enter JSON output. Metadata describes source content; arbitrary replacement Markdown from extension renderers is not analyzed. Source locations currently use AST object identity: manually reusing the same node or mark instance in several places may report only one occurrence. Parsed JSON creates distinct occurrences.
+Diagnostics expose `paths` as JSON Pointers and `details` for structured context. Java exceptions remain available through `cause()` but never enter JSON output. Metadata describes source content; arbitrary replacement Markdown from extension renderers is not analyzed. Source locations follow position in the document, so a node or mark instance reused in several places is reported at each of them.
 
 ## CLI
 

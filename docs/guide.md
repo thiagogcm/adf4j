@@ -38,6 +38,7 @@ Method details:
 
 - `AdfJson.parse(String)` returns a `ParseResult` with an `AdfDocument` and parse diagnostics. `isSuccess()` tells whether it produced a document. It never throws on bad input.
 - `AdfJson.write(AdfDocument)` returns the document as ADF JSON.
+- `AdfJson.writeResult(result, pretty)` writes any result in the portable JSON contract the CLI and WASM emit. `AdfJson.METADATA_SECTIONS` lists the keys of its `metadata` object in output order.
 - `analyze(String|ParseResult|AdfDocument)` returns `AnalysisResult` with metadata and diagnostics. Check `isSuccess()` before using the metadata.
 - `convert(String|ParseResult|AdfDocument|ExcerptDefinition)` returns `MarkdownResult`.
 - `toMarkdown(String)` is convenience for `convert(json).requireBody()` and throws on failure.

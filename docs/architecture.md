@@ -154,13 +154,13 @@ Analysis extracts information known before rendering:
 - Excerpt definitions.
 - Unknown-node and unknown-mark diagnostics.
 
-`AdfDocumentAnalyzer` runs one `AdfNodeWalker` pass, which hands every block and inline in document order to independent visitors:
+`AdfDocumentAnalyzer` runs one `AdfNodeWalker` pass, which hands every block and inline in document order, with its JSON Pointer, to independent visitors:
 
 | Visitor | Purpose |
 | --- | --- |
 | `AdfHeadingCollector` | Builds heading text, anchors, and TOC level ranges. |
 | `AdfContentMetadataExtractor` | Builds `ContentMetadata` in document order. |
-| `AdfLossinessCollector` | Converts unknown-node and unknown-mark counts into diagnostics. |
+| `AdfLossinessCollector` | Turns the positions of unknown nodes and marks into diagnostics. |
 
 The walker is the single home for what a node's children are, and it follows the renderer: it skips what never renders, such as a stray child of `mediaSingle` or the marks in a code block. Metadata therefore reports what renders. A macro with a body renders a placeholder over that body and never expands, so the macro itself references nothing, though its body does. The one exception is an `excerpt`, which counts as a definition. The extractor also reads the `AttachmentInventory`, so an inventoried file's reference carries its `downloadUrl`, and an `attachments` macro references every entry.
 
@@ -185,9 +185,10 @@ The AST stays product-neutral. Page links are decided in one place, `ConfluenceS
 
 Key state:
 
-- `RenderSession` is what the whole traversal shares: heading outline, options, `AttachmentInventory`, the per-render sinks `MacroDiagnostics` and `UnresolvedTracker`, `Resolvers`, and `MarkdownWriter`.
-- `RenderContext(session, site)` is the immutable cursor. It holds the session plus the `InlineSite` (`BODY`, `GFM_CELL`, `HTML_CELL`, or `HEADING`) that changes on descent and decides escaping and hard-break form.
-- `Resolvers` wraps every caller hook: it handles a missing hook, guards the call, applies that hook's decline rule, and records what stays unresolved.
+- `RenderSession` is what the whole traversal shares: heading outline, options, `AttachmentInventory`, the per-render sinks `MacroDiagnostics` and `RenderEvents`, `Resolvers`, and `MarkdownWriter`.
+- `RenderContext(session, site, path)` is the immutable cursor. It holds the session, the `InlineSite` (`BODY`, `GFM_CELL`, `HTML_CELL`, or `HEADING`) that changes on descent and decides escaping and hard-break form, and the JSON Pointer of the node being rendered. Renderers descend through `children` and `at`, which take each pointer from the child's index in its parent's `content`, so every report locates content by position, never by object identity.
+- `RenderEvents` collects what the render reports: callback failures, effects in document order, unresolved dependencies, and the lossiness of each position it observes, counted once however often the renderers reach it.
+- `Resolvers` wraps every caller hook: it handles a missing hook, guards the call, and applies that hook's decline rule. Renderers record what stays unresolved after every fallback.
 - `MarkdownWriter` binds the `MarkdownText` operations to the render's `escapeParentheses` value.
 
 `BlockRenderer` is the hub. It dispatches each block and renders the simple containers itself. It builds focused delegates for lists, tables, media, macros, cards, and marks, and hands them itself so they can recurse into nested blocks. `InlineRenderer` renders inline runs. It merges adjacent text nodes whose marks render identically, compared by rendered form rather than by the marks themselves, so a run gets one set of delimiters, and it tracks whether the next node sits at a line start.

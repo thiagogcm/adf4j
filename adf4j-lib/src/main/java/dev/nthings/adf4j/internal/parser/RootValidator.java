@@ -14,53 +14,36 @@ final class RootValidator {
   private RootValidator() {}
 
   static List<Diagnostic> validate(JsonNode document) {
-    var issues = new ArrayList<Diagnostic>();
     if (!document.isObject()) {
-      issues.add(new Diagnostic(Code.INVALID_ROOT_TYPE, "ADF root must be an object."));
-      return issues.stream()
-          .map(
-              issue ->
-                  issue.at(
-                      switch (issue.code()) {
-                        case INVALID_VERSION, UNSUPPORTED_VERSION -> "/version";
-                        case INVALID_CONTENT -> "/content";
-                        case INVALID_ROOT_NODE -> "/type";
-                        default -> "";
-                      }))
-          .toList();
+      return List.of(new Diagnostic(Code.INVALID_ROOT_TYPE, "ADF root must be an object.").at(""));
     }
 
+    var issues = new ArrayList<Diagnostic>();
     var type = document.path("type").asString(null);
     if (!Objects.equals("doc", type)) {
-      issues.add(new Diagnostic(Code.INVALID_ROOT_NODE, "ADF root node must have type 'doc'."));
+      issues.add(
+          new Diagnostic(Code.INVALID_ROOT_NODE, "ADF root node must have type 'doc'.")
+              .at("/type"));
     }
 
     var versionNode = document.get("version");
     var version = versionNode == null ? null : versionOf(versionNode);
     if (version == null) {
-      issues.add(new Diagnostic(Code.INVALID_VERSION, "ADF root must contain integer version."));
+      issues.add(
+          new Diagnostic(Code.INVALID_VERSION, "ADF root must contain integer version.")
+              .at("/version"));
     } else if (version != 1) {
       // Non-fatal: the document still parses and renders best-effort, so flag it as a warning.
-      issues.add(new Diagnostic(Code.UNSUPPORTED_VERSION, "ADF version must be 1."));
+      issues.add(new Diagnostic(Code.UNSUPPORTED_VERSION, "ADF version must be 1.").at("/version"));
     }
 
     var contentNode = document.get("content");
     if (contentNode == null || !contentNode.isArray()) {
       issues.add(
-          new Diagnostic(Code.INVALID_CONTENT, "ADF root must contain array field 'content'."));
+          new Diagnostic(Code.INVALID_CONTENT, "ADF root must contain array field 'content'.")
+              .at("/content"));
     }
-
-    return issues.stream()
-        .map(
-            issue ->
-                issue.at(
-                    switch (issue.code()) {
-                      case INVALID_VERSION, UNSUPPORTED_VERSION -> "/version";
-                      case INVALID_CONTENT -> "/content";
-                      case INVALID_ROOT_NODE -> "/type";
-                      default -> "";
-                    }))
-        .toList();
+    return List.copyOf(issues);
   }
 
   // Accept the version as a whole JSON number or a numeric string ("1"); anything else yields null.

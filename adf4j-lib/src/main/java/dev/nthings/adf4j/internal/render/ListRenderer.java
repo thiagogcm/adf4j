@@ -1,6 +1,8 @@
 package dev.nthings.adf4j.internal.render;
 
 import dev.nthings.adf4j.ast.AdfBlock;
+import dev.nthings.adf4j.ast.AdfInline;
+import dev.nthings.adf4j.ast.AdfNode;
 import dev.nthings.adf4j.ast.BlockTaskItem;
 import dev.nthings.adf4j.ast.BulletList;
 import dev.nthings.adf4j.ast.DecisionItem;
@@ -10,6 +12,7 @@ import dev.nthings.adf4j.ast.OrderedList;
 import dev.nthings.adf4j.ast.Paragraph;
 import dev.nthings.adf4j.ast.TaskItem;
 import dev.nthings.adf4j.ast.TaskList;
+import dev.nthings.adf4j.ast.TaskListContent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.IntFunction;
@@ -49,20 +52,21 @@ final class ListRenderer {
   String renderTaskList(TaskList node, RenderContext context) {
     var lines = new ArrayList<String>();
     var previousWasNested = false;
-    for (var item : node.items()) {
-      switch (item) {
+    for (var item : context.children(node, TaskListContent.class)) {
+      var itemContext = context.at(item);
+      switch (item.node()) {
         case TaskItem taskItem -> {
-          lines.add(renderTaskItem(taskItem, context));
+          lines.add(renderTaskItem(taskItem, itemContext));
           previousWasNested = false;
         }
         case BlockTaskItem blockTaskItem -> {
-          lines.addAll(blockTaskItemLines(blockTaskItem, context));
+          lines.addAll(blockTaskItemLines(blockTaskItem, itemContext));
           previousWasNested = false;
         }
         case TaskList nested -> {
           var rendered =
               MarkdownBlocks.indentLines(
-                  renderTaskList(nested, context), MarkdownBlocks.LIST_INDENT);
+                  renderTaskList(nested, itemContext), MarkdownBlocks.LIST_INDENT);
           if (!rendered.isEmpty()) {
             if (previousWasNested) {
               lines.addAll(separatorLines(MarkdownBlocks.LIST_INDENT));
@@ -78,7 +82,8 @@ final class ListRenderer {
   }
 
   String renderTaskItem(TaskItem node, RenderContext context) {
-    var content = inlineRenderer.renderInlineNodes(node.content(), context, false);
+    var content =
+        inlineRenderer.renderInlineNodes(context.children(node, AdfInline.class), context, false);
     return String.join(
         "\n", prefixParagraph(checklistPrefix(node.state()), content, MarkdownBlocks.LIST_INDENT));
   }
@@ -91,22 +96,22 @@ final class ListRenderer {
     return renderItem(
         checklistPrefix(node.state()),
         MarkdownBlocks.LIST_INDENT,
-        node.content(),
+        node,
         ItemStyle.TASK_ITEM,
         context);
   }
 
   String renderBulletList(BulletList node, RenderContext context) {
-    return renderListItems(node.items(), context, _ -> "-");
+    return renderListItems(node, context, _ -> "-");
   }
 
   String renderOrderedList(OrderedList node, RenderContext context) {
     var start = node.order();
-    return renderListItems(node.items(), context, index -> (start + index) + ".");
+    return renderListItems(node, context, index -> (start + index) + ".");
   }
 
-  private String renderListItems(
-      List<ListItem> items, RenderContext context, IntFunction<String> marker) {
+  private String renderListItems(AdfNode list, RenderContext context, IntFunction<String> marker) {
+    var items = context.children(list, ListItem.class);
     var lines = new ArrayList<String>();
     for (var index = 0; index < items.size(); index++) {
       var itemMarker = marker.apply(index);
@@ -114,30 +119,36 @@ final class ListRenderer {
       var indent = " ".repeat(itemMarker.length() + 1);
       lines.addAll(
           renderItem(
-              itemMarker + " ", indent, items.get(index).content(), ItemStyle.LIST_ITEM, context));
+              itemMarker + " ",
+              indent,
+              items.get(index).node(),
+              ItemStyle.LIST_ITEM,
+              context.at(items.get(index))));
     }
     return String.join("\n", lines);
   }
 
   // The item's lines: `prefix` opens the first one and `indent` aligns the rest to its content
-  // column.
+  // column. `context` sits at `item`.
   private List<String> renderItem(
-      String prefix, String indent, List<AdfBlock> blocks, ItemStyle style, RenderContext context) {
+      String prefix, String indent, AdfNode item, ItemStyle style, RenderContext context) {
+    var blocks = context.children(item, AdfBlock.class);
     if (blocks.isEmpty()) {
       return List.of(prefix.stripTrailing());
     }
 
-    var first = blocks.getFirst();
+    var located = blocks.getFirst();
+    var first = located.node();
     var lines = new ArrayList<String>();
     String previous;
     if (first instanceof Paragraph paragraph) {
       previous =
           blockRenderer
-              .renderParagraph(paragraph, context, style.paragraphAtLineStart)
+              .renderParagraph(paragraph, context.at(located), style.paragraphAtLineStart)
               .stripTrailing();
       lines.addAll(prefixParagraph(prefix, previous, indent));
     } else {
-      previous = blockRenderer.renderBlock(first, context);
+      previous = blockRenderer.renderBlock(first, context.at(located));
       lines.add(prefix.stripTrailing());
       if (style.blankBeforeRenumberedList
           && first instanceof OrderedList orderedList
@@ -147,8 +158,9 @@ final class ListRenderer {
       lines.addAll(MarkdownBlocks.indentLines(previous, indent));
     }
 
-    for (var block : blocks.subList(1, blocks.size())) {
-      var rendered = blockRenderer.renderBlock(block, context);
+    for (var next : blocks.subList(1, blocks.size())) {
+      var block = next.node();
+      var rendered = blockRenderer.renderBlock(block, context.at(next));
       if (rendered.isEmpty()) {
         continue;
       }
@@ -184,8 +196,8 @@ final class ListRenderer {
 
   String renderDecisionList(DecisionList node, RenderContext context) {
     var lines = new ArrayList<String>();
-    for (var item : node.items()) {
-      lines.add(renderDecisionItem(item, context));
+    for (var item : context.children(node, DecisionItem.class)) {
+      lines.add(renderDecisionItem(item.node(), context.at(item)));
     }
     return String.join("\n", lines);
   }
@@ -197,7 +209,8 @@ final class ListRenderer {
             .session()
             .writer()
             .label(state == null || state.isBlank() ? "decision" : "decision:" + state);
-    var content = inlineRenderer.renderInlineNodes(node.content(), context, false);
+    var content =
+        inlineRenderer.renderInlineNodes(context.children(node, AdfInline.class), context, false);
     return String.join(
         "\n", prefixParagraph("- " + label + " ", content, MarkdownBlocks.LIST_INDENT));
   }

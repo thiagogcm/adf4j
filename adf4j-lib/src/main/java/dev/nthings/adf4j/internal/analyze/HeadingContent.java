@@ -5,6 +5,7 @@ import dev.nthings.adf4j.ast.HardBreak;
 import dev.nthings.adf4j.ast.InlineExtension;
 import dev.nthings.adf4j.internal.analyze.ConfluenceMacro.Anchor;
 import java.util.List;
+import java.util.function.Function;
 import org.jspecify.annotations.Nullable;
 
 /// Interpretation of a heading's inline content, shared by the analyze phase (slugging) and the
@@ -17,19 +18,26 @@ public final class HeadingContent {
   /// The heading's significant inline nodes: leading/trailing {@link HardBreak}s trimmed and any
   /// Confluence `anchor` macro removed (its id is read separately via {@link #extractAnchorId}).
   public static List<AdfInline> normalizedHeadingNodes(List<AdfInline> content) {
+    return normalized(content, Function.identity());
+  }
+
+  /// {@link #normalizedHeadingNodes} over items that each carry an inline, such as located ones.
+  public static <T> List<T> normalized(List<T> content, Function<T, AdfInline> inline) {
     var start = 0;
-    while (start < content.size() && content.get(start) instanceof HardBreak) {
+    while (start < content.size() && inline.apply(content.get(start)) instanceof HardBreak) {
       start++;
     }
     var end = content.size();
-    while (end > start && content.get(end - 1) instanceof HardBreak) {
+    while (end > start && inline.apply(content.get(end - 1)) instanceof HardBreak) {
       end--;
     }
     if (start >= end) {
       return List.of();
     }
 
-    return content.subList(start, end).stream().filter(node -> !isAnchorExtension(node)).toList();
+    return content.subList(start, end).stream()
+        .filter(item -> !isAnchorExtension(inline.apply(item)))
+        .toList();
   }
 
   /// The id of the heading's first Confluence `anchor` macro that has one, or `null` if none.

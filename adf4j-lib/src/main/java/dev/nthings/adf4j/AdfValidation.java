@@ -5,26 +5,39 @@ import com.networknt.schema.SchemaRegistry;
 import com.networknt.schema.SpecificationVersion;
 import com.networknt.schema.path.NodePath;
 import dev.nthings.adf4j.ast.AdfDocument;
+import dev.nthings.adf4j.internal.Strings;
+import dev.nthings.adf4j.internal.parser.AdfParsingService;
+import dev.nthings.adf4j.internal.writer.AdfJsonWriter;
 import dev.nthings.adf4j.result.Diagnostic;
 import dev.nthings.adf4j.result.ValidationResult;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
-import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.JsonNode;
 
 /// Checks the original JSON against the bundled ADF schema. Parsing remains tolerant.
 public final class AdfValidation {
-  private static final JsonMapper JSON = JsonMapper.builder().build();
+  private static final AdfParsingService PARSER = AdfParsingService.createDefault();
+  private static final AdfJsonWriter WRITER = AdfJsonWriter.createDefault();
   private static final Schema SCHEMA = schema();
 
   private AdfValidation() {}
 
+  /// The input's parse errors, if its JSON or root is unusable; otherwise its schema violations.
   public static ValidationResult validate(String json) {
-    var parsed = AdfJson.parse(json);
-    if (!parsed.isSuccess()) return new ValidationResult(parsed.diagnostics());
+    var tree = PARSER.readTree(json);
+    var root = tree.root();
+    return root == null ? new ValidationResult(tree.diagnostics()) : schemaViolations(root);
+  }
+
+  public static ValidationResult validate(AdfDocument document) {
+    return schemaViolations(WRITER.tree(Objects.requireNonNull(document, "document")));
+  }
+
+  private static ValidationResult schemaViolations(JsonNode root) {
     var diagnostics =
-        SCHEMA.validate(JSON.readTree(json)).stream()
+        SCHEMA.validate(root).stream()
             .map(
                 error ->
                     new Diagnostic(Diagnostic.Code.SCHEMA_VIOLATION, error.getMessage())
@@ -32,10 +45,6 @@ public final class AdfValidation {
             .distinct()
             .toList();
     return new ValidationResult(diagnostics);
-  }
-
-  public static ValidationResult validate(AdfDocument document) {
-    return validate(AdfJson.write(document));
   }
 
   public static AdfDocument requireValid(AdfDocument document) {
@@ -46,9 +55,7 @@ public final class AdfValidation {
   private static String pointer(NodePath path) {
     var result = new StringBuilder();
     for (int i = 0; i < path.getNameCount(); i++)
-      result
-          .append('/')
-          .append(String.valueOf(path.getElement(i)).replace("~", "~0").replace("/", "~1"));
+      result.append('/').append(Strings.pointerToken(String.valueOf(path.getElement(i))));
     return result.toString();
   }
 

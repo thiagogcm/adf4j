@@ -1,6 +1,7 @@
 package dev.nthings.adf4j;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 
 import dev.nthings.adf4j.metadata.AttachmentReference;
@@ -14,6 +15,8 @@ import dev.nthings.adf4j.options.PageLinkResolver;
 import dev.nthings.adf4j.options.PageTreeResolver;
 import dev.nthings.adf4j.options.TableFallback;
 import dev.nthings.adf4j.options.UnknownNodePolicy;
+import dev.nthings.adf4j.result.AdfException;
+import dev.nthings.adf4j.result.Diagnostic;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -264,5 +267,32 @@ class ConversionOptionsTests {
     var withSuffix = ConversionOptions.defaults().withImageSizeAttributes(true);
     assertThat(AdfToMarkdown.with(withSuffix).toMarkdown(json).stripTrailing())
         .isEqualTo("![Sized](https://example.com/diagram.png){width=800 height=400}");
+  }
+
+  @Test
+  void blank_portable_configuration_is_the_defaults() {
+    assertThat(ConversionOptions.fromJson("  ")).isEqualTo(ConversionOptions.defaults());
+  }
+
+  @Test
+  void invalid_portable_configuration_throws_one_invalid_options_diagnostic() {
+    for (var json :
+        List.of(
+            "{",
+            "{\"markdown\":{\"bogus\":true}}",
+            "{\"markdown\":{\"tableFallback\":\"nope\"}}")) {
+      assertThatExceptionOfType(AdfException.class)
+          .isThrownBy(() -> ConversionOptions.fromJson(json))
+          .satisfies(
+              failure ->
+                  assertThat(failure.diagnostics())
+                      .extracting(Diagnostic::code)
+                      .containsExactly(Diagnostic.Code.INVALID_OPTIONS));
+    }
+    assertThatExceptionOfType(AdfException.class)
+        .isThrownBy(() -> ConversionOptions.fromJson("{\"markdown\":{\"tableFallback\":\"nope\"}}"))
+        .withMessage(
+            "Invalid configuration: tableFallback must be one of: html, gfm-promote-first-row,"
+                + " gfm-empty-header");
   }
 }

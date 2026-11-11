@@ -7,6 +7,7 @@ import static dev.nthings.adf4j.cli.CliTestSupport.run;
 import static dev.nthings.adf4j.cli.CliTestSupport.write;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.nthings.adf4j.AdfJson;
 import java.nio.file.Path;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
@@ -45,7 +46,7 @@ class AnalyzeCommandTest {
     var result = run(SIMPLE_DOC, "analyze");
     assertThat(result.exitCode()).isZero();
     assertThat(JSON.readTree(result.out()).path("metadata").propertyNames())
-        .containsExactlyElementsOf(JsonRenderer.SECTION_NAMES);
+        .containsExactlyElementsOf(AdfJson.METADATA_SECTIONS);
     assertThat(result.out()).contains("\"text\" : \"Hello\"");
   }
 
@@ -138,7 +139,7 @@ class AnalyzeCommandTest {
     var result = run("{\"version\":1,\"type\":\"paragraph\"}", "analyze");
     assertThat(result.exitCode()).isEqualTo(ExitCodes.CONTENT_FAILURE);
     assertThat(JSON.readTree(result.out()).path("metadata").propertyNames())
-        .containsExactlyElementsOf(JsonRenderer.SECTION_NAMES);
+        .containsExactlyElementsOf(AdfJson.METADATA_SECTIONS);
     assertThat(result.err()).contains("[ERROR] INVALID_ROOT_NODE:");
   }
 

@@ -41,10 +41,10 @@ final class TableRenderer {
     if (numberColumn
         || requiresHtmlTableFallback(rows)
         || (hasHeaderCell(rows) && !firstRowIsHeader(rows))) {
-      return htmlTableRenderer.renderHtmlTable(rows, context, numberColumn);
+      return htmlTableRenderer.renderHtmlTable(node, context, numberColumn);
     }
     if (firstRowIsHeader(rows)) {
-      return renderGfmTable(rows, context, false);
+      return renderGfmTable(node, context, false);
     }
     // GFM-safe but headerless: apply the fallback policy. Promoting the first row needs no extra
     // step, because the first emitted row always sits above the separator.
@@ -54,25 +54,24 @@ final class TableRenderer {
           .events()
           .effect(
               ConversionEffect.Kind.STRUCTURE_CHANGED,
-              context.at(node).path(),
+              context.path(),
               context.session().options().tableFallback() == TableFallback.GFM_EMPTY_HEADER
                   ? "Empty table header synthesized"
                   : "First data row promoted to header");
     }
     return switch (context.session().options().tableFallback()) {
-      case HTML -> htmlTableRenderer.renderHtmlTable(rows, context, numberColumn);
-      case GFM_PROMOTE_FIRST_ROW -> renderGfmTable(rows, context, false);
-      case GFM_EMPTY_HEADER -> renderGfmTable(rows, context, true);
+      case HTML -> htmlTableRenderer.renderHtmlTable(node, context, numberColumn);
+      case GFM_PROMOTE_FIRST_ROW -> renderGfmTable(node, context, false);
+      case GFM_EMPTY_HEADER -> renderGfmTable(node, context, true);
     };
   }
 
-  private String renderGfmTable(
-      List<TableRow> rows, RenderContext context, boolean syntheticEmptyHeader) {
+  private String renderGfmTable(Table table, RenderContext context, boolean syntheticEmptyHeader) {
     var renderedRows = new ArrayList<List<String>>();
     var maxColumns = 0;
 
-    for (var row : rows) {
-      var rendered = renderTableRowCells(row, context);
+    for (var row : context.children(table, TableRow.class)) {
+      var rendered = renderTableRowCells(row.node(), context.at(row));
       if (rendered.isEmpty()) {
         continue;
       }
@@ -125,8 +124,7 @@ final class TableRenderer {
   }
 
   String renderTableCell(TableCell cell, RenderContext context) {
-    var text =
-        blockRenderer.renderBlocks(cell.content(), context.withSite(InlineSite.GFM_CELL)).trim();
+    var text = blockRenderer.renderBlocks(cell, context.withSite(InlineSite.GFM_CELL)).trim();
     if (text.isBlank()) {
       return "";
     }
@@ -135,8 +133,8 @@ final class TableRenderer {
 
   private List<String> renderTableRowCells(TableRow row, RenderContext context) {
     var rendered = new ArrayList<String>();
-    for (var cell : row.cells()) {
-      rendered.add(renderTableCell(cell, context));
+    for (var cell : context.children(row, TableCell.class)) {
+      rendered.add(renderTableCell(cell.node(), context.at(cell)));
     }
     return rendered;
   }

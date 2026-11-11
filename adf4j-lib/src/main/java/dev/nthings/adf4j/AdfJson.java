@@ -6,6 +6,7 @@ import dev.nthings.adf4j.internal.parser.AdfParsingService;
 import dev.nthings.adf4j.internal.writer.AdfJsonWriter;
 import dev.nthings.adf4j.result.OperationResult;
 import dev.nthings.adf4j.result.ParseResult;
+import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
@@ -19,6 +20,9 @@ import org.jspecify.annotations.Nullable;
 /// is built, with no warning.
 public final class AdfJson {
 
+  /// The keys of a result's `metadata` object in {@link #writeResult}, in output order.
+  public static final List<String> METADATA_SECTIONS = ResultJson.SECTION_NAMES;
+
   private static final AdfParsingService PARSER = AdfParsingService.createDefault();
   private static final AdfJsonWriter WRITER = AdfJsonWriter.createDefault();
 
@@ -30,9 +34,15 @@ public final class AdfJson {
     return PARSER.parse(adfJson);
   }
 
-  /// Writes an operation result using the portable CLI/WASM JSON contract.
+  /// Writes an operation result using the portable CLI/WASM JSON contract, on one line.
   public static String writeResult(OperationResult result) {
-    return ResultJson.write(result);
+    return writeResult(result, false);
+  }
+
+  /// Writes an operation result using the portable CLI/WASM JSON contract; `pretty` indents by two
+  /// spaces with `\n` newlines on every platform.
+  public static String writeResult(OperationResult result, boolean pretty) {
+    return ResultJson.write(Objects.requireNonNull(result, "result"), pretty);
   }
 
   /// Writes a document as ADF JSON.

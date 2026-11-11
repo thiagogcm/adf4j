@@ -47,7 +47,7 @@ final class AdfHeadingCollector implements NodeVisitor {
   }
 
   @Override
-  public void visitBlock(AdfBlock block) {
+  public void visitBlock(AdfBlock block, String path) {
     switch (block) {
       case Heading heading -> headings.add(heading);
       case Extension extension -> recordMacro(extension);
@@ -56,7 +56,7 @@ final class AdfHeadingCollector implements NodeVisitor {
   }
 
   @Override
-  public void visitInline(AdfInline inline) {
+  public void visitInline(AdfInline inline, String path) {
     if (inline instanceof InlineExtension extension) {
       recordMacro(extension);
     }

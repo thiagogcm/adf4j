@@ -5,7 +5,6 @@ import dev.nthings.adf4j.internal.AttachmentInventory;
 import dev.nthings.adf4j.internal.Strings;
 import dev.nthings.adf4j.internal.analyze.HeadingOutline;
 import dev.nthings.adf4j.options.ConversionOptions;
-import java.util.List;
 import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
 
@@ -27,27 +26,20 @@ public final class AdfRenderer {
   }
 
   public RenderOutput render(
-      @Nullable AdfDocument document,
+      AdfDocument document,
       ConversionOptions options,
       AttachmentInventory attachments,
       HeadingOutline headingOutline) {
-    var writer = new MarkdownWriter(options.escapeParentheses());
-    if (document == null) {
-      return new RenderOutput(
-          prependTitle("", options.documentTitle(), writer), List.of(), List.of(), List.of());
-    }
-
-    var session = RenderSession.from(options, attachments, headingOutline, document);
-    var body =
-        blockRenderer.renderBlocks(document.content(), new RenderContext(session, InlineSite.BODY));
+    var session = RenderSession.from(options, attachments, headingOutline);
+    var body = blockRenderer.renderBlocks(document, new RenderContext(session, InlineSite.BODY));
     return new RenderOutput(
-        prependTitle(body, options.documentTitle(), writer),
+        prependTitle(body, options.documentTitle(), session.writer()),
         Stream.concat(
                 session.macroDiagnostics().build().stream(),
-                session.events().allDiagnostics(options.unknownNodePolicy()).stream())
+                session.events().diagnostics().stream())
             .toList(),
-        session.unresolvedTracker().build(),
-        session.events().allEffects());
+        session.events().unresolved(),
+        session.events().effects());
   }
 
   // Prepends the optional documentTitle as a level-1 heading, blank-line separated from the body.

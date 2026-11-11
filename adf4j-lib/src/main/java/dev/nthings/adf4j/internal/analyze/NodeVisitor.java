@@ -8,8 +8,9 @@ import dev.nthings.adf4j.ast.AdfInline;
 interface NodeVisitor {
 
   /// Called once for every block in document order, before the walker descends into its children.
-  default void visitBlock(AdfBlock block) {}
+  /// `path` is the block's JSON Pointer.
+  default void visitBlock(AdfBlock block, String path) {}
 
-  /// Called once for every inline in document order.
-  default void visitInline(AdfInline inline) {}
+  /// Called once for every inline in document order. `path` is the inline's JSON Pointer.
+  default void visitInline(AdfInline inline, String path) {}
 }

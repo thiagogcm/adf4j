@@ -50,4 +50,9 @@ public final class Strings {
   public static String collapseWhitespace(String value) {
     return WHITESPACE_RUN.matcher(value).replaceAll(" ");
   }
+
+  /// One JSON Pointer reference token (RFC 6901): `~` and `/` escaped as `~0` and `~1`.
+  public static String pointerToken(String value) {
+    return value.replace("~", "~0").replace("/", "~1");
+  }
 }

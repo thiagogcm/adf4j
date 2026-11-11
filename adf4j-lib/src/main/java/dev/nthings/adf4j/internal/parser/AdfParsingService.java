@@ -12,6 +12,7 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.core.StreamReadConstraints;
 import tools.jackson.core.json.JsonFactory;
 import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /// The parse phase: reads ADF JSON, validates the root, and maps it to an {@link AdfDocument}
@@ -50,10 +51,14 @@ public final class AdfParsingService {
     return new AdfParsingService(mapper, new AdfAstParser(mapper));
   }
 
-  public ParseResult parse(@Nullable String rawAdf) {
+  /// A payload's JSON tree and its root diagnostics. `root` is null when they hold an error.
+  public record Tree(@Nullable JsonNode root, List<Diagnostic> diagnostics) {}
+
+  /// Reads and root-validates a payload without building the AST.
+  public Tree readTree(@Nullable String rawAdf) {
     if (rawAdf == null || rawAdf.isBlank()) {
       log.debug("parse called with null or blank input – returning empty result");
-      return new ParseResult(
+      return new Tree(
           null, List.of(new Diagnostic(Diagnostic.Code.EMPTY_INPUT, "ADF input is blank.")));
     }
 
@@ -61,24 +66,36 @@ public final class AdfParsingService {
     try {
       var jsonRoot = mapper.readTree(rawAdf);
       var issues = RootValidator.validate(jsonRoot);
-      var fatal = issues.stream().anyMatch(issue -> issue.severity() == Severity.ERROR);
       issues.forEach(
           issue -> log.debug("ADF validation issue [{}]: {}", issue.code(), issue.message()));
-      if (fatal) {
-        return new ParseResult(null, issues);
-      }
+      var fatal = issues.stream().anyMatch(issue -> issue.severity() == Severity.ERROR);
+      return new Tree(fatal ? null : jsonRoot, issues);
+    } catch (JacksonException | NumberFormatException exception) {
+      return new Tree(null, invalidJson(exception));
+    }
+  }
+
+  public ParseResult parse(@Nullable String rawAdf) {
+    var tree = readTree(rawAdf);
+    var root = tree.root();
+    if (root == null) {
+      return new ParseResult(null, tree.diagnostics());
+    }
+    try {
       // Warnings at most: parse best-effort, keeping them in diagnostics.
-      var parsed = astParser.parse(jsonRoot);
-      var allIssues = Stream.concat(issues.stream(), parsed.issues().stream()).toList();
+      var parsed = astParser.parse(root);
+      var allIssues = Stream.concat(tree.diagnostics().stream(), parsed.issues().stream()).toList();
       return new ParseResult(parsed.document(), allIssues);
     } catch (JacksonException | NumberFormatException exception) {
-      // A number beyond what the reader can hold surfaces as NumberFormatException.
-      log.debug("Failed to parse ADF JSON payload: {}", exception.getMessage());
-      return new ParseResult(
-          null,
-          List.of(
-              new Diagnostic(
-                  Diagnostic.Code.INVALID_JSON, "Failed to parse ADF JSON payload.", exception)));
+      return new ParseResult(null, invalidJson(exception));
     }
+  }
+
+  // A number beyond what the reader can hold surfaces as NumberFormatException.
+  private static List<Diagnostic> invalidJson(RuntimeException exception) {
+    log.debug("Failed to parse ADF JSON payload: {}", exception.getMessage());
+    return List.of(
+        new Diagnostic(
+            Diagnostic.Code.INVALID_JSON, "Failed to parse ADF JSON payload.", exception));
   }
 }

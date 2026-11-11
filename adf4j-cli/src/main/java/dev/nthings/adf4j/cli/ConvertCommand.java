@@ -1,5 +1,6 @@
 package dev.nthings.adf4j.cli;
 
+import dev.nthings.adf4j.AdfJson;
 import dev.nthings.adf4j.AdfToMarkdown;
 import dev.nthings.adf4j.result.Diagnostic;
 import java.util.List;
@@ -55,9 +56,7 @@ public class ConvertCommand extends Adf4jSubcommand {
 
     var result = converter.convert(parsed);
     var output =
-        format.equals("json")
-            ? json.write(json.result(result), !common.compact) + "\n"
-            : result.body();
+        format.equals("json") ? AdfJson.writeResult(result, !common.compact) + "\n" : result.body();
     CliIo.writeOutput(common.output, output);
 
     printSummary(result.diagnostics());

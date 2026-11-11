@@ -1,20 +1,19 @@
 package dev.nthings.adf4j.internal.render;
 
 import dev.nthings.adf4j.ast.AdfBlock;
-import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.ast.AdfInline;
 import dev.nthings.adf4j.ast.AdfNode;
-import dev.nthings.adf4j.internal.SourceIndex;
+import dev.nthings.adf4j.ast.AdfUnknown;
+import dev.nthings.adf4j.ast.LayoutSection;
+import dev.nthings.adf4j.ast.UnknownMark;
+import dev.nthings.adf4j.internal.Located;
 import dev.nthings.adf4j.internal.analyze.AdfLossinessCollector;
-import dev.nthings.adf4j.internal.analyze.ConversionEffects;
 import dev.nthings.adf4j.options.ConversionOptions;
-import dev.nthings.adf4j.options.UnknownNodePolicy;
 import dev.nthings.adf4j.result.ConversionEffect;
 import dev.nthings.adf4j.result.Diagnostic;
 import dev.nthings.adf4j.result.UnresolvedResource;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.IdentityHashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -22,41 +21,74 @@ import java.util.function.Supplier;
 import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
 
+/// What one render reports: callback failures, conversion effects in document order, unresolved
+/// dependencies, and the lossiness of the content it visits.
 final class RenderEvents {
-  final List<Diagnostic> diagnostics = new ArrayList<>();
-  final List<ConversionEffect> effects = new ArrayList<>();
-  final SourceIndex source;
-  final ConversionEffects changes;
-  final AdfLossinessCollector unknowns;
-  final Set<AdfNode> observed = Collections.newSetFromMap(new IdentityHashMap<>());
+  // Callback failures only, so its size counts them (see reasonSince).
+  private final List<Diagnostic> failures = new ArrayList<>();
+  private final List<ConversionEffect> effects = new ArrayList<>();
+  private final List<UnresolvedResource> unresolved = new ArrayList<>();
+  private final AdfLossinessCollector unknowns = new AdfLossinessCollector();
+  private final Set<String> observed = new HashSet<>();
+  private final ConversionOptions options;
 
-  void observe(AdfNode node) {
-    if (observed.add(node)) {
-      changes.visit(node);
-      if (node instanceof AdfBlock block) unknowns.visitBlock(block);
-      else if (node instanceof AdfInline inline) unknowns.visitInline(inline);
+  RenderEvents(ConversionOptions options) {
+    this.options = options;
+  }
+
+  /// Records what rendering the node at `path` changes. Each source position counts once, however
+  /// often the renderers reach it.
+  void observe(AdfNode node, String path) {
+    if (!observed.add(path)) return;
+    if (node instanceof AdfBlock block) unknowns.visitBlock(block, path);
+    else if (node instanceof AdfInline inline) unknowns.visitInline(inline, path);
+    if (node instanceof AdfUnknown) {
+      switch (options.unknownNodePolicy()) {
+        case SKIP -> effect(ConversionEffect.Kind.CONTENT_DROPPED, path, "Unknown node dropped");
+        case PLACEHOLDER ->
+            effect(
+                ConversionEffect.Kind.PLACEHOLDER,
+                path,
+                "Unknown node replaced with a placeholder");
+        case PRESERVE_RAW, FAIL -> {}
+      }
+    }
+    if (node instanceof LayoutSection)
+      effect(
+          ConversionEffect.Kind.STRUCTURE_CHANGED,
+          path,
+          "Columns flattened into sequential blocks");
+    for (int i = 0; i < node.marks().size(); i++) {
+      var mark = node.marks().get(i);
+      if (mark instanceof UnknownMark)
+        effect(
+            ConversionEffect.Kind.CONTENT_DROPPED, Located.mark(path, i), "Unknown mark dropped");
+      else if (TextMarkRenderer.omitsVisual(mark, options.htmlVisualMarks()))
+        effect(
+            ConversionEffect.Kind.STYLE_OMITTED,
+            Located.mark(path, i),
+            "Visual formatting omitted");
     }
   }
 
-  List<Diagnostic> allDiagnostics(UnknownNodePolicy policy) {
-    return Stream.concat(unknowns.build(policy).stream(), diagnostics.stream()).toList();
+  List<Diagnostic> diagnostics() {
+    return Stream.concat(unknowns.build(options.unknownNodePolicy()).stream(), failures.stream())
+        .toList();
   }
 
-  List<ConversionEffect> allEffects() {
-    return Stream.concat(changes.effects().stream(), effects.stream()).toList();
+  List<ConversionEffect> effects() {
+    return List.copyOf(effects);
   }
 
-  RenderEvents(AdfDocument document, ConversionOptions options) {
-    source = new SourceIndex(document);
-    changes = new ConversionEffects(document, options);
-    unknowns = new AdfLossinessCollector(document);
+  List<UnresolvedResource> unresolved() {
+    return List.copyOf(unresolved);
   }
 
   <T> @Nullable T call(String hook, String path, Supplier<@Nullable T> callback) {
     try {
       return callback.get();
     } catch (RuntimeException failure) {
-      diagnostics.add(
+      failures.add(
           new Diagnostic(
               Diagnostic.Code.CALLBACK_FAILED,
               hook + " failed: " + failure.getMessage(),
@@ -68,7 +100,7 @@ final class RenderEvents {
   }
 
   int callbackFailures() {
-    return diagnostics.size();
+    return failures.size();
   }
 
   UnresolvedResource.Reason reasonSince(int failures) {
@@ -79,5 +111,18 @@ final class RenderEvents {
 
   void effect(ConversionEffect.Kind kind, String path, String message) {
     effects.add(new ConversionEffect(kind, path, message));
+  }
+
+  /// Records a dependency that is missing after every fallback, plus a `PLACEHOLDER` effect when
+  /// `placeholder` describes one.
+  void unresolved(
+      UnresolvedResource.Kind kind,
+      @Nullable String id,
+      String path,
+      UnresolvedResource.Reason reason,
+      String fallback,
+      @Nullable String placeholder) {
+    unresolved.add(new UnresolvedResource(kind, id == null ? "" : id, path, reason, fallback));
+    if (placeholder != null) effect(ConversionEffect.Kind.PLACEHOLDER, path, placeholder);
   }
 }

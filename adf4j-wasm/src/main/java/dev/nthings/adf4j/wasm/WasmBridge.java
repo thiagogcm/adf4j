@@ -4,8 +4,8 @@ import dev.nthings.adf4j.AdfJson;
 import dev.nthings.adf4j.AdfToMarkdown;
 import dev.nthings.adf4j.metadata.ContentMetadata;
 import dev.nthings.adf4j.options.ConversionOptions;
+import dev.nthings.adf4j.result.AdfException;
 import dev.nthings.adf4j.result.AnalysisResult;
-import dev.nthings.adf4j.result.Diagnostic;
 import dev.nthings.adf4j.result.MarkdownResult;
 import java.io.IOException;
 import java.util.List;
@@ -14,7 +14,6 @@ import java.util.function.BiFunction;
 import java.util.function.Supplier;
 import org.graalvm.webimage.api.JS;
 import org.graalvm.webimage.api.JSString;
-import tools.jackson.core.JacksonException;
 
 /// Installs convert, analyze, and version on globalThis.adf4j and signals readiness.
 /// Configuration contains portable rendering policy and document context.
@@ -36,25 +35,16 @@ public final class WasmBridge {
   private static String run(String json, String config, boolean analyze) {
     ConversionOptions options;
     try {
-      options =
-          config.isBlank() ? ConversionOptions.defaults() : ConversionOptions.fromJson(config);
-    } catch (IllegalArgumentException | JacksonException invalid) {
-      var failure =
-          new MarkdownResult(
-              "",
-              ContentMetadata.empty(),
-              List.of(
-                  new Diagnostic(
-                      Diagnostic.Code.INVALID_OPTIONS,
-                      "Invalid configuration: " + invalid.getMessage())),
-              List.of(),
-              List.of());
+      options = ConversionOptions.fromJson(config);
+    } catch (AdfException invalid) {
+      var diagnostics = invalid.diagnostics();
       return AdfJson.writeResult(
-          analyze ? new AnalysisResult(ContentMetadata.empty(), failure.diagnostics()) : failure);
+          analyze
+              ? new AnalysisResult(ContentMetadata.empty(), diagnostics)
+              : new MarkdownResult("", ContentMetadata.empty(), diagnostics, List.of(), List.of()));
     }
     var converter = AdfToMarkdown.with(options);
-    return AdfJson.writeResult(
-        analyze ? converter.analyze(AdfJson.parse(json)) : converter.convert(json));
+    return AdfJson.writeResult(analyze ? converter.analyze(json) : converter.convert(json));
   }
 
   private static String loadVersion() {

@@ -2,7 +2,6 @@ package dev.nthings.adf4j.cli;
 
 import dev.nthings.adf4j.AdfJson;
 import dev.nthings.adf4j.AdfValidation;
-import dev.nthings.adf4j.result.Diagnostic;
 import dev.nthings.adf4j.result.OperationResult;
 import org.aesh.command.CommandDefinition;
 import org.aesh.command.option.Option;
@@ -38,13 +37,10 @@ public class ValidateCommand extends Adf4jSubcommand {
   int run() {
     var input = readInput();
     OperationResult parsed = parseOnly ? AdfJson.parse(input) : AdfValidation.validate(input);
-    var hasWarning =
-        parsed.diagnostics().stream()
-            .anyMatch(diagnostic -> diagnostic.severity() == Diagnostic.Severity.WARNING);
 
     String output;
     if (format.equals("json")) {
-      output = new CliJson().write(new CliJson().result(parsed), !common.compact) + "\n";
+      output = AdfJson.writeResult(parsed, !common.compact) + "\n";
     } else {
       output = validateText(parsed);
     }
@@ -53,7 +49,7 @@ public class ValidateCommand extends Adf4jSubcommand {
     if (!parsed.isSuccess()) {
       return ExitCodes.CONTENT_FAILURE;
     }
-    if (failOnWarning && hasWarning) {
+    if (failOnWarning && parsed.hasWarnings()) {
       return ExitCodes.QUALITY_GATE;
     }
     return ExitCodes.OK;

@@ -15,6 +15,9 @@ public record ConversionOptions(
     Objects.requireNonNull(resolvers);
   }
 
+  /// Reads the portable `{ markdown, context }` configuration shared with the CLI and WASM. Blank
+  /// input is the defaults. Invalid input throws an {@link dev.nthings.adf4j.result.AdfException}
+  /// carrying one `INVALID_OPTIONS` diagnostic.
   public static ConversionOptions fromJson(String json) {
     return ConversionConfig.read(json);
   }

@@ -8,8 +8,9 @@ import org.jspecify.annotations.Nullable;
 /// Renders smart-link nodes (block/inline/embed cards) to Markdown links.
 final class CardRenderer {
 
-  String renderBlockCard(AdfCard card, RenderSession session) {
-    var link = renderCardLink(card, session);
+  String renderBlockCard(AdfCard card, RenderContext context) {
+    var session = context.session();
+    var link = renderCardLink(card, context);
     if (link != null) {
       return link;
     }
@@ -21,14 +22,14 @@ final class CardRenderer {
     return session.writer().label("Card: " + identifier);
   }
 
-  String renderInlineCard(AdfCard card, RenderSession session) {
-    var link = renderCardLink(card, session);
-    return link != null ? link : session.writer().label(AdfText.INLINE_CARD_LABEL);
+  String renderInlineCard(AdfCard card, RenderContext context) {
+    var link = renderCardLink(card, context);
+    return link != null ? link : context.session().writer().label(AdfText.INLINE_CARD_LABEL);
   }
 
-  String renderEmbedCard(AdfCard card, RenderSession session) {
-    var link = renderCardLink(card, session);
-    return link != null ? link : session.writer().label("Embed card");
+  String renderEmbedCard(AdfCard card, RenderContext context) {
+    var link = renderCardLink(card, context);
+    return link != null ? link : context.session().writer().label("Embed card");
   }
 
   /// Shared url/title rendering for all three card kinds, or `null` when the card has neither:
@@ -36,14 +37,14 @@ final class CardRenderer {
   /// the escaped title as plain text. A `PageLinkResolver` rewrites an internal page card's
   /// destination; a url-only card whose destination is rewritten keeps the original url as its
   /// visible label.
-  private @Nullable String renderCardLink(AdfCard card, RenderSession session) {
+  private @Nullable String renderCardLink(AdfCard card, RenderContext context) {
+    var session = context.session();
     var url = card.url();
     var title = card.title();
     var hasTitle = title != null && !title.isBlank();
 
     if (url != null && !url.isBlank()) {
-      var resolvedUrl =
-          session.resolvers().pageHref(url, card.attrs(), session.events().source.path(card));
+      var resolvedUrl = session.resolvers().pageHref(url, card.attrs(), context.path());
       if (hasTitle) {
         return session.writer().link(title, resolvedUrl);
       }

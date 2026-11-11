@@ -16,6 +16,7 @@ import dev.nthings.adf4j.ast.Text;
 import dev.nthings.adf4j.ast.UnknownBlock;
 import dev.nthings.adf4j.ast.UnknownInline;
 import dev.nthings.adf4j.internal.AdfText;
+import dev.nthings.adf4j.internal.Located;
 import dev.nthings.adf4j.result.AdfException;
 import dev.nthings.adf4j.result.Diagnostic;
 import java.util.ArrayList;
@@ -53,15 +54,17 @@ final class InlineRenderer {
   /// are one output line, so nothing in them starts a line. A heading also keeps a hard break on
   /// its line and inserts one space between an inline image and adjacent text so they don't glue
   /// (e.g. `![icon](src) Title`); all-text headings are unaffected.
-  String renderInlineNodes(List<AdfInline> nodes, RenderContext context, boolean startAtLineStart) {
+  String renderInlineNodes(
+      List<Located<AdfInline>> nodes, RenderContext context, boolean startAtLineStart) {
     var inHeading = context.site() == InlineSite.HEADING;
     var hasLines = !inHeading && context.site() != InlineSite.GFM_CELL;
     var builder = new StringBuilder();
     var atLineStart = hasLines && startAtLineStart;
     @Nullable AdfInline previous = null;
-    nodes.forEach(context.session().events()::observe);
-    for (var node : coalesceAdjacentText(nodes, context.session())) {
-      var rendered = renderInline(node, context, atLineStart);
+    nodes.forEach(node -> context.session().events().observe(node.node(), node.path()));
+    for (var located : coalesceAdjacentText(nodes, context.session())) {
+      var node = located.node();
+      var rendered = renderInline(node, context.at(located), atLineStart);
       if (rendered.isEmpty()) {
         continue;
       }
@@ -77,29 +80,32 @@ final class InlineRenderer {
 
   /// Merges consecutive {@link Text} inlines whose marks render identically into one node, so an
   /// adjacent run gets a single set of delimiters instead of one per node. Non-Text inlines break a
-  /// run.
-  private List<AdfInline> coalesceAdjacentText(List<AdfInline> nodes, RenderSession session) {
-    var result = new ArrayList<AdfInline>(nodes.size());
-    for (var node : nodes) {
-      if (node instanceof Text text
+  /// run. A merged run keeps its first node's pointer.
+  private List<Located<AdfInline>> coalesceAdjacentText(
+      List<Located<AdfInline>> nodes, RenderSession session) {
+    var result = new ArrayList<Located<AdfInline>>(nodes.size());
+    for (var located : nodes) {
+      if (located.node() instanceof Text text
           && !result.isEmpty()
-          && result.getLast() instanceof Text last
+          && result.getLast().node() instanceof Text last
           && markRenderer.rendersAlike(last.marks(), text.marks(), session)) {
-        result.set(result.size() - 1, new Text(last.text() + text.text(), last.marks()));
+        result.set(
+            result.size() - 1,
+            new Located<>(
+                new Text(last.text() + text.text(), last.marks()), result.getLast().path()));
       } else {
-        result.add(node);
+        result.add(located);
       }
     }
     return result;
   }
 
   private String renderInline(AdfInline node, RenderContext context, boolean atLineStart) {
-    context = context.at(node);
     var writer = context.session().writer();
     return switch (node) {
       case Text text -> renderText(text, context, atLineStart);
       case HardBreak _ -> hardBreakMarker(context);
-      case AdfCard card -> cardRenderer.renderInlineCard(card, context.session());
+      case AdfCard card -> cardRenderer.renderInlineCard(card, context);
       case MediaInline media -> mediaRenderer.renderMedia(media, context);
       // Attribute-derived text is escaped like literal text, honouring atLineStart.
       case Date date -> writer.text(AdfText.dateFromTimestamp(date.timestamp()), atLineStart);
@@ -129,10 +135,10 @@ final class InlineRenderer {
     // Code-marked text is literal (applyMarks wraps it in backticks), so it must not be escaped.
     var hasCodeMark = text.marks().stream().anyMatch(Code.class::isInstance);
     if (hasCodeMark) {
-      return markRenderer.applyMarks(text.text(), text.marks(), context.session());
+      return markRenderer.applyMarks(text.text(), text.marks(), context);
     }
     var escaped = context.session().writer().text(text.text(), atLineStart);
-    return markRenderer.applyMarks(escaped, text.marks(), context.session());
+    return markRenderer.applyMarks(escaped, text.marks(), context);
   }
 
   private String hardBreakMarker(RenderContext context) {

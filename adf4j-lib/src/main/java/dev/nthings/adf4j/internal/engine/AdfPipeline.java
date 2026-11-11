@@ -72,7 +72,7 @@ public final class AdfPipeline {
     if (document == null)
       return new MarkdownResult("", ContentMetadata.empty(), diagnostics, List.of(), List.of());
     var attachments = AttachmentInventory.from(options.attachments());
-    var analysis = analyzer.analyze(document, options, attachments);
+    var analysis = analyzer.analyze(document, options, attachments, false);
     try {
       var rendered = renderer.render(document, options, attachments, analysis.outline());
       // Only visited content contributes render diagnostics.

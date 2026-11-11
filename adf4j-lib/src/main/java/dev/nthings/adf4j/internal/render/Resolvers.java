@@ -49,8 +49,7 @@ final class Resolvers {
     if (resolver == null || pageNodeId == null || pageNodeId.isBlank()) {
       return null;
     }
-    var resolved = nonBlank("PageLinkResolver", path, () -> resolver.resolve(pageNodeId));
-    return resolved;
+    return nonBlank("PageLinkResolver", path, () -> resolver.resolve(pageNodeId));
   }
 
   private @Nullable String nonBlank(String hook, String path, Supplier<@Nullable String> callback) {
@@ -83,27 +82,22 @@ final class Resolvers {
 
   @Nullable List<PageTreeEntry> pageTree(PageTreeReference reference, String path) {
     var resolver = options.pageTreeResolver();
-    var entries =
-        resolver == null
-            ? null
-            : events.call("PageTreeResolver", path, () -> resolver.resolve(reference));
-    return entries;
+    return resolver == null
+        ? null
+        : events.call("PageTreeResolver", path, () -> resolver.resolve(reference));
   }
 
   @Nullable String excerpt(ExcerptIncludeReference reference, String path) {
     var resolver = options.excerptResolver();
-    var resolved =
-        resolver == null
-            ? null
-            : events.call("ExcerptResolver", path, () -> resolver.resolve(reference));
-    return resolved;
+    return resolver == null
+        ? null
+        : events.call("ExcerptResolver", path, () -> resolver.resolve(reference));
   }
 
   /// The first non-deferred answer in order, then the built-in handler.
-  @Nullable ExtensionOutput extension(AdfExtension node) {
+  @Nullable ExtensionOutput extension(AdfExtension node, String path) {
     for (var renderer : options.extensionRenderers()) {
-      var rendered =
-          events.call("ExtensionRenderer", events.source.path(node), () -> renderer.render(node));
+      var rendered = events.call("ExtensionRenderer", path, () -> renderer.render(node));
       if (rendered != null && rendered.mode() != ExtensionOutput.Mode.DEFER) {
         return rendered;
       }

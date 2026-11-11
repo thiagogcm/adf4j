@@ -14,6 +14,7 @@ import dev.nthings.adf4j.options.PageTreeEntry;
 import dev.nthings.adf4j.options.PageTreeResolver;
 import dev.nthings.adf4j.options.TableFallback;
 import dev.nthings.adf4j.options.UnknownNodePolicy;
+import dev.nthings.adf4j.result.AdfException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -23,7 +24,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
-import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 
 /// Translates the rendering/resolver flags of `convert` into a {@link ConversionOptions}. Resolvers
@@ -48,8 +48,8 @@ final class RenderConfig {
       var raw = CliIo.read(Path.of(rendering.config), "config file");
       try {
         base = ConversionOptions.fromJson(raw);
-      } catch (IllegalArgumentException | JacksonException invalid) {
-        throw CliException.usage("Invalid --config: " + invalid.getMessage());
+      } catch (AdfException invalid) {
+        throw CliException.usage("--config: " + invalid.getMessage());
       }
     }
     if (rendering.title != null) base = base.withDocumentTitle(rendering.title);

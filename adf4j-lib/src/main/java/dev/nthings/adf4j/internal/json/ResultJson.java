@@ -11,12 +11,16 @@ import dev.nthings.adf4j.result.AnalysisResult;
 import dev.nthings.adf4j.result.Diagnostic;
 import dev.nthings.adf4j.result.MarkdownResult;
 import dev.nthings.adf4j.result.OperationResult;
+import dev.nthings.adf4j.result.ParseResult;
 import dev.nthings.adf4j.result.UnresolvedResource;
+import dev.nthings.adf4j.result.ValidationResult;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.function.Function;
+import tools.jackson.core.util.DefaultIndenter;
+import tools.jackson.core.util.DefaultPrettyPrinter;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
@@ -28,23 +32,34 @@ public final class ResultJson {
 
   private static final JsonMapper JSON = JsonMapper.builder().build();
 
-  public static String write(OperationResult result) {
-    ObjectNode output;
-    if (result instanceof MarkdownResult converted) {
-      output = markdownResult(converted);
-      var effects = output.putArray("effects");
-      for (var effect : converted.effects())
-        effects
-            .addObject()
-            .put("kind", effect.kind().name())
-            .put("path", effect.path())
-            .put("message", effect.message());
-    } else {
-      output = operationResult(result);
-      if (result instanceof AnalysisResult analyzed)
-        output.set("metadata", metadata(analyzed.metadata(), SECTION_NAMES));
-    }
+  // Two-space indent with `\n` newlines (Jackson defaults to System.lineSeparator()), so pretty
+  // output is byte-identical across platforms.
+  private static final DefaultPrettyPrinter PRETTY =
+      new DefaultPrettyPrinter().withObjectIndenter(new DefaultIndenter("  ", "\n"));
+
+  /// Keys follow the documented order: `ok`, `body`, `hasWarnings`, `diagnostics`, `metadata`,
+  /// `effects`, `unresolved`, `error`, each present only for the result types that carry it.
+  public static String write(OperationResult result, boolean pretty) {
+    var output = JSON.createObjectNode();
+    output.put("ok", result.isSuccess());
+    if (result instanceof MarkdownResult converted) output.put("body", converted.body());
     output.put("hasWarnings", result.hasWarnings());
+    output.set("diagnostics", diagnostics(result.diagnostics()));
+    switch (result) {
+      case MarkdownResult converted -> {
+        output.set("metadata", metadata(converted.metadata()));
+        var effects = output.putArray("effects");
+        for (var effect : converted.effects())
+          effects
+              .addObject()
+              .put("kind", effect.kind().name())
+              .put("path", effect.path())
+              .put("message", effect.message());
+        output.set("unresolved", node(converted.unresolved()));
+      }
+      case AnalysisResult analyzed -> output.set("metadata", metadata(analyzed.metadata()));
+      case ParseResult _, ValidationResult _ -> {}
+    }
     if (!result.isSuccess())
       output.put(
           "error",
@@ -53,13 +68,14 @@ public final class ResultJson {
               .map(Diagnostic::message)
               .findFirst()
               .orElse("ADF operation failed"));
-    return JSON.writeValueAsString(output);
+    return pretty
+        ? JSON.writer().with(PRETTY).writeValueAsString(output)
+        : JSON.writeValueAsString(output);
   }
 
   private record Section(String name, Function<ContentMetadata, JsonNode> project) {}
 
-  // The table behind `analyze --select`, `analyze -f text` and the `metadata` object of
-  // `convert -f json`: one row per section, in output order.
+  // The `metadata` object of every result: one row per section, in output order.
   private static final List<Section> SECTIONS =
       List.of(
           new Section("pageIds", metadata -> strings(metadata.pageIds())),
@@ -73,38 +89,14 @@ public final class ResultJson {
           new Section("excerpts", metadata -> nodes(metadata.excerpts(), ResultJson::node)),
           new Section("outline", metadata -> nodes(metadata.outline(), ResultJson::node)));
 
-  /// Every section `analyze` can emit, in output order.
-  static final List<String> SECTION_NAMES = SECTIONS.stream().map(Section::name).toList();
+  /// Every key of the `metadata` object, in output order.
+  public static final List<String> SECTION_NAMES = SECTIONS.stream().map(Section::name).toList();
 
   private ResultJson() {}
 
-  private static ObjectNode markdownResult(MarkdownResult result) {
+  private static ObjectNode metadata(ContentMetadata metadata) {
     var node = JSON.createObjectNode();
-    node.put("ok", result.isSuccess());
-    node.put("body", result.body());
-    node.put("hasWarnings", result.hasWarnings());
-    node.set("diagnostics", diagnostics(result.diagnostics()));
-    node.set("metadata", metadata(result.metadata(), SECTION_NAMES));
-    node.set("unresolved", node(result.unresolved()));
-    return node;
-  }
-
-  /// The `validate -f json` result.
-  static ObjectNode operationResult(OperationResult result) {
-    var node = JSON.createObjectNode();
-    node.put("ok", result.isSuccess());
-    node.set("diagnostics", diagnostics(result.diagnostics()));
-    return node;
-  }
-
-  /// The selected sections of `metadata`, in output order.
-  static ObjectNode metadata(ContentMetadata metadata, Collection<String> selected) {
-    var node = JSON.createObjectNode();
-    for (var section : SECTIONS) {
-      if (selected.contains(section.name())) {
-        node.set(section.name(), section.project().apply(metadata));
-      }
-    }
+    for (var section : SECTIONS) node.set(section.name(), section.project().apply(metadata));
     return node;
   }
 

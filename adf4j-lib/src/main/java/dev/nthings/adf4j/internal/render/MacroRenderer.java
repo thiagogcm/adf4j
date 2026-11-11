@@ -1,6 +1,5 @@
 package dev.nthings.adf4j.internal.render;
 
-import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.AdfExtension;
 import dev.nthings.adf4j.ast.BodiedExtension;
 import dev.nthings.adf4j.ast.BodiedSyncBlock;
@@ -55,7 +54,7 @@ final class MacroRenderer {
   // `atLineStart` is where the output lands: true for a block, whose fallback text sits at column
   // 0.
   String renderExtension(AdfExtension node, RenderContext context, boolean atLineStart) {
-    var custom = context.session().resolvers().extension(node);
+    var custom = context.session().resolvers().extension(node, context.path());
     if (custom != null) {
       return custom.markdown();
     }
@@ -83,10 +82,9 @@ final class MacroRenderer {
   String renderBodiedExtension(BodiedExtension node, RenderContext context) {
     return switch (ConfluenceMacro.of(node)) {
       // The excerpt is transparent: without a custom header, only its body renders.
-      case Excerpt _ -> headerThenBodies(node, node.content(), context, (_, _) -> "");
+      case Excerpt _ -> headerThenBodies(node, context, (_, _) -> "");
       // The body holds the data table; keep the numbers under a caption, not a placeholder.
-      case Chart _, LegacyChart _ ->
-          headerThenBodies(node, node.content(), context, this::chartCaption);
+      case Chart _, LegacyChart _ -> headerThenBodies(node, context, this::chartCaption);
       case InlineMediaImage _,
           PageTree _,
           Toc _,
@@ -96,25 +94,24 @@ final class MacroRenderer {
           ExcerptInclude _,
           Attachments _,
           Other _ ->
-          headerThenBodies(node, node.content(), context, this::blockFallback);
+          headerThenBodies(node, context, this::blockFallback);
     };
   }
 
   String renderMultiBodiedExtension(MultiBodiedExtension node, RenderContext context) {
     // The schema predates this node; salvage the frame bodies.
-    return headerThenBodies(node, node.content(), context, this::blockFallback);
+    return headerThenBodies(node, context, this::blockFallback);
   }
 
   // Header (custom renderer, else defaultHeader) then the body blocks.
   private String headerThenBodies(
       AdfExtension node,
-      List<AdfBlock> content,
       RenderContext context,
       BiFunction<AdfExtension, RenderContext, String> defaultHeader) {
-    var custom = context.session().resolvers().extension(node);
+    var custom = context.session().resolvers().extension(node, context.path());
     if (custom != null && custom.mode() == ExtensionOutput.Mode.REPLACE) return custom.markdown();
     var header = custom != null ? custom.markdown() : defaultHeader.apply(node, context);
-    return MarkdownBlocks.join(List.of(header, blockRenderer.renderBlocks(content, context)));
+    return MarkdownBlocks.join(List.of(header, blockRenderer.renderBlocks(node, context)));
   }
 
   private String blockFallback(AdfExtension node, RenderContext context) {
@@ -146,7 +143,7 @@ final class MacroRenderer {
 
   String renderBodiedSyncBlock(BodiedSyncBlock node, RenderContext context) {
     var label = syncBlockLabel(node.resourceId(), context);
-    return MarkdownBlocks.join(List.of(label, blockRenderer.renderBlocks(node.content(), context)));
+    return MarkdownBlocks.join(List.of(label, blockRenderer.renderBlocks(node, context)));
   }
 
   private String syncBlockLabel(@Nullable String resourceId, RenderContext context) {
@@ -175,20 +172,14 @@ final class MacroRenderer {
             yield root == null ? "{{pagetree}}" : "{{pagetree:" + root + "}}";
           }
         };
-    context
-        .session()
-        .unresolvedTracker()
-        .recordResource(
-            new UnresolvedResource(
-                UnresolvedResource.Kind.PAGE_TREE,
-                reference.root() == null ? "" : reference.root(),
-                context.path(),
-                context.session().events().reasonSince(failures),
-                fallback));
-    context
-        .session()
-        .events()
-        .effect(ConversionEffect.Kind.PLACEHOLDER, context.path(), "Page tree unresolved");
+    var events = context.session().events();
+    events.unresolved(
+        UnresolvedResource.Kind.PAGE_TREE,
+        reference.root(),
+        context.path(),
+        events.reasonSince(failures),
+        fallback,
+        "Page tree unresolved");
     return fallback;
   }
 
@@ -224,16 +215,14 @@ final class MacroRenderer {
       return context.session().writer().link(label.isEmpty() ? href : label, href);
     }
     if (entry.pageNodeId() != null && !entry.pageNodeId().isBlank()) {
-      context
-          .session()
-          .unresolvedTracker()
-          .recordResource(
-              new UnresolvedResource(
-                  UnresolvedResource.Kind.PAGE,
-                  entry.pageNodeId(),
-                  context.path(),
-                  context.session().events().reasonSince(failures),
-                  label));
+      var events = context.session().events();
+      events.unresolved(
+          UnresolvedResource.Kind.PAGE,
+          entry.pageNodeId(),
+          context.path(),
+          events.reasonSince(failures),
+          label,
+          null);
     }
     return label.isEmpty() ? null : context.session().writer().text(label, false);
   }
@@ -260,20 +249,14 @@ final class MacroRenderer {
             ? "Excerpt include: " + reference.page()
             : "Excerpt include: " + reference.page() + " / " + reference.excerptName();
     var fallback = context.session().writer().label(label);
-    context
-        .session()
-        .unresolvedTracker()
-        .recordResource(
-            new UnresolvedResource(
-                UnresolvedResource.Kind.EXCERPT,
-                reference.page(),
-                context.path(),
-                context.session().events().reasonSince(failures),
-                fallback));
-    context
-        .session()
-        .events()
-        .effect(ConversionEffect.Kind.PLACEHOLDER, context.path(), "Excerpt unresolved");
+    var events = context.session().events();
+    events.unresolved(
+        UnresolvedResource.Kind.EXCERPT,
+        reference.page(),
+        context.path(),
+        events.reasonSince(failures),
+        fallback,
+        "Excerpt unresolved");
     return fallback;
   }
 
@@ -287,14 +270,14 @@ final class MacroRenderer {
       var fallback = extensionFallback(node, context, atLineStart);
       context
           .session()
-          .unresolvedTracker()
-          .recordResource(
-              new UnresolvedResource(
-                  UnresolvedResource.Kind.ATTACHMENT_INVENTORY,
-                  "",
-                  context.path(),
-                  UnresolvedResource.Reason.MISSING_INVENTORY,
-                  fallback));
+          .events()
+          .unresolved(
+              UnresolvedResource.Kind.ATTACHMENT_INVENTORY,
+              null,
+              context.path(),
+              UnresolvedResource.Reason.MISSING_INVENTORY,
+              fallback,
+              null);
       return fallback;
     }
     var writer = context.session().writer();
@@ -341,20 +324,16 @@ final class MacroRenderer {
       var fallback = writer.label(label);
       context
           .session()
-          .unresolvedTracker()
-          .recordResource(
-              new UnresolvedResource(
-                  UnresolvedResource.Kind.ATTACHMENT,
-                  name == null ? "" : name,
-                  context.path(),
-                  context.session().attachments().isKnown()
-                      ? UnresolvedResource.Reason.NO_ANSWER
-                      : UnresolvedResource.Reason.MISSING_INVENTORY,
-                  fallback));
-      context
-          .session()
           .events()
-          .effect(ConversionEffect.Kind.PLACEHOLDER, context.path(), "Attachment unavailable");
+          .unresolved(
+              UnresolvedResource.Kind.ATTACHMENT,
+              name,
+              context.path(),
+              context.session().attachments().isKnown()
+                  ? UnresolvedResource.Reason.NO_ANSWER
+                  : UnresolvedResource.Reason.MISSING_INVENTORY,
+              fallback,
+              "Attachment unavailable");
       return fallback;
     }
     return writer.link(label, resolveAttachment(attachmentReference, context));
@@ -372,20 +351,14 @@ final class MacroRenderer {
       return downloadUrl;
     }
     var fallback = "attachment:" + reference.fileId();
-    context
-        .session()
-        .unresolvedTracker()
-        .recordResource(
-            new UnresolvedResource(
-                UnresolvedResource.Kind.ATTACHMENT,
-                reference.fileId(),
-                context.path(),
-                context.session().events().reasonSince(failures),
-                fallback));
-    context
-        .session()
-        .events()
-        .effect(ConversionEffect.Kind.PLACEHOLDER, context.path(), "Attachment URL unresolved");
+    var events = context.session().events();
+    events.unresolved(
+        UnresolvedResource.Kind.ATTACHMENT,
+        reference.fileId(),
+        context.path(),
+        events.reasonSince(failures),
+        fallback,
+        "Attachment URL unresolved");
     return fallback;
   }
 

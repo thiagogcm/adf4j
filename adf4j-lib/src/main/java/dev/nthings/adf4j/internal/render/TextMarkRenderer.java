@@ -20,12 +20,12 @@ import dev.nthings.adf4j.ast.TextColor;
 import dev.nthings.adf4j.ast.Underline;
 import dev.nthings.adf4j.ast.UnknownMark;
 import dev.nthings.adf4j.internal.AdfText;
+import dev.nthings.adf4j.internal.Located;
 import dev.nthings.adf4j.internal.Strings;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
@@ -61,15 +61,7 @@ final class TextMarkRenderer {
 
   /// The link around a run. `pageNodeId` is what a `PageLinkResolver` will look up, so two links
   /// that could resolve differently differ here without asking the resolver.
-  private record LinkTarget(
-      String href, @Nullable String title, @Nullable String pageNodeId, Link source) {
-    boolean sameDestination(@Nullable LinkTarget other) {
-      return other != null
-          && href.equals(other.href)
-          && Objects.equals(title, other.title)
-          && Objects.equals(pageNodeId, other.pageNodeId);
-    }
-  }
+  private record LinkTarget(String href, @Nullable String title, @Nullable String pageNodeId) {}
 
   /// What a mark list renders to under the active options, holding nothing that doesn't render:
   /// `effects` are the formatting by rank, a later mark replacing an earlier one of the same rank.
@@ -79,27 +71,36 @@ final class TextMarkRenderer {
 
   // Inside-out: format marks (canonical order), then a combined visual <span>, then the link
   // outermost.
-  String applyMarks(String value, List<AdfMark> marks, RenderSession session) {
+  // `context` sits at the node that carries `marks`.
+  String applyMarks(String value, List<AdfMark> marks, RenderContext context) {
     if (marks.isEmpty()) {
       return value;
     }
-    var style = style(marks, session);
+    var style = style(marks, context.session());
     var rendered =
         style.code()
             ? MarkdownText.inlineCodeSpan(value)
             : applyEffects(value, style.effects().values());
     var link = style.link();
-    return link == null ? rendered : applyLink(rendered, link, session);
+    return link == null ? rendered : applyLink(rendered, link, linkPath(marks, context), context);
   }
 
   /// Whether text runs with these marks render identically, and so must merge into one run. Asks no
   /// resolver: two different hrefs stay apart even when a `PageLinkResolver` maps them to one page.
   boolean rendersAlike(List<AdfMark> left, List<AdfMark> right, RenderSession session) {
-    if (left.equals(right)) return true;
-    var a = style(left, session);
-    var b = style(right, session);
-    var sameLink = a.link() == null ? b.link() == null : a.link().sameDestination(b.link());
-    return a.code() == b.code() && a.effects().equals(b.effects()) && sameLink;
+    return left.equals(right) || style(left, session).equals(style(right, session));
+  }
+
+  /// Whether a visual-only mark leaves no trace in the output: always without `htmlVisualMarks`,
+  /// and with it whenever its value is unsafe to emit. Alignment is a block mark; only the default
+  /// alignment goes unwrapped, which loses nothing.
+  static boolean omitsVisual(AdfMark mark, boolean htmlVisualMarks) {
+    return switch (mark) {
+      case TextColor _, BackgroundColor _, FontSize _, Border _ ->
+          effect(mark, htmlVisualMarks) == null;
+      case Alignment _ -> !htmlVisualMarks;
+      default -> false;
+    };
   }
 
   private static Style style(List<AdfMark> marks, RenderSession session) {
@@ -157,8 +158,14 @@ final class TextMarkRenderer {
     return new LinkTarget(
         href,
         Strings.firstNonBlank(link.title()),
-        session.resolvers().linkedPageId(href, link.attrs()),
-        link);
+        session.resolvers().linkedPageId(href, link.attrs()));
+  }
+
+  // The pointer of the effective (last) link mark, which the PageLinkResolver call reports.
+  private static String linkPath(List<AdfMark> marks, RenderContext context) {
+    var index = marks.size() - 1;
+    while (index > 0 && !(marks.get(index) instanceof Link)) index--;
+    return Located.mark(context.path(), index);
   }
 
   private String applyEffects(String value, Collection<MarkEffect> effects) {
@@ -181,10 +188,11 @@ final class TextMarkRenderer {
   // Wraps formatted text in a Markdown link. A PageLinkResolver rewrites an internal page href to
   // the caller's destination; the visible label (the original text, or the original href when the
   // text is blank) is left untouched.
-  private String applyLink(String rendered, LinkTarget link, RenderSession session) {
+  private String applyLink(
+      String rendered, LinkTarget link, String linkPath, RenderContext context) {
+    var session = context.session();
     var label = rendered.isBlank() ? session.writer().text(link.href(), false) : rendered;
-    var resolved =
-        session.resolvers().pageId(link.pageNodeId(), session.events().source.path(link.source()));
+    var resolved = session.resolvers().pageId(link.pageNodeId(), linkPath);
     var destination = resolved == null ? link.href() : resolved;
     var title = link.title();
     return title == null

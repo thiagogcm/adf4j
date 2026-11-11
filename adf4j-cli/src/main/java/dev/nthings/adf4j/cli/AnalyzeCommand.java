@@ -1,5 +1,6 @@
 package dev.nthings.adf4j.cli;
 
+import dev.nthings.adf4j.AdfJson;
 import dev.nthings.adf4j.AdfToMarkdown;
 import dev.nthings.adf4j.options.ConversionOptions;
 import java.util.List;
@@ -13,8 +14,8 @@ import tools.jackson.databind.node.ObjectNode;
 
 /// `adf4j analyze`: extracts references, attachments, and the outline without rendering, so the
 /// attachment inventory is its only input besides the document. Sections come from
-/// {@link JsonRenderer}'s table, in its order. `-f text` is a plain walk of the same JSON, so the
-/// two formats carry the same data. Diagnostics go to stderr.
+/// {@link AdfJson#METADATA_SECTIONS}, in its order. `-f text` is a plain walk of the same JSON, so
+/// the two formats carry the same data. Diagnostics go to stderr.
 @CommandDefinition(
     name = "analyze",
     description = "Extract references, attachments, and outline",
@@ -46,7 +47,7 @@ public class AnalyzeCommand extends Adf4jSubcommand {
     var metadata = AdfToMarkdown.with(options).analyze(parsed);
 
     var result = json.result(metadata);
-    var sections = JsonRenderer.metadata((ObjectNode) result.get("metadata"), selected);
+    var sections = ((ObjectNode) result.get("metadata")).retain(selected);
     var output =
         format.equals("text") ? text(sections) : json.write(result, !common.compact) + "\n";
     CliIo.writeOutput(common.output, output);
@@ -56,13 +57,13 @@ public class AnalyzeCommand extends Adf4jSubcommand {
 
   private List<String> selectedSections() {
     for (var section : select) {
-      if (!JsonRenderer.SECTION_NAMES.contains(section)) {
+      if (!AdfJson.METADATA_SECTIONS.contains(section)) {
         throw CliException.usage(
             "Invalid value '%s' for option '--select'. Allowed values: %s"
-                .formatted(section, String.join(", ", JsonRenderer.SECTION_NAMES)));
+                .formatted(section, String.join(", ", AdfJson.METADATA_SECTIONS)));
       }
     }
-    return select.isEmpty() ? JsonRenderer.SECTION_NAMES : select;
+    return select.isEmpty() ? AdfJson.METADATA_SECTIONS : select;
   }
 
   private static String text(ObjectNode sections) {

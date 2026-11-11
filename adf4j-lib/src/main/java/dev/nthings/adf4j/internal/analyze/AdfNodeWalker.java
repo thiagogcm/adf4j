@@ -3,6 +3,7 @@ package dev.nthings.adf4j.internal.analyze;
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.ast.AdfInline;
+import dev.nthings.adf4j.ast.AdfNode;
 import dev.nthings.adf4j.ast.BlockCard;
 import dev.nthings.adf4j.ast.BlockTaskItem;
 import dev.nthings.adf4j.ast.Blockquote;
@@ -36,11 +37,14 @@ import dev.nthings.adf4j.ast.TableCell;
 import dev.nthings.adf4j.ast.TableRow;
 import dev.nthings.adf4j.ast.TaskItem;
 import dev.nthings.adf4j.ast.TaskList;
+import dev.nthings.adf4j.ast.TaskListContent;
 import dev.nthings.adf4j.ast.UnknownBlock;
+import dev.nthings.adf4j.internal.Located;
 import java.util.List;
 
 /// The analyze phase's one tree-walk: descends a document in order, handing every block and inline
-/// to each {@link NodeVisitor}. The single home for "what are a node's children".
+/// with its JSON Pointer to each {@link NodeVisitor}. The single home for "what are a node's
+/// children".
 final class AdfNodeWalker {
 
   private final List<NodeVisitor> visitors;
@@ -50,50 +54,51 @@ final class AdfNodeWalker {
   }
 
   static void walk(AdfDocument document, List<NodeVisitor> visitors) {
-    new AdfNodeWalker(visitors).blocks(document.content());
+    new AdfNodeWalker(visitors).blocks(document, "", AdfBlock.class);
   }
 
-  private void blocks(List<? extends AdfBlock> blocks) {
-    for (var block : blocks) {
-      block(block);
+  private void blocks(AdfNode parent, String path, Class<? extends AdfBlock> type) {
+    for (var child : Located.children(parent, path, type)) {
+      block(child.node(), child.path());
     }
   }
 
-  private void block(AdfBlock block) {
+  private void block(AdfBlock block, String path) {
     for (var visitor : visitors) {
-      visitor.visitBlock(block);
+      visitor.visitBlock(block, path);
     }
     switch (block) {
-      case Paragraph node -> inlines(node.content());
-      case Heading node -> inlines(node.content());
-      case TaskItem node -> inlines(node.content());
-      case DecisionItem node -> inlines(node.content());
-      case Caption node -> inlines(node.content());
-      case Blockquote node -> blocks(node.content());
-      case Panel node -> blocks(node.content());
-      case BulletList node -> blocks(node.items());
-      case OrderedList node -> blocks(node.items());
-      case ListItem node -> blocks(node.content());
-      case TaskList node -> blocks(node.items());
-      case BlockTaskItem node -> blocks(node.content());
-      case DecisionList node -> blocks(node.items());
-      case Table node -> blocks(node.rows());
-      case TableRow node -> blocks(node.cells());
-      case TableCell node -> blocks(node.content());
-      case Expand node -> blocks(node.content());
-      case NestedExpand node -> blocks(node.content());
-      case LayoutSection node -> blocks(node.columns());
-      case LayoutColumn node -> blocks(node.content());
+      case Paragraph node -> inlines(node, path);
+      case Heading node -> inlines(node, path);
+      case TaskItem node -> inlines(node, path);
+      case DecisionItem node -> inlines(node, path);
+      case Caption node -> inlines(node, path);
+      case BulletList node -> blocks(node, path, ListItem.class);
+      case OrderedList node -> blocks(node, path, ListItem.class);
+      case TaskList node -> blocks(node, path, TaskListContent.class);
+      case DecisionList node -> blocks(node, path, DecisionItem.class);
+      case Table node -> blocks(node, path, TableRow.class);
+      case TableRow node -> blocks(node, path, TableCell.class);
+      case LayoutSection node -> blocks(node, path, LayoutColumn.class);
       // Only the children that render: a stray child would feed references the body doesn't have.
       case MediaSingle node -> {
-        blocks(node.media());
-        blocks(node.captions());
+        blocks(node, path, Media.class);
+        blocks(node, path, Caption.class);
       }
-      case MediaGroup node -> blocks(node.items());
-      case BodiedExtension node -> blocks(node.content());
-      case MultiBodiedExtension node -> blocks(node.content());
-      case ExtensionFrame node -> blocks(node.content());
-      case BodiedSyncBlock node -> blocks(node.content());
+      case MediaGroup node -> blocks(node, path, Media.class);
+      case Blockquote _,
+          Panel _,
+          ListItem _,
+          BlockTaskItem _,
+          TableCell _,
+          Expand _,
+          NestedExpand _,
+          LayoutColumn _,
+          BodiedExtension _,
+          MultiBodiedExtension _,
+          ExtensionFrame _,
+          BodiedSyncBlock _ ->
+          blocks(block, path, AdfBlock.class);
       // Leaf blocks: no children to analyze (a code block's text is literal, so its marks don't
       // count). Exhaustive (no default) so new block types must be triaged here.
       case CodeBlock _,
@@ -107,10 +112,10 @@ final class AdfNodeWalker {
     }
   }
 
-  private void inlines(List<AdfInline> inlines) {
-    for (var inline : inlines) {
+  private void inlines(AdfNode parent, String path) {
+    for (var inline : Located.children(parent, path, AdfInline.class)) {
       for (var visitor : visitors) {
-        visitor.visitInline(inline);
+        visitor.visitInline(inline.node(), inline.path());
       }
     }
   }

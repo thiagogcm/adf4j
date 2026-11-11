@@ -77,8 +77,14 @@ public record Diagnostic(
     this(code, message, cause, List.of(), Map.of());
   }
 
+  /// This diagnostic located at one JSON Pointer.
   public Diagnostic at(String path) {
-    return new Diagnostic(code, message, cause, List.of(path), details);
+    return at(List.of(path));
+  }
+
+  /// This diagnostic located at every JSON Pointer in `paths`, one per occurrence.
+  public Diagnostic at(List<String> paths) {
+    return new Diagnostic(code, message, cause, paths, details);
   }
 
   /// A diagnostic with no originating exception.

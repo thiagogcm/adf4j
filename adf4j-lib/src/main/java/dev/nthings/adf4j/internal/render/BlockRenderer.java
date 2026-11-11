@@ -2,6 +2,7 @@ package dev.nthings.adf4j.internal.render;
 
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.AdfInline;
+import dev.nthings.adf4j.ast.AdfNode;
 import dev.nthings.adf4j.ast.BlockCard;
 import dev.nthings.adf4j.ast.BlockTaskItem;
 import dev.nthings.adf4j.ast.Blockquote;
@@ -37,9 +38,9 @@ import dev.nthings.adf4j.ast.TaskItem;
 import dev.nthings.adf4j.ast.TaskList;
 import dev.nthings.adf4j.ast.UnknownBlock;
 import dev.nthings.adf4j.internal.AdfText;
+import dev.nthings.adf4j.internal.Located;
 import dev.nthings.adf4j.internal.Strings;
 import dev.nthings.adf4j.internal.analyze.HeadingContent;
-import java.util.List;
 import java.util.Locale;
 import org.jspecify.annotations.Nullable;
 
@@ -68,10 +69,10 @@ final class BlockRenderer {
   }
 
   // Blocks are right-trimmed here so a custom renderer's trailing newline can't add blank lines to
-  // an indented or joined parent.
+  // an indented or joined parent. `context` sits at the block, as everywhere below.
   String renderBlock(AdfBlock block, RenderContext context) {
-    context.session().events().observe(block);
-    return dispatchBlock(block, context.at(block)).stripTrailing();
+    context.session().events().observe(block, context.path());
+    return dispatchBlock(block, context).stripTrailing();
   }
 
   private String dispatchBlock(AdfBlock block, RenderContext context) {
@@ -91,14 +92,14 @@ final class BlockRenderer {
       case OrderedList orderedList -> listRenderer.renderOrderedList(orderedList, context);
       case DecisionList decisionList -> listRenderer.renderDecisionList(decisionList, context);
       case DecisionItem decisionItem -> listRenderer.renderDecisionItem(decisionItem, context);
-      case ListItem listItem -> renderBlocks(listItem.content(), context);
+      case ListItem listItem -> renderBlocks(listItem, context);
       case Table table -> tableRenderer.renderTable(table, context);
       case TableRow row -> tableRenderer.renderTableRow(row, context);
       case TableCell cell -> tableRenderer.renderTableCell(cell, context);
-      case Expand expand -> renderExpand(expand.title(), expand.content(), context);
-      case NestedExpand expand -> renderExpand(expand.title(), expand.content(), context);
+      case Expand expand -> renderExpand(expand.title(), expand, context);
+      case NestedExpand expand -> renderExpand(expand.title(), expand, context);
       case LayoutSection layout -> renderLayoutSection(layout, context);
-      case LayoutColumn column -> renderBlocks(column.content(), context);
+      case LayoutColumn column -> renderBlocks(column, context);
       case MediaSingle mediaSingle -> mediaRenderer.renderMediaSingle(mediaSingle, context);
       case MediaGroup mediaGroup -> mediaRenderer.renderMediaGroup(mediaGroup, context);
       case Media media -> mediaRenderer.renderMedia(media, context);
@@ -106,17 +107,21 @@ final class BlockRenderer {
       case Extension extension -> macroRenderer.renderExtension(extension, context, true);
       case BodiedExtension bodied -> macroRenderer.renderBodiedExtension(bodied, context);
       case MultiBodiedExtension mbe -> macroRenderer.renderMultiBodiedExtension(mbe, context);
-      case ExtensionFrame frame -> renderBlocks(frame.content(), context);
+      case ExtensionFrame frame -> renderBlocks(frame, context);
       case SyncBlock sync -> macroRenderer.renderSyncBlock(sync, context);
       case BodiedSyncBlock sync -> macroRenderer.renderBodiedSyncBlock(sync, context);
-      case BlockCard blockCard -> cardRenderer.renderBlockCard(blockCard, context.session());
-      case EmbedCard embedCard -> cardRenderer.renderEmbedCard(embedCard, context.session());
+      case BlockCard blockCard -> cardRenderer.renderBlockCard(blockCard, context);
+      case EmbedCard embedCard -> cardRenderer.renderEmbedCard(embedCard, context);
       case UnknownBlock unknown -> inlineRenderer.renderUnknown(unknown, context);
     };
   }
 
-  String renderBlocks(List<AdfBlock> blocks, RenderContext context) {
-    var rendered = blocks.stream().map(block -> renderBlock(block, context)).toList();
+  /// The block children of `parent`, the node `context` sits at, joined.
+  String renderBlocks(AdfNode parent, RenderContext context) {
+    var rendered =
+        context.children(parent, AdfBlock.class).stream()
+            .map(block -> renderBlock(block.node(), context.at(block)))
+            .toList();
     return context.site() == InlineSite.GFM_CELL
         ? MarkdownBlocks.joinWithoutLists(rendered)
         : MarkdownBlocks.join(rendered);
@@ -124,26 +129,27 @@ final class BlockRenderer {
 
   // A caption renders as its own block at column 0, so its first inline is at a block start.
   String renderCaption(Caption node, RenderContext context) {
-    return inlineRenderer.renderInlineNodes(node.content(), context, true);
+    return inlineRenderer.renderInlineNodes(context.children(node, AdfInline.class), context, true);
   }
 
   // `atLineStart` is false only for text following a checkbox on its line.
   String renderParagraph(Paragraph paragraph, RenderContext context, boolean atLineStart) {
-    context.session().events().observe(paragraph);
+    context.session().events().observe(paragraph, context.path());
     var rendered =
-        inlineRenderer.renderInlineNodes(paragraph.content(), context.at(paragraph), atLineStart);
+        inlineRenderer.renderInlineNodes(
+            context.children(paragraph, AdfInline.class), context, atLineStart);
     if (rendered.isBlank()) {
       return rendered;
     }
     // Prefix after escaping, so the nbsp indent run isn't itself marker-neutralised.
     var prefixed = markRenderer.indentationPrefix(paragraph.marks()) + rendered;
-    var styled = markRenderer.applyMarks(prefixed, paragraph.marks(), context.session());
+    var styled = markRenderer.applyMarks(prefixed, paragraph.marks(), context);
     return markRenderer.alignmentWrap(
         styled, paragraph.marks(), context.session().options().htmlVisualMarks());
   }
 
   private String renderHeading(Heading heading, RenderContext context) {
-    var text = renderHeadingText(heading.content(), context);
+    var text = renderHeadingText(heading, context);
     var anchor = context.session().headingOutline().anchorToInject(heading, text.isBlank());
     if (text.isBlank()) {
       return HtmlFragments.anchor(anchor);
@@ -159,8 +165,9 @@ final class BlockRenderer {
         markup, heading.marks(), context.session().options().htmlVisualMarks());
   }
 
-  private String renderHeadingText(List<AdfInline> content, RenderContext context) {
-    var headingNodes = HeadingContent.normalizedHeadingNodes(content);
+  private String renderHeadingText(Heading heading, RenderContext context) {
+    var headingNodes =
+        HeadingContent.normalized(context.children(heading, AdfInline.class), Located::node);
     var headingContext = context.withSite(InlineSite.HEADING);
     var rendered = inlineRenderer.renderInlineNodes(headingNodes, headingContext, false);
     // An ATX heading is one line, whatever line breaks its inlines carry.
@@ -168,12 +175,12 @@ final class BlockRenderer {
   }
 
   private String renderBlockQuote(Blockquote blockquote, RenderContext context) {
-    return toBlockQuote(renderBlocks(blockquote.content(), context));
+    return toBlockQuote(renderBlocks(blockquote, context));
   }
 
   private String renderPanel(Panel panel, RenderContext context) {
     var header = "> [!" + gfmAlert(panel.panelType()) + "]";
-    var content = renderBlocks(panel.content(), context);
+    var content = renderBlocks(panel, context);
     if (content.isBlank()) {
       return header;
     }
@@ -211,12 +218,14 @@ final class BlockRenderer {
 
   private String renderLayoutSection(LayoutSection layout, RenderContext context) {
     return MarkdownBlocks.join(
-        layout.columns().stream().map(column -> renderBlocks(column.content(), context)).toList());
+        context.children(layout, LayoutColumn.class).stream()
+            .map(column -> renderBlocks(column.node(), context.at(column)))
+            .toList());
   }
 
-  private String renderExpand(String title, List<AdfBlock> content, RenderContext context) {
+  private String renderExpand(String title, AdfBlock expand, RenderContext context) {
     var safeTitle = title.trim();
-    var body = renderBlocks(content, context);
+    var body = renderBlocks(expand, context);
     var summary =
         safeTitle.isBlank()
             ? "<summary></summary>"

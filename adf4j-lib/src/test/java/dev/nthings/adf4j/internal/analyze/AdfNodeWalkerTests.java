@@ -21,7 +21,7 @@ class AdfNodeWalkerTests {
     NodeVisitor visitor =
         new NodeVisitor() {
           @Override
-          public void visitBlock(AdfBlock block) {}
+          public void visitBlock(AdfBlock block, String path) {}
         };
     var document = documentWithParagraph("inline default is harmless");
 
@@ -33,7 +33,7 @@ class AdfNodeWalkerTests {
     NodeVisitor visitor =
         new NodeVisitor() {
           @Override
-          public void visitInline(AdfInline inline) {}
+          public void visitInline(AdfInline inline, String path) {}
         };
     var document = documentWithParagraph("block default is harmless");
 
@@ -59,12 +59,12 @@ class AdfNodeWalkerTests {
         List.of(
             new NodeVisitor() {
               @Override
-              public void visitBlock(AdfBlock block) {
+              public void visitBlock(AdfBlock block, String path) {
                 visited.add("block:" + block.getClass().getSimpleName());
               }
 
               @Override
-              public void visitInline(AdfInline inline) {
+              public void visitInline(AdfInline inline, String path) {
                 visited.add(
                     "inline:" + inline.getClass().getSimpleName() + ":" + ((Text) inline).text());
               }

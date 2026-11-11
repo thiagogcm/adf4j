@@ -5,7 +5,6 @@ import dev.nthings.adf4j.result.Diagnostic;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
 
@@ -30,13 +29,12 @@ final class MacroDiagnostics {
     }
     return List.of(
         new Diagnostic(
-            Diagnostic.Code.UNSUPPORTED_MACRO,
-            unsupportedMacros.size()
-                + " unsupported macro(s) rendered as placeholders; original content not represented: "
-                + String.join(", ", unsupportedMacros)
-                + ".",
-            null,
-            paths,
-            Map.of("count", String.valueOf(paths.size()))));
+                Diagnostic.Code.UNSUPPORTED_MACRO,
+                unsupportedMacros.size()
+                    + " unsupported macro(s) rendered as placeholders; original content not"
+                    + " represented: "
+                    + String.join(", ", unsupportedMacros)
+                    + ".")
+            .at(paths));
   }
 }

@@ -61,7 +61,7 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
   }
 
   @Override
-  public void visitBlock(AdfBlock block) {
+  public void visitBlock(AdfBlock block, String path) {
     switch (block) {
       case Media media -> collectMedia(media);
       // A wrapper's link wraps its media, so without any it renders nothing.
@@ -78,7 +78,7 @@ final class AdfContentMetadataExtractor implements NodeVisitor {
   }
 
   @Override
-  public void visitInline(AdfInline inline) {
+  public void visitInline(AdfInline inline, String path) {
     switch (inline) {
       case Text text -> collectLinkMarks(text.marks());
       case AdfCard card -> collectLink(card.url(), card.attrs());
