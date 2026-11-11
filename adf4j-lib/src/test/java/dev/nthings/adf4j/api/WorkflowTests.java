@@ -1,6 +1,25 @@
 package dev.nthings.adf4j.api;
 
-import static dev.nthings.adf4j.ast.Adf.*;
+import static dev.nthings.adf4j.ast.Adf.PanelType;
+import static dev.nthings.adf4j.ast.Adf.TextAlign;
+import static dev.nthings.adf4j.ast.Adf.alignment;
+import static dev.nthings.adf4j.ast.Adf.bodiedExtension;
+import static dev.nthings.adf4j.ast.Adf.code;
+import static dev.nthings.adf4j.ast.Adf.doc;
+import static dev.nthings.adf4j.ast.Adf.extension;
+import static dev.nthings.adf4j.ast.Adf.heading;
+import static dev.nthings.adf4j.ast.Adf.link;
+import static dev.nthings.adf4j.ast.Adf.macroParameters;
+import static dev.nthings.adf4j.ast.Adf.media;
+import static dev.nthings.adf4j.ast.Adf.mediaInline;
+import static dev.nthings.adf4j.ast.Adf.mediaSingle;
+import static dev.nthings.adf4j.ast.Adf.panel;
+import static dev.nthings.adf4j.ast.Adf.paragraph;
+import static dev.nthings.adf4j.ast.Adf.strong;
+import static dev.nthings.adf4j.ast.Adf.table;
+import static dev.nthings.adf4j.ast.Adf.tableCell;
+import static dev.nthings.adf4j.ast.Adf.tableRow;
+import static dev.nthings.adf4j.ast.Adf.text;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -139,7 +158,9 @@ class WorkflowTests {
                         new PageTreeEntry(0, "Available", "3")))
             .withPageLinkResolver(
                 id -> {
-                  if (id.equals("1")) throw new IllegalStateException("offline");
+                  if (id.equals("1")) {
+                    throw new IllegalStateException("offline");
+                  }
                   return id.equals("3") ? "pages/3" : null;
                 });
     var result =

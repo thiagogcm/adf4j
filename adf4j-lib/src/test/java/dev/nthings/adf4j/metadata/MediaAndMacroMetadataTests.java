@@ -1,6 +1,14 @@
 package dev.nthings.adf4j.metadata;
 
-import static dev.nthings.adf4j.testing.AdfSnippets.*;
+import static dev.nthings.adf4j.testing.AdfSnippets.atom;
+import static dev.nthings.adf4j.testing.AdfSnippets.doc;
+import static dev.nthings.adf4j.testing.AdfSnippets.link;
+import static dev.nthings.adf4j.testing.AdfSnippets.macro;
+import static dev.nthings.adf4j.testing.AdfSnippets.mark;
+import static dev.nthings.adf4j.testing.AdfSnippets.node;
+import static dev.nthings.adf4j.testing.AdfSnippets.paragraph;
+import static dev.nthings.adf4j.testing.AdfSnippets.quote;
+import static dev.nthings.adf4j.testing.AdfSnippets.text;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.nthings.adf4j.AdfJson;
@@ -11,6 +19,8 @@ import dev.nthings.adf4j.ast.MediaGroup;
 import dev.nthings.adf4j.ast.MediaSingle;
 import dev.nthings.adf4j.options.ConversionOptions;
 import java.util.List;
+import org.commonmark.parser.Parser;
+import org.commonmark.renderer.html.HtmlRenderer;
 import org.jsoup.Jsoup;
 import org.junit.jupiter.api.Test;
 
@@ -248,10 +258,10 @@ class MediaAndMacroMetadataTests {
   @Test
   void parsed_media_links_are_real_links_in_commonmark() {
     var html =
-        org.commonmark.renderer.html.HtmlRenderer.builder()
+        HtmlRenderer.builder()
             .build()
             .render(
-                org.commonmark.parser.Parser.builder()
+                Parser.builder()
                     .build()
                     .parse(
                         CONVERTER.toMarkdown(

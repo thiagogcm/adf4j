@@ -1,6 +1,5 @@
 package dev.nthings.adf4j.internal.engine;
 
-import dev.nthings.adf4j.AdfToMarkdown;
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.internal.AttachmentInventory;
 import dev.nthings.adf4j.internal.analyze.AdfDocumentAnalyzer;
@@ -17,7 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
-/// Runs the `parse → analyze → render` pipeline behind {@link AdfToMarkdown}. Stateless and
+/// Runs the `parse → analyze → render` pipeline behind `AdfToMarkdown`. Stateless and
 /// thread-safe, so one instance serves the process.
 public final class AdfPipeline {
 
@@ -41,7 +40,9 @@ public final class AdfPipeline {
 
   public AnalysisResult analyze(ParseResult parsed, ConversionOptions options) {
     var document = parsed.document();
-    if (document == null) return new AnalysisResult(ContentMetadata.empty(), parsed.diagnostics());
+    if (document == null) {
+      return new AnalysisResult(ContentMetadata.empty(), parsed.diagnostics());
+    }
     var result = analyze(document, options);
     return new AnalysisResult(
         result.metadata(), mergeDiagnostics(parsed.diagnostics(), result.diagnostics()));
@@ -68,8 +69,9 @@ public final class AdfPipeline {
   // Failed parsing yields an empty body, including when a title is configured.
   private MarkdownResult render(
       @Nullable AdfDocument document, ConversionOptions options, List<Diagnostic> diagnostics) {
-    if (document == null)
+    if (document == null) {
       return new MarkdownResult("", ContentMetadata.empty(), diagnostics, List.of(), List.of());
+    }
     var attachments = AttachmentInventory.from(options.attachments());
     var analysis = analyzer.analyze(document, options, attachments, false);
     try {

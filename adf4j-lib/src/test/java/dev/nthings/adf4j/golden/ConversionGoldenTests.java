@@ -118,7 +118,9 @@ class ConversionGoldenTests {
       actual.put(preset.getKey(), entries);
     }
 
-    if (UPDATE) write(actual, bodies);
+    if (UPDATE) {
+      write(actual, bodies);
+    }
 
     var checks = new ArrayList<Executable>();
     checks.add(() -> assertThat(contract).as("results violating the JSON contract").isEmpty());
@@ -148,7 +150,9 @@ class ConversionGoldenTests {
     }
     for (var body : bodies.entrySet()) {
       var markdown = SOURCE.resolve(markdownPath(body.getKey()));
-      if (Files.exists(markdown)) Files.writeString(markdown, body.getValue() + "\n");
+      if (Files.exists(markdown)) {
+        Files.writeString(markdown, body.getValue() + "\n");
+      }
     }
   }
 
@@ -226,7 +230,9 @@ class ConversionGoldenTests {
       Schema schema, String label, AdfToMarkdown converter, String adf, List<String> violations) {
     for (OperationResult result : List.of(converter.convert(adf), converter.analyze(adf))) {
       var errors = schema.validate(JSON.readTree(AdfJson.writeResult(result)));
-      if (!errors.isEmpty()) violations.add(label + ": " + errors);
+      if (!errors.isEmpty()) {
+        violations.add(label + ": " + errors);
+      }
     }
   }
 
@@ -255,7 +261,9 @@ class ConversionGoldenTests {
   private static void line(StringBuilder builder, String key, Object value) {
     var text = String.valueOf(value).replace("\\", "\\\\").replace("\n", "\\n");
     builder.append(key).append(":");
-    if (!text.isEmpty()) builder.append(' ').append(text);
+    if (!text.isEmpty()) {
+      builder.append(' ').append(text);
+    }
     builder.append('\n');
   }
 

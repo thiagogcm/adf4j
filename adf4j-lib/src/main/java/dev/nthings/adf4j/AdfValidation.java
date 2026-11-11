@@ -56,8 +56,9 @@ public final class AdfValidation {
 
   private static String pointer(NodePath path) {
     var result = new StringBuilder();
-    for (int i = 0; i < path.getNameCount(); i++)
+    for (var i = 0; i < path.getNameCount(); i++) {
       result.append('/').append(Strings.pointerToken(String.valueOf(path.getElement(i))));
+    }
     return result.toString();
   }
 

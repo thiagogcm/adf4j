@@ -26,8 +26,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/// Raw AST construction for off-schema structures the type-checked {@link
-// dev.nthings.adf4j.ast.Adf}
+/// Raw AST construction for off-schema structures the type-checked `Adf`
 /// builder refuses, such as lists inside a `blockTaskItem`. Prefer `Adf` everywhere else.
 public final class AdfNodes {
 

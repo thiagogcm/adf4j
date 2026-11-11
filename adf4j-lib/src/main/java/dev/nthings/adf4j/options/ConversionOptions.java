@@ -16,7 +16,7 @@ public record ConversionOptions(
   }
 
   /// Reads the portable `{ markdown, context }` JSON shared with the CLI and WASM. Blank input
-  /// means defaults; invalid input throws {@link dev.nthings.adf4j.result.AdfException} with one
+  /// means defaults; invalid input throws `AdfException` with one
   /// `INVALID_OPTIONS` diagnostic.
   public static ConversionOptions fromJson(String json) {
     return ConversionConfig.read(json);

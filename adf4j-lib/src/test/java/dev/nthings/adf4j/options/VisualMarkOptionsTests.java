@@ -1,6 +1,12 @@
 package dev.nthings.adf4j.options;
 
-import static dev.nthings.adf4j.testing.AdfSnippets.*;
+import static dev.nthings.adf4j.testing.AdfSnippets.doc;
+import static dev.nthings.adf4j.testing.AdfSnippets.mark;
+import static dev.nthings.adf4j.testing.AdfSnippets.markedParagraph;
+import static dev.nthings.adf4j.testing.AdfSnippets.node;
+import static dev.nthings.adf4j.testing.AdfSnippets.paragraph;
+import static dev.nthings.adf4j.testing.AdfSnippets.quote;
+import static dev.nthings.adf4j.testing.AdfSnippets.text;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.nthings.adf4j.AdfToMarkdown;

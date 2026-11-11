@@ -132,11 +132,14 @@ public final class AdfAstParser {
     private static void index(JsonNode node, String path, Map<JsonNode, String> locations) {
       if (node.isObject()) {
         locations.put(node, path);
-        for (var entry : node.properties())
+        for (var entry : node.properties()) {
           index(entry.getValue(), path + "/" + Strings.pointerToken(entry.getKey()), locations);
+        }
       } else if (node.isArray()) {
         locations.put(node, path);
-        for (int i = 0; i < node.size(); i++) index(node.get(i), path + "/" + i, locations);
+        for (var i = 0; i < node.size(); i++) {
+          index(node.get(i), path + "/" + i, locations);
+        }
       }
     }
 
@@ -144,7 +147,9 @@ public final class AdfAstParser {
       var index = locations;
       if (index == null) {
         index = new IdentityHashMap<>();
-        if (root != null) index(root, "", index);
+        if (root != null) {
+          index(root, "", index);
+        }
         locations = index;
       }
       return index.getOrDefault(node, "");
@@ -206,7 +211,7 @@ public final class AdfAstParser {
         return List.of();
       }
       var result = new ArrayList<T>(arrayNode.size());
-      for (int i = 0; i < arrayNode.size(); i++) {
+      for (var i = 0; i < arrayNode.size(); i++) {
         var child = arrayNode.get(i);
         if (child.isObject()) {
           result.add(fn.apply(child));

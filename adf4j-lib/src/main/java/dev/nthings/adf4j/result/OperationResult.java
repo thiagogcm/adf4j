@@ -20,6 +20,8 @@ public sealed interface OperationResult
   }
 
   default void requireSuccess() {
-    if (!isSuccess()) throw new AdfException(diagnostics());
+    if (!isSuccess()) {
+      throw new AdfException(diagnostics());
+    }
   }
 }

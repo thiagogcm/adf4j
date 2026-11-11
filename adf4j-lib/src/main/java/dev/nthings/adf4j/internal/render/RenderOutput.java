@@ -1,12 +1,11 @@
 package dev.nthings.adf4j.internal.render;
 
-import dev.nthings.adf4j.internal.analyze.DocumentAnalysis;
 import dev.nthings.adf4j.result.ConversionEffect;
 import dev.nthings.adf4j.result.Diagnostic;
 import dev.nthings.adf4j.result.UnresolvedResource;
 import java.util.List;
 
-/// Render result; mirrors the analyze phase's {@link DocumentAnalysis}.
+/// Render result; mirrors the analyze phase's `DocumentAnalysis`.
 public record RenderOutput(
     String body,
     List<Diagnostic> diagnostics,

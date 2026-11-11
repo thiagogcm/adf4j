@@ -86,7 +86,7 @@ final class TableRenderer {
       renderedRows.addFirst(Collections.nCopies(maxColumns, ""));
     }
 
-    final int columns = maxColumns;
+    final var columns = maxColumns;
     var normalizedRows = renderedRows.stream().map(row -> withPadding(row, columns)).toList();
 
     // Delimiter row needs at least three dashes per column.

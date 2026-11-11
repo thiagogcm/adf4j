@@ -107,7 +107,9 @@ final class MacroRenderer {
       RenderContext context,
       BiFunction<AdfExtension, RenderContext, String> defaultHeader) {
     var custom = context.session().resolvers().extension(node, context.path());
-    if (custom != null && custom.mode() == ExtensionOutput.Mode.REPLACE) return custom.markdown();
+    if (custom != null && custom.mode() == ExtensionOutput.Mode.REPLACE) {
+      return custom.markdown();
+    }
     var header = custom != null ? custom.markdown() : defaultHeader.apply(node, context);
     return MarkdownBlocks.join(List.of(header, blockRenderer.renderBlocks(node, context)));
   }
@@ -152,7 +154,7 @@ final class MacroRenderer {
 
   // Resolver expansion, else the placeholder token (recorded as unresolved).
   private String renderPageTreeMacro(PageTreeReference reference, RenderContext context) {
-    int failures = context.session().events().callbackFailures();
+    var failures = context.session().events().callbackFailures();
     var expanded = expandPageTree(reference, context);
     if (expanded != null) {
       return expanded;
@@ -204,7 +206,7 @@ final class MacroRenderer {
   // Link when the page id resolves, else the escaped one-line title; null if nothing renders.
   private @Nullable String pageTreeLabel(PageTreeEntry entry, RenderContext context) {
     var label = Strings.collapseWhitespace(entry.title()).strip();
-    int failures = context.session().events().callbackFailures();
+    var failures = context.session().events().callbackFailures();
     var href = context.session().resolvers().pageId(entry.pageNodeId(), context.path());
     if (href != null) {
       return context.session().writer().link(label.isEmpty() ? href : label, href);
@@ -233,7 +235,7 @@ final class MacroRenderer {
 
   // Resolver expansion, else the labelled placeholder (recorded as unresolved).
   private String renderExcerptInclude(ExcerptIncludeReference reference, RenderContext context) {
-    int failures = context.session().events().callbackFailures();
+    var failures = context.session().events().callbackFailures();
     var resolved = context.session().resolvers().excerpt(reference, context.path());
     if (resolved != null) {
       return resolved;
@@ -334,7 +336,7 @@ final class MacroRenderer {
 
   // Resolver, then the reference's downloadUrl, else the attachment:<fileId> placeholder.
   private String resolveAttachment(AttachmentReference reference, RenderContext context) {
-    int failures = context.session().events().callbackFailures();
+    var failures = context.session().events().callbackFailures();
     var resolved = context.session().resolvers().attachment(reference, context.path());
     if (resolved != null) {
       return resolved;

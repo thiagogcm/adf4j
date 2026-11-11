@@ -26,7 +26,9 @@ public final class ConversionConfig {
   /// Blank input means defaults. Malformed JSON, unknown keys or wrong types throw an
   /// {@link AdfException} with one `INVALID_OPTIONS` diagnostic.
   public static ConversionOptions read(String json) {
-    if (json.isBlank()) return ConversionOptions.defaults();
+    if (json.isBlank()) {
+      return ConversionOptions.defaults();
+    }
     try {
       return parse(JSON.readTree(json));
     } catch (JacksonException invalid) {
@@ -81,14 +83,16 @@ public final class ConversionConfig {
       options = options.withDocumentTitle(string(context, "title"));
       var attachments = context.get("attachments");
       if (attachments != null) {
-        if (!attachments.isArray())
+        if (!attachments.isArray()) {
           throw new IllegalArgumentException("attachments must be an array");
+        }
         var entries = new ArrayList<AttachmentReference>();
         for (var entry : attachments) {
           object(entry, Set.of("fileId", "title", "mediaType", "downloadUrl"));
           var id = string(entry, "fileId");
-          if (id == null || id.isBlank())
+          if (id == null || id.isBlank()) {
             throw new IllegalArgumentException("attachment fileId is required");
+          }
           entries.add(
               new AttachmentReference(
                   id,
@@ -103,17 +107,23 @@ public final class ConversionConfig {
   }
 
   private static void object(JsonNode node, Set<String> keys) {
-    if (!node.isObject()) throw new IllegalArgumentException("Expected a configuration object");
-    for (var key : node.propertyNames())
-      if (!keys.contains(key))
+    if (!node.isObject()) {
+      throw new IllegalArgumentException("Expected a configuration object");
+    }
+    for (var key : node.propertyNames()) {
+      if (!keys.contains(key)) {
         throw new IllegalArgumentException("Unknown configuration key: " + key);
+      }
+    }
   }
 
   // Kebab-case names. Takes the constants, not the Class, to avoid reflection in native images.
   private static <E extends Enum<E>> E constant(E[] constants, JsonNode node, String key) {
     var value = requiredString(node, key);
     for (var constant : constants) {
-      if (kebabCase(constant).equals(value)) return constant;
+      if (kebabCase(constant).equals(value)) {
+        return constant;
+      }
     }
     throw new IllegalArgumentException(
         key
@@ -128,12 +138,16 @@ public final class ConversionConfig {
   }
 
   private static boolean bool(JsonNode node, String key) {
-    if (!node.isBoolean()) throw new IllegalArgumentException(key + " must be a boolean");
+    if (!node.isBoolean()) {
+      throw new IllegalArgumentException(key + " must be a boolean");
+    }
     return node.asBoolean();
   }
 
   private static String requiredString(JsonNode node, String key) {
-    if (!node.isString()) throw new IllegalArgumentException(key + " must be a string");
+    if (!node.isString()) {
+      throw new IllegalArgumentException(key + " must be a string");
+    }
     return node.asString();
   }
 

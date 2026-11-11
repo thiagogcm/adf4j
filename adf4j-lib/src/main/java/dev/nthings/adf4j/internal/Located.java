@@ -14,7 +14,7 @@ public record Located<T extends AdfNode>(T node, String path) {
       AdfNode parent, String path, Class<T> type) {
     var content = parent.content();
     var children = new ArrayList<Located<T>>(content.size());
-    for (int i = 0; i < content.size(); i++) {
+    for (var i = 0; i < content.size(); i++) {
       if (type.isInstance(content.get(i))) {
         children.add(new Located<>(type.cast(content.get(i)), path + "/content/" + i));
       }

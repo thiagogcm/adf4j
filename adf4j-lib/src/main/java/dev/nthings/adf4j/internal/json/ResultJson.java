@@ -41,25 +41,28 @@ public final class ResultJson {
   public static String write(OperationResult result, boolean pretty) {
     var output = JSON.createObjectNode();
     output.put("ok", result.isSuccess());
-    if (result instanceof MarkdownResult converted) output.put("body", converted.body());
+    if (result instanceof MarkdownResult converted) {
+      output.put("body", converted.body());
+    }
     output.put("hasWarnings", result.hasWarnings());
     output.set("diagnostics", diagnostics(result.diagnostics()));
     switch (result) {
       case MarkdownResult converted -> {
         output.set("metadata", metadata(converted.metadata()));
         var effects = output.putArray("effects");
-        for (var effect : converted.effects())
+        for (var effect : converted.effects()) {
           effects
               .addObject()
               .put("kind", effect.kind().name())
               .put("path", effect.path())
               .put("message", effect.message());
+        }
         output.set("unresolved", node(converted.unresolved()));
       }
       case AnalysisResult analyzed -> output.set("metadata", metadata(analyzed.metadata()));
       case ParseResult _, ValidationResult _ -> {}
     }
-    if (!result.isSuccess())
+    if (!result.isSuccess()) {
       output.put(
           "error",
           result.diagnostics().stream()
@@ -67,6 +70,7 @@ public final class ResultJson {
               .map(Diagnostic::message)
               .findFirst()
               .orElse("ADF operation failed"));
+    }
     return pretty
         ? JSON.writer().with(PRETTY).writeValueAsString(output)
         : JSON.writeValueAsString(output);
@@ -94,7 +98,9 @@ public final class ResultJson {
 
   private static ObjectNode metadata(ContentMetadata metadata) {
     var node = JSON.createObjectNode();
-    for (var section : SECTIONS) node.set(section.name(), section.project().apply(metadata));
+    for (var section : SECTIONS) {
+      node.set(section.name(), section.project().apply(metadata));
+    }
     return node;
   }
 
@@ -115,7 +121,7 @@ public final class ResultJson {
 
   private static ArrayNode node(List<UnresolvedResource> unresolved) {
     var resources = JSON.createArrayNode();
-    for (var resource : unresolved)
+    for (var resource : unresolved) {
       resources
           .addObject()
           .put("kind", resource.kind().name())
@@ -123,6 +129,7 @@ public final class ResultJson {
           .put("path", resource.path())
           .put("reason", resource.reason().name())
           .put("fallback", resource.fallback());
+    }
     return resources;
   }
 

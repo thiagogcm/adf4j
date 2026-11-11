@@ -38,9 +38,14 @@ final class RenderEvents {
 
   /// Records what the node at `path` changes; each source position counts once.
   void observe(AdfNode node, String path) {
-    if (!observed.add(path)) return;
-    if (node instanceof AdfBlock block) unknowns.visitBlock(block, path);
-    else if (node instanceof AdfInline inline) unknowns.visitInline(inline, path);
+    if (!observed.add(path)) {
+      return;
+    }
+    if (node instanceof AdfBlock block) {
+      unknowns.visitBlock(block, path);
+    } else if (node instanceof AdfInline inline) {
+      unknowns.visitInline(inline, path);
+    }
     if (node instanceof AdfUnknown) {
       switch (options.unknownNodePolicy()) {
         case SKIP -> effect(ConversionEffect.Kind.CONTENT_DROPPED, path, "Unknown node dropped");
@@ -52,21 +57,23 @@ final class RenderEvents {
         case PRESERVE_RAW, FAIL -> {}
       }
     }
-    if (node instanceof LayoutSection)
+    if (node instanceof LayoutSection) {
       effect(
           ConversionEffect.Kind.STRUCTURE_CHANGED,
           path,
           "Columns flattened into sequential blocks");
-    for (int i = 0; i < node.marks().size(); i++) {
+    }
+    for (var i = 0; i < node.marks().size(); i++) {
       var mark = node.marks().get(i);
-      if (mark instanceof UnknownMark)
+      if (mark instanceof UnknownMark) {
         effect(
             ConversionEffect.Kind.CONTENT_DROPPED, Located.mark(path, i), "Unknown mark dropped");
-      else if (TextMarkRenderer.omitsVisual(mark, options.htmlVisualMarks()))
+      } else if (TextMarkRenderer.omitsVisual(mark, options.htmlVisualMarks())) {
         effect(
             ConversionEffect.Kind.STYLE_OMITTED,
             Located.mark(path, i),
             "Visual formatting omitted");
+      }
     }
   }
 
@@ -121,6 +128,8 @@ final class RenderEvents {
       String fallback,
       @Nullable String placeholder) {
     unresolved.add(new UnresolvedResource(kind, id == null ? "" : id, path, reason, fallback));
-    if (placeholder != null) effect(ConversionEffect.Kind.PLACEHOLDER, path, placeholder);
+    if (placeholder != null) {
+      effect(ConversionEffect.Kind.PLACEHOLDER, path, placeholder);
+    }
   }
 }

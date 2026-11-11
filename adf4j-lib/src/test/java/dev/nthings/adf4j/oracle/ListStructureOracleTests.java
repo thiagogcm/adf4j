@@ -1,6 +1,22 @@
 package dev.nthings.adf4j.oracle;
 
-import static dev.nthings.adf4j.testing.AdfNodes.*;
+import static dev.nthings.adf4j.testing.AdfNodes.blockTaskItem;
+import static dev.nthings.adf4j.testing.AdfNodes.blockquote;
+import static dev.nthings.adf4j.testing.AdfNodes.bulletList;
+import static dev.nthings.adf4j.testing.AdfNodes.decisionItem;
+import static dev.nthings.adf4j.testing.AdfNodes.decisionList;
+import static dev.nthings.adf4j.testing.AdfNodes.expand;
+import static dev.nthings.adf4j.testing.AdfNodes.listItem;
+import static dev.nthings.adf4j.testing.AdfNodes.orderedList;
+import static dev.nthings.adf4j.testing.AdfNodes.panel;
+import static dev.nthings.adf4j.testing.AdfNodes.paragraph;
+import static dev.nthings.adf4j.testing.AdfNodes.paragraphOf;
+import static dev.nthings.adf4j.testing.AdfNodes.table;
+import static dev.nthings.adf4j.testing.AdfNodes.tableCell;
+import static dev.nthings.adf4j.testing.AdfNodes.tableRow;
+import static dev.nthings.adf4j.testing.AdfNodes.taskItem;
+import static dev.nthings.adf4j.testing.AdfNodes.taskList;
+import static dev.nthings.adf4j.testing.AdfNodes.text;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.nthings.adf4j.AdfToMarkdown;

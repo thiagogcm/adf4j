@@ -497,8 +497,9 @@ public final class Adf {
   public static Text text(String text, TextMark... marks) {
     if (Arrays.stream(marks).anyMatch(Code.class::isInstance)
         && Arrays.stream(marks)
-            .anyMatch(m -> !(m instanceof Code || m instanceof Link || m instanceof Annotation)))
+            .anyMatch(m -> !(m instanceof Code || m instanceof Link || m instanceof Annotation))) {
       throw new IllegalArgumentException("code combines only with link and annotation");
+    }
     return new Text(text, List.<AdfMark>of(marks));
   }
 
@@ -597,8 +598,9 @@ public final class Adf {
 
   /// A border around media, `size` 1 to 3 pixels.
   public static Border border(int size, String color) {
-    if (size < 1 || size > 3)
+    if (size < 1 || size > 3) {
       throw new IllegalArgumentException("border size must be between 1 and 3");
+    }
     return new Border(Attributes.empty().with("size", size).with("color", color));
   }
 
@@ -640,7 +642,9 @@ public final class Adf {
   }
 
   private static Attributes level(int level) {
-    if (level < 1 || level > 6) throw new IllegalArgumentException("level must be between 1 and 6");
+    if (level < 1 || level > 6) {
+      throw new IllegalArgumentException("level must be between 1 and 6");
+    }
     return Attributes.empty().with("level", level);
   }
 

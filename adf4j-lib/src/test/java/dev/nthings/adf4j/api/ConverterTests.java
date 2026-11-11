@@ -17,6 +17,7 @@ import dev.nthings.adf4j.result.AdfException;
 import dev.nthings.adf4j.result.Diagnostic;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 /// The `AdfToMarkdown` entry points: every input form converts and analyzes the same way, failures
@@ -138,7 +139,7 @@ class ConverterTests {
 
   @Test
   void analyze_reports_the_metadata_convert_would_without_rendering() {
-    var resolverCalls = new java.util.concurrent.atomic.AtomicInteger();
+    var resolverCalls = new AtomicInteger();
     var converter =
         AdfToMarkdown.with(
             ConversionOptions.defaults()

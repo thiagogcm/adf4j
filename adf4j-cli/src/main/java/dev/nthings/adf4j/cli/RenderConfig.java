@@ -51,11 +51,21 @@ final class RenderConfig {
         throw CliException.usage("--config: " + invalid.getMessage());
       }
     }
-    if (rendering.title != null) base = base.withDocumentTitle(rendering.title);
-    if (rendering.collapseHardBreaks) base = base.withCollapseHardBreaks(true);
-    if (rendering.escapeParentheses) base = base.withEscapeParentheses(true);
-    if (rendering.imageSize) base = base.withImageSizeAttributes(true);
-    if (rendering.htmlVisualMarks) base = base.withHtmlVisualMarks(true);
+    if (rendering.title != null) {
+      base = base.withDocumentTitle(rendering.title);
+    }
+    if (rendering.collapseHardBreaks) {
+      base = base.withCollapseHardBreaks(true);
+    }
+    if (rendering.escapeParentheses) {
+      base = base.withEscapeParentheses(true);
+    }
+    if (rendering.imageSize) {
+      base = base.withImageSizeAttributes(true);
+    }
+    if (rendering.htmlVisualMarks) {
+      base = base.withHtmlVisualMarks(true);
+    }
     var options =
         base.withMediaResolver(mediaResolver(resolvers, json))
             .withAttachmentResolver(attachmentResolver(resolvers, json))

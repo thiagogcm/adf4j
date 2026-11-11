@@ -49,7 +49,7 @@ public final class AdfLossinessCollector implements NodeVisitor {
   }
 
   private void unknownMarks(AdfNode node, String path) {
-    for (int i = 0; i < node.marks().size(); i++) {
+    for (var i = 0; i < node.marks().size(); i++) {
       if (node.marks().get(i) instanceof UnknownMark) {
         markPaths.add(Located.mark(path, i));
       }

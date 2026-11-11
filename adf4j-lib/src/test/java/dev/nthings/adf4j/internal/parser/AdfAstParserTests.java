@@ -2,9 +2,6 @@ package dev.nthings.adf4j.internal.parser;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.nthings.adf4j.ast.AdfBlock;
-import dev.nthings.adf4j.ast.AdfInline;
-import dev.nthings.adf4j.ast.AdfMark;
 import dev.nthings.adf4j.ast.BlockCard;
 import dev.nthings.adf4j.ast.BodiedExtension;
 import dev.nthings.adf4j.ast.BodiedSyncBlock;
@@ -45,7 +42,7 @@ class AdfAstParserTests {
     var document = parser.parse(mapper.readTree(raw)).document();
 
     assertThat(document.content()).hasSize(1);
-    AdfBlock block = document.content().getFirst();
+    var block = document.content().getFirst();
     assertThat(block).isInstanceOf(UnknownBlock.class);
     var unknown = (UnknownBlock) block;
     assertThat(unknown.type()).isEqualTo("widget");
@@ -73,11 +70,11 @@ class AdfAstParserTests {
         """;
     var document = parser.parse(mapper.readTree(raw)).document();
 
-    AdfBlock first = document.content().getFirst();
+    var first = document.content().getFirst();
     assertThat(first).isInstanceOf(Paragraph.class);
     var paragraph = (Paragraph) first;
     assertThat(paragraph.content()).hasSize(1);
-    AdfInline inline = paragraph.content().getFirst();
+    var inline = paragraph.content().getFirst();
     assertThat(inline).isInstanceOf(UnknownInline.class);
     var unknown = (UnknownInline) inline;
     assertThat(unknown.type()).isEqualTo("mysteryInline");
@@ -107,7 +104,7 @@ class AdfAstParserTests {
     var paragraph = (Paragraph) document.content().getFirst();
     var text = (Text) paragraph.content().getFirst();
     assertThat(text.marks()).hasSize(1);
-    AdfMark mark = text.marks().getFirst();
+    var mark = text.marks().getFirst();
     assertThat(mark).isInstanceOf(UnknownMark.class);
     var unknown = (UnknownMark) mark;
     assertThat(unknown.type()).isEqualTo("newMark");
@@ -153,7 +150,7 @@ class AdfAstParserTests {
     var taskList = (TaskList) document.content().getFirst();
     assertThat(taskList.content()).hasSize(2);
     assertThat(taskList.content().get(0)).isInstanceOf(TaskItem.class);
-    AdfBlock nested = taskList.content().get(1);
+    var nested = taskList.content().get(1);
     assertThat(nested)
         .as("a taskList nested in a taskList is preserved")
         .isInstanceOf(TaskList.class);

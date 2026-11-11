@@ -52,7 +52,9 @@ public final class Outcome {
   }
 
   private static void section(List<String> lines, String name, List<String> entries) {
-    if (entries.isEmpty()) return;
+    if (entries.isEmpty()) {
+      return;
+    }
     lines.add("== " + name);
     lines.addAll(entries);
   }

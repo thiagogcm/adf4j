@@ -52,7 +52,9 @@ public class ConvertCommand extends Adf4jSubcommand {
     var json = new CliJson();
     var parsed = parseInput();
     var options = RenderConfig.build(rendering, resolvers, json);
-    if (attachments.path != null) options = options.withAttachments(attachments.read(json));
+    if (attachments.path != null) {
+      options = options.withAttachments(attachments.read(json));
+    }
     var converter = AdfToMarkdown.with(options);
 
     var result = converter.convert(parsed);

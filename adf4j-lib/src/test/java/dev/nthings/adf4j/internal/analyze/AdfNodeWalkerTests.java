@@ -1,6 +1,9 @@
 package dev.nthings.adf4j.internal.analyze;
 
-import static dev.nthings.adf4j.testing.AdfNodes.*;
+import static dev.nthings.adf4j.testing.AdfNodes.bodiedExtension;
+import static dev.nthings.adf4j.testing.AdfNodes.bodiedSyncBlock;
+import static dev.nthings.adf4j.testing.AdfNodes.extensionFrame;
+import static dev.nthings.adf4j.testing.AdfNodes.paragraph;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.nthings.adf4j.ast.AdfBlock;

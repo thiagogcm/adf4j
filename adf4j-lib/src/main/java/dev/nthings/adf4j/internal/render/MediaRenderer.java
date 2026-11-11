@@ -56,7 +56,7 @@ final class MediaRenderer {
 
   private String renderEmbedOrLink(AdfMedia media, RenderContext context) {
     var attachment = context.session().attachments().byFileId(media.id());
-    int failures = context.session().events().callbackFailures();
+    var failures = context.session().events().callbackFailures();
     var resolvedSource = resolveMediaSource(media, attachment, context);
     var destination = resolvedSource != null ? resolvedSource : placeholder(media);
     if (resolvedSource == null) {

@@ -2,7 +2,6 @@ package dev.nthings.adf4j.testing;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
 import java.util.TreeMap;
 import org.jspecify.annotations.Nullable;
@@ -76,7 +75,7 @@ public final class AdfJsonComparison {
       return fields.toString();
     }
     if (node.isArray()) {
-      List<@Nullable String> items = new ArrayList<>();
+      var items = new ArrayList<@Nullable String>();
       node.forEach(child -> items.add(value(child)));
       return items.toString();
     }
