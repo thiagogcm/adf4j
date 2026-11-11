@@ -10,7 +10,7 @@ import java.util.Map;
 import org.jspecify.annotations.Nullable;
 
 /// The attachment inventory of one render or analyze, built from
-/// `MarkdownOptions.attachments()`. `fileId` is an entry's identity: a blank one is dropped, the
+/// `ConversionOptions.attachments()`. `fileId` is an entry's identity: a blank one is dropped, the
 /// first entry per id wins, and an id matches trimmed and case-insensitively. Titles are a separate
 /// index for macros that name a file: optional, matched the same way, and when two entries share
 /// one the first wins the lookup while both stay reachable by id.

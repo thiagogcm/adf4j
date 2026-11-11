@@ -91,7 +91,7 @@ test('an empty context stays empty', () => {
 
 test('a successful result forwards only the Markdown', () => {
   assert.deepEqual(
-    conversionResponse({ ok: true, body: '# T\n\nBody', wasLossy: true, diagnostics: [{}] }),
+    conversionResponse({ ok: true, body: '# T\n\nBody', hasWarnings: true, diagnostics: [{}] }),
     { ok: true, markdown: '# T\n\nBody' },
   );
 });
@@ -101,7 +101,7 @@ test('a failed result forwards the error, never the lone title body', () => {
     conversionResponse({
       ok: false,
       body: '# Page',
-      wasLossy: true,
+      hasWarnings: true,
       diagnostics: [{ code: 'INVALID_JSON', severity: 'ERROR', message: 'bad' }],
       error: 'Failed to parse ADF JSON payload.',
     }),

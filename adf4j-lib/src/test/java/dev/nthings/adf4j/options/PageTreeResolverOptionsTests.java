@@ -142,7 +142,7 @@ class PageTreeResolverOptionsTests {
   @Test
   void resolver_expands_the_tree_resolving_each_page_node_id_via_the_page_link_resolver() {
     var options =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withPageTreeResolver(
                 request ->
                     List.of(
@@ -162,7 +162,7 @@ class PageTreeResolverOptionsTests {
   @Test
   void resolver_expands_an_inline_pagetree_into_a_block_list() {
     var options =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withPageTreeResolver(request -> List.of(new PageTreeEntry(0, "Home", "home")))
             .withPageLinkResolver(pageNodeId -> "h.md");
 
@@ -172,7 +172,7 @@ class PageTreeResolverOptionsTests {
   @Test
   void resolver_escapes_entry_labels() {
     var options =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withPageTreeResolver(request -> List.of(new PageTreeEntry(0, "A & B", "111")))
             .withPageLinkResolver(pageNodeId -> "https://x/a");
 
@@ -184,7 +184,7 @@ class PageTreeResolverOptionsTests {
   void resolver_destinations_are_scheme_sanitized() {
     // A resolved page destination is untrusted input — a dangerous scheme is neutralized.
     var options =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withPageTreeResolver(request -> List.of(new PageTreeEntry(0, "x", "111")))
             .withPageLinkResolver(pageNodeId -> "javascript:alert(1)");
 
@@ -196,7 +196,7 @@ class PageTreeResolverOptionsTests {
   void an_entry_without_a_resolvable_destination_renders_as_plain_text() {
     // A page node id with no PageLinkResolver to resolve it leaves the (escaped) title, not a link.
     var options =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withPageTreeResolver(request -> List.of(new PageTreeEntry(0, "Orphan", "999")));
 
     assertThat(AdfToMarkdown.with(options).toMarkdown(PAGETREE)).isEqualTo("- Orphan");
@@ -205,7 +205,7 @@ class PageTreeResolverOptionsTests {
   @Test
   void entry_depth_is_normalized_so_the_shallowest_entry_sits_at_column_zero() {
     var options =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withPageTreeResolver(
                 request ->
                     List.of(
@@ -223,7 +223,7 @@ class PageTreeResolverOptionsTests {
   void the_request_carries_the_named_root_and_the_full_parameter_map() {
     var captured = new PageTreeReference[1];
     var options =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withPageTreeResolver(
                 request -> {
                   captured[0] = request;
@@ -243,7 +243,7 @@ class PageTreeResolverOptionsTests {
   void the_request_root_is_null_for_a_keyword_root_but_the_keyword_stays_in_the_parameters() {
     var captured = new PageTreeReference[1];
     var options =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withPageTreeResolver(
                 request -> {
                   captured[0] = request;
@@ -258,14 +258,14 @@ class PageTreeResolverOptionsTests {
 
   @Test
   void resolver_returning_null_falls_back_to_the_token() {
-    var nulls = MarkdownOptions.defaults().withPageTreeResolver(request -> null);
+    var nulls = ConversionOptions.defaults().withPageTreeResolver(request -> null);
     assertThat(AdfToMarkdown.with(nulls).toMarkdown(PAGETREE)).isEqualTo("{{pagetree}}");
   }
 
   @Test
   void resolver_returning_an_empty_list_renders_nothing() {
     // An empty list is an authoritative "no descendants", not a decline — no placeholder leaks.
-    var empty = MarkdownOptions.defaults().withPageTreeResolver(request -> List.of());
+    var empty = ConversionOptions.defaults().withPageTreeResolver(request -> List.of());
     assertThat(AdfToMarkdown.with(empty).toMarkdown(PAGETREE)).isEmpty();
   }
 
@@ -289,7 +289,7 @@ class PageTreeResolverOptionsTests {
           ]
         }
         """;
-    var options = MarkdownOptions.defaults().withPageTreeResolver(request -> List.of());
+    var options = ConversionOptions.defaults().withPageTreeResolver(request -> List.of());
 
     assertThat(AdfToMarkdown.with(options).toMarkdown(adf))
         .isEqualToNormalizingNewlines("before\n\nafter");
@@ -299,7 +299,7 @@ class PageTreeResolverOptionsTests {
   void resolver_that_throws_is_contained_and_falls_back_to_the_token() {
     // A failing lookup must not abort the conversion; it degrades to the token (named root kept).
     var options =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withPageTreeResolver(
                 request -> {
                   throw new RuntimeException("lookup failed");
@@ -319,7 +319,7 @@ class PageTreeResolverOptionsTests {
   @Test
   void the_same_resolver_expands_the_children_macro() {
     var options =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withPageTreeResolver(
                 request ->
                     List.of(
@@ -337,7 +337,7 @@ class PageTreeResolverOptionsTests {
   void the_children_request_reports_the_macro_its_page_root_and_params() {
     var captured = new PageTreeReference[1];
     var options =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withPageTreeResolver(
                 request -> {
                   captured[0] = request;
@@ -356,7 +356,7 @@ class PageTreeResolverOptionsTests {
   @Test
   void a_declining_resolver_keeps_the_children_depth_token() {
     // Falling back preserves the existing {{children:<depth>}} token for a bounded depth.
-    var options = MarkdownOptions.defaults().withPageTreeResolver(request -> null);
+    var options = ConversionOptions.defaults().withPageTreeResolver(request -> null);
 
     assertThat(AdfToMarkdown.with(options).toMarkdown(ROOTED_CHILDREN)).isEqualTo("{{children:2}}");
   }
@@ -368,7 +368,7 @@ class PageTreeResolverOptionsTests {
   void the_request_parses_the_standard_depth_and_all_parameters() {
     var captured = new PageTreeReference[1];
     var options =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withPageTreeResolver(
                 request -> {
                   captured[0] = request;
@@ -414,7 +414,7 @@ class PageTreeResolverOptionsTests {
   @Test
   void a_null_title_from_a_resolver_does_not_abort_the_conversion() {
     var options =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withPageLinkResolver(id -> "https://page/" + id)
             .withPageTreeResolver(
                 request ->

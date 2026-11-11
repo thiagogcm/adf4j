@@ -16,7 +16,8 @@ import dev.nthings.adf4j.ast.Text;
 import dev.nthings.adf4j.ast.UnknownBlock;
 import dev.nthings.adf4j.ast.UnknownInline;
 import dev.nthings.adf4j.internal.AdfText;
-import dev.nthings.adf4j.result.UnknownNodeException;
+import dev.nthings.adf4j.result.AdfException;
+import dev.nthings.adf4j.result.Diagnostic;
 import java.util.ArrayList;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
@@ -58,6 +59,7 @@ final class InlineRenderer {
     var builder = new StringBuilder();
     var atLineStart = hasLines && startAtLineStart;
     @Nullable AdfInline previous = null;
+    nodes.forEach(context.session().events()::observe);
     for (var node : coalesceAdjacentText(nodes, context.session())) {
       var rendered = renderInline(node, context, atLineStart);
       if (rendered.isEmpty()) {
@@ -92,6 +94,7 @@ final class InlineRenderer {
   }
 
   private String renderInline(AdfInline node, RenderContext context, boolean atLineStart) {
+    context = context.at(node);
     var writer = context.session().writer();
     return switch (node) {
       case Text text -> renderText(text, context, atLineStart);
@@ -156,8 +159,10 @@ final class InlineRenderer {
         yield "";
       }
       case FAIL ->
-          throw new UnknownNodeException(
-              nodeType, "Unsupported ADF " + kind + " node type: " + label);
+          throw new AdfException(
+              List.of(
+                  new Diagnostic(Diagnostic.Code.UNKNOWN_NODE_REJECTED, "Unknown node: " + label)
+                      .at(context.path())));
       case PRESERVE_RAW -> {
         log.warn("Preserving raw JSON for unsupported ADF {} node type: {}", kind, label);
         var rawJson = node.rawJson();

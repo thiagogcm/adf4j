@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "adf4j portable conversion configuration",
+  "type": "object",
+  "properties": {
+    "markdown": {
+      "type": "object",
+      "properties": {
+        "unknownNodePolicy": {
+          "enum": [
+            "placeholder",
+            "skip",
+            "preserve-raw",
+            "fail"
+          ]
+        },
+        "tableFallback": {
+          "enum": [
+            "gfm-empty-header",
+            "gfm-promote-first-row",
+            "html"
+          ]
+        },
+        "imageSizeAttributes": {
+          "type": "boolean"
+        },
+        "htmlVisualMarks": {
+          "type": "boolean"
+        },
+        "collapseHardBreaks": {
+          "type": "boolean"
+        },
+        "escapeParentheses": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "context": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "attachments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "fileId": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              },
+              "title": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "mediaType": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "downloadUrl": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "fileId"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}

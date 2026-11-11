@@ -86,7 +86,7 @@ class ExcerptResolverOptionsTests {
   @Test
   void a_resolver_renders_the_excerpt_markdown_in_place() {
     var options =
-        MarkdownOptions.defaults().withExcerptResolver(reference -> "**Shared** notice body");
+        ConversionOptions.defaults().withExcerptResolver(reference -> "**Shared** notice body");
 
     var result = AdfToMarkdown.with(options).convert(BLOCK_EXCERPT_INCLUDE);
 
@@ -99,7 +99,7 @@ class ExcerptResolverOptionsTests {
   void a_resolver_sees_the_page_name_and_parameters() {
     var seen = new ExcerptIncludeReference[1];
     var options =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withExcerptResolver(
                 reference -> {
                   seen[0] = reference;
@@ -116,7 +116,7 @@ class ExcerptResolverOptionsTests {
   @Test
   void an_inline_named_include_resolves_inline_and_carries_the_excerpt_name() {
     var options =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withExcerptResolver(
                 reference ->
                     "Problemas Conhecidos".equals(reference.excerptName()) ? "none known" : null);
@@ -131,9 +131,9 @@ class ExcerptResolverOptionsTests {
     var result = AdfToMarkdown.create().convert(BLOCK_EXCERPT_INCLUDE);
 
     assertThat(result.body()).contains("\\[Excerpt include: Shared Notices\\]");
-    assertThat(result.unresolved().excerptRefs())
+    assertThat(result.unresolved())
         .singleElement()
-        .satisfies(reference -> assertThat(reference.page()).isEqualTo("Shared Notices"));
+        .satisfies(reference -> assertThat(reference.id()).isEqualTo("Shared Notices"));
     assertThat(result.diagnostics()).noneMatch(d -> d.code() == Diagnostic.Code.UNSUPPORTED_MACRO);
   }
 
@@ -143,29 +143,29 @@ class ExcerptResolverOptionsTests {
 
     assertThat(result.body())
         .contains("\\[Excerpt include: Dados Cadastrais / Problemas Conhecidos\\]");
-    assertThat(result.unresolved().excerptRefs())
+    assertThat(result.unresolved())
         .singleElement()
         .satisfies(
             reference -> {
-              assertThat(reference.page()).isEqualTo("Dados Cadastrais");
-              assertThat(reference.excerptName()).isEqualTo("Problemas Conhecidos");
+              assertThat(reference.id()).isEqualTo("Dados Cadastrais");
+              assertThat(reference.fallback()).contains("Problemas Conhecidos");
             });
   }
 
   @Test
   void a_declining_resolver_keeps_the_placeholder_and_records_the_reference() {
-    var options = MarkdownOptions.defaults().withExcerptResolver(reference -> null);
+    var options = ConversionOptions.defaults().withExcerptResolver(reference -> null);
 
     var result = AdfToMarkdown.with(options).convert(BLOCK_EXCERPT_INCLUDE);
 
     assertThat(result.body()).contains("\\[Excerpt include: Shared Notices\\]");
-    assertThat(result.unresolved().excerptRefs()).hasSize(1);
+    assertThat(result.unresolved()).hasSize(1);
   }
 
   @Test
   void a_throwing_resolver_counts_as_declined() {
     var options =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withExcerptResolver(
                 reference -> {
                   throw new IllegalStateException("index unavailable");
@@ -174,12 +174,12 @@ class ExcerptResolverOptionsTests {
     var result = AdfToMarkdown.with(options).convert(BLOCK_EXCERPT_INCLUDE);
 
     assertThat(result.body()).contains("\\[Excerpt include: Shared Notices\\]");
-    assertThat(result.unresolved().excerptRefs()).hasSize(1);
+    assertThat(result.unresolved()).hasSize(1);
   }
 
   @Test
   void an_empty_string_answer_suppresses_the_macro_and_counts_as_resolved() {
-    var options = MarkdownOptions.defaults().withExcerptResolver(reference -> "");
+    var options = ConversionOptions.defaults().withExcerptResolver(reference -> "");
 
     var result = AdfToMarkdown.with(options).convert(BLOCK_EXCERPT_INCLUDE);
 
@@ -189,13 +189,13 @@ class ExcerptResolverOptionsTests {
 
   @Test
   void an_include_without_a_source_page_falls_back_to_the_generic_placeholder() {
-    var options = MarkdownOptions.defaults().withExcerptResolver(reference -> "resolved");
+    var options = ConversionOptions.defaults().withExcerptResolver(reference -> "resolved");
 
     var result = AdfToMarkdown.with(options).convert(MALFORMED_EXCERPT_INCLUDE);
 
     assertThat(result.body())
         .contains("\\[Extension: com.atlassian.confluence.macro.core/excerpt-include\\]");
-    assertThat(result.unresolved().excerptRefs()).isEmpty();
+    assertThat(result.unresolved()).isEmpty();
     assertThat(result.diagnostics())
         .anyMatch(
             d ->

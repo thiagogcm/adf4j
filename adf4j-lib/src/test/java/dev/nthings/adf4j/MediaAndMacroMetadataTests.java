@@ -9,7 +9,7 @@ import dev.nthings.adf4j.ast.MediaGroup;
 import dev.nthings.adf4j.ast.MediaSingle;
 import dev.nthings.adf4j.metadata.AttachmentReference;
 import dev.nthings.adf4j.metadata.ContentMetadata;
-import dev.nthings.adf4j.options.MarkdownOptions;
+import dev.nthings.adf4j.options.ConversionOptions;
 import java.util.List;
 import org.jsoup.Jsoup;
 import org.junit.jupiter.api.Test;
@@ -182,7 +182,7 @@ class MediaAndMacroMetadataTests {
   @Test
   void bodied_macros_that_render_a_placeholder_record_nothing() {
     var inventory =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withAttachments(List.of(new AttachmentReference("1", "a.pdf", "application/pdf")));
     var body = paragraph(text("b"));
     var pdf = "{\"name\":{\"value\":\"a.pdf\"}}";
@@ -209,7 +209,7 @@ class MediaAndMacroMetadataTests {
   @Test
   void the_same_macros_without_a_body_keep_recording() {
     var inventory =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withAttachments(List.of(new AttachmentReference("1", "a.pdf", "application/pdf")));
     var metadata =
         AdfToMarkdown.with(inventory)

@@ -26,6 +26,9 @@ for (const file of npmSourceFiles) {
   await copyFile(resolve(npmSourceDir, file), resolve(output, file));
 }
 await copyFile(resolve(root, 'adf4j-wasm/target/adf4j-wasm.js.wasm'), resolve(output, 'adf4j-wasm.js.wasm'));
+for (const schema of ['conversion-options.schema.json', 'operation-result.schema.json']) {
+  await copyFile(resolve(root, 'docs/schemas', schema), resolve(output, schema));
+}
 await copyFile(resolve(root, 'LICENSE'), resolve(output, 'LICENSE'));
 
 const packageJsonPath = resolve(output, 'package.json');

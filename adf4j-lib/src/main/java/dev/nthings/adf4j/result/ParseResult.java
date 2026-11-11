@@ -2,6 +2,7 @@ package dev.nthings.adf4j.result;
 
 import dev.nthings.adf4j.ast.AdfDocument;
 import java.util.List;
+import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 /// The outcome of parsing ADF JSON: the parsed `document`, or `null` when the input was blank or
@@ -9,14 +10,20 @@ import org.jspecify.annotations.Nullable;
 /// warnings: `UNSUPPORTED_VERSION` means the document parsed best effort, and `UNPRESERVED_JSON`
 /// means part of the JSON is malformed in a way the document cannot hold, so writing it back would
 /// lose that part.
-public record ParseResult(@Nullable AdfDocument document, List<Diagnostic> diagnostics) {
+public record ParseResult(@Nullable AdfDocument document, List<Diagnostic> diagnostics)
+    implements OperationResult {
 
   public ParseResult {
-    diagnostics = diagnostics == null ? List.of() : List.copyOf(diagnostics);
+    diagnostics = List.copyOf(diagnostics);
+  }
+
+  public AdfDocument requireDocument() {
+    requireSuccess();
+    return Objects.requireNonNull(document);
   }
 
   /// Whether parsing produced a document.
-  public boolean isValid() {
+  public boolean isSuccess() {
     return document != null;
   }
 }

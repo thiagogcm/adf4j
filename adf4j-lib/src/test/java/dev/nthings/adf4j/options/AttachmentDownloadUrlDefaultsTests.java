@@ -77,8 +77,8 @@ class AttachmentDownloadUrlDefaultsTests {
       }
       """;
 
-  private static MarkdownOptions withInventory(AttachmentReference... references) {
-    return MarkdownOptions.defaults().withAttachments(List.of(references));
+  private static ConversionOptions withInventory(AttachmentReference... references) {
+    return ConversionOptions.defaults().withAttachments(List.of(references));
   }
 
   @Test

@@ -11,7 +11,7 @@ import org.jspecify.annotations.Nullable;
 /// Return the excerpt as Markdown, rendered in place of the macro. The returned string is emitted
 /// verbatim and is not escaped/sanitized, so escape untrusted content yourself. An empty string is
 /// a valid answer that suppresses the macro's output. Return `null` to decline (or throw; a thrown
-/// `RuntimeException` is logged); only that falls back to the placeholder and
+/// `RuntimeException` emits a diagnostic); only that falls back to the placeholder and
 /// records the reference on `MarkdownResult.unresolved()`.
 @FunctionalInterface
 public interface ExcerptResolver {

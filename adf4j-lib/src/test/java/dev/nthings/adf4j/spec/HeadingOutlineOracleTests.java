@@ -5,7 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
 import dev.nthings.adf4j.AdfToMarkdown;
-import dev.nthings.adf4j.options.MarkdownOptions;
+import dev.nthings.adf4j.options.ConversionOptions;
+import dev.nthings.adf4j.options.ExtensionOutput;
 import dev.nthings.adf4j.options.UnknownNodePolicy;
 import java.util.List;
 import org.jsoup.Jsoup;
@@ -102,12 +103,13 @@ class HeadingOutlineOracleTests {
 
     var raw =
         AdfToMarkdown.with(
-                MarkdownOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.PRESERVE_RAW))
+                ConversionOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.PRESERVE_RAW))
             .convert(document);
     assertThat(raw.metadata().outline()).hasSize(1);
 
     var skip =
-        AdfToMarkdown.with(MarkdownOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.SKIP))
+        AdfToMarkdown.with(
+                ConversionOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.SKIP))
             .convert(document);
     assertThat(skip.body()).isEmpty();
     assertThat(skip.metadata().outline()).isEmpty();
@@ -135,9 +137,13 @@ class HeadingOutlineOracleTests {
   void a_custom_rendered_heading_keeps_its_explicit_anchor_and_a_toc_entry() {
     var converter =
         AdfToMarkdown.with(
-            MarkdownOptions.defaults()
+            ConversionOptions.defaults()
                 .withExtensionRenderers(
-                    List.of(extension -> "y".equals(extension.extensionKey()) ? "Custom" : null)));
+                    List.of(
+                        extension ->
+                            "y".equals(extension.extensionKey())
+                                ? ExtensionOutput.replace("Custom")
+                                : ExtensionOutput.defer())));
     var extension = atom("inlineExtension", "{\"extensionType\":\"x\",\"extensionKey\":\"y\"}");
 
     var result = converter.convert(doc(toc(), heading(2, anchor("here"), extension)));

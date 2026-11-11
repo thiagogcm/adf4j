@@ -1,5 +1,7 @@
 package dev.nthings.adf4j.cli;
 
+import dev.nthings.adf4j.AdfJson;
+import dev.nthings.adf4j.result.OperationResult;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,6 +48,10 @@ final class CliJson {
                     .build())
             .build();
     this.mapper = JsonMapper.builder(factory).build();
+  }
+
+  ObjectNode result(OperationResult result) {
+    return (ObjectNode) mapper.readTree(AdfJson.writeResult(result));
   }
 
   static ObjectNode object() {

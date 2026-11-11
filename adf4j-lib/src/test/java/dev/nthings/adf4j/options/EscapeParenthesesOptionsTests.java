@@ -1,10 +1,9 @@
 package dev.nthings.adf4j.options;
 
-import dev.nthings.adf4j.AdfToMarkdown;
-
-import org.junit.jupiter.api.Test;
-
 import static org.assertj.core.api.Assertions.assertThat;
+
+import dev.nthings.adf4j.AdfToMarkdown;
+import org.junit.jupiter.api.Test;
 
 class EscapeParenthesesOptionsTests {
 
@@ -85,7 +84,7 @@ class EscapeParenthesesOptionsTests {
 
   @Test
   void parentheses_are_escaped_when_opted_in() {
-    var options = MarkdownOptions.defaults().withEscapeParentheses(true);
+    var options = ConversionOptions.defaults().withEscapeParentheses(true);
 
     var markdown = AdfToMarkdown.with(options).toMarkdown(PARAGRAPH_WITH_PARENS).strip();
 
@@ -106,9 +105,10 @@ class EscapeParenthesesOptionsTests {
     // "1)" at column 0 would otherwise open an ordered list, so the delimiter is backslash-escaped
     // regardless of the parentheses setting.
     var defaultOutput = AdfToMarkdown.create().toMarkdown(LEADING_ORDERED_PAREN).strip();
-    var escapedOutput = AdfToMarkdown.with(MarkdownOptions.defaults().withEscapeParentheses(true))
-        .toMarkdown(LEADING_ORDERED_PAREN)
-        .strip();
+    var escapedOutput =
+        AdfToMarkdown.with(ConversionOptions.defaults().withEscapeParentheses(true))
+            .toMarkdown(LEADING_ORDERED_PAREN)
+            .strip();
 
     assertThat(defaultOutput).isEqualTo("1\\) not a list");
     assertThat(escapedOutput).isEqualTo("1\\) not a list");
@@ -117,9 +117,10 @@ class EscapeParenthesesOptionsTests {
   @Test
   void image_alt_text_parentheses_follow_the_same_toggle() {
     var defaultOutput = AdfToMarkdown.create().toMarkdown(IMAGE_WITH_PARENS_ALT).strip();
-    var escapedOutput = AdfToMarkdown.with(MarkdownOptions.defaults().withEscapeParentheses(true))
-        .toMarkdown(IMAGE_WITH_PARENS_ALT)
-        .strip();
+    var escapedOutput =
+        AdfToMarkdown.with(ConversionOptions.defaults().withEscapeParentheses(true))
+            .toMarkdown(IMAGE_WITH_PARENS_ALT)
+            .strip();
 
     assertThat(defaultOutput).isEqualTo("![chart (v2)](https://example.com/chart.png)");
     assertThat(escapedOutput).isEqualTo("![chart \\(v2\\)](https://example.com/chart.png)");

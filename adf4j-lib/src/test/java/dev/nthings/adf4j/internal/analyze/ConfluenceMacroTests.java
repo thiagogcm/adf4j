@@ -19,6 +19,7 @@ import dev.nthings.adf4j.internal.analyze.ConfluenceMacro.Toc;
 import dev.nthings.adf4j.internal.analyze.ConfluenceMacro.ViewPdf;
 import dev.nthings.adf4j.metadata.ExcerptIncludeReference;
 import dev.nthings.adf4j.metadata.PageTreeMacro;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -132,7 +133,7 @@ class ConfluenceMacroTests {
   }
 
   private static Attributes attributes(String type, String key, Map<String, ?> parameters) {
-    var attrs = new java.util.HashMap<String, Object>();
+    var attrs = new HashMap<String, Object>();
     if (type != null) {
       attrs.put("extensionType", type);
     }

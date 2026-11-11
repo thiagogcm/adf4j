@@ -97,7 +97,7 @@ class VisualMarkOptionsTests {
 
   @Test
   void opt_in_preserves_text_color_as_a_span_style() {
-    var options = MarkdownOptions.defaults().withHtmlVisualMarks(true);
+    var options = ConversionOptions.defaults().withHtmlVisualMarks(true);
     var markdown = AdfToMarkdown.with(options).toMarkdown(TEXT_COLOR).strip();
 
     assertThat(markdown).isEqualTo("<span style=\"color:#ff0000\">danger</span>");
@@ -105,7 +105,7 @@ class VisualMarkOptionsTests {
 
   @Test
   void opt_in_combines_multiple_visual_marks_into_one_span() {
-    var options = MarkdownOptions.defaults().withHtmlVisualMarks(true);
+    var options = ConversionOptions.defaults().withHtmlVisualMarks(true);
     var markdown = AdfToMarkdown.with(options).toMarkdown(COLOR_AND_BACKGROUND).strip();
 
     assertThat(markdown)
@@ -114,7 +114,7 @@ class VisualMarkOptionsTests {
 
   @Test
   void opt_in_preserves_font_size_keyword() {
-    var options = MarkdownOptions.defaults().withHtmlVisualMarks(true);
+    var options = ConversionOptions.defaults().withHtmlVisualMarks(true);
     var markdown = AdfToMarkdown.with(options).toMarkdown(FONT_SIZE).strip();
 
     assertThat(markdown).isEqualTo("<span style=\"font-size:small\">tiny</span>");
@@ -122,7 +122,7 @@ class VisualMarkOptionsTests {
 
   @Test
   void opt_in_wraps_a_centered_block_in_a_div() {
-    var options = MarkdownOptions.defaults().withHtmlVisualMarks(true);
+    var options = ConversionOptions.defaults().withHtmlVisualMarks(true);
     var markdown = AdfToMarkdown.with(options).toMarkdown(CENTERED_PARAGRAPH).strip();
 
     assertThat(markdown).isEqualTo("<div align=\"center\">\n\nmiddle\n\n</div>");
@@ -134,7 +134,7 @@ class VisualMarkOptionsTests {
   }
 
   private static String visual(String json) {
-    return AdfToMarkdown.with(MarkdownOptions.defaults().withHtmlVisualMarks(true))
+    return AdfToMarkdown.with(ConversionOptions.defaults().withHtmlVisualMarks(true))
         .toMarkdown(json);
   }
 

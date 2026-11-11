@@ -14,12 +14,12 @@ JSON --parse--> AdfDocument --analyze--> ContentMetadata + outline --render--> M
 
 Analysis runs before rendering because rendering may need information from the whole document. A table-of-contents macro near the top needs headings later in the document, and heading anchors must be unique before output begins.
 
-| Entry point           | Runs                   | Returns           | Use when                                                                 |
-| --------------------- | ---------------------- | ----------------- | ------------------------------------------------------------------------ |
-| `AdfJson.parse(json)` | parse                  | `ParseResult`     | You need the typed AST and parse diagnostics.                            |
-| `analyze(parsed)`     | analyze                | `ContentMetadata` | You need references, attachments, excerpts, or outline without Markdown. |
-| `convert(...)`        | parse, analyze, render | `MarkdownResult`  | You need Markdown plus metadata and diagnostics.                         |
-| `toMarkdown(json)`    | parse, analyze, render | `String`          | You only need the Markdown body.                                         |
+| Entry point | Runs | Returns | Use when |
+| --- | --- | --- | --- |
+| `AdfJson.parse(json)` | parse | `ParseResult` | You need the typed AST and parse diagnostics. |
+| `analyze(parsed)` | analyze | `AnalysisResult` | You need references, attachments, excerpts, or outline without Markdown. |
+| `convert(...)` | parse, analyze, render | `MarkdownResult` | You need Markdown plus metadata and diagnostics. |
+| `toMarkdown(json)` | parse, analyze, render | `String` | You only need the Markdown body. |
 
 ## Choosing an entry point
 
@@ -36,11 +36,11 @@ String markdown = converter.toMarkdown(adfJson);
 
 Method details:
 
-- `AdfJson.parse(String)` returns a `ParseResult` with an `AdfDocument` and parse diagnostics. `isValid()` tells whether it produced a document. It never throws on bad input.
+- `AdfJson.parse(String)` returns a `ParseResult` with an `AdfDocument` and parse diagnostics. `isSuccess()` tells whether it produced a document. It never throws on bad input.
 - `AdfJson.write(AdfDocument)` returns the document as ADF JSON.
-- `analyze(ParseResult|AdfDocument)` returns `ContentMetadata`, or `ContentMetadata.empty()` for an invalid `ParseResult`.
+- `analyze(String|ParseResult|AdfDocument)` returns `AnalysisResult` with metadata and diagnostics. Check `isSuccess()` before using the metadata.
 - `convert(String|ParseResult|AdfDocument|ExcerptDefinition)` returns `MarkdownResult`.
-- `toMarkdown(String)` is convenience for `convert(json).body()`.
+- `toMarkdown(String)` is convenience for `convert(json).requireBody()` and throws on failure.
 
 When rendering the same document with different options, parse once:
 
@@ -54,9 +54,9 @@ MarkdownResult asOfJanuary = AdfToMarkdown.with(januaryOptions).convert(parsed);
 MarkdownResult asOfToday = AdfToMarkdown.with(todayOptions).convert(parsed);
 ```
 
-Prefer `convert(ParseResult)` over `convert(AdfDocument)` when the input came from `AdfJson.parse(...)`; the `ParseResult` carries parse diagnostics into the final result. Blank input is the one invalid case with no diagnostic: `isValid()` is false, the body is empty, and `wasLossy()` is false.
+Prefer `convert(ParseResult)` over `convert(AdfDocument)` when the input came from `AdfJson.parse(...)`; the `ParseResult` carries parse diagnostics into the final result. Blank input produces an `EMPTY_INPUT` error. `isSuccess()` is false and the body is empty. `toMarkdown()` throws on failure; `convert()` returns diagnostics.
 
-## Results, diagnostics, and lossiness
+## Results, diagnostics, and conversion effects
 
 `convert(...)` returns:
 
@@ -65,46 +65,43 @@ MarkdownResult result = converter.convert(adfJson);
 
 result.body();         // Markdown body
 result.metadata();     // references, attachments, excerpts, outline
-result.diagnostics();  // parse, analyze, and render diagnostics
-result.unresolved();   // resolver lookups this render declined
+result.diagnostics();  // parse and render diagnostics
+result.unresolved();   // missing output dependencies
 ```
 
 Diagnostics have `INFO`, `WARNING`, or `ERROR` severity:
 
 - `INFO`: non-lossy note, such as an unknown node preserved as raw JSON.
-- `WARNING`: content was altered or dropped.
-- `ERROR`: conversion failed structurally or produced an empty body.
+- `WARNING`: conversion encountered an issue, such as unknown content or a failed callback.
+- `ERROR`: the operation failed. Successful output may also be empty.
 
-Use `wasLossy()` to gate quality:
+Use `hasWarnings()` to gate quality:
 
 ```java
-if (result.wasLossy()) {
+if (result.hasWarnings()) {
     result.diagnostics().stream()
-        .filter(d -> d.severity() != Diagnostic.Severity.INFO)
+        .filter(d -> d.severity() == Diagnostic.Severity.WARNING)
         .forEach(d -> log.warn("Conversion issue [{}]: {}", d.code(), d.message()));
 }
 ```
 
-`wasLossy()` is true only for `WARNING` or `ERROR`. It ignores expected option-driven output, such as `media:` placeholders when no resolver is configured, dropped visual marks when `htmlVisualMarks` is off, and table HTML fallback.
+`hasWarnings()` reports warnings only. Inspect `isSuccess()` for failure, `effects()` for conversion changes, and `unresolved()` for missing output dependencies.
 
-`result.unresolved()` reports declined resolver lookups for this render:
-
-- `pageIds()`: page node IDs a configured `PageLinkResolver` declined. Without a resolver, no lookup happens and nothing is recorded.
-- `pageTreeRefs()`: `pagetree` or `children` macros left as tokens.
-- `excerptRefs()`: `excerpt-include` macros left as placeholders.
+`result.unresolved()` is a flat list of `UnresolvedResource` entries. Each identifies a resource kind and ID, source JSON Pointer, reason, and emitted fallback. It covers missing files, attachment inventories, page-tree entries, and excerpts. Keeping an existing usable page URL after a resolver declines does not create an unresolved dependency.
 
 ## The resolver model
 
-adf4j does no I/O. ADF points to media, attachments, pages, and server-side macro output by ID or title. Your application supplies those environment-specific answers through `MarkdownOptions`.
+adf4j does no I/O. ADF points to media, attachments, pages, and server-side macro output by ID or title. Your application supplies those environment-specific answers through `ConversionOptions`.
 
-| Hook                 | Used for                                   | Returns               |
-| -------------------- | ------------------------------------------ | --------------------- |
-| `MediaResolver`      | File and attachment media nodes            | URL `String`          |
-| `AttachmentResolver` | Resolved Confluence attachment macros      | URL `String`          |
-| `PageLinkResolver`   | Page links, smart cards, page-tree entries | URL `String`          |
-| `PageTreeResolver`   | `pagetree` and `children` macros           | `List<PageTreeEntry>` |
-| `ExcerptResolver`    | `excerpt-include` macros                   | Markdown `String`     |
-| `ExtensionRenderer`  | Custom or overridden extensions            | Markdown `String`     |
+| Hook | Used for | Returns |
+| --- | --- | --- |
+| `FileResolver` | Media and attachment file IDs | URL `String` |
+| `MediaResolver` | File and attachment media nodes | URL `String` |
+| `AttachmentResolver` | Resolved Confluence attachment macros | URL `String` |
+| `PageLinkResolver` | Page links, smart cards, page-tree entries | URL `String` |
+| `PageTreeResolver` | `pagetree` and `children` macros | `List<PageTreeEntry>` |
+| `ExcerptResolver` | `excerpt-include` macros | Markdown `String` |
+| `ExtensionRenderer` | Custom or overridden extensions | `ExtensionOutput` |
 
 Decline a lookup by returning `null`. For URL-returning hooks, blank strings also decline. A non-null answer is authoritative, including empty answers:
 
@@ -112,19 +109,21 @@ Decline a lookup by returning `null`. For URL-returning hooks, blank strings als
 - An empty `String` from `ExcerptResolver` suppresses that include.
 - An empty attachment inventory means the page has no attachments.
 
-Resolver exceptions are caught, logged, and treated as declined lookups.
+Resolver exceptions emit `CALLBACK_FAILED` diagnostics and use the normal fallback.
+
+Extension renderers return `ExtensionOutput.defer()` to let another handler run, `replace(markdown)` to replace the whole extension, or `header(markdown)` to keep its body below a custom header.
 
 `ExtensionRenderer` and `ExcerptResolver` output is inserted verbatim. Escape untrusted content before returning it. Other resolver URLs are scheme-sanitized by adf4j.
 
 ## Configuring a conversion
 
-`MarkdownOptions` is immutable. Start from `defaults()` and chain `withX(...)`, each of which returns a new instance:
+`ConversionOptions` is immutable. Start from `defaults()` and chain `withX(...)`, each of which returns a new instance:
 
 ```java
-import dev.nthings.adf4j.options.MarkdownOptions;
+import dev.nthings.adf4j.options.ConversionOptions;
 import dev.nthings.adf4j.options.TableFallback;
 
-MarkdownOptions options = MarkdownOptions.defaults()
+ConversionOptions options = ConversionOptions.defaults()
     .withHtmlVisualMarks(true)
     .withTableFallback(TableFallback.GFM_EMPTY_HEADER)
     .withCollapseHardBreaks(true);
@@ -132,14 +131,14 @@ MarkdownOptions options = MarkdownOptions.defaults()
 AdfToMarkdown converter = AdfToMarkdown.with(options);
 ```
 
-For the full option table, see [Options](./reference.md#options-markdownoptions).
+For the full option table, see [Options](./reference.md#options-conversionoptions).
 
 ## Resolving media and attachments
 
 Media nodes carry IDs, not URLs. Without a resolver, they render as placeholders such as `media:contentId-42/abc-123`.
 
 ```java
-MarkdownOptions options = MarkdownOptions.defaults()
+ConversionOptions options = ConversionOptions.defaults()
     .withMediaResolver(media -> {
         if (media.id() == null) {
             return null;
@@ -161,7 +160,7 @@ List<AttachmentReference> attachments = List.of(
         "file-123", "Q3 Report.pdf", "application/pdf",
         "https://example.atlassian.net/wiki/rest/api/content/42/child/attachment/att9/download"));
 
-MarkdownOptions options = MarkdownOptions.defaults().withAttachments(attachments);
+ConversionOptions options = ConversionOptions.defaults().withAttachments(attachments);
 ```
 
 An entry is identified by its `fileId` (the media file UUID, `fileId` in the REST API): a blank one is ignored, and the first entry with a given `fileId` wins. Media file nodes match the inventory by `fileId`. Macros match by the `fileId`, `id`, or `attachmentId` parameter they carry, else by title, and a macro that carries a file id still resolves when the inventory doesn't list it. Both lookups trim and ignore case. The inventory's `mediaType` and `title` also decide whether a file node renders as an image.
@@ -169,7 +168,7 @@ An entry is identified by its `fileId` (the media file UUID, `fileId` in the RES
 Each path has its own rewrite hook when you need other destinations, for example local paths. `AttachmentResolver` overrides the `downloadUrl` for attachment macros, and `MediaResolver` overrides it for media nodes:
 
 ```java
-MarkdownOptions options = MarkdownOptions.defaults()
+ConversionOptions options = ConversionOptions.defaults()
     .withAttachments(attachments)
     .withAttachmentResolver(ref -> "https://cdn.example.com/files/" + ref.fileId());
 ```
@@ -187,7 +186,7 @@ Map<String, String> pageUrls = Map.of(
     "98765", "/docs/onboarding.html",
     "98766", "/docs/security.html");
 
-MarkdownOptions options = MarkdownOptions.defaults()
+ConversionOptions options = ConversionOptions.defaults()
     .withPageLinkResolver(pageNodeId -> pageUrls.get(pageNodeId));
 ```
 
@@ -201,7 +200,7 @@ The resolver is used for inline page links, page smart cards, and page-tree entr
 import dev.nthings.adf4j.metadata.PageTreeMacro;
 import dev.nthings.adf4j.options.PageTreeEntry;
 
-MarkdownOptions options = MarkdownOptions.defaults()
+ConversionOptions options = ConversionOptions.defaults()
     .withPageLinkResolver(pageUrls::get)
     .withPageTreeResolver(reference -> {
         boolean wholeTree = reference.macro() == PageTreeMacro.PAGETREE || reference.all();
@@ -227,12 +226,12 @@ import java.util.HashMap;
 import java.util.Map;
 
 Map<String, String> excerptIndex = new HashMap<>();
-for (ExcerptDefinition excerpt : converter.analyze(AdfJson.parse(sourceAdf)).excerpts()) {
+for (ExcerptDefinition excerpt : converter.analyze(AdfJson.parse(sourceAdf)).metadata().excerpts()) {
     String md = converter.convert(excerpt).body();
     excerptIndex.put(sourceTitle + " / " + excerpt.name(), md);
 }
 
-MarkdownOptions options = MarkdownOptions.defaults()
+ConversionOptions options = ConversionOptions.defaults()
     .withExcerptResolver(ref ->
         excerptIndex.get(ref.page() + " / " + ref.excerptName()));
 ```
@@ -244,34 +243,35 @@ MarkdownOptions options = MarkdownOptions.defaults()
 The `attachments` macro lists the page's attachment inventory. Supply that inventory with `withAttachments`:
 
 ```java
-MarkdownOptions options = MarkdownOptions.defaults()
+ConversionOptions options = ConversionOptions.defaults()
     .withAttachments(pageAttachments)
     .withAttachmentResolver(ref -> "files/" + ref.title());
 ```
 
-An empty list is authoritative and renders nothing. A `null` inventory, the default, means it is unknown: the macro keeps the extension placeholder and emits a lossy diagnostic. Macro display parameters such as `patterns`, `labels`, and sort order are not interpreted.
+An empty list is authoritative and renders nothing. A `null` inventory, the default, means it is unknown: the macro keeps the extension placeholder and emits a warning and an unresolved inventory entry. Macro display parameters such as `patterns`, `labels`, and sort order are not interpreted.
 
 ## Rendering custom macros and extensions
 
-Register `ExtensionRenderer`s to render unsupported macros or override built-ins. Renderers run in order before the built-in Confluence macro handlers. The first non-null result wins.
+Register `ExtensionRenderer`s to render unsupported macros or override built-ins. Renderers run in order before the built-in Confluence macro handlers. The first result other than `ExtensionOutput.defer()` wins.
 
 ```java
 import dev.nthings.adf4j.options.ExtensionRenderer;
+import dev.nthings.adf4j.options.ExtensionOutput;
 import java.util.List;
 
 ExtensionRenderer infoPanel = extension -> {
     if (!"com.atlassian.confluence.macro.core".equals(extension.extensionType())
             || !"info".equals(extension.extensionKey())) {
-        return null;
+        return ExtensionOutput.defer();
     }
-    return "> :information_source: " + extension.macroParams().value("body");
+    return ExtensionOutput.replace("> :information_source: " + extension.macroParams().value("body"));
 };
 
-MarkdownOptions options = MarkdownOptions.defaults()
+ConversionOptions options = ConversionOptions.defaults()
     .withExtensionRenderers(List.of(infoPanel));
 ```
 
-The renderer receives the node as an `AdfExtension`, which exposes `extensionType()`, `extensionKey()`, `text()`, the flattened `macroParams()` with `value(name)`, and the raw `parameters()` envelope, the only place some extensions keep their data. An empty string suppresses the extension. For a bodied extension the result replaces the header line only, and the body blocks still render. Returned Markdown is not sanitized.
+The renderer receives the node as an `AdfExtension`, which exposes `extensionType()`, `extensionKey()`, `text()`, the flattened `macroParams()` with `value(name)`, and the raw `parameters()` envelope, the only place some extensions keep their data. `ExtensionOutput.replace("")` suppresses the whole extension. `replace(markdown)` owns the complete node; `header(markdown)` retains body rendering. Returned Markdown is not sanitized.
 
 ## Controlling unknown nodes
 
@@ -280,16 +280,16 @@ Unknown ADF node types are preserved in the AST as `Unknown*` records. `UnknownN
 ```java
 import dev.nthings.adf4j.options.UnknownNodePolicy;
 
-MarkdownOptions options = MarkdownOptions.defaults()
+ConversionOptions options = ConversionOptions.defaults()
     .withUnknownNodePolicy(UnknownNodePolicy.PRESERVE_RAW);
 ```
 
-| Policy         | Effect                                                                                                          |
-| -------------- | --------------------------------------------------------------------------------------------------------------- |
-| `PLACEHOLDER`  | Emit `[Unsupported: <type>]`, or `[Unsupported inline: <type>]` for an inline node, and record a `WARNING`.     |
-| `SKIP`         | Drop the node and record a `WARNING`.                                                                           |
-| `PRESERVE_RAW` | Emit the node's original JSON, as a fenced block or an inline code span, and record an `INFO` diagnostic.       |
-| `FAIL`         | Throw `UnknownNodeException`, whose `nodeType()` names the node, when an unknown node is rendered.              |
+| Policy | Effect |
+| --- | --- |
+| `PLACEHOLDER` | Emit `[Unsupported: <type>]`, or `[Unsupported inline: <type>]` for an inline node, and record a `WARNING`. |
+| `SKIP` | Drop the node and record a `WARNING`. |
+| `PRESERVE_RAW` | Emit the node's original JSON, as a fenced block or an inline code span, and record an `INFO` diagnostic. |
+| `FAIL` | Return a failed conversion with `UNKNOWN_NODE_REJECTED` and its source JSON Pointer. |
 
 Unknown marks on rendered text, media, paragraphs, and headings are dropped with a `WARNING`. `FAIL` is the only hard-failure rendering policy.
 
@@ -305,12 +305,14 @@ import java.util.Map;
 import java.util.Set;
 
 ParseResult parsed = AdfJson.parse(adfJson);
-ContentMetadata metadata = AdfToMarkdown.create().analyze(parsed);
+var analysis = AdfToMarkdown.create().analyze(parsed);
+analysis.requireSuccess();
+ContentMetadata metadata = analysis.metadata();
 
 Set<String> fileIds = metadata.referencedFileIds();
 Map<String, String> urls = myStorage.fetchAll(fileIds);
 
-MarkdownOptions options = MarkdownOptions.defaults()
+ConversionOptions options = ConversionOptions.defaults()
     .withMediaResolver(media -> urls.get(media.id()));
 
 String markdown = AdfToMarkdown.with(options).convert(parsed).body();
@@ -330,7 +332,7 @@ import dev.nthings.adf4j.ast.*;
 import dev.nthings.adf4j.result.ParseResult;
 
 ParseResult parsed = AdfJson.parse(adfJson);
-if (parsed.isValid()) {
+if (parsed.isSuccess()) {
     AdfDocument doc = parsed.document();
     for (AdfBlock block : doc.content()) {
         String summary = switch (block) {
@@ -393,13 +395,14 @@ text("x", alignment(TextAlign.CENTER));         // alignment isn't a text mark
 paragraph("x").withMarks(strong());             // strong isn't a paragraph mark
 ```
 
-Types can't express everything, and these rules aren't checked:
+Factories reject invalid heading/indentation levels, border sizes, and incompatible code marks. For contextual rules, validate the complete document:
 
-- Numeric ranges, such as heading levels 1 to 6.
-- `code` combining only with `link` and `annotation`.
-- Block marks in context. Alignment and indentation on a paragraph or heading are accepted only in some containers, not in panels, list items, blockquotes, expands, or extensions, and the two can't combine. `small()` is refused only inside a blockquote.
+```java
+import dev.nthings.adf4j.AdfValidation;
+AdfValidation.requireValid(document);
+```
 
-adf4j doesn't include a schema validator. To check generated documents, run `AdfJson.write` output through a JSON Schema validator with the [ADF schema](spec/adf-schema.json). Atlassian notes that a schema-valid node may still not be accepted by a given product: Jira, for example, may refuse layouts.
+Parsing and raw record construction preserve imported data even when it is outside the schema. Schema validity does not guarantee acceptance by every Atlassian product.
 
 Text carries its marks: `text("bold", strong())`, `text("docs", link(url))`, `text("x", strong(), em())`. A paragraph or heading takes block marks with `withMarks`, as in `paragraph("Centered").withMarks(alignment(TextAlign.CENTER))`.
 
@@ -429,7 +432,7 @@ Empty text is no node at all, wherever it appears, because the schema forbids it
 To add to an existing document, use `append`, which works on a parsed document and keeps its unknown nodes and existing ids:
 
 ```java
-AdfDocument updated = AdfJson.parse(adfJson).document().append(paragraph("Reviewed"));
+AdfDocument updated = AdfJson.parse(adfJson).requireDocument().append(paragraph("Reviewed"));
 ```
 
 The schema requires a `localId` on tasks, decisions, and sync blocks. `doc` and `append` fill these in from each node, so rebuilding the same content writes the same JSON:
@@ -454,7 +457,7 @@ var toc =
 
 ```java
 for (Page page : pages) {
-    MarkdownOptions perPage = MarkdownOptions.defaults()
+    ConversionOptions perPage = ConversionOptions.defaults()
         .withAttachments(page.attachments())
         .withMediaResolver(media -> page.mediaUrl(media.id()));
 

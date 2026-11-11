@@ -8,32 +8,29 @@ import dev.nthings.adf4j.internal.ConfluenceSupport;
 import dev.nthings.adf4j.metadata.AttachmentReference;
 import dev.nthings.adf4j.metadata.ExcerptIncludeReference;
 import dev.nthings.adf4j.metadata.PageTreeReference;
-import dev.nthings.adf4j.options.MarkdownOptions;
+import dev.nthings.adf4j.options.ConversionOptions;
+import dev.nthings.adf4j.options.ExtensionOutput;
 import dev.nthings.adf4j.options.PageTreeEntry;
 import java.util.List;
+import java.util.function.Supplier;
 import org.jspecify.annotations.Nullable;
 
-/// The caller's hooks for one render: each method handles a missing hook, guards the call, applies
-/// that hook's decline rule and records what stays unresolved. `null` always means the hook
-/// declined or is absent, so the renderer falls back to its default.
-///
-/// URL hooks decline with a null or blank answer. A page-tree or excerpt answer is authoritative
-/// even when empty, so only `null` declines, and those two lookups count as unresolved with no
-/// resolver at all. A page lookup needs a resolver to count as unresolved.
+/// Invokes caller hooks and reports callback failures. Renderers record missing dependencies
+/// after trying every applicable fallback.
 final class Resolvers {
 
-  private final MarkdownOptions options;
-  private final UnresolvedTracker unresolved;
+  private final RenderEvents events;
+  private final ConversionOptions options;
 
-  Resolvers(MarkdownOptions options, UnresolvedTracker unresolved) {
+  Resolvers(ConversionOptions options, RenderEvents events) {
     this.options = options;
-    this.unresolved = unresolved;
+    this.events = events;
   }
 
   /// The caller-resolved destination for an internal page href, or the original href when there is
   /// no `PageLinkResolver`, the href is not a page reference, or the resolver declines.
-  String pageHref(String href, Attributes attrs) {
-    var resolved = pageId(linkedPageId(href, attrs));
+  String pageHref(String href, Attributes attrs, String path) {
+    var resolved = pageId(linkedPageId(href, attrs), path);
     return resolved == null ? href : resolved;
   }
 
@@ -46,63 +43,68 @@ final class Resolvers {
   }
 
   /// The resolver's destination for a page node id, or `null` when there is no id or resolver or it
-  /// declines; a decline is recorded as an unresolved page ref.
-  @Nullable String pageId(@Nullable String pageNodeId) {
+  /// declines.
+  @Nullable String pageId(@Nullable String pageNodeId, String path) {
     var resolver = options.pageLinkResolver();
     if (resolver == null || pageNodeId == null || pageNodeId.isBlank()) {
       return null;
     }
-    var resolved =
-        CallbackGuards.guardNonBlank("PageLinkResolver", () -> resolver.resolve(pageNodeId));
-    if (resolved == null) {
-      unresolved.recordPageId(pageNodeId);
-    }
+    var resolved = nonBlank("PageLinkResolver", path, () -> resolver.resolve(pageNodeId));
     return resolved;
   }
 
-  @Nullable String media(AdfMedia media) {
+  private @Nullable String nonBlank(String hook, String path, Supplier<@Nullable String> callback) {
+    var value = events.call(hook, path, callback);
+    return value == null || value.isBlank() ? null : value;
+  }
+
+  @Nullable String media(AdfMedia media, String path) {
     var resolver = options.mediaResolver();
-    return resolver == null
-        ? null
-        : CallbackGuards.guardNonBlank("MediaResolver", () -> resolver.resolve(media));
+    var resolved =
+        resolver == null ? null : nonBlank("MediaResolver", path, () -> resolver.resolve(media));
+    return resolved != null ? resolved : file(media.id(), path);
   }
 
-  @Nullable String attachment(AttachmentReference reference) {
+  @Nullable String attachment(AttachmentReference reference, String path) {
     var resolver = options.attachmentResolver();
-    return resolver == null
-        ? null
-        : CallbackGuards.guardNonBlank("AttachmentResolver", () -> resolver.resolve(reference));
+    var resolved =
+        resolver == null
+            ? null
+            : nonBlank("AttachmentResolver", path, () -> resolver.resolve(reference));
+    return resolved != null ? resolved : file(reference.fileId(), path);
   }
 
-  @Nullable List<PageTreeEntry> pageTree(PageTreeReference reference) {
+  private @Nullable String file(@Nullable String id, String path) {
+    var resolver = options.fileResolver();
+    return resolver == null || id == null
+        ? null
+        : nonBlank("FileResolver", path, () -> resolver.resolve(id));
+  }
+
+  @Nullable List<PageTreeEntry> pageTree(PageTreeReference reference, String path) {
     var resolver = options.pageTreeResolver();
     var entries =
         resolver == null
             ? null
-            : CallbackGuards.guard("PageTreeResolver", () -> resolver.resolve(reference));
-    if (entries == null) {
-      unresolved.recordPageTree(reference);
-    }
+            : events.call("PageTreeResolver", path, () -> resolver.resolve(reference));
     return entries;
   }
 
-  @Nullable String excerpt(ExcerptIncludeReference reference) {
+  @Nullable String excerpt(ExcerptIncludeReference reference, String path) {
     var resolver = options.excerptResolver();
     var resolved =
         resolver == null
             ? null
-            : CallbackGuards.guard("ExcerptResolver", () -> resolver.resolve(reference));
-    if (resolved == null) {
-      unresolved.recordExcerpt(reference);
-    }
+            : events.call("ExcerptResolver", path, () -> resolver.resolve(reference));
     return resolved;
   }
 
-  /// The first custom renderer's answer in order; `null` defers to the next, then the default.
-  @Nullable String extension(AdfExtension node) {
+  /// The first non-deferred answer in order, then the built-in handler.
+  @Nullable ExtensionOutput extension(AdfExtension node) {
     for (var renderer : options.extensionRenderers()) {
-      var rendered = CallbackGuards.guard("ExtensionRenderer", () -> renderer.render(node));
-      if (rendered != null) {
+      var rendered =
+          events.call("ExtensionRenderer", events.source.path(node), () -> renderer.render(node));
+      if (rendered != null && rendered.mode() != ExtensionOutput.Mode.DEFER) {
         return rendered;
       }
     }

@@ -11,7 +11,7 @@ import dev.nthings.adf4j.ast.Heading;
 import dev.nthings.adf4j.ast.Paragraph;
 import dev.nthings.adf4j.ast.Text;
 import dev.nthings.adf4j.internal.AttachmentInventory;
-import dev.nthings.adf4j.options.MarkdownOptions;
+import dev.nthings.adf4j.options.ConversionOptions;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -346,7 +346,7 @@ class AdfHeadingCollectorTests {
 
   private static HeadingOutline outlineOf(AdfDocument document) {
     return AdfDocumentAnalyzer.createDefault()
-        .analyze(document, MarkdownOptions.defaults(), AttachmentInventory.from(null))
+        .analyze(document, ConversionOptions.defaults(), AttachmentInventory.from(null))
         .outline();
   }
 

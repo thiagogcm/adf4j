@@ -123,6 +123,7 @@
                             <fallback>false</fallback>
                             <verbose>true</verbose>
                             <buildArgs>
+                                <buildArg>-H:IncludeResources=dev/nthings/adf4j/adf-schema\\.json</buildArg>
                                 <buildArg>--no-fallback</buildArg>
                                 <buildArg>
                                     -H:IncludeResources=dev/nthings/adf4j/cli/adf4j-cli\\.properties</buildArg>

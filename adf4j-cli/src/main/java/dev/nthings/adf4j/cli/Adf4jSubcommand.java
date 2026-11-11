@@ -59,13 +59,12 @@ abstract class Adf4jSubcommand implements Command<CommandInvocation> {
   /// Reads and parses the input. Bad content is not an exception: the result is invalid and the
   /// command still writes its stdout, then exits {@link ExitCodes#CONTENT_FAILURE}.
   ParseResult parseInput() {
+    return AdfJson.parse(readInput());
+  }
+
+  String readInput() {
     var path = file == null || file.equals("-") ? null : Path.of(file);
-    var parsed = AdfJson.parse(CliIo.read(path, "input file"));
-    // Blank input is invalid without a diagnostic to show for it.
-    if (!parsed.isValid() && parsed.diagnostics().isEmpty() && !common.quiet) {
-      System.err.println("error: input is blank");
-    }
-    return parsed;
+    return CliIo.read(path, "input file");
   }
 
   /// Lists diagnostics on stderr, unless `--quiet`.

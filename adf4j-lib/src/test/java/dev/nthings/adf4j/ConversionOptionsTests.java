@@ -5,9 +5,10 @@ import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 
 import dev.nthings.adf4j.metadata.AttachmentReference;
 import dev.nthings.adf4j.options.AttachmentResolver;
+import dev.nthings.adf4j.options.ConversionOptions;
 import dev.nthings.adf4j.options.ExcerptResolver;
+import dev.nthings.adf4j.options.ExtensionOutput;
 import dev.nthings.adf4j.options.ExtensionRenderer;
-import dev.nthings.adf4j.options.MarkdownOptions;
 import dev.nthings.adf4j.options.MediaResolver;
 import dev.nthings.adf4j.options.PageLinkResolver;
 import dev.nthings.adf4j.options.PageTreeResolver;
@@ -18,15 +19,15 @@ import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-class MarkdownOptionsTests {
+class ConversionOptionsTests {
 
   @Test
   void defaults_use_placeholder_policy_and_an_unknown_attachment_inventory() {
-    var options = MarkdownOptions.defaults();
+    var options = ConversionOptions.defaults();
 
     assertThat(options.unknownNodePolicy()).isEqualTo(UnknownNodePolicy.PLACEHOLDER);
     assertThat(options.attachments()).isNull();
-    assertThat(options.tableFallback()).isEqualTo(TableFallback.GFM_PROMOTE_FIRST_ROW);
+    assertThat(options.tableFallback()).isEqualTo(TableFallback.GFM_EMPTY_HEADER);
     assertThat(options.mediaResolver()).isNull();
     assertThat(options.extensionRenderers()).isEmpty();
     assertThat(options.attachmentResolver()).isNull();
@@ -40,7 +41,7 @@ class MarkdownOptionsTests {
 
   @Test
   void required_values_reject_null() {
-    var options = MarkdownOptions.defaults();
+    var options = ConversionOptions.defaults();
 
     assertThatNullPointerException().isThrownBy(() -> options.withUnknownNodePolicy(null));
     assertThatNullPointerException().isThrownBy(() -> options.withTableFallback(null));
@@ -54,7 +55,7 @@ class MarkdownOptionsTests {
             List.of(
                 new AttachmentReference("b", "b.pdf", null),
                 new AttachmentReference("a", null, null)));
-    var options = MarkdownOptions.defaults().withAttachments(attachments);
+    var options = ConversionOptions.defaults().withAttachments(attachments);
     var expected = List.copyOf(attachments);
 
     attachments.clear();
@@ -66,8 +67,8 @@ class MarkdownOptionsTests {
 
   @Test
   void table_fallback_and_media_resolver_default_and_carry_through_other_withers() {
-    var options = MarkdownOptions.defaults();
-    assertThat(options.tableFallback()).isEqualTo(TableFallback.GFM_PROMOTE_FIRST_ROW);
+    var options = ConversionOptions.defaults();
+    assertThat(options.tableFallback()).isEqualTo(TableFallback.GFM_EMPTY_HEADER);
     assertThat(options.mediaResolver()).isNull();
 
     var fallback = options.withTableFallback(TableFallback.HTML);
@@ -87,7 +88,7 @@ class MarkdownOptionsTests {
 
   @Test
   void image_size_attributes_default_off_and_carry_through_other_withers() {
-    var options = MarkdownOptions.defaults();
+    var options = ConversionOptions.defaults();
     assertThat(options.imageSizeAttributes()).isFalse();
 
     var enabled = options.withImageSizeAttributes(true);
@@ -99,7 +100,7 @@ class MarkdownOptionsTests {
 
   @Test
   void attachment_and_page_link_resolvers_default_null_and_carry_through_other_withers() {
-    var options = MarkdownOptions.defaults();
+    var options = ConversionOptions.defaults();
     assertThat(options.attachmentResolver()).isNull();
     assertThat(options.pageLinkResolver()).isNull();
 
@@ -121,7 +122,7 @@ class MarkdownOptionsTests {
   @Test
   void passing_null_to_a_resolver_setter_clears_it() {
     var options =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withMediaResolver(attrs -> "x")
             .withAttachmentResolver(reference -> "y")
             .withPageLinkResolver(pageNodeId -> "z");
@@ -133,11 +134,10 @@ class MarkdownOptionsTests {
 
   @Test
   void a_null_extension_renderer_element_is_rejected_with_a_named_message() {
-    var renderers = Arrays.<ExtensionRenderer>asList(extension -> null, null);
+    var renderers = Arrays.<ExtensionRenderer>asList(extension -> ExtensionOutput.defer(), null);
 
     assertThatNullPointerException()
-        .isThrownBy(() -> MarkdownOptions.defaults().withExtensionRenderers(renderers))
-        .withMessageContaining("extensionRenderers");
+        .isThrownBy(() -> ConversionOptions.defaults().withExtensionRenderers(renderers));
   }
 
   @Test
@@ -147,11 +147,11 @@ class MarkdownOptionsTests {
     PageLinkResolver pageLink = pageNodeId -> "p";
     PageTreeResolver pageTree = reference -> List.of();
     ExcerptResolver excerpt = reference -> "e";
-    ExtensionRenderer extension = node -> "x";
+    ExtensionRenderer extension = node -> ExtensionOutput.replace("x");
     var attachments = List.of(new AttachmentReference("a", "a.pdf", null));
 
     var options =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withUnknownNodePolicy(UnknownNodePolicy.SKIP)
             .withAttachments(attachments)
             .withImageSizeAttributes(true)
@@ -185,7 +185,7 @@ class MarkdownOptionsTests {
 
   @Test
   void escape_parentheses_default_off_and_carry_through_other_withers() {
-    var options = MarkdownOptions.defaults();
+    var options = ConversionOptions.defaults();
     assertThat(options.escapeParentheses()).isFalse();
 
     var enabled = options.withEscapeParentheses(true);
@@ -197,7 +197,7 @@ class MarkdownOptionsTests {
 
   @Test
   void html_visual_marks_default_off_and_carry_through_other_withers() {
-    var options = MarkdownOptions.defaults();
+    var options = ConversionOptions.defaults();
     assertThat(options.htmlVisualMarks()).isFalse();
 
     var enabled = options.withHtmlVisualMarks(true);
@@ -208,7 +208,7 @@ class MarkdownOptionsTests {
 
   @Test
   void collapse_hard_breaks_default_off_and_carry_through_other_withers() {
-    var options = MarkdownOptions.defaults();
+    var options = ConversionOptions.defaults();
     assertThat(options.collapseHardBreaks()).isFalse();
 
     var enabled = options.withCollapseHardBreaks(true);
@@ -219,7 +219,7 @@ class MarkdownOptionsTests {
 
   @Test
   void document_title_default_null_and_carry_through_other_withers() {
-    var options = MarkdownOptions.defaults();
+    var options = ConversionOptions.defaults();
     assertThat(options.documentTitle()).isNull();
 
     var titled = options.withDocumentTitle("My Page");
@@ -261,7 +261,7 @@ class MarkdownOptionsTests {
     assertThat(AdfToMarkdown.create().toMarkdown(json).stripTrailing())
         .isEqualTo("![Sized](https://example.com/diagram.png)");
 
-    var withSuffix = MarkdownOptions.defaults().withImageSizeAttributes(true);
+    var withSuffix = ConversionOptions.defaults().withImageSizeAttributes(true);
     assertThat(AdfToMarkdown.with(withSuffix).toMarkdown(json).stripTrailing())
         .isEqualTo("![Sized](https://example.com/diagram.png){width=800 height=400}");
   }

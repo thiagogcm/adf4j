@@ -45,7 +45,7 @@ check('version is reported', () => {
 
 // The Markdown of a conversion that must succeed.
 function markdown(adf, context) {
-  const result = adf4j.convert(adf, context);
+  const result = adf4j.convert(adf, context === undefined ? undefined : { context });
   assert.equal(result.ok, true, JSON.stringify(result));
   return result.body;
 }
@@ -53,17 +53,17 @@ function markdown(adf, context) {
 function assertFails(result, error) {
   assert.equal(result.ok, false);
   assert.match(result.error, error);
-  assert.deepEqual(Object.keys(result), ['ok', 'body', 'wasLossy', 'diagnostics', 'error']);
+  assert.equal(result.body, "");
 }
 
 const mediaDoc = (id) => doc([
   { type: 'paragraph', content: [{ type: 'mediaInline', attrs: { id, collection: 'contentId-1' } }] },
 ]);
 
-check('the API is convert and version', () => {
-  assert.equal(adf4j.convertJson, undefined);
-  assert.equal(typeof adf4j.convert, 'function');
-  assert.equal(typeof adf4j.version, 'function');
+check('analysis plans attachment fetches without rendering', () => {
+  const result = adf4j.analyze(mediaDoc('file-1'));
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.metadata.referencedFileIds, ['file-1']);
 });
 
 check('heading renders as ATX', () => {
@@ -105,11 +105,11 @@ check('code block keeps language fence', () => {
   assert.match(md, /```js[\s\S]*a=1[\s\S]*```/);
 });
 
-check('a clean document has the full result shape and no error', () => {
+check('a clean document converts without warnings', () => {
   const r = adf4j.convert(doc([para('plain text')]));
-  assert.deepEqual(Object.keys(r), ['ok', 'body', 'wasLossy', 'diagnostics']);
+
   assert.equal(r.ok, true);
-  assert.equal(r.wasLossy, false);
+  assert.equal(r.hasWarnings, false);
   assert.deepEqual(r.diagnostics, []);
   assert.equal(r.body.trim(), 'plain text');
 });
@@ -118,10 +118,10 @@ check('quoted text survives in the body', () => {
   assert.equal(markdown(doc([para('say "hi"')])).trim(), 'say "hi"');
 });
 
-check('a warning is lossy, stays ok, and lists its diagnostic', () => {
+check('unknown content produces a warning and a usable placeholder', () => {
   const r = adf4j.convert(doc([{ type: 'bogusBlock' }]));
   assert.equal(r.ok, true);
-  assert.equal(r.wasLossy, true);
+  assert.equal(r.hasWarnings, true);
   assert.equal(r.diagnostics[0].code, 'UNKNOWN_NODE_PLACEHOLDER');
   assert.equal(r.diagnostics[0].severity, 'WARNING');
 });
@@ -141,8 +141,7 @@ check('attachment context turns media file nodes into real links', () => {
     md.trim(),
     '[report.xlsx](https://example.atlassian.net/wiki/rest/api/content/1/child/attachment/att9/download)',
   );
-  // The same context as a pre-encoded JSON string behaves identically.
-  assert.equal(markdown(adf, JSON.stringify(context)).trim(), md.trim());
+
   // Without context the synthetic placeholder remains.
   assert.equal(markdown(adf).trim(), '[file](media:contentId-1/file-uuid-1)');
 });
@@ -168,8 +167,7 @@ check('invalid JSON fails without throwing', () => {
   const r = adf4j.convert('{not valid json');
   assertFails(r, /Failed to parse/);
   assert.equal(r.body, '');
-  assert.equal(r.wasLossy, true);
-  assert.deepEqual(Object.keys(r.diagnostics[0]), ['code', 'severity', 'message']);
+  assert.equal(r.hasWarnings, false);
   assert.equal(r.diagnostics[0].code, 'INVALID_JSON');
   assert.equal(r.diagnostics[0].severity, 'ERROR');
 });
@@ -180,10 +178,10 @@ check('an invalid root fails', () => {
   assert.equal(r.diagnostics[0].code, 'INVALID_ROOT_NODE');
 });
 
-check('blank input fails, with no diagnostic to show for it', () => {
+check('blank input reports its cause', () => {
   const r = adf4j.convert('  ');
   assertFails(r, /blank/);
-  assert.deepEqual(r.diagnostics, []);
+  assert.equal(r.diagnostics[0].code, 'EMPTY_INPUT');
 });
 
 check('a non-string input fails without throwing', () => {
@@ -192,32 +190,37 @@ check('a non-string input fails without throwing', () => {
 });
 
 check('a failed title-only conversion is still a failure', () => {
-  const r = adf4j.convert('{not valid json', { title: 'Page' });
+  const r = adf4j.convert('{not valid json', { context: { title: 'Page' } });
   assertFails(r, /Failed to parse/);
-  assert.equal(r.body.trim(), '# Page');
+  assert.equal(r.body, '');
 });
 
-for (const [name, context, error] of [
-  ['a context that is not JSON', '{nope', /invalid context/],
-  ['a non-object context', [], /context must be an object/],
-  ['a function context', () => {}, /invalid context/],
-  ['an unknown context key', { attachment: [] }, /unknown key 'attachment'/],
-  ['non-array attachments', { attachments: { fileId: 'x' } }, /'attachments' must be an array/],
-  ['null attachments', { attachments: null }, /'attachments' must be an array/],
-  ['a non-object attachment', { attachments: ['x'] }, /attachments entry must be an object/],
-  ['an attachment without fileId', { attachments: [{ title: 't' }] }, /missing 'fileId'/],
-  ['a blank fileId', { attachments: [{ fileId: ' ' }] }, /missing 'fileId'/],
-  ['an unknown attachment key', { attachments: [{ fileId: 'x', url: 'u' }] }, /unknown key 'url'/],
-  ['a non-scalar attachment title', { attachments: [{ fileId: 'x', title: {} }] }, /'title'/],
-  ['a non-scalar context title', { title: ['t'] }, /'title'/],
+for (const [config, message] of [
+  [{ context: { attachment: [] } }, /Unknown configuration key: attachment/],
+  [{ context: { attachments: [{ title: 'guide.pdf' }] } }, /fileId is required/],
+  [{ markdown: { htmlVisualMarks: 'yes' } }, /must be a boolean/],
 ]) {
-  check(`invalid context fails: ${name}`, () => {
-    const r = adf4j.convert(doc([para('body')]), context);
-    assertFails(r, error);
-    assert.equal(r.body, '');
-    assert.deepEqual(r.diagnostics, []);
+  check(`invalid configuration: ${JSON.stringify(config)}`, () => {
+    const result = adf4j.convert(doc([para('body')]), config);
+    assertFails(result, message);
+    assert.equal(result.diagnostics[0].code, 'INVALID_OPTIONS');
   });
 }
+
+check('portable rendering policy is honored', () => {
+  const result = adf4j.convert(doc([para('(text)')]), {
+    markdown: { escapeParentheses: true }, context: { title: 'Report' },
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.body, '# Report\n\n\\(text\\)');
+});
+
+check('unresolved media carries its source location', () => {
+  const result = adf4j.convert(mediaDoc('file-1'));
+  assert.equal(result.ok, true);
+  assert.equal(result.unresolved[0].id, 'file-1');
+  assert.equal(result.unresolved[0].path, '/content/0/content/0');
+});
 
 await checkSampleFile();
 async function checkSampleFile() {

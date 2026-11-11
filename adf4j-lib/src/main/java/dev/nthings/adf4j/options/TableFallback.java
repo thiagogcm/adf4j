@@ -6,8 +6,8 @@ package dev.nthings.adf4j.options;
 public enum TableFallback {
   /// Emit raw `<table>` HTML instead of promoting or synthesizing a header row.
   HTML,
-  /// Promote the first row to the header row so the table renders as GFM Markdown (the default).
+  /// Promote the first row to the header row so the table renders as GFM Markdown.
   GFM_PROMOTE_FIRST_ROW,
-  /// Prepend a synthesized empty header row so every original row stays a data row in GFM Markdown.
+  /// Default: prepend an empty header, keeping every original row as data.
   GFM_EMPTY_HEADER
 }

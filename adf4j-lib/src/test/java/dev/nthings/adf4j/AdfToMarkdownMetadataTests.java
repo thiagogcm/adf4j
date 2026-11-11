@@ -7,7 +7,7 @@ import dev.nthings.adf4j.metadata.HeadingReference;
 import dev.nthings.adf4j.metadata.MentionReference;
 import dev.nthings.adf4j.metadata.PageTreeMacro;
 import dev.nthings.adf4j.metadata.PageTreeReference;
-import dev.nthings.adf4j.options.MarkdownOptions;
+import dev.nthings.adf4j.options.ConversionOptions;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -20,7 +20,7 @@ class AdfToMarkdownMetadataTests {
   void extract_collects_external_refs_and_durable_attachment_refs_from_db_derived_viewpdf_case()
       throws Exception {
     var options =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withAttachments(
                 List.of(
                     new AttachmentReference(
@@ -53,7 +53,7 @@ class AdfToMarkdownMetadataTests {
       throws Exception {
     var adf = testSupport.caseDocument("deduplicate-references");
     var options =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withAttachments(
                 List.of(new AttachmentReference("file-pdf-1", "guide.pdf", "application/pdf")));
 
@@ -73,7 +73,7 @@ class AdfToMarkdownMetadataTests {
   void a_media_node_in_the_inventory_is_enriched_with_what_it_lacks() {
     // A Confluence file node: the only hint at its kind is the coarse `type`.
     var options =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withAttachments(
                 List.of(
                     new AttachmentReference("f1", "plan.pdf", "application/pdf", "https://x/1")));
@@ -88,7 +88,7 @@ class AdfToMarkdownMetadataTests {
   @Test
   void a_media_node_keeps_what_it_has_over_the_inventory() {
     var options =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withAttachments(
                 List.of(
                     new AttachmentReference("f1", "plan.pdf", "application/pdf", "https://x/1")));
@@ -103,7 +103,7 @@ class AdfToMarkdownMetadataTests {
   @Test
   void a_repeated_media_node_lacking_fields_does_not_replace_the_ones_another_node_set() {
     var options =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withAttachments(
                 List.of(
                     new AttachmentReference("f1", "plan.pdf", "application/pdf", "https://x/1")));
@@ -127,7 +127,7 @@ class AdfToMarkdownMetadataTests {
   @Test
   void inventory_lookup_ignores_case_and_surrounding_whitespace_of_the_file_id() {
     var options =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withAttachments(
                 List.of(new AttachmentReference("F1", "plan.pdf", null, "https://x/1")));
 
@@ -141,7 +141,7 @@ class AdfToMarkdownMetadataTests {
   @Test
   void a_media_node_outside_the_inventory_is_left_as_it_is() {
     var options =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withAttachments(
                 List.of(new AttachmentReference("f2", "plan.pdf", null, "https://x/2")));
 
@@ -157,7 +157,7 @@ class AdfToMarkdownMetadataTests {
         List.of(new AttachmentReference("f1", "guide.pdf", "application/pdf", "https://x/1"));
 
     var metadata =
-        AdfToMarkdown.with(MarkdownOptions.defaults().withAttachments(inventory))
+        AdfToMarkdown.with(ConversionOptions.defaults().withAttachments(inventory))
             .convert(viewPdf("guide.pdf"))
             .metadata();
 

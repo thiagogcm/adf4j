@@ -44,7 +44,9 @@
     },
     "./adf4j-wasm.js": "./adf4j-wasm.js",
     "./adf4j-wasm.js.wasm": "./adf4j-wasm.js.wasm",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./conversion-options.schema.json": "./conversion-options.schema.json",
+    "./operation-result.schema.json": "./operation-result.schema.json"
   },
   "files": [
     "adf4j-wasm.d.ts",
@@ -54,7 +56,9 @@
     "vite.d.ts",
     "vite.mjs",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "conversion-options.schema.json",
+    "operation-result.schema.json"
   ],
   "engines": {
     "node": ">=24.0.0"

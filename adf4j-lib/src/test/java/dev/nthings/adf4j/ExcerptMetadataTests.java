@@ -2,7 +2,7 @@ package dev.nthings.adf4j;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.nthings.adf4j.options.MarkdownOptions;
+import dev.nthings.adf4j.options.ConversionOptions;
 import org.junit.jupiter.api.Test;
 
 class ExcerptMetadataTests {
@@ -95,7 +95,7 @@ class ExcerptMetadataTests {
 
   @Test
   void excerpt_include_occurrences_are_listed_in_metadata() {
-    var metadata = AdfToMarkdown.create().analyze(AdfJson.parse(PAGE_WITH_INCLUDES));
+    var metadata = AdfToMarkdown.create().analyze(AdfJson.parse(PAGE_WITH_INCLUDES)).metadata();
 
     assertThat(metadata.excerptRefs()).hasSize(2);
     assertThat(metadata.excerptRefs().get(0).page()).isEqualTo("Source Page");
@@ -107,7 +107,8 @@ class ExcerptMetadataTests {
 
   @Test
   void an_excerpt_definition_exposes_its_name_and_marked_region() {
-    var metadata = AdfToMarkdown.create().analyze(AdfJson.parse(SOURCE_PAGE_WITH_EXCERPT));
+    var metadata =
+        AdfToMarkdown.create().analyze(AdfJson.parse(SOURCE_PAGE_WITH_EXCERPT)).metadata();
 
     assertThat(metadata.excerpts())
         .singleElement()
@@ -120,7 +121,7 @@ class ExcerptMetadataTests {
 
   @Test
   void an_unnamed_excerpt_definition_has_a_null_name() {
-    var metadata = AdfToMarkdown.create().analyze(AdfJson.parse(UNNAMED_EXCERPT));
+    var metadata = AdfToMarkdown.create().analyze(AdfJson.parse(UNNAMED_EXCERPT)).metadata();
 
     assertThat(metadata.excerpts())
         .singleElement()
@@ -140,11 +141,12 @@ class ExcerptMetadataTests {
     // The documented recipe: index the source page's excerpts, render one as its own document, and
     // answer an excerpt-include on another page with the result.
     var converter = AdfToMarkdown.create();
-    var excerpt = converter.analyze(AdfJson.parse(SOURCE_PAGE_WITH_EXCERPT)).excerpts().getFirst();
+    var excerpt =
+        converter.analyze(AdfJson.parse(SOURCE_PAGE_WITH_EXCERPT)).metadata().excerpts().getFirst();
     var fragmentMarkdown = converter.convert(excerpt).body();
 
     var options =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withExcerptResolver(
                 reference ->
                     "Known Issues".equals(reference.excerptName()) ? fragmentMarkdown : null);
@@ -153,15 +155,15 @@ class ExcerptMetadataTests {
     assertThat(fragmentMarkdown).isEqualTo("shared \\*fragment\\*");
     assertThat(result.body()).contains("shared \\*fragment\\*");
     // The unnamed include declined and stays trackable; the named one resolved.
-    assertThat(result.unresolved().excerptRefs()).hasSize(1);
+    assertThat(result.unresolved()).hasSize(1);
   }
 
   @Test
   void converting_a_definition_ignores_the_document_title() {
-    var options = MarkdownOptions.defaults().withDocumentTitle("Source page");
+    var options = ConversionOptions.defaults().withDocumentTitle("Source page");
     var converter = AdfToMarkdown.with(options);
     var parsed = AdfJson.parse(SOURCE_PAGE_WITH_EXCERPT);
-    var excerpt = converter.analyze(parsed).excerpts().getFirst();
+    var excerpt = converter.analyze(parsed).metadata().excerpts().getFirst();
 
     assertThat(converter.convert(excerpt).body()).isEqualTo("shared \\*fragment\\*");
     // The title still belongs to the whole page.

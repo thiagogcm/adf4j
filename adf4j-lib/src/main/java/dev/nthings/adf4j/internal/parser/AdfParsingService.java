@@ -53,7 +53,8 @@ public final class AdfParsingService {
   public ParseResult parse(@Nullable String rawAdf) {
     if (rawAdf == null || rawAdf.isBlank()) {
       log.debug("parse called with null or blank input – returning empty result");
-      return new ParseResult(null, List.of());
+      return new ParseResult(
+          null, List.of(new Diagnostic(Diagnostic.Code.EMPTY_INPUT, "ADF input is blank.")));
     }
 
     log.debug("Parsing ADF payload ({} chars)", rawAdf.length());

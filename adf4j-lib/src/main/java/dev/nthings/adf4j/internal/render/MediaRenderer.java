@@ -7,6 +7,8 @@ import dev.nthings.adf4j.internal.AdfText;
 import dev.nthings.adf4j.internal.AttachmentReferences;
 import dev.nthings.adf4j.internal.Strings;
 import dev.nthings.adf4j.metadata.AttachmentReference;
+import dev.nthings.adf4j.result.ConversionEffect;
+import dev.nthings.adf4j.result.UnresolvedResource;
 import java.util.ArrayList;
 import org.jspecify.annotations.Nullable;
 
@@ -44,14 +46,34 @@ final class MediaRenderer {
   }
 
   String renderMedia(AdfMedia node, RenderContext context) {
+    context = context.at(node);
+    context.session().events().observe(node);
     var rendered = renderEmbedOrLink(node, context);
     return markRenderer.applyMarks(rendered, node.marks(), context.session());
   }
 
   private String renderEmbedOrLink(AdfMedia media, RenderContext context) {
     var attachment = context.session().attachments().byFileId(media.id());
+    int failures = context.session().events().callbackFailures();
     var resolvedSource = resolveMediaSource(media, attachment, context);
     var destination = resolvedSource != null ? resolvedSource : placeholder(media);
+    if (resolvedSource == null) {
+      var path = context.at(media).path();
+      context
+          .session()
+          .unresolvedTracker()
+          .recordResource(
+              new UnresolvedResource(
+                  UnresolvedResource.Kind.MEDIA,
+                  media.id() == null ? "" : media.id(),
+                  path,
+                  context.session().events().reasonSince(failures),
+                  destination));
+      context
+          .session()
+          .events()
+          .effect(ConversionEffect.Kind.PLACEHOLDER, path, "Media URL unresolved");
+    }
 
     // Non-image attachments (PDF, video, archive, …) render as a link; an image embed would break.
     if (!isImage(media, attachment, resolvedSource)) {
@@ -119,7 +141,7 @@ final class MediaRenderer {
       return url;
     }
 
-    var resolved = context.session().resolvers().media(media);
+    var resolved = context.session().resolvers().media(media, context.at(media).path());
     if (resolved != null) {
       return resolved;
     }

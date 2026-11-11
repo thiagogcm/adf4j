@@ -44,7 +44,7 @@ class AnalyzeCommandTest {
   void defaultJsonEmitsEverySectionInTableOrder() {
     var result = run(SIMPLE_DOC, "analyze");
     assertThat(result.exitCode()).isZero();
-    assertThat(JSON.readTree(result.out()).propertyNames())
+    assertThat(JSON.readTree(result.out()).path("metadata").propertyNames())
         .containsExactlyElementsOf(JsonRenderer.SECTION_NAMES);
     assertThat(result.out()).contains("\"text\" : \"Hello\"");
   }
@@ -52,7 +52,7 @@ class AnalyzeCommandTest {
   @Test
   void selectLimitsToChosenSectionsCommaSeparated() {
     var result = run(SIMPLE_DOC, "analyze", "--select", "outline,referencedFileIds");
-    assertThat(JSON.readTree(result.out()).propertyNames())
+    assertThat(JSON.readTree(result.out()).path("metadata").propertyNames())
         .containsExactly("referencedFileIds", "outline");
   }
 
@@ -68,7 +68,7 @@ class AnalyzeCommandTest {
   void excerptsAreNamesOnly() {
     var result = run(RICH_DOC, "analyze", "--select", "excerpts");
     assertThat(result.exitCode()).isZero();
-    var excerpts = JSON.readTree(result.out()).get("excerpts");
+    var excerpts = JSON.readTree(result.out()).path("metadata").get("excerpts");
     assertThat(excerpts).hasSize(1);
     assertThat(excerpts.get(0).propertyNames()).containsExactly("name");
     assertThat(result.out()).doesNotContain("Shared");
@@ -92,7 +92,7 @@ class AnalyzeCommandTest {
             "[{\"fileId\":\"FILE_ID\",\"title\":\"a.pdf\",\"downloadUrl\":\"https://x/a.pdf\"}]");
     var result = run(MEDIA_DOC, "analyze", "--attachments", inventory.toString());
     assertThat(result.exitCode()).isZero();
-    var reference = JSON.readTree(result.out()).get("attachmentRefs").get(0);
+    var reference = JSON.readTree(result.out()).path("metadata").get("attachmentRefs").get(0);
     assertThat(reference.get("title").asString()).isEqualTo("a.pdf");
     assertThat(reference.get("downloadUrl").asString()).isEqualTo("https://x/a.pdf");
   }
@@ -112,7 +112,7 @@ class AnalyzeCommandTest {
 
   @Test
   void textExposesEveryValueOfTheJson() {
-    var json = JSON.readTree(run(RICH_DOC, "analyze").out());
+    var json = JSON.readTree(run(RICH_DOC, "analyze").out()).path("metadata");
     var text = run(RICH_DOC, "analyze", "-f", "text").out();
 
     assertThat(json.propertyNames()).allSatisfy(section -> assertThat(text).contains(section));
@@ -137,7 +137,7 @@ class AnalyzeCommandTest {
   void invalidRootExitsContentFailureStillPrintingTheEnvelope() {
     var result = run("{\"version\":1,\"type\":\"paragraph\"}", "analyze");
     assertThat(result.exitCode()).isEqualTo(ExitCodes.CONTENT_FAILURE);
-    assertThat(JSON.readTree(result.out()).propertyNames())
+    assertThat(JSON.readTree(result.out()).path("metadata").propertyNames())
         .containsExactlyElementsOf(JsonRenderer.SECTION_NAMES);
     assertThat(result.err()).contains("[ERROR] INVALID_ROOT_NODE:");
   }
@@ -162,7 +162,7 @@ class AnalyzeCommandTest {
     var result = run("{\"version\":999,\"type\":\"doc\",\"content\":[]}", "analyze");
     assertThat(result.exitCode()).isZero();
     assertThat(result.err()).contains("[WARNING] UNSUPPORTED_VERSION:");
-    assertThat(result.out()).doesNotContain("UNSUPPORTED_VERSION");
+    assertThat(result.out()).contains("UNSUPPORTED_VERSION");
   }
 
   @Test

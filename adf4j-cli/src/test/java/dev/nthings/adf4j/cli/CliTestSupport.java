@@ -23,7 +23,7 @@ final class CliTestSupport {
         {"type":"paragraph","content":[{"type":"text","text":"World"}]}
       ]}""";
 
-  // Drops an unknown mark -> a WARNING diagnostic -> wasLossy() is true.
+  // Drops an unknown mark -> a WARNING diagnostic -> hasWarnings() is true.
   static final String LOSSY_DOC =
       """
       {"version":1,"type":"doc","content":[

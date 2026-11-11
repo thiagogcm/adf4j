@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import tools.jackson.databind.json.JsonMapper;
 
 class ConvertCommandTest {
 
@@ -45,7 +46,7 @@ class ConvertCommandTest {
     var result = convert(SIMPLE_DOC, "-f", "json");
     assertThat(result.exitCode()).isZero();
     assertThat(result.out()).contains("\n  \"body\""); // pretty-printed (indented)
-    assertThat(result.out()).contains("\"wasLossy\" : false");
+    assertThat(result.out()).contains("\"hasWarnings\" : false");
     assertThat(result.out()).contains("\"diagnostics\"");
     assertThat(result.out()).contains("\"metadata\"");
     assertThat(result.out()).contains("\"unresolved\"");
@@ -53,7 +54,7 @@ class ConvertCommandTest {
   }
 
   @Test
-  void jsonResultRendersExcerptsWithoutTheDocumentTitle() {
+  void jsonMetadataDescribesExcerptsWithoutRenderingThemAgain() {
     var excerpt =
         """
         {"type":"doc","version":1,"content":[{"type":"bodiedExtension","attrs":{
@@ -64,8 +65,8 @@ class ConvertCommandTest {
     assertThat(result.exitCode()).isZero();
     assertThat(result.out())
         .contains("\"name\" : null")
-        .contains("\"markdown\" : \"Shared\"")
-        .doesNotContain("\"markdown\" : \"# Page");
+        .contains("Shared")
+        .doesNotContain("\"markdown\"");
   }
 
   @Test
@@ -84,7 +85,7 @@ class ConvertCommandTest {
   }
 
   @Test
-  void unresolvedReferencesProjectLikeMetadata() {
+  void unresolvedPageTreeIdentifiesTheSourceAndFallback() {
     var pageTree =
         """
         {"type":"doc","version":1,"content":[{"type":"extension","attrs":{
@@ -92,11 +93,11 @@ class ConvertCommandTest {
           "parameters":{"macroParams":{"depth":{"value":"2"},"all":{"value":"true"}}}}}]}
         """;
     var result = convert(pageTree, "-f", "json", "--compact");
-    var reference =
-        "{\"macro\":\"children\",\"root\":null,\"depth\":2,\"all\":true,\"parameters\":";
-    assertThat(result.out().indexOf(reference)) // once under metadata, once under unresolved
-        .isNotNegative()
-        .isLessThan(result.out().lastIndexOf(reference));
+    var output = JsonMapper.builder().build().readTree(result.out());
+    assertThat(output.get("unresolved").get(0).get("path").asString()).isEqualTo("/content/0");
+    assertThat(output.get("unresolved").get(0).get("fallback").asString())
+        .isEqualTo("{{children}}");
+    assertThat(output.get("metadata").get("pageTreeRefs").get(0).get("depth").asInt()).isEqualTo(2);
   }
 
   @Test
@@ -158,7 +159,7 @@ class ConvertCommandTest {
   void diagnosticsSummaryGoesToStderrNotStdout() {
     var result = convert(LOSSY_DOC, "-f", "json");
     assertThat(result.out()).doesNotContain("warning(s)");
-    assertThat(result.err()).contains("warning(s)").contains("lossy=true");
+    assertThat(result.err()).contains("warning(s)");
   }
 
   @Test
@@ -171,7 +172,7 @@ class ConvertCommandTest {
   void malformedAdfExitsContentFailureStillWritingStdout() {
     var result = convert("{ not json", "-t", "Page");
     assertThat(result.exitCode()).isEqualTo(ExitCodes.CONTENT_FAILURE);
-    assertThat(result.out()).isEqualTo("# Page");
+    assertThat(result.out()).isEmpty();
     assertThat(result.err()).contains("1 error(s)").contains("[ERROR] INVALID_JSON:");
   }
 
@@ -191,8 +192,8 @@ class ConvertCommandTest {
   }
 
   @Test
-  void invalidInputOutranksTheLossyGate() {
-    var result = convert("{ not json", "--fail-on-lossy");
+  void invalidInputOutranksTheWarningGate() {
+    var result = convert("{ not json", "--fail-on-warning");
     assertThat(result.exitCode()).isEqualTo(ExitCodes.CONTENT_FAILURE);
   }
 
@@ -204,14 +205,14 @@ class ConvertCommandTest {
   }
 
   @Test
-  void failOnLossyExitsFourWhenLossy() {
-    var result = convert(LOSSY_DOC, "--fail-on-lossy");
+  void failOnWarningExitsFourWhenWarningPresent() {
+    var result = convert(LOSSY_DOC, "--fail-on-warning");
     assertThat(result.exitCode()).isEqualTo(ExitCodes.QUALITY_GATE);
   }
 
   @Test
-  void failOnLossyExitsZeroWhenClean() {
-    var result = convert(SIMPLE_DOC, "--fail-on-lossy");
+  void failOnWarningExitsZeroWhenClean() {
+    var result = convert(SIMPLE_DOC, "--fail-on-warning");
     assertThat(result.exitCode()).isZero();
   }
 
@@ -219,7 +220,7 @@ class ConvertCommandTest {
   void unknownNodesFailAbortsWithContentFailure() {
     var result = convert(UNKNOWN_NODE_DOC, "--unknown-nodes", "fail");
     assertThat(result.exitCode()).isEqualTo(ExitCodes.CONTENT_FAILURE);
-    assertThat(result.err()).contains("error:").contains("unknown node 'bogusBlock'");
+    assertThat(result.err()).contains("UNKNOWN_NODE_REJECTED").contains("bogusBlock");
     assertThat(result.out()).isEmpty();
   }
 
@@ -237,6 +238,45 @@ class ConvertCommandTest {
     assertThat(result.out()).contains("INVALID_JSON");
     assertThat(result.out()).doesNotContain("\tat "); // no stack frames
     assertThat(result.out()).doesNotContain("Exception");
+  }
+
+  @Test
+  void configInventoryResolvesFilesAndExplicitTitleOverridesTheConfig(@TempDir Path dir) {
+    var config =
+        CliTestSupport.write(
+            dir,
+            "config.json",
+            """
+        {"context":{"title":"Original","attachments":[
+          {"fileId":"FILE_ID","downloadUrl":"downloads/file"}]}}
+        """);
+    var missing = convert(CliTestSupport.MEDIA_DOC, "--fail-on-unresolved");
+    assertThat(missing.exitCode()).isEqualTo(ExitCodes.QUALITY_GATE);
+    assertThat(missing.out()).contains("media:col/FILE_ID");
+
+    var resolved =
+        convert(
+            CliTestSupport.MEDIA_DOC,
+            "--config",
+            config.toString(),
+            "--title",
+            "Published",
+            "--fail-on-unresolved");
+    assertThat(resolved.exitCode()).isZero();
+    assertThat(resolved.out()).startsWith("# Published").contains("downloads/file");
+  }
+
+  @Test
+  void presentationChangeGateWorksWithoutWarnings() {
+    var styled =
+        """
+        {"type":"doc","version":1,"content":[{"type":"paragraph","content":[
+          {"type":"text","text":"Important","marks":[{"type":"textColor","attrs":{"color":"#ff0000"}}]}]}]}
+        """;
+    assertThat(convert(styled, "--fail-on-warning").exitCode()).isZero();
+    var gated = convert(styled, "--fail-on-changes");
+    assertThat(gated.exitCode()).isEqualTo(ExitCodes.QUALITY_GATE);
+    assertThat(gated.out()).isEqualTo("Important");
   }
 
   private static void assumePosix(Path dir) {

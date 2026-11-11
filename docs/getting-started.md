@@ -44,24 +44,66 @@ String markdown = converter.toMarkdown(adfJson);
   "type": "doc",
   "version": 1,
   "content": [
-    { "type": "heading", "attrs": { "level": 1 },
-      "content": [ { "type": "text", "text": "Release Notes" } ] },
-    { "type": "paragraph", "content": [
-      { "type": "text", "text": "See the " },
-      { "type": "text", "text": "migration guide",
-        "marks": [ { "type": "link", "attrs": { "href": "https://example.com/guide" } } ] },
-      { "type": "text", "text": " before upgrading." } ] },
-    { "type": "panel", "attrs": { "panelType": "warning" },
-      "content": [ { "type": "paragraph",
-        "content": [ { "type": "text", "text": "This release drops Java 21." } ] } ] },
-    { "type": "bulletList", "content": [
-      { "type": "listItem", "content": [ { "type": "paragraph",
-        "content": [ { "type": "text", "text": "Faster parsing" } ] } ] },
-      { "type": "listItem", "content": [ { "type": "paragraph", "content": [
-        { "type": "text", "text": "New " },
-        { "type": "text", "text": "analyze()", "marks": [ { "type": "code" } ] },
-        { "type": "text", "text": " API" } ] } ] }
-    ] }
+    {
+      "type": "heading",
+      "attrs": { "level": 1 },
+      "content": [{ "type": "text", "text": "Release Notes" }]
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        { "type": "text", "text": "See the " },
+        {
+          "type": "text",
+          "text": "migration guide",
+          "marks": [
+            { "type": "link", "attrs": { "href": "https://example.com/guide" } }
+          ]
+        },
+        { "type": "text", "text": " before upgrading." }
+      ]
+    },
+    {
+      "type": "panel",
+      "attrs": { "panelType": "warning" },
+      "content": [
+        {
+          "type": "paragraph",
+          "content": [{ "type": "text", "text": "This release drops Java 21." }]
+        }
+      ]
+    },
+    {
+      "type": "bulletList",
+      "content": [
+        {
+          "type": "listItem",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [{ "type": "text", "text": "Faster parsing" }]
+            }
+          ]
+        },
+        {
+          "type": "listItem",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                { "type": "text", "text": "New " },
+                {
+                  "type": "text",
+                  "text": "analyze()",
+                  "marks": [{ "type": "code" }]
+                },
+                { "type": "text", "text": " API" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
   ]
 }
 ```
@@ -73,8 +115,7 @@ String markdown = converter.toMarkdown(adfJson);
 
 See the [migration guide](https://example.com/guide) before upgrading.
 
-> [!WARNING]
-> This release drops Java 21.
+> [!WARNING] This release drops Java 21.
 
 - Faster parsing
 - New `analyze()` API
@@ -93,7 +134,7 @@ import dev.nthings.adf4j.result.MarkdownResult;
 MarkdownResult result = converter.convert(adfJson);
 String body = result.body();
 
-if (result.wasLossy()) {
+if (result.hasWarnings()) {
   for (Diagnostic diagnostic : result.diagnostics()) {
     if (diagnostic.severity() != Diagnostic.Severity.INFO) {
       log.warn("Conversion issue [{}]: {}", diagnostic.code(), diagnostic.message());
@@ -102,7 +143,7 @@ if (result.wasLossy()) {
 }
 ```
 
-`wasLossy()` is true when a diagnostic is `WARNING` or `ERROR`. Informational diagnostics do not make a result lossy, and expected option-driven behavior such as unresolved media placeholders is not counted as lossy.
+`hasWarnings()` reports warnings only. Check `isSuccess()` before consuming output. Inspect `effects()` for supported conversion changes and `unresolved()` for missing dependencies.
 
 `result.metadata()` exposes references, attachments, excerpts, and the heading outline. `result.unresolved()` lists resolver lookups that stayed unresolved during this render.
 

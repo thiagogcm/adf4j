@@ -70,7 +70,8 @@ final class BlockRenderer {
   // Blocks are right-trimmed here so a custom renderer's trailing newline can't add blank lines to
   // an indented or joined parent.
   String renderBlock(AdfBlock block, RenderContext context) {
-    return dispatchBlock(block, context).stripTrailing();
+    context.session().events().observe(block);
+    return dispatchBlock(block, context.at(block)).stripTrailing();
   }
 
   private String dispatchBlock(AdfBlock block, RenderContext context) {
@@ -128,7 +129,9 @@ final class BlockRenderer {
 
   // `atLineStart` is false only for text following a checkbox on its line.
   String renderParagraph(Paragraph paragraph, RenderContext context, boolean atLineStart) {
-    var rendered = inlineRenderer.renderInlineNodes(paragraph.content(), context, atLineStart);
+    context.session().events().observe(paragraph);
+    var rendered =
+        inlineRenderer.renderInlineNodes(paragraph.content(), context.at(paragraph), atLineStart);
     if (rendered.isBlank()) {
       return rendered;
     }

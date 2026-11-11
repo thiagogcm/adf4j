@@ -42,4 +42,4 @@ if (!result.body.endsWith('\n')) {
   process.stdout.write('\n');
 }
 
-console.error(`\n[wasLossy=${result.wasLossy} diagnostics=${result.diagnostics.length}]`);
+console.error(`\n[hasWarnings=${result.hasWarnings} diagnostics=${result.diagnostics.length}]`);

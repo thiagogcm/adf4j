@@ -1,44 +1,264 @@
 ### number-unknown-node-big-integer
-threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: mystery
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: mystery
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
 ### number-unknown-node-exponent
-threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: mystery
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: mystery
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
 ### number-unknown-node-huge-exponent
-threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: mystery
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: mystery
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
 ### number-unknown-node-limit-scale
-threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: mystery
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: mystery
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
 ### number-unknown-node-limit-scale-digits
-threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: mystery
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: mystery
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
 ### number-unknown-node-long-decimal
-threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: mystery
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: mystery
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
 ### number-unknown-node-negative-zero
-threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: mystery
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: mystery
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
 ### number-unknown-node-overflowing-scale
-threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: mystery
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: mystery
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
 ### number-unknown-node-tiny-exponent
-threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: mystery
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: mystery
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
 ### number-unknown-node-trailing-zero
-threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: mystery
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: mystery
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
 ### pos-extension-in-paragraph
-threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF inline node type: extension
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: extension
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
 ### pos-inlinecard-in-doc
-threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: inlineCard
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: inlineCard
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
 ### pos-inlineextension-in-doc
-threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: inlineExtension
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: inlineExtension
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
 ### pos-media-in-paragraph
-threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF inline node type: media
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: media
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
 ### pos-paragraph-in-paragraph
-threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF inline node type: paragraph
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: paragraph
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
 ### pos-text-in-doc
-threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: text
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: text
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
 ### shape-marks-string
-threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: text
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: text
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
 ### shape-type-float
-threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: 1.0E8
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: 1.0E8
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
 ### shape-type-missing
-threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: <empty>
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: <empty>
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
 ### shape-type-number
-threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: 5
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: 5
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
 ### shape-type-object
-threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: <empty>
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: <empty>
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
 ### unknown-node-policy.json
-threw: dev.nthings.adf4j.result.UnknownNodeException: Unsupported ADF block node type: mysteryBlock
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: mysteryBlock
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []

@@ -5,9 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.nthings.adf4j.metadata.AttachmentReference;
 import dev.nthings.adf4j.metadata.ContentMetadata;
-import dev.nthings.adf4j.options.MarkdownOptions;
+import dev.nthings.adf4j.options.ConversionOptions;
 import dev.nthings.adf4j.options.UnknownNodePolicy;
-import dev.nthings.adf4j.result.UnknownNodeException;
+import dev.nthings.adf4j.result.AdfException;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -67,7 +67,7 @@ class AdfToMarkdownRenderingTests {
   void convert_resolves_viewpdf_macros_with_attachment_context() throws Exception {
     var rawPayload = testSupport.caseInput("viewpdf-macros");
     var options =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withAttachments(
                 List.of(new AttachmentReference("file-pdf-1", "guide.pdf", "application/pdf")));
 
@@ -85,29 +85,29 @@ class AdfToMarkdownRenderingTests {
 
     assertThat(
             AdfToMarkdown.with(
-                    MarkdownOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.PLACEHOLDER))
+                    ConversionOptions.defaults()
+                        .withUnknownNodePolicy(UnknownNodePolicy.PLACEHOLDER))
                 .toMarkdown(rawPayload))
         .contains("\\[Unsupported: mysteryBlock\\]");
     assertThat(
             AdfToMarkdown.with(
-                    MarkdownOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.SKIP))
+                    ConversionOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.SKIP))
                 .toMarkdown(rawPayload))
         .isEmpty();
     assertThatThrownBy(
             () ->
                 AdfToMarkdown.with(
-                        MarkdownOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.FAIL))
+                        ConversionOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.FAIL))
                     .toMarkdown(rawPayload))
-        .isInstanceOfSatisfying(
-            UnknownNodeException.class,
-            failure -> assertThat(failure.nodeType()).isEqualTo("mysteryBlock"))
+        .isInstanceOf(AdfException.class)
         .hasMessageContaining("mysteryBlock");
   }
 
   @Test
   void convert_supports_generic_options_without_context() throws Exception {
     var markdown =
-        AdfToMarkdown.with(MarkdownOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.SKIP))
+        AdfToMarkdown.with(
+                ConversionOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.SKIP))
             .toMarkdown(testSupport.caseInput("unknown-node-policy"));
 
     assertThat(markdown).isEmpty();
@@ -123,7 +123,7 @@ class AdfToMarkdownRenderingTests {
   @Test
   void convert_resolves_db_derived_viewpdf_cases_with_attachment_context() throws Exception {
     var options =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withAttachments(
                 List.of(
                     new AttachmentReference(
@@ -345,7 +345,7 @@ class AdfToMarkdownRenderingTests {
         }
         """;
 
-    var collapsing = AdfToMarkdown.with(MarkdownOptions.defaults().withCollapseHardBreaks(true));
+    var collapsing = AdfToMarkdown.with(ConversionOptions.defaults().withCollapseHardBreaks(true));
     var markdown = collapsing.toMarkdown(adf);
 
     assertThat(markdown).isEqualToNormalizingNewlines("alpha\n\\# beta");
@@ -553,7 +553,7 @@ class AdfToMarkdownRenderingTests {
 
   @Test
   void document_title_is_prepended_as_an_h1_above_the_body() {
-    var titled = AdfToMarkdown.with(MarkdownOptions.defaults().withDocumentTitle("My Page"));
+    var titled = AdfToMarkdown.with(ConversionOptions.defaults().withDocumentTitle("My Page"));
     assertThat(titled.toMarkdown(ONE_PARAGRAPH)).isEqualToNormalizingNewlines("# My Page\n\nbody");
   }
 
@@ -564,54 +564,51 @@ class AdfToMarkdownRenderingTests {
 
   @Test
   void document_title_on_an_empty_document_renders_just_the_heading() {
-    var titled = AdfToMarkdown.with(MarkdownOptions.defaults().withDocumentTitle("My Page"));
+    var titled = AdfToMarkdown.with(ConversionOptions.defaults().withDocumentTitle("My Page"));
     assertThat(titled.toMarkdown(EMPTY_DOC)).isEqualToNormalizingNewlines("# My Page");
   }
 
   @Test
-  void document_title_is_emitted_even_when_the_input_is_blank_or_fails_to_parse() {
-    var titled = AdfToMarkdown.with(MarkdownOptions.defaults().withDocumentTitle("My Page"));
-    // A titled-but-empty document needs no synthetic empty ADF doc as input.
-    assertThat(titled.toMarkdown("{\"type\":\"paragraph\",\"version\":1,\"content\":[]}"))
-        .isEqualTo("# My Page");
-    assertThat(titled.toMarkdown("   ")).isEqualTo("# My Page");
-
-    // The invalid root still surfaces as a diagnostic alongside the titled body.
-    var invalid = titled.convert("{\"type\":\"paragraph\",\"version\":1,\"content\":[]}");
-    assertThat(invalid.body()).isEqualTo("# My Page");
-    assertThat(invalid.diagnostics()).isNotEmpty();
+  void failed_conversion_never_emits_a_publishable_title() {
+    var titled = AdfToMarkdown.with(ConversionOptions.defaults().withDocumentTitle("My Page"));
+    for (var input : List.of("   ", "{\"type\":\"paragraph\",\"version\":1,\"content\":[]}")) {
+      var result = titled.convert(input);
+      assertThat(result.isSuccess()).isFalse();
+      assertThat(result.body()).isEmpty();
+      assertThatThrownBy(result::requireBody).isInstanceOf(AdfException.class);
+    }
   }
 
   @Test
   void document_title_collapses_newlines_to_a_single_line_heading() {
     var titled =
-        AdfToMarkdown.with(MarkdownOptions.defaults().withDocumentTitle("Line one\nLine two"));
+        AdfToMarkdown.with(ConversionOptions.defaults().withDocumentTitle("Line one\nLine two"));
     assertThat(titled.toMarkdown(ONE_PARAGRAPH))
         .isEqualToNormalizingNewlines("# Line one Line two\n\nbody");
   }
 
   @Test
   void blank_document_title_emits_no_heading() {
-    var blank = AdfToMarkdown.with(MarkdownOptions.defaults().withDocumentTitle("   "));
+    var blank = AdfToMarkdown.with(ConversionOptions.defaults().withDocumentTitle("   "));
     assertThat(blank.toMarkdown(ONE_PARAGRAPH)).isEqualToNormalizingNewlines("body");
   }
 
   @Test
   void document_title_escapes_markdown_and_html_punctuation() {
-    var titled = AdfToMarkdown.with(MarkdownOptions.defaults().withDocumentTitle("<b> & *x*"));
+    var titled = AdfToMarkdown.with(ConversionOptions.defaults().withDocumentTitle("<b> & *x*"));
     assertThat(titled.toMarkdown(ONE_PARAGRAPH))
         .isEqualToNormalizingNewlines("# \\<b> \\& \\*x\\*\n\nbody");
   }
 
   @Test
   void document_title_of_dashes_stays_literal_text_not_a_thematic_break() {
-    var titled = AdfToMarkdown.with(MarkdownOptions.defaults().withDocumentTitle("---"));
+    var titled = AdfToMarkdown.with(ConversionOptions.defaults().withDocumentTitle("---"));
     assertThat(titled.toMarkdown(ONE_PARAGRAPH)).isEqualToNormalizingNewlines("# ---\n\nbody");
   }
 
   @Test
   void document_title_ending_in_a_backslash_escapes_it_and_cannot_escape_the_line_end() {
-    var titled = AdfToMarkdown.with(MarkdownOptions.defaults().withDocumentTitle("Title\\"));
+    var titled = AdfToMarkdown.with(ConversionOptions.defaults().withDocumentTitle("Title\\"));
     assertThat(titled.toMarkdown(ONE_PARAGRAPH))
         .isEqualToNormalizingNewlines("# Title\\\\\n\nbody");
   }
@@ -620,7 +617,7 @@ class AdfToMarkdownRenderingTests {
   void document_title_is_unaffected_by_html_visual_marks() {
     var titled =
         AdfToMarkdown.with(
-            MarkdownOptions.defaults().withDocumentTitle("My Page").withHtmlVisualMarks(true));
+            ConversionOptions.defaults().withDocumentTitle("My Page").withHtmlVisualMarks(true));
     assertThat(titled.toMarkdown(ONE_PARAGRAPH)).isEqualToNormalizingNewlines("# My Page\n\nbody");
   }
 
@@ -640,7 +637,7 @@ class AdfToMarkdownRenderingTests {
           ]
         }
         """;
-    var titled = AdfToMarkdown.with(MarkdownOptions.defaults().withDocumentTitle("My Page"));
+    var titled = AdfToMarkdown.with(ConversionOptions.defaults().withDocumentTitle("My Page"));
     assertThat(titled.toMarkdown(adf)).isEqualToNormalizingNewlines("# My Page\n\n# Body Heading");
   }
 

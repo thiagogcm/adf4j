@@ -1,17 +1,21 @@
 package dev.nthings.adf4j.result;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
-/// One diagnostic raised while converting a document. `code` is a stable machine-readable
-/// identifier that fixes the {@link #severity()}, so consumers can react programmatically (see
-/// {@link MarkdownResult#wasLossy()}). `cause` is the originating exception when one exists, else
-/// `null`.
-public record Diagnostic(Code code, String message, @Nullable Throwable cause) {
+/// A machine-readable issue. Paths are JSON Pointers; details carry structured context.
+/// The cause is available to Java callers and omitted from portable JSON output.
+public record Diagnostic(
+    Code code,
+    String message,
+    @Nullable Throwable cause,
+    List<String> paths,
+    Map<String, String> details) {
 
-  /// How serious a {@link Diagnostic} is. {@link #ERROR} aborts the conversion or yields an empty
-  /// body, {@link #WARNING} marks content that converted but was dropped or altered, and
-  /// {@link #INFO} is a non-lossy note.
+  /// ERROR means the operation failed; WARNING reports an issue in a completed operation.
+  /// INFO provides context without marking a problem.
   public enum Severity {
     INFO,
     WARNING,
@@ -22,6 +26,11 @@ public record Diagnostic(Code code, String message, @Nullable Throwable cause) {
   public enum Code {
     /// The payload is not valid JSON, is nested too deeply, or holds a number too large to read.
     INVALID_JSON(Severity.ERROR),
+    EMPTY_INPUT(Severity.ERROR),
+    INVALID_OPTIONS(Severity.ERROR),
+    SCHEMA_VIOLATION(Severity.ERROR),
+    UNKNOWN_NODE_REJECTED(Severity.ERROR),
+    CALLBACK_FAILED(Severity.WARNING),
     /// The parsed document is `null`.
     /// The root is not a JSON object.
     INVALID_ROOT_TYPE(Severity.ERROR),
@@ -60,6 +69,16 @@ public record Diagnostic(Code code, String message, @Nullable Throwable cause) {
 
   public Diagnostic {
     Objects.requireNonNull(code, "code");
+    paths = List.copyOf(paths);
+    details = Map.copyOf(details);
+  }
+
+  public Diagnostic(Code code, String message, @Nullable Throwable cause) {
+    this(code, message, cause, List.of(), Map.of());
+  }
+
+  public Diagnostic at(String path) {
+    return new Diagnostic(code, message, cause, List.of(path), details);
   }
 
   /// A diagnostic with no originating exception.

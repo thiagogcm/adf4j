@@ -1,5 +1,5 @@
 // Loads the adf4j GraalVM Web Image (WebAssembly) and returns a small JS-native API. The generated
-// image script runs Java `main`, publishes `globalThis.adf4j = { convert, version }`,
+// image script runs Java `main`, publishes `globalThis.adf4j = { convert, analyze, version }`,
 // then calls `globalThis.__adf4jOnReady()`. This wrapper installs that callback first and evaluates
 // the generated image, which self-detects its host (Node.js, Bun, Deno, or a browser).
 
@@ -13,11 +13,10 @@ let cached;
 
 /**
  * @param {{ timeoutMs?: number,
- *           imagePath?: string,
  *           imageUrl?: string | URL,
- *           wasmPath?: string,
  *           wasmUrl?: string | URL }} [opts]
- * @returns {Promise<{ convert(json: string, context?: object | string): object,
+ * @returns {Promise<{ convert(json: string, config?: object | string): object,
+ *                     analyze(json: string, config?: object | string): object,
  *                     version(): string }>}
  */
 export function loadAdf4j(opts = {}) {
@@ -32,7 +31,7 @@ export function loadAdf4j(opts = {}) {
 
   cached = new Promise((res, rej) => {
     const timer = setTimeout(
-      () => rej(new Error(`adf4j wasm did not signal ready within ${timeoutMs}ms`)),
+      () => { cached = undefined; rej(new Error(`adf4j wasm did not signal ready within ${timeoutMs}ms`)); },
       timeoutMs,
     );
 
@@ -59,11 +58,10 @@ export function loadAdf4j(opts = {}) {
 
 function resolveImageCandidates(opts) {
   const env = globalThis.process?.env ?? {};
+  if (opts.imageUrl) return [imageCandidate(opts.imageUrl, opts.wasmUrl)];
   return [
-    imageCandidate(opts.imageUrl, opts.wasmUrl),
-    imageCandidate(opts.imagePath, opts.wasmPath),
     imageCandidate(env.ADF4J_WASM_JS, env.ADF4J_WASM),
-    imageCandidate(localImageUrl, localWasmUrl),
+    imageCandidate(localImageUrl, opts.wasmUrl ?? localWasmUrl),
   ].filter(Boolean);
 }
 

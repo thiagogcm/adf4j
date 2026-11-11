@@ -1,7 +1,7 @@
 ### confluence-link-metadata
 body: [x](https://page.example/42)\n\n[http://b](https://page.example/43)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: [42, 43]
 externalUrls: []
 mentionRefs: []
@@ -11,8 +11,8 @@ excerptRefs: []
 outline: []
 ### deduplicate-references.json
 body: [Draft link](https://page.example/12345)[ Metadata link](https://page.example/67890)[ Duplicate draft](https://page.example/12345)[ External link](https://external.example.com/docs)\n\n<https://external.example.com/docs>\n\n![diagram.png](https://media.example/asset-22)\n\n![diagram.png](https://media.example/asset-22)\n\n![Diagram](https://cdn.example.com/diagram.png)\n\n\\[PDF: guide.pdf\\]\n\n\\[PDF: guide.pdf\\]
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: [UnresolvedResource{kind=ATTACHMENT, id=guide.pdf, path=/content/5, reason=NO_ANSWER, fallback=\\[PDF: guide.pdf\\]}, UnresolvedResource{kind=ATTACHMENT, id=guide.pdf, path=/content/6, reason=NO_ANSWER, fallback=\\[PDF: guide.pdf\\]}]
 pageIds: [12345, 67890]
 externalUrls: [https://external.example.com/docs, https://cdn.example.com/diagram.png]
 mentionRefs: []
@@ -22,8 +22,8 @@ excerptRefs: []
 outline: []
 ### especificacoes-reporte-children.json
 body: # [Reporting icon](https://media.example/children-reporting-icon) **Reporting Specifications**\n\n- [Child](https://page.example/1)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -33,8 +33,8 @@ excerptRefs: []
 outline: [HeadingReference{level=1, text=Reporting icon Reporting Specifications, anchor=reporting-icon-reporting-specifications}]
 ### inline/media-inline-file.json
 body: Download [bundle.zip](https://media.example/media-zip)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -44,8 +44,8 @@ excerptRefs: []
 outline: []
 ### inline/media-inline.json
 body: See badge ![badge.png](https://media.example/media-1)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -55,9 +55,31 @@ excerptRefs: []
 outline: []
 ### internal-page-links.json
 body: [https://example.atlassian.net/wiki/spaces/OF/pages/12345](https://page.example/12345)\n\n[https://example.atlassian.net/wiki/spaces/OF/pages/edit-v2/54321?draftShareId=abc](https://page.example/54321)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: [12345, 54321]
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### lista-participantes-viewpdf.json
+body: Participants can be consulted through the directory export.\n\n[Directory file](https://data.directory.openbankingbrasil.org.br/participants)[ and registration schema ](https://github.com/OpenBanking-Brasil/specs-directory/blob/main/swagger_participants.yaml)remain available for discovery.\n\n## **Participant registration guide**\n\nOpen the PDF instructions using the [attachment link](https://openfinancebrasil.atlassian.net/wiki/download/attachments/7996604/Open_Finance_cadastro_diretorio_passo_a_passo.pdf?api=v2).\n\n\\[PDF: Open_Finance_cadastro_diretorio_passo_a_passo.pdf\\]
+warnings: false
+unresolved: [UnresolvedResource{kind=ATTACHMENT, id=Open_Finance_cadastro_diretorio_passo_a_passo.pdf, path=/content/4, reason=NO_ANSWER, fallback=\\[PDF: Open_Finance_cadastro_diretorio_passo_a_passo.pdf\\]}]
+pageIds: []
+externalUrls: [https://data.directory.openbankingbrasil.org.br/participants, https://github.com/OpenBanking-Brasil/specs-directory/blob/main/swagger_participants.yaml, https://openfinancebrasil.atlassian.net/wiki/download/attachments/7996604/Open_Finance_cadastro_diretorio_passo_a_passo.pdf?api=v2]
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: [HeadingReference{level=2, text=Participant registration guide, anchor=participant-registration-guide}]
+### macro-param-array
+body: \\[PDF\\]
+warnings: false
+unresolved: [UnresolvedResource{kind=ATTACHMENT, id=, path=/content/0, reason=NO_ANSWER, fallback=\\[PDF\\]}]
+pageIds: []
 externalUrls: []
 mentionRefs: []
 attachmentRefs: []
@@ -66,8 +88,8 @@ excerptRefs: []
 outline: []
 ### macro-param-beyond-int
 body: [PDF: 99999999999](https://attach.example/99999999999)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -75,10 +97,21 @@ attachmentRefs: [AttachmentReference{fileId=99999999999, title=99999999999, medi
 pageTreeRefs: []
 excerptRefs: []
 outline: []
+### macro-param-blank
+body: \\[PDF\\]
+warnings: false
+unresolved: [UnresolvedResource{kind=ATTACHMENT, id=, path=/content/0, reason=NO_ANSWER, fallback=\\[PDF\\]}]
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
 ### macro-param-bool
 body: [PDF: true](https://attach.example/true)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -88,8 +121,8 @@ excerptRefs: []
 outline: []
 ### macro-param-float
 body: [PDF: 2.7](https://attach.example/2.7)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -99,8 +132,8 @@ excerptRefs: []
 outline: []
 ### macro-param-huge
 body: [PDF: 99](https://attach.example/99)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -110,8 +143,8 @@ excerptRefs: []
 outline: []
 ### macro-param-negative
 body: [PDF: -3](https://attach.example/-3)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -121,8 +154,8 @@ excerptRefs: []
 outline: []
 ### macro-param-nonnumeric
 body: [PDF: abc](https://attach.example/abc)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -130,10 +163,32 @@ attachmentRefs: [AttachmentReference{fileId=abc, title=abc, mediaType=null, down
 pageTreeRefs: []
 excerptRefs: []
 outline: []
+### macro-param-null
+body: \\[PDF\\]
+warnings: false
+unresolved: [UnresolvedResource{kind=ATTACHMENT, id=, path=/content/0, reason=NO_ANSWER, fallback=\\[PDF\\]}]
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### macro-param-object
+body: \\[PDF\\]
+warnings: false
+unresolved: [UnresolvedResource{kind=ATTACHMENT, id=, path=/content/0, reason=NO_ANSWER, fallback=\\[PDF\\]}]
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
 ### macro-param-one
 body: [PDF: 1](https://attach.example/1)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -143,8 +198,8 @@ excerptRefs: []
 outline: []
 ### macro-param-string
 body: [PDF: 2](https://attach.example/2)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -154,8 +209,8 @@ excerptRefs: []
 outline: []
 ### macro-param-string-false
 body: [PDF: false](https://attach.example/false)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -165,8 +220,8 @@ excerptRefs: []
 outline: []
 ### macro-param-string-true
 body: [PDF: true](https://attach.example/true)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -176,8 +231,8 @@ excerptRefs: []
 outline: []
 ### macro-param-zero
 body: [PDF: 0](https://attach.example/0)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -187,8 +242,8 @@ excerptRefs: []
 outline: []
 ### marks-on-inline-atoms
 body: @1[[a.pdf](https://media.example/1)](http://kept)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: [http://kept]
 mentionRefs: [MentionReference{id=1, text=}]
@@ -198,8 +253,8 @@ excerptRefs: []
 outline: []
 ### marks/border-omitted.json
 body: Boxed ![Bordered](https://media.example/media-bordered)\n\nOut of range ![Clamped](https://media.example/media-clamped)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -209,8 +264,8 @@ excerptRefs: []
 outline: []
 ### media-array
 body: [null](https://media.example/null)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -220,8 +275,8 @@ excerptRefs: []
 outline: []
 ### media-blank
 body: [file](https://media.example/)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -231,8 +286,8 @@ excerptRefs: []
 outline: []
 ### media-inline-array
 body: [null](https://media.example/null)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -242,8 +297,8 @@ excerptRefs: []
 outline: []
 ### media-inline-beyond-int
 body: [99999999999](https://media.example/99999999999)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -253,8 +308,8 @@ excerptRefs: []
 outline: []
 ### media-inline-blank
 body: [file](https://media.example/)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -264,8 +319,8 @@ excerptRefs: []
 outline: []
 ### media-inline-bool
 body: [true](https://media.example/true)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -275,8 +330,8 @@ excerptRefs: []
 outline: []
 ### media-inline-float
 body: [2.7](https://media.example/2.7)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -286,8 +341,8 @@ excerptRefs: []
 outline: []
 ### media-inline-huge
 body: [99](https://media.example/99)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -297,8 +352,8 @@ excerptRefs: []
 outline: []
 ### media-inline-negative
 body: [-3](https://media.example/-3)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -308,8 +363,8 @@ excerptRefs: []
 outline: []
 ### media-inline-nonnumeric
 body: [abc](https://media.example/abc)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -319,8 +374,8 @@ excerptRefs: []
 outline: []
 ### media-inline-null
 body: [null](https://media.example/null)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -330,8 +385,8 @@ excerptRefs: []
 outline: []
 ### media-inline-object
 body: [null](https://media.example/null)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -341,8 +396,8 @@ excerptRefs: []
 outline: []
 ### media-inline-one
 body: [1](https://media.example/1)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -352,8 +407,8 @@ excerptRefs: []
 outline: []
 ### media-inline-string
 body: [2](https://media.example/2)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -363,8 +418,8 @@ excerptRefs: []
 outline: []
 ### media-inline-string-false
 body: [false](https://media.example/false)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -374,8 +429,8 @@ excerptRefs: []
 outline: []
 ### media-inline-string-true
 body: [true](https://media.example/true)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -385,8 +440,8 @@ excerptRefs: []
 outline: []
 ### media-inline-zero
 body: [0](https://media.example/0)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -396,8 +451,8 @@ excerptRefs: []
 outline: []
 ### media-null
 body: [null](https://media.example/null)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -407,8 +462,8 @@ excerptRefs: []
 outline: []
 ### media-object
 body: [null](https://media.example/null)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -418,8 +473,8 @@ excerptRefs: []
 outline: []
 ### media-one
 body: [1](1)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -429,8 +484,8 @@ excerptRefs: []
 outline: []
 ### multi-bodied
 body: ExtensionView{extensionType=x, extensionKey=k, text=t, macroParams={}, parameters=Attributes{values={}}}\n\nx
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -440,8 +495,8 @@ excerptRefs: []
 outline: []
 ### nodes/block-card-url-relative.json
 body: [/wiki/spaces/DEV/pages/123](https://page.example/123)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: [123]
 externalUrls: []
 mentionRefs: []
@@ -451,8 +506,8 @@ excerptRefs: []
 outline: []
 ### nodes/heading-with-inline-image.json
 body: # ![icon](https://media.example/icon-1) Title
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -462,8 +517,8 @@ excerptRefs: []
 outline: [HeadingReference{level=1, text=icon Title, anchor=icon-title}]
 ### nodes/media-single-file.json
 body: [Local image](https://media.example/file-abc)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -473,8 +528,8 @@ excerptRefs: []
 outline: []
 ### nodes/media-single-image-png.json
 body: ![Screenshot](https://media.example/file-png)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -484,8 +539,8 @@ excerptRefs: []
 outline: []
 ### nodes/media-single-pdf.json
 body: [report.pdf](https://media.example/file-pdf)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -495,8 +550,8 @@ excerptRefs: []
 outline: []
 ### params-inline-media-image
 body: ![media](https://media.example/123)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -506,8 +561,8 @@ excerptRefs: []
 outline: []
 ### params-null-in-array
 body: ExtensionView{extensionType=x, extensionKey=k, text=null, macroParams={}, parameters=Attributes{values={a=[null, 1, {}], macroParams={e={}}}}}
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -517,9 +572,20 @@ excerptRefs: []
 outline: []
 ### pos-embedcard-in-paragraph-metadata
 body: [https://x.atlassian.net/wiki/spaces/A/pages/123/P](https://page.example/123)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: [123]
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### viewpdf-macros.json
+body: \\[PDF: guide.pdf\\]
+warnings: false
+unresolved: [UnresolvedResource{kind=ATTACHMENT, id=guide.pdf, path=/content/0, reason=NO_ANSWER, fallback=\\[PDF: guide.pdf\\]}]
+pageIds: []
 externalUrls: []
 mentionRefs: []
 attachmentRefs: []

@@ -8,6 +8,8 @@ import dev.nthings.adf4j.ast.Paragraph;
 import dev.nthings.adf4j.ast.Table;
 import dev.nthings.adf4j.ast.TableCell;
 import dev.nthings.adf4j.ast.TableRow;
+import dev.nthings.adf4j.options.TableFallback;
+import dev.nthings.adf4j.result.ConversionEffect;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -46,6 +48,17 @@ final class TableRenderer {
     }
     // GFM-safe but headerless: apply the fallback policy. Promoting the first row needs no extra
     // step, because the first emitted row always sits above the separator.
+    if (context.session().options().tableFallback() != TableFallback.HTML) {
+      context
+          .session()
+          .events()
+          .effect(
+              ConversionEffect.Kind.STRUCTURE_CHANGED,
+              context.at(node).path(),
+              context.session().options().tableFallback() == TableFallback.GFM_EMPTY_HEADER
+                  ? "Empty table header synthesized"
+                  : "First data row promoted to header");
+    }
     return switch (context.session().options().tableFallback()) {
       case HTML -> htmlTableRenderer.renderHtmlTable(rows, context, numberColumn);
       case GFM_PROMOTE_FIRST_ROW -> renderGfmTable(rows, context, false);

@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
@@ -60,7 +61,15 @@ final class TextMarkRenderer {
 
   /// The link around a run. `pageNodeId` is what a `PageLinkResolver` will look up, so two links
   /// that could resolve differently differ here without asking the resolver.
-  private record LinkTarget(String href, @Nullable String title, @Nullable String pageNodeId) {}
+  private record LinkTarget(
+      String href, @Nullable String title, @Nullable String pageNodeId, Link source) {
+    boolean sameDestination(@Nullable LinkTarget other) {
+      return other != null
+          && href.equals(other.href)
+          && Objects.equals(title, other.title)
+          && Objects.equals(pageNodeId, other.pageNodeId);
+    }
+  }
 
   /// What a mark list renders to under the active options, holding nothing that doesn't render:
   /// `effects` are the formatting by rank, a later mark replacing an earlier one of the same rank.
@@ -86,7 +95,11 @@ final class TextMarkRenderer {
   /// Whether text runs with these marks render identically, and so must merge into one run. Asks no
   /// resolver: two different hrefs stay apart even when a `PageLinkResolver` maps them to one page.
   boolean rendersAlike(List<AdfMark> left, List<AdfMark> right, RenderSession session) {
-    return left.equals(right) || style(left, session).equals(style(right, session));
+    if (left.equals(right)) return true;
+    var a = style(left, session);
+    var b = style(right, session);
+    var sameLink = a.link() == null ? b.link() == null : a.link().sameDestination(b.link());
+    return a.code() == b.code() && a.effects().equals(b.effects()) && sameLink;
   }
 
   private static Style style(List<AdfMark> marks, RenderSession session) {
@@ -144,7 +157,8 @@ final class TextMarkRenderer {
     return new LinkTarget(
         href,
         Strings.firstNonBlank(link.title()),
-        session.resolvers().linkedPageId(href, link.attrs()));
+        session.resolvers().linkedPageId(href, link.attrs()),
+        link);
   }
 
   private String applyEffects(String value, Collection<MarkEffect> effects) {
@@ -169,7 +183,8 @@ final class TextMarkRenderer {
   // text is blank) is left untouched.
   private String applyLink(String rendered, LinkTarget link, RenderSession session) {
     var label = rendered.isBlank() ? session.writer().text(link.href(), false) : rendered;
-    var resolved = session.resolvers().pageId(link.pageNodeId());
+    var resolved =
+        session.resolvers().pageId(link.pageNodeId(), session.events().source.path(link.source()));
     var destination = resolved == null ? link.href() : resolved;
     var title = link.title();
     return title == null

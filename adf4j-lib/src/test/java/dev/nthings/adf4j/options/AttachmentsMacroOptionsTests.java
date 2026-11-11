@@ -34,8 +34,8 @@ class AttachmentsMacroOptionsTests {
           new AttachmentReference("file-1", "spec.pdf", "application/pdf"),
           new AttachmentReference("file-2", "diagram.png", "image/png"));
 
-  private static MarkdownOptions withInventory(List<AttachmentReference> references) {
-    return MarkdownOptions.defaults().withAttachments(references);
+  private static ConversionOptions withInventory(List<AttachmentReference> references) {
+    return ConversionOptions.defaults().withAttachments(references);
   }
 
   @Test
@@ -84,7 +84,9 @@ class AttachmentsMacroOptionsTests {
   @Test
   void a_supplied_inventory_is_referenced_in_metadata() {
     var metadata =
-        AdfToMarkdown.with(withInventory(INVENTORY)).analyze(AdfJson.parse(ATTACHMENTS_MACRO));
+        AdfToMarkdown.with(withInventory(INVENTORY))
+            .analyze(AdfJson.parse(ATTACHMENTS_MACRO))
+            .metadata();
 
     assertThat(metadata.referencedFileIds()).containsExactly("file-1", "file-2");
   }
@@ -126,7 +128,7 @@ class AttachmentsMacroOptionsTests {
 
   @Test
   void without_a_context_the_macro_contributes_no_attachment_refs() {
-    var metadata = AdfToMarkdown.create().analyze(AdfJson.parse(ATTACHMENTS_MACRO));
+    var metadata = AdfToMarkdown.create().analyze(AdfJson.parse(ATTACHMENTS_MACRO)).metadata();
 
     assertThat(metadata.attachmentRefs()).isEmpty();
   }

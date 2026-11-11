@@ -60,9 +60,9 @@ class ExtensionRendererOptionsTests {
     return extension -> {
       if ("com.acme.macros".equals(extension.extensionType())
           && "jira-issue".equals(extension.extensionKey())) {
-        return body.formatted(extension.macroParams().value("key"));
+        return ExtensionOutput.replace(body.formatted(extension.macroParams().value("key")));
       }
-      return null;
+      return ExtensionOutput.defer();
     };
   }
 
@@ -76,7 +76,7 @@ class ExtensionRendererOptionsTests {
   @Test
   void a_custom_renderer_renders_a_block_extension() {
     var options =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withExtensionRenderers(
                 List.of(jiraIssue("[%1$s](https://jira.example.com/browse/%1$s)")));
     var markdown = AdfToMarkdown.with(options).toMarkdown(BLOCK_EXTENSION).strip();
@@ -86,7 +86,7 @@ class ExtensionRendererOptionsTests {
 
   @Test
   void a_custom_renderer_renders_an_inline_extension() {
-    var options = MarkdownOptions.defaults().withExtensionRenderers(List.of(jiraIssue("#%s")));
+    var options = ConversionOptions.defaults().withExtensionRenderers(List.of(jiraIssue("#%s")));
     var markdown = AdfToMarkdown.with(options).toMarkdown(INLINE_EXTENSION).strip();
 
     assertThat(markdown).isEqualTo("See #PROJ-7");
@@ -94,8 +94,8 @@ class ExtensionRendererOptionsTests {
 
   @Test
   void a_renderer_that_defers_falls_through_to_the_default() {
-    ExtensionRenderer deferring = extension -> null;
-    var options = MarkdownOptions.defaults().withExtensionRenderers(List.of(deferring));
+    ExtensionRenderer deferring = extension -> ExtensionOutput.defer();
+    var options = ConversionOptions.defaults().withExtensionRenderers(List.of(deferring));
     var markdown = AdfToMarkdown.with(options).toMarkdown(BLOCK_EXTENSION).strip();
 
     assertThat(markdown).contains("Extension");
@@ -107,7 +107,7 @@ class ExtensionRendererOptionsTests {
         extension -> {
           throw new RuntimeException("boom");
         };
-    var options = MarkdownOptions.defaults().withExtensionRenderers(List.of(throwing));
+    var options = ConversionOptions.defaults().withExtensionRenderers(List.of(throwing));
     var markdown = AdfToMarkdown.with(options).toMarkdown(BLOCK_EXTENSION).strip();
 
     assertThat(markdown).contains("Extension");
@@ -116,7 +116,7 @@ class ExtensionRendererOptionsTests {
   @Test
   void renderers_are_consulted_in_order_and_the_first_match_wins() {
     var options =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withExtensionRenderers(List.of(jiraIssue("first:%s"), jiraIssue("second:%s")));
     var markdown = AdfToMarkdown.with(options).toMarkdown(BLOCK_EXTENSION).strip();
 
@@ -127,9 +127,13 @@ class ExtensionRendererOptionsTests {
   void a_custom_renderer_sees_a_bodied_excerpt_and_the_engine_still_renders_its_body() {
     var excerpt = doc(macro("bodiedExtension", "excerpt", "{}", paragraph(text("Body"))));
     var options =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withExtensionRenderers(
-                List.of(node -> "excerpt".equals(node.extensionKey()) ? "Header" : null));
+                List.of(
+                    node ->
+                        "excerpt".equals(node.extensionKey())
+                            ? ExtensionOutput.header("Header")
+                            : ExtensionOutput.defer()));
 
     assertThat(AdfToMarkdown.with(options).toMarkdown(excerpt)).isEqualTo("Header\n\nBody");
   }
@@ -137,7 +141,8 @@ class ExtensionRendererOptionsTests {
   @Test
   void a_bodied_excerpt_stays_transparent_when_every_renderer_declines() {
     var excerpt = doc(macro("bodiedExtension", "excerpt", "{}", paragraph(text("Body"))));
-    var options = MarkdownOptions.defaults().withExtensionRenderers(List.of(_ -> null));
+    var options =
+        ConversionOptions.defaults().withExtensionRenderers(List.of(_ -> ExtensionOutput.defer()));
 
     assertThat(AdfToMarkdown.with(options).toMarkdown(excerpt)).isEqualTo("Body");
   }

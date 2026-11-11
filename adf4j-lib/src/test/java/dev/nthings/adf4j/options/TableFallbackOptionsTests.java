@@ -67,20 +67,8 @@ class TableFallbackOptionsTests {
       """;
 
   @Test
-  void default_promotes_the_first_row_of_a_headerless_table() {
-    var markdown = AdfToMarkdown.create().toMarkdown(HEADERLESS_TABLE).strip();
-
-    assertThat(markdown)
-        .isEqualTo(
-            """
-            | a1  | a2  |
-            | --- | --- |
-            | b1  | b2  |""");
-  }
-
-  @Test
   void html_fallback_keeps_a_headerless_table_as_raw_html() {
-    var options = MarkdownOptions.defaults().withTableFallback(TableFallback.HTML);
+    var options = ConversionOptions.defaults().withTableFallback(TableFallback.HTML);
     var markdown = AdfToMarkdown.with(options).toMarkdown(HEADERLESS_TABLE).strip();
 
     assertThat(markdown)
@@ -89,8 +77,8 @@ class TableFallbackOptionsTests {
   }
 
   @Test
-  void gfm_empty_header_prepends_a_synthesized_empty_header_row() {
-    var options = MarkdownOptions.defaults().withTableFallback(TableFallback.GFM_EMPTY_HEADER);
+  void default_keeps_every_original_row_as_data() {
+    var options = ConversionOptions.defaults();
     var markdown = AdfToMarkdown.with(options).toMarkdown(HEADERLESS_TABLE).strip();
 
     assertThat(markdown)
@@ -104,7 +92,8 @@ class TableFallbackOptionsTests {
 
   @Test
   void gfm_promote_first_row_treats_the_first_row_as_the_header() {
-    var options = MarkdownOptions.defaults().withTableFallback(TableFallback.GFM_PROMOTE_FIRST_ROW);
+    var options =
+        ConversionOptions.defaults().withTableFallback(TableFallback.GFM_PROMOTE_FIRST_ROW);
     var markdown = AdfToMarkdown.with(options).toMarkdown(HEADERLESS_TABLE).strip();
 
     assertThat(markdown)
@@ -117,7 +106,8 @@ class TableFallbackOptionsTests {
 
   @Test
   void inexpressible_table_stays_html_even_under_a_gfm_policy() {
-    var options = MarkdownOptions.defaults().withTableFallback(TableFallback.GFM_PROMOTE_FIRST_ROW);
+    var options =
+        ConversionOptions.defaults().withTableFallback(TableFallback.GFM_PROMOTE_FIRST_ROW);
     var markdown = AdfToMarkdown.with(options).toMarkdown(COLSPAN_TABLE).strip();
 
     assertThat(markdown).startsWith("<table>").contains("colspan=\"2\"").endsWith("</table>");

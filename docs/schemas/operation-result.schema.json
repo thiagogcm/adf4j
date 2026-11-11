@@ -1,0 +1,367 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "adf4j operation outcome",
+  "type": "object",
+  "properties": {
+    "ok": {
+      "type": "boolean"
+    },
+    "hasWarnings": {
+      "type": "boolean"
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "INFO",
+              "WARNING",
+              "ERROR"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "code",
+          "severity",
+          "message",
+          "paths",
+          "details"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "error": {
+      "type": "string"
+    },
+    "body": {
+      "type": "string"
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "pageIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "externalUrls": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "referencedFileIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "mentionRefs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "text": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "text"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "attachmentRefs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "fileId": {
+                "type": "string"
+              },
+              "title": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "mediaType": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "downloadUrl": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "fileId",
+              "title",
+              "mediaType",
+              "downloadUrl"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "pageTreeRefs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "macro": {
+                "enum": [
+                  "pagetree",
+                  "children"
+                ]
+              },
+              "root": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "depth": {
+                "type": "integer"
+              },
+              "all": {
+                "type": "boolean"
+              },
+              "parameters": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "macro",
+              "root",
+              "all",
+              "parameters"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "excerptRefs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "string"
+              },
+              "excerptName": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "parameters": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "page",
+              "excerptName",
+              "parameters"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "excerpts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "outline": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "level": {
+                "type": "integer"
+              },
+              "text": {
+                "type": "string"
+              },
+              "anchor": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "level",
+              "text",
+              "anchor"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [],
+      "additionalProperties": false,
+      "description": "Source metadata. analyze --select may emit a subset of sections."
+    },
+    "effects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "enum": [
+              "CONTENT_DROPPED",
+              "PLACEHOLDER",
+              "STYLE_OMITTED",
+              "STRUCTURE_CHANGED"
+            ]
+          },
+          "path": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "path",
+          "message"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "unresolved": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "enum": [
+              "MEDIA",
+              "ATTACHMENT",
+              "PAGE",
+              "PAGE_TREE",
+              "EXCERPT",
+              "ATTACHMENT_INVENTORY"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "reason": {
+            "enum": [
+              "NO_ANSWER",
+              "MISSING_INVENTORY",
+              "CALLBACK_FAILED"
+            ]
+          },
+          "fallback": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "path",
+          "reason",
+          "fallback"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "ok",
+    "hasWarnings",
+    "diagnostics"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "ok": {
+            "const": false
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "body": {
+            "const": ""
+          }
+        }
+      },
+      "else": {
+        "not": {
+          "required": [
+            "error"
+          ]
+        }
+      }
+    }
+  ],
+  "dependentRequired": {
+    "body": [
+      "metadata",
+      "effects",
+      "unresolved"
+    ]
+  }
+}

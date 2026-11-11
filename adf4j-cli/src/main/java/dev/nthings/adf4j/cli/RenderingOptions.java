@@ -7,6 +7,11 @@ import org.jspecify.annotations.Nullable;
 /// A `null` value keeps the library default, so the CLI never overrides what it was not asked to.
 final class RenderingOptions {
 
+  @Option(
+      name = "config",
+      description = "Portable conversion configuration JSON; explicit flags override its values")
+  @Nullable String config;
+
   @Option(shortName = 't', name = "title", description = "Prepend TITLE as a level-1 (#) heading")
   @Nullable String title;
 
@@ -44,7 +49,7 @@ final class RenderingOptions {
 
   @Option(
       name = "table-fallback",
-      description = "Table shape for non-GFM tables (default: gfm-promote-first-row)",
+      description = "Table shape for non-GFM tables (default: gfm-empty-header)",
       allowedValues = {"gfm-promote-first-row", "gfm-empty-header", "html"})
   @Nullable String tableFallback;
 }

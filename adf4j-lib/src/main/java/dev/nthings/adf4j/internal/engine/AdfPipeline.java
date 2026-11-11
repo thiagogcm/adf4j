@@ -7,7 +7,9 @@ import dev.nthings.adf4j.internal.analyze.AdfDocumentAnalyzer;
 import dev.nthings.adf4j.internal.parser.AdfParsingService;
 import dev.nthings.adf4j.internal.render.AdfRenderer;
 import dev.nthings.adf4j.metadata.ContentMetadata;
-import dev.nthings.adf4j.options.MarkdownOptions;
+import dev.nthings.adf4j.options.ConversionOptions;
+import dev.nthings.adf4j.result.AdfException;
+import dev.nthings.adf4j.result.AnalysisResult;
 import dev.nthings.adf4j.result.Diagnostic;
 import dev.nthings.adf4j.result.MarkdownResult;
 import dev.nthings.adf4j.result.ParseResult;
@@ -38,39 +40,49 @@ public final class AdfPipeline {
         AdfRenderer.createDefault());
   }
 
-  public ContentMetadata analyze(ParseResult parsed, MarkdownOptions options) {
+  public AnalysisResult analyze(ParseResult parsed, ConversionOptions options) {
     var document = parsed.document();
-    return document == null ? ContentMetadata.empty() : analyze(document, options);
+    if (document == null) return new AnalysisResult(ContentMetadata.empty(), parsed.diagnostics());
+    var result = analyze(document, options);
+    return new AnalysisResult(
+        result.metadata(), mergeDiagnostics(parsed.diagnostics(), result.diagnostics()));
   }
 
-  public ContentMetadata analyze(AdfDocument document, MarkdownOptions options) {
+  public AnalysisResult analyze(AdfDocument document, ConversionOptions options) {
     var attachments = AttachmentInventory.from(options.attachments());
-    return analyzer.analyze(document, options, attachments).metadata();
+    var result = analyzer.analyze(document, options, attachments);
+    return new AnalysisResult(result.metadata(), result.diagnostics());
   }
 
-  public MarkdownResult convert(@Nullable String adfJson, MarkdownOptions options) {
+  public MarkdownResult convert(@Nullable String adfJson, ConversionOptions options) {
     return convert(parsingService.parse(adfJson), options);
   }
 
-  public MarkdownResult convert(ParseResult parsed, MarkdownOptions options) {
+  public MarkdownResult convert(ParseResult parsed, ConversionOptions options) {
     return render(parsed.document(), options, parsed.diagnostics());
   }
 
-  public MarkdownResult convert(AdfDocument document, MarkdownOptions options) {
+  public MarkdownResult convert(AdfDocument document, ConversionOptions options) {
     return render(document, options, List.of());
   }
 
-  // A null document yields an empty (possibly titled) body.
+  // Failed parsing yields an empty body, including when a title is configured.
   private MarkdownResult render(
-      @Nullable AdfDocument document, MarkdownOptions options, List<Diagnostic> diagnostics) {
+      @Nullable AdfDocument document, ConversionOptions options, List<Diagnostic> diagnostics) {
+    if (document == null)
+      return new MarkdownResult("", ContentMetadata.empty(), diagnostics, List.of(), List.of());
     var attachments = AttachmentInventory.from(options.attachments());
     var analysis = analyzer.analyze(document, options, attachments);
-    var rendered = renderer.render(document, options, attachments, analysis.outline());
-    // Diagnostics in pipeline order: parse, then analyze-phase lossiness, then render-phase macros.
-    var merged =
-        mergeDiagnostics(
-            mergeDiagnostics(diagnostics, analysis.diagnostics()), rendered.diagnostics());
-    return new MarkdownResult(rendered.body(), analysis.metadata(), merged, rendered.unresolved());
+    try {
+      var rendered = renderer.render(document, options, attachments, analysis.outline());
+      // Only visited content contributes render diagnostics.
+      var merged = mergeDiagnostics(diagnostics, rendered.diagnostics());
+      return new MarkdownResult(
+          rendered.body(), analysis.metadata(), merged, rendered.unresolved(), rendered.effects());
+    } catch (AdfException failure) {
+      var issues = mergeDiagnostics(diagnostics, failure.diagnostics());
+      return new MarkdownResult("", analysis.metadata(), issues, List.of(), List.of());
+    }
   }
 
   private static List<Diagnostic> mergeDiagnostics(

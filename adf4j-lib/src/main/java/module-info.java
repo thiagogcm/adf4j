@@ -1,6 +1,7 @@
 /// adf4j: Atlassian Document Format processing for Java. Only the API packages below are exported.
 module dev.nthings.adf4j {
   requires org.jspecify;
+  requires com.networknt.schema;
   requires org.slf4j;
   requires tools.jackson.core;
   requires tools.jackson.databind;

@@ -38,16 +38,25 @@ class ValidateCommandTest {
   @Test
   void jsonFormatEmitsValidFlagAndDiagnostics() {
     var result = run(SIMPLE_DOC, "validate", "-f", "json");
-    assertThat(result.out()).contains("\"valid\" : true").contains("\"diagnostics\"");
+    assertThat(result.out()).contains("\"ok\" : true").contains("\"diagnostics\"");
   }
 
   @Test
   void failOnWarningExitsFourWhenWarningPresent() {
-    var withGate = run(UNSUPPORTED_VERSION_DOC, "validate", "--fail-on-warning");
+    var withGate = run(UNSUPPORTED_VERSION_DOC, "validate", "--parse-only", "--fail-on-warning");
     assertThat(withGate.exitCode()).isEqualTo(ExitCodes.QUALITY_GATE);
 
-    var withoutGate = run(UNSUPPORTED_VERSION_DOC, "validate");
+    var withoutGate = run(UNSUPPORTED_VERSION_DOC, "validate", "--parse-only");
     assertThat(withoutGate.exitCode()).isZero();
     assertThat(withoutGate.out()).contains("valid: true");
+  }
+
+  @Test
+  void schemaValidationRejectsInvalidContentThatTolerantParsingPreserves() {
+    var invalidHeading = SIMPLE_DOC.replace("\"level\":1", "\"level\":9");
+    assertThat(run(invalidHeading, "validate", "--parse-only").exitCode()).isZero();
+    var checked = run(invalidHeading, "validate", "-f", "json");
+    assertThat(checked.exitCode()).isEqualTo(ExitCodes.CONTENT_FAILURE);
+    assertThat(checked.out()).contains("SCHEMA_VIOLATION", "/content/0/attrs/level");
   }
 }

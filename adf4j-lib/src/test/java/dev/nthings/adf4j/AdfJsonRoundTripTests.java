@@ -82,7 +82,7 @@ class AdfJsonRoundTripTests {
   @FieldSource("corpus")
   void off_spec_input_round_trips_or_says_it_did_not(String input) {
     var parsed = AdfJson.parse(input);
-    if (!parsed.isValid()) {
+    if (!parsed.isSuccess()) {
       return;
     }
 
@@ -102,7 +102,7 @@ class AdfJsonRoundTripTests {
             ]}
             """);
 
-    assertThat(parsed.isValid()).isTrue();
+    assertThat(parsed.isSuccess()).isTrue();
     assertThat(parsed.diagnostics())
         .singleElement()
         .satisfies(

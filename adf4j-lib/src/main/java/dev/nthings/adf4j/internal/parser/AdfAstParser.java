@@ -71,8 +71,10 @@ import dev.nthings.adf4j.ast.UnknownMark;
 import dev.nthings.adf4j.result.Diagnostic;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiFunction;
@@ -109,7 +111,7 @@ public final class AdfAstParser {
   public record ParsedDocument(AdfDocument document, List<Diagnostic> issues) {}
 
   public ParsedDocument parse(@Nullable JsonNode root) {
-    var run = new Run();
+    var run = new Run(root);
     var document = run.document(root);
     return new ParsedDocument(document, run.issues());
   }
@@ -117,10 +119,37 @@ public final class AdfAstParser {
   // One document's traversal, so the report never crosses threads or documents.
   private final class Run {
 
+    private final Map<JsonNode, String> locations = new IdentityHashMap<>();
+    private final List<String> paths = new ArrayList<>();
+
+    Run(@Nullable JsonNode root) {
+      if (root != null) index(root, "");
+    }
+
+    private void index(JsonNode node, String path) {
+      if (node.isObject()) {
+        locations.put(node, path);
+        node.properties()
+            .forEach(
+                entry ->
+                    index(
+                        entry.getValue(),
+                        path + "/" + entry.getKey().replace("~", "~0").replace("/", "~1")));
+      } else if (node.isArray()) {
+        locations.put(node, path);
+        for (int i = 0; i < node.size(); i++) index(node.get(i), path + "/" + i);
+      }
+    }
+
+    private String path(JsonNode node) {
+      return locations.getOrDefault(node, "");
+    }
+
     private int unpreserved;
     private @Nullable String firstUnpreserved;
 
-    private void unpreserved(String description) {
+    private void unpreserved(String path, String description) {
+      paths.add(path);
       if (unpreserved++ == 0) {
         firstUnpreserved = description;
       }
@@ -136,7 +165,10 @@ public final class AdfAstParser {
               unpreserved
                   + " malformed JSON construct(s) have no place in the AST and would be lost when"
                   + " writing the document, first: "
-                  + firstUnpreserved));
+                  + firstUnpreserved,
+              null,
+              paths,
+              Map.of("count", String.valueOf(unpreserved))));
     }
 
     AdfDocument document(@Nullable JsonNode root) {
@@ -149,7 +181,7 @@ public final class AdfAstParser {
       if (declared != null
           && !(declared.isNumber()
               && declared.decimalValue().compareTo(new BigDecimal(version)) == 0)) {
-        unpreserved("version is not an integer");
+        unpreserved("/version", "version is not an integer");
       }
       return new AdfDocument(version, blocks(root, "doc"));
     }
@@ -170,15 +202,18 @@ public final class AdfAstParser {
         return List.of();
       }
       if (!arrayNode.isArray()) {
-        unpreserved(parentType + "." + field + " is not an array");
+        unpreserved(path(parent) + "/" + field, parentType + "." + field + " is not an array");
         return List.of();
       }
       var result = new ArrayList<T>(arrayNode.size());
-      for (var child : arrayNode) {
+      for (int i = 0; i < arrayNode.size(); i++) {
+        var child = arrayNode.get(i);
         if (child.isObject()) {
           result.add(fn.apply(child));
         } else {
-          unpreserved(parentType + "." + field + " has a non-object element");
+          unpreserved(
+              path(parent) + "/" + field + "/" + i,
+              parentType + "." + field + " has a non-object element");
         }
       }
       return result;
@@ -273,11 +308,11 @@ public final class AdfAstParser {
       checkKeys(node, "text", TEXT_KEYS);
       var text = node.get("text");
       if (text == null || !text.isString()) {
-        unpreserved("text node without a string text");
+        unpreserved(path(node) + "/text", "text node without a string text");
       }
       return new Text(
           JsonFields.text(node, "text"),
-          attributes(node.get("attrs"), "text"),
+          attributes(node.get("attrs"), "text", path(node) + "/attrs"),
           marks(node, "text"));
     }
 
@@ -307,7 +342,7 @@ public final class AdfAstParser {
 
     private Attributes attrs(JsonNode node, String type, Set<String> allowedKeys) {
       checkKeys(node, type, allowedKeys);
-      return attributes(node.get("attrs"), type);
+      return attributes(node.get("attrs"), type, path(node) + "/attrs");
     }
 
     private void checkKeys(JsonNode node, String type, Set<String> allowed) {
@@ -320,17 +355,19 @@ public final class AdfAstParser {
                 || (key.equals("attrs") && hasOnlyNulls(value))
                 || (NODE_FIELDS.contains(key) && isAbsent(value));
         if (!keptOrEquivalent) {
-          unpreserved(type + " has unexpected key '" + key + "'");
+          unpreserved(
+              path(node) + "/" + key.replace("~", "~0").replace("/", "~1"),
+              type + " has unexpected key '" + key + "'");
         }
       }
     }
 
-    private Attributes attributes(@Nullable JsonNode attrs, String type) {
+    private Attributes attributes(@Nullable JsonNode attrs, String type, String path) {
       if (attrs == null || isAbsent(attrs)) {
         return Attributes.empty();
       }
       if (!attrs.isObject()) {
-        unpreserved(type + ".attrs is not an object");
+        unpreserved(path, type + ".attrs is not an object");
         return Attributes.empty();
       }
       return new Attributes(plainObject(attrs));

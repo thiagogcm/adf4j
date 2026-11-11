@@ -4,9 +4,9 @@ import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.internal.AttachmentInventory;
 import dev.nthings.adf4j.internal.Strings;
 import dev.nthings.adf4j.internal.analyze.HeadingOutline;
-import dev.nthings.adf4j.options.MarkdownOptions;
-import dev.nthings.adf4j.result.UnresolvedReferences;
+import dev.nthings.adf4j.options.ConversionOptions;
 import java.util.List;
+import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
 
 /// The render phase: turns a document into a Markdown body, with the optional title heading, plus
@@ -28,24 +28,26 @@ public final class AdfRenderer {
 
   public RenderOutput render(
       @Nullable AdfDocument document,
-      MarkdownOptions options,
+      ConversionOptions options,
       AttachmentInventory attachments,
       HeadingOutline headingOutline) {
     var writer = new MarkdownWriter(options.escapeParentheses());
     if (document == null) {
       return new RenderOutput(
-          prependTitle("", options.documentTitle(), writer),
-          List.of(),
-          UnresolvedReferences.empty());
+          prependTitle("", options.documentTitle(), writer), List.of(), List.of(), List.of());
     }
 
-    var session = RenderSession.from(options, attachments, headingOutline);
+    var session = RenderSession.from(options, attachments, headingOutline, document);
     var body =
         blockRenderer.renderBlocks(document.content(), new RenderContext(session, InlineSite.BODY));
     return new RenderOutput(
         prependTitle(body, options.documentTitle(), writer),
-        session.macroDiagnostics().build(),
-        session.unresolvedTracker().build());
+        Stream.concat(
+                session.macroDiagnostics().build().stream(),
+                session.events().allDiagnostics(options.unknownNodePolicy()).stream())
+            .toList(),
+        session.unresolvedTracker().build(),
+        session.events().allEffects());
   }
 
   // Prepends the optional documentTitle as a level-1 heading, blank-line separated from the body.

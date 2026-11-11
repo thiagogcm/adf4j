@@ -1,10 +1,9 @@
 package dev.nthings.adf4j.options;
 
-import dev.nthings.adf4j.AdfToMarkdown;
-
-import org.junit.jupiter.api.Test;
-
 import static org.assertj.core.api.Assertions.assertThat;
+
+import dev.nthings.adf4j.AdfToMarkdown;
+import org.junit.jupiter.api.Test;
 
 class MediaResolverOptionsTests {
 
@@ -35,7 +34,8 @@ class MediaResolverOptionsTests {
       }
       """;
 
-  // A file media node with no intrinsic type (no fileName/mediaType), as Confluence file media arrive: its
+  // A file media node with no intrinsic type (no fileName/mediaType), as Confluence file media
+  // arrive: its
   // image-ness is known only from the path the resolver supplies.
   private static final String UNTYPED_FILE_MEDIA =
       """
@@ -54,7 +54,8 @@ class MediaResolverOptionsTests {
       }
       """;
 
-  // A file media node with no intrinsic label (no name/fileName/alt): its file name lives only in the
+  // A file media node with no intrinsic label (no name/fileName/alt): its file name lives only in
+  // the
   // resolved path.
   private static final String UNLABELLED_FILE_MEDIA =
       """
@@ -75,7 +76,7 @@ class MediaResolverOptionsTests {
 
   @Test
   void file_link_takes_its_label_from_the_resolved_destinations_file_name() {
-    var options = MarkdownOptions.defaults().withMediaResolver(attrs -> "attachments/report.pdf");
+    var options = ConversionOptions.defaults().withMediaResolver(attrs -> "attachments/report.pdf");
     var markdown = AdfToMarkdown.with(options).toMarkdown(UNLABELLED_FILE_MEDIA).strip();
 
     assertThat(markdown).isEqualTo("[report.pdf](attachments/report.pdf)");
@@ -91,7 +92,8 @@ class MediaResolverOptionsTests {
   @Test
   void untyped_media_embeds_as_an_image_when_the_resolved_path_has_an_image_extension() {
     var options =
-        MarkdownOptions.defaults().withMediaResolver(attrs -> "attachments/" + attrs.alt() + ".png");
+        ConversionOptions.defaults()
+            .withMediaResolver(attrs -> "attachments/" + attrs.alt() + ".png");
     var markdown = AdfToMarkdown.with(options).toMarkdown(UNTYPED_FILE_MEDIA).strip();
 
     assertThat(markdown).isEqualTo("![diagram](attachments/diagram.png)");
@@ -99,7 +101,7 @@ class MediaResolverOptionsTests {
 
   @Test
   void untyped_media_renders_as_a_link_when_the_resolved_path_is_not_an_image() {
-    var options = MarkdownOptions.defaults().withMediaResolver(attrs -> "attachments/report.pdf");
+    var options = ConversionOptions.defaults().withMediaResolver(attrs -> "attachments/report.pdf");
     var markdown = AdfToMarkdown.with(options).toMarkdown(UNTYPED_FILE_MEDIA).strip();
 
     assertThat(markdown).isEqualTo("[diagram](attachments/report.pdf)");
@@ -115,7 +117,7 @@ class MediaResolverOptionsTests {
   @Test
   void resolver_turns_file_media_into_a_real_url() {
     var options =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withMediaResolver(attrs -> "https://cdn.example.com/" + attrs.id());
     var markdown = AdfToMarkdown.with(options).toMarkdown(FILE_MEDIA).strip();
 
@@ -124,7 +126,7 @@ class MediaResolverOptionsTests {
 
   @Test
   void resolver_returning_null_falls_back_to_the_placeholder() {
-    var options = MarkdownOptions.defaults().withMediaResolver(attrs -> null);
+    var options = ConversionOptions.defaults().withMediaResolver(attrs -> null);
     var markdown = AdfToMarkdown.with(options).toMarkdown(FILE_MEDIA).strip();
 
     assertThat(markdown).isEqualTo("![diagram](media:contentId-42/abc-123)");
@@ -132,9 +134,12 @@ class MediaResolverOptionsTests {
 
   @Test
   void resolver_that_throws_is_contained_and_falls_back_to_the_placeholder() {
-    var options = MarkdownOptions.defaults().withMediaResolver(attrs -> {
-      throw new RuntimeException("boom");
-    });
+    var options =
+        ConversionOptions.defaults()
+            .withMediaResolver(
+                attrs -> {
+                  throw new RuntimeException("boom");
+                });
     var markdown = AdfToMarkdown.with(options).toMarkdown(FILE_MEDIA).strip();
 
     assertThat(markdown).isEqualTo("![diagram](media:contentId-42/abc-123)");

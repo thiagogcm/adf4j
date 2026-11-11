@@ -5,8 +5,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.nthings.adf4j.AdfToMarkdown;
 import dev.nthings.adf4j.ast.AdfExtension;
 import dev.nthings.adf4j.metadata.AttachmentReference;
+import dev.nthings.adf4j.options.ConversionOptions;
+import dev.nthings.adf4j.options.ExtensionOutput;
 import dev.nthings.adf4j.options.ExtensionRenderer;
-import dev.nthings.adf4j.options.MarkdownOptions;
 import dev.nthings.adf4j.options.PageTreeEntry;
 import dev.nthings.adf4j.options.TableFallback;
 import dev.nthings.adf4j.options.UnknownNodePolicy;
@@ -23,7 +24,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import org.junit.jupiter.api.Test;
 
-/// Pins everything observable about a conversion (body, lossiness, diagnostics, metadata,
+/// Pins everything observable about a conversion (body, warnings, diagnostics, metadata,
 /// unresolved references) across the spec fixtures and an off-spec corpus, under an option matrix.
 /// The `.md` goldens cover only the default body of schema-shaped input, so changes to coercion,
 /// positional behaviour or mark handling can pass them unnoticed; this suite cannot be fooled that
@@ -35,39 +36,41 @@ class ConversionCharacterizationTests {
   private static final Path SOURCE_ROOT = Path.of("src/test/resources", ROOT);
 
   // Non-default presets store only the cases that differ from `defaults`, which keeps them small.
-  private static final Map<String, MarkdownOptions> PRESETS = presets();
+  private static final Map<String, ConversionOptions> PRESETS = presets();
 
-  private static Map<String, MarkdownOptions> presets() {
-    var presets = new LinkedHashMap<String, MarkdownOptions>();
-    presets.put("defaults", MarkdownOptions.defaults());
+  private static Map<String, ConversionOptions> presets() {
+    var presets = new LinkedHashMap<String, ConversionOptions>();
+    presets.put("defaults", ConversionOptions.defaults());
     presets.put(
         "visual",
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withHtmlVisualMarks(true)
             .withImageSizeAttributes(true)
             .withTableFallback(TableFallback.HTML));
     presets.put(
         "layout",
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withTableFallback(TableFallback.GFM_EMPTY_HEADER)
             .withCollapseHardBreaks(true)
             .withEscapeParentheses(true));
     presets.put(
-        "unknown-skip", MarkdownOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.SKIP));
+        "unknown-skip", ConversionOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.SKIP));
     presets.put(
         "unknown-raw",
-        MarkdownOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.PRESERVE_RAW));
+        ConversionOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.PRESERVE_RAW));
     presets.put(
-        "unknown-fail", MarkdownOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.FAIL));
+        "unknown-fail", ConversionOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.FAIL));
     presets.put("resolvers", resolvers());
     return presets;
   }
 
-  private static MarkdownOptions resolvers() {
+  private static ConversionOptions resolvers() {
     ExtensionRenderer dumpingRenderer =
         extension ->
-            "x".equals(extension.extensionType()) ? describe(ExtensionView.of(extension)) : null;
-    return MarkdownOptions.defaults()
+            "x".equals(extension.extensionType())
+                ? ExtensionOutput.header(describe(ExtensionView.of(extension)))
+                : ExtensionOutput.defer();
+    return ConversionOptions.defaults()
         .withMediaResolver(media -> "https://media.example/" + media.id())
         .withAttachmentResolver(reference -> "https://attach.example/" + reference.fileId())
         .withPageLinkResolver(id -> "https://page.example/" + id)
@@ -124,13 +127,13 @@ class ConversionCharacterizationTests {
     return cases;
   }
 
-  private static String characterize(String adf, MarkdownOptions options) {
+  private static String characterize(String adf, ConversionOptions options) {
     var builder = new StringBuilder();
     try {
       var converter = AdfToMarkdown.with(options);
       var result = converter.convert(adf);
       line(builder, "body", result.body());
-      line(builder, "lossy", result.wasLossy());
+      line(builder, "warnings", result.hasWarnings());
       for (var diagnostic : result.diagnostics()) {
         line(
             builder,
@@ -175,7 +178,9 @@ class ConversionCharacterizationTests {
 
   private static void line(StringBuilder builder, String key, Object value) {
     var text = String.valueOf(value).replace("\\", "\\\\").replace("\n", "\\n");
-    builder.append(key).append(": ").append(text).append('\n');
+    builder.append(key).append(":");
+    if (!text.isEmpty()) builder.append(' ').append(text);
+    builder.append('\n');
   }
 
   // A deterministic rendering of records, maps and lists: some maps use salted iteration order, so

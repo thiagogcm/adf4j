@@ -1,8 +1,10 @@
 package dev.nthings.adf4j;
 
 import dev.nthings.adf4j.ast.AdfDocument;
+import dev.nthings.adf4j.internal.json.ResultJson;
 import dev.nthings.adf4j.internal.parser.AdfParsingService;
 import dev.nthings.adf4j.internal.writer.AdfJsonWriter;
+import dev.nthings.adf4j.result.OperationResult;
 import dev.nthings.adf4j.result.ParseResult;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
@@ -26,6 +28,11 @@ public final class AdfJson {
   /// or invalid JSON yields a result with no document.
   public static ParseResult parse(@Nullable String adfJson) {
     return PARSER.parse(adfJson);
+  }
+
+  /// Writes an operation result using the portable CLI/WASM JSON contract.
+  public static String writeResult(OperationResult result) {
+    return ResultJson.write(result);
   }
 
   /// Writes a document as ADF JSON.

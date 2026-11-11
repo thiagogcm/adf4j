@@ -1,7 +1,7 @@
 ---
 title: "adf4j"
 description: "Java library and CLI for converting Atlassian Document Format (ADF) JSON to GitHub-Flavored Markdown (GFM)"
-tags: [ "Java", "ADF", "Markdown" ]
+tags: ["Java", "ADF", "Markdown"]
 ---
 
 ## What it does
@@ -40,7 +40,7 @@ For metadata and diagnostics:
 MarkdownResult result = AdfToMarkdown.create().convert(adfJson);
 String body = result.body();
 ContentMetadata metadata = result.metadata();
-boolean lossy = result.wasLossy();
+boolean warnings = result.hasWarnings();
 ```
 
 ## Technical snapshot

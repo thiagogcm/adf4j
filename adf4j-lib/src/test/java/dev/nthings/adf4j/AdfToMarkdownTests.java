@@ -2,11 +2,13 @@ package dev.nthings.adf4j;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.metadata.AttachmentReference;
 import dev.nthings.adf4j.metadata.ExcerptDefinition;
-import dev.nthings.adf4j.options.MarkdownOptions;
+import dev.nthings.adf4j.options.ConversionOptions;
+import dev.nthings.adf4j.result.AdfException;
 import dev.nthings.adf4j.result.ParseResult;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -56,7 +58,8 @@ class AdfToMarkdownTests {
             """);
 
     assertThat(markdown).isEqualTo("Hello, ADF");
-    assertThat(AdfJson.parse("{\"type\":\"doc\",\"version\":1,\"content\":[]}").isValid()).isTrue();
+    assertThat(AdfJson.parse("{\"type\":\"doc\",\"version\":1,\"content\":[]}").isSuccess())
+        .isTrue();
   }
 
   @Test
@@ -71,14 +74,16 @@ class AdfToMarkdownTests {
     assertThatNullPointerException().isThrownBy(() -> PROCESSOR.convert((ParseResult) null));
     assertThatNullPointerException().isThrownBy(() -> PROCESSOR.convert((AdfDocument) null));
     assertThatNullPointerException().isThrownBy(() -> PROCESSOR.convert((ExcerptDefinition) null));
-    assertThatNullPointerException().isThrownBy(() -> PROCESSOR.analyze((ParseResult) null));
-    assertThatNullPointerException().isThrownBy(() -> PROCESSOR.analyze((AdfDocument) null));
+    assertThatNullPointerException()
+        .isThrownBy(() -> PROCESSOR.analyze((ParseResult) null).metadata());
+    assertThatNullPointerException()
+        .isThrownBy(() -> PROCESSOR.analyze((AdfDocument) null).metadata());
   }
 
   @Test
   void null_json_converts_to_an_empty_result() {
     assertThat(PROCESSOR.convert((String) null).body()).isEmpty();
-    assertThat(PROCESSOR.toMarkdown(null)).isEmpty();
+    assertThatThrownBy(() -> PROCESSOR.toMarkdown(null)).isInstanceOf(AdfException.class);
   }
 
   @Test
@@ -87,11 +92,11 @@ class AdfToMarkdownTests {
 
     var was =
         AdfToMarkdown.with(
-                MarkdownOptions.defaults().withMediaResolver(media -> "v1/" + media.id()))
+                ConversionOptions.defaults().withMediaResolver(media -> "v1/" + media.id()))
             .convert(parsed);
     var is =
         AdfToMarkdown.with(
-                MarkdownOptions.defaults().withMediaResolver(media -> "v2/" + media.id()))
+                ConversionOptions.defaults().withMediaResolver(media -> "v2/" + media.id()))
             .convert(parsed);
 
     assertThat(was.body().strip()).isEqualTo("![diagram](v1/abc-123)");
@@ -119,7 +124,7 @@ class AdfToMarkdownTests {
 
     assertThat(result.body()).isEmpty();
     assertThat(result.diagnostics()).isEqualTo(parsed.diagnostics()).isNotEmpty();
-    assertThat(PROCESSOR.analyze(parsed)).isEqualTo(result.metadata());
+    assertThat(PROCESSOR.analyze(parsed).metadata()).isEqualTo(result.metadata());
   }
 
   @Test
@@ -127,9 +132,11 @@ class AdfToMarkdownTests {
     var document = AdfJson.parse(FILE_MEDIA).document();
     var inventory = List.of(new AttachmentReference("abc-123", null, null, "url-a"));
 
-    var unknown = PROCESSOR.analyze(document);
+    var unknown = PROCESSOR.analyze(document).metadata();
     var known =
-        AdfToMarkdown.with(MarkdownOptions.defaults().withAttachments(inventory)).analyze(document);
+        AdfToMarkdown.with(ConversionOptions.defaults().withAttachments(inventory))
+            .analyze(document)
+            .metadata();
 
     assertThat(unknown.attachmentRefs().getFirst().downloadUrl()).isNull();
     assertThat(known.attachmentRefs().getFirst().downloadUrl()).isEqualTo("url-a");

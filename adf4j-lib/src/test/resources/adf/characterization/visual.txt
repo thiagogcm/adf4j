@@ -1,7 +1,7 @@
 ### colspan-array
 body: <table><tr><td>x</td></tr><tr><td>x</td></tr></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -11,8 +11,8 @@ excerptRefs: []
 outline: []
 ### colspan-beyond-int
 body: <table><tr><td>x</td></tr><tr><td>x</td></tr></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -22,8 +22,8 @@ excerptRefs: []
 outline: []
 ### colspan-blank
 body: <table><tr><td>x</td></tr><tr><td>x</td></tr></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -33,8 +33,8 @@ excerptRefs: []
 outline: []
 ### colspan-bool
 body: <table><tr><td>x</td></tr><tr><td>x</td></tr></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -44,8 +44,8 @@ excerptRefs: []
 outline: []
 ### colspan-negative
 body: <table><tr><td>x</td></tr><tr><td>x</td></tr></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -55,8 +55,8 @@ excerptRefs: []
 outline: []
 ### colspan-nonnumeric
 body: <table><tr><td>x</td></tr><tr><td>x</td></tr></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -66,8 +66,8 @@ excerptRefs: []
 outline: []
 ### colspan-null
 body: <table><tr><td>x</td></tr><tr><td>x</td></tr></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -77,8 +77,8 @@ excerptRefs: []
 outline: []
 ### colspan-object
 body: <table><tr><td>x</td></tr><tr><td>x</td></tr></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -88,8 +88,8 @@ excerptRefs: []
 outline: []
 ### colspan-one
 body: <table><tr><td>x</td></tr><tr><td>x</td></tr></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -99,8 +99,8 @@ excerptRefs: []
 outline: []
 ### colspan-string-false
 body: <table><tr><td>x</td></tr><tr><td>x</td></tr></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -110,8 +110,8 @@ excerptRefs: []
 outline: []
 ### colspan-string-true
 body: <table><tr><td>x</td></tr><tr><td>x</td></tr></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -121,8 +121,8 @@ excerptRefs: []
 outline: []
 ### colspan-zero
 body: <table><tr><td>x</td></tr><tr><td>x</td></tr></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -132,8 +132,8 @@ excerptRefs: []
 outline: []
 ### deduplicate-references.json
 body: [Draft link](https://example.atlassian.net/wiki/spaces/OF/pages/edit-v2/12345?draftShareId=abc)[ Metadata link](https://example.atlassian.net/wiki/spaces/OF/pages/67890)[ Duplicate draft](https://example.atlassian.net/wiki/spaces/OF/pages/12345)[ External link](https://external.example.com/docs)\n\n<https://external.example.com/docs>\n\n![diagram.png](media:contentId-asset/asset-22){width=200 height=100}\n\n![diagram.png](media:contentId-asset/asset-22)\n\n![Diagram](https://cdn.example.com/diagram.png)\n\n\\[PDF: guide.pdf\\]\n\n\\[PDF: guide.pdf\\]
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: [UnresolvedResource{kind=MEDIA, id=asset-22, path=/content/2/content/0, reason=NO_ANSWER, fallback=media:contentId-asset/asset-22}, UnresolvedResource{kind=MEDIA, id=asset-22, path=/content/3/content/0, reason=NO_ANSWER, fallback=media:contentId-asset/asset-22}, UnresolvedResource{kind=ATTACHMENT, id=guide.pdf, path=/content/5, reason=MISSING_INVENTORY, fallback=\\[PDF: guide.pdf\\]}, UnresolvedResource{kind=ATTACHMENT, id=guide.pdf, path=/content/6, reason=MISSING_INVENTORY, fallback=\\[PDF: guide.pdf\\]}]
 pageIds: [12345, 67890]
 externalUrls: [https://external.example.com/docs, https://cdn.example.com/diagram.png]
 mentionRefs: []
@@ -143,8 +143,8 @@ excerptRefs: []
 outline: []
 ### especificacoes-reporte-children.json
 body: # [Reporting icon](media:contentId-reporting/children-reporting-icon) <span style="color:#0747a6">**Reporting Specifications**</span>\n\n{{children}}
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[PageTreeReference{macro=CHILDREN, root=null, parameters={allChildren=true}}], excerptRefs=[]}
+warnings: false
+unresolved: [UnresolvedResource{kind=MEDIA, id=children-reporting-icon, path=/content/0/content/0, reason=NO_ANSWER, fallback=media:contentId-reporting/children-reporting-icon}, UnresolvedResource{kind=PAGE_TREE, id=, path=/content/1, reason=NO_ANSWER, fallback={{children}}}]
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -154,8 +154,8 @@ excerptRefs: []
 outline: [HeadingReference{level=1, text=Reporting icon Reporting Specifications, anchor=reporting-icon-reporting-specifications}]
 ### marks-color-differ
 body: <span style="color:#111111">a</span><span style="color:#222222">b</span>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -165,9 +165,9 @@ excerptRefs: []
 outline: []
 ### marks-on-ignoring-nodes
 body: <details><summary>t</summary>\n\nx\n\n</details>\n\n<table><tr><td>x</td></tr></table>\n\n\\[Extension: k\\]
-lossy: true
+warnings: true
 diagnostic: UNSUPPORTED_MACRO|WARNING|1 unsupported macro(s) rendered as placeholders; original content not represented: k.
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -177,8 +177,8 @@ excerptRefs: []
 outline: []
 ### marks/alignment-omitted.json
 body: <div align="center">\n\nCentered.\n\n</div>\n\n<div align="right">\n\nAligned to end.\n\n</div>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -188,8 +188,8 @@ excerptRefs: []
 outline: []
 ### marks/background-color-omitted.json
 body: <span style="background-color:#ffff00">Yellow</span>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -199,8 +199,8 @@ excerptRefs: []
 outline: []
 ### marks/border-omitted.json
 body: Boxed <span style="border:2px solid #000000">![Bordered](media:contentId-1/media-bordered)</span>\n\nOut of range <span style="border:3px solid #0000ff">![Clamped](media:contentId-1/media-clamped)</span>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: [UnresolvedResource{kind=MEDIA, id=media-bordered, path=/content/0/content/1, reason=NO_ANSWER, fallback=media:contentId-1/media-bordered}, UnresolvedResource{kind=MEDIA, id=media-clamped, path=/content/1/content/1, reason=NO_ANSWER, fallback=media:contentId-1/media-clamped}]
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -210,8 +210,8 @@ excerptRefs: []
 outline: []
 ### marks/font-size-omitted.json
 body: <details><summary>Notes</summary>\n\n<span style="font-size:small">Footnote text</span>\n\n</details>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -221,8 +221,8 @@ excerptRefs: []
 outline: []
 ### marks/text-color-omitted.json
 body: <span style="color:#ff0000">Red</span> text.
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -232,8 +232,8 @@ excerptRefs: []
 outline: []
 ### media-external-beyond-int
 body: ![media](https://e.example/i.png){width=2147483647 height=2147483647}
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: [https://e.example/i.png]
 mentionRefs: []
@@ -243,8 +243,8 @@ excerptRefs: []
 outline: []
 ### media-external-float
 body: ![media](https://e.example/i.png){width=3 height=3}
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: [https://e.example/i.png]
 mentionRefs: []
@@ -254,8 +254,8 @@ excerptRefs: []
 outline: []
 ### media-external-huge
 body: ![media](https://e.example/i.png){width=99 height=99}
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: [https://e.example/i.png]
 mentionRefs: []
@@ -265,8 +265,8 @@ excerptRefs: []
 outline: []
 ### media-external-one
 body: ![media](https://e.example/i.png){width=1 height=1}
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: [https://e.example/i.png]
 mentionRefs: []
@@ -276,8 +276,8 @@ excerptRefs: []
 outline: []
 ### media-external-string
 body: ![media](https://e.example/i.png){width=2 height=2}
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: [https://e.example/i.png]
 mentionRefs: []
@@ -287,8 +287,8 @@ excerptRefs: []
 outline: []
 ### nodes/media-single-external.json
 body: ![Sized](https://example.com/diagram.png){width=800 height=400}
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: [https://example.com/diagram.png]
 mentionRefs: []
@@ -298,8 +298,8 @@ excerptRefs: []
 outline: []
 ### nodes/table-gfm-leading-marker-unescaped.json
 body: <table><tr><td># hash</td><td>&gt; quote</td></tr><tr><td>- item</td><td>1. one</td></tr><tr><td>plain</td><td>+ plus</td></tr></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -309,8 +309,8 @@ excerptRefs: []
 outline: []
 ### nodes/table-simple.json
 body: <table><tr><td>a1</td><td>a2</td></tr><tr><td>b1</td><td>b2</td></tr></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -320,8 +320,8 @@ excerptRefs: []
 outline: []
 ### number-column-array
 body: <table><tr><td>x</td></tr><tr><td>x</td></tr></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -331,8 +331,8 @@ excerptRefs: []
 outline: []
 ### number-column-blank
 body: <table><tr><td>x</td></tr><tr><td>x</td></tr></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -342,8 +342,8 @@ excerptRefs: []
 outline: []
 ### number-column-float
 body: <table><tr><td>x</td></tr><tr><td>x</td></tr></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -353,8 +353,8 @@ excerptRefs: []
 outline: []
 ### number-column-nonnumeric
 body: <table><tr><td>x</td></tr><tr><td>x</td></tr></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -364,8 +364,8 @@ excerptRefs: []
 outline: []
 ### number-column-null
 body: <table><tr><td>x</td></tr><tr><td>x</td></tr></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -375,8 +375,8 @@ excerptRefs: []
 outline: []
 ### number-column-object
 body: <table><tr><td>x</td></tr><tr><td>x</td></tr></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -386,8 +386,8 @@ excerptRefs: []
 outline: []
 ### number-column-string
 body: <table><tr><td>x</td></tr><tr><td>x</td></tr></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -397,8 +397,8 @@ excerptRefs: []
 outline: []
 ### number-column-string-false
 body: <table><tr><td>x</td></tr><tr><td>x</td></tr></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -408,8 +408,8 @@ excerptRefs: []
 outline: []
 ### number-column-zero
 body: <table><tr><td>x</td></tr><tr><td>x</td></tr></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -419,8 +419,8 @@ excerptRefs: []
 outline: []
 ### number-media-width-big-integer
 body: ![media](http://i.png){width=2147483647}
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: [http://i.png]
 mentionRefs: []
@@ -430,8 +430,8 @@ excerptRefs: []
 outline: []
 ### number-media-width-exponent
 body: ![media](http://i.png){width=100}
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: [http://i.png]
 mentionRefs: []
@@ -441,8 +441,8 @@ excerptRefs: []
 outline: []
 ### number-media-width-huge-exponent
 body: ![media](http://i.png){width=2147483647}
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: [http://i.png]
 mentionRefs: []
@@ -452,8 +452,8 @@ excerptRefs: []
 outline: []
 ### number-media-width-limit-scale
 body: ![media](http://i.png){width=2147483647}
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: [http://i.png]
 mentionRefs: []
@@ -463,8 +463,8 @@ excerptRefs: []
 outline: []
 ### number-media-width-limit-scale-digits
 body: ![media](http://i.png){width=2147483647}
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: [http://i.png]
 mentionRefs: []
@@ -474,8 +474,8 @@ excerptRefs: []
 outline: []
 ### number-media-width-long-decimal
 body: ![media](http://i.png){width=1}
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: [http://i.png]
 mentionRefs: []
@@ -485,8 +485,8 @@ excerptRefs: []
 outline: []
 ### number-media-width-overflowing-scale
 body: ![media](http://i.png){width=2147483647}
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: [http://i.png]
 mentionRefs: []
@@ -496,8 +496,8 @@ excerptRefs: []
 outline: []
 ### number-media-width-trailing-zero
 body: ![media](http://i.png){width=1}
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: [http://i.png]
 mentionRefs: []
@@ -507,8 +507,8 @@ excerptRefs: []
 outline: []
 ### params-inline-media-image
 body: ![media](media:c/123){width=100 height=51}
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: [UnresolvedResource{kind=MEDIA, id=123, path=/content/0, reason=NO_ANSWER, fallback=media:c/123}]
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -518,8 +518,8 @@ excerptRefs: []
 outline: []
 ### pos-paragraph-in-tablerow
 body: <table></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -529,8 +529,8 @@ excerptRefs: []
 outline: []
 ### rowspan-array
 body: <table><tr><td>x</td></tr><tr><td>x</td></tr></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -540,8 +540,8 @@ excerptRefs: []
 outline: []
 ### rowspan-beyond-int
 body: <table><tr><td>x</td></tr><tr><td>x</td></tr></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -551,8 +551,8 @@ excerptRefs: []
 outline: []
 ### rowspan-blank
 body: <table><tr><td>x</td></tr><tr><td>x</td></tr></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -562,8 +562,8 @@ excerptRefs: []
 outline: []
 ### rowspan-bool
 body: <table><tr><td>x</td></tr><tr><td>x</td></tr></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -573,8 +573,8 @@ excerptRefs: []
 outline: []
 ### rowspan-negative
 body: <table><tr><td>x</td></tr><tr><td>x</td></tr></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -584,8 +584,8 @@ excerptRefs: []
 outline: []
 ### rowspan-nonnumeric
 body: <table><tr><td>x</td></tr><tr><td>x</td></tr></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -595,8 +595,8 @@ excerptRefs: []
 outline: []
 ### rowspan-null
 body: <table><tr><td>x</td></tr><tr><td>x</td></tr></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -606,8 +606,8 @@ excerptRefs: []
 outline: []
 ### rowspan-object
 body: <table><tr><td>x</td></tr><tr><td>x</td></tr></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -617,8 +617,8 @@ excerptRefs: []
 outline: []
 ### rowspan-one
 body: <table><tr><td>x</td></tr><tr><td>x</td></tr></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -628,8 +628,8 @@ excerptRefs: []
 outline: []
 ### rowspan-string-false
 body: <table><tr><td>x</td></tr><tr><td>x</td></tr></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -639,8 +639,8 @@ excerptRefs: []
 outline: []
 ### rowspan-string-true
 body: <table><tr><td>x</td></tr><tr><td>x</td></tr></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -650,8 +650,8 @@ excerptRefs: []
 outline: []
 ### rowspan-zero
 body: <table><tr><td>x</td></tr><tr><td>x</td></tr></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -661,8 +661,8 @@ excerptRefs: []
 outline: []
 ### visual-marks-beyond-int
 body: <span style="font-size:99999999999; color:99999999999; background-color:99999999999; border:99999999999px solid 99999999999">x</span>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -672,8 +672,8 @@ excerptRefs: []
 outline: []
 ### visual-marks-bool
 body: <span style="font-size:true; color:true; background-color:true">x</span>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -683,8 +683,8 @@ excerptRefs: []
 outline: []
 ### visual-marks-float
 body: <span style="font-size:2.7; color:2.7; background-color:2.7; border:2.7px solid 2.7">x</span>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -694,8 +694,8 @@ excerptRefs: []
 outline: []
 ### visual-marks-huge
 body: <span style="font-size:99; color:99; background-color:99; border:99px solid 99">x</span>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -705,8 +705,8 @@ excerptRefs: []
 outline: []
 ### visual-marks-nonnumeric
 body: <span style="font-size:abc; color:abc; background-color:abc">x</span>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -716,8 +716,8 @@ excerptRefs: []
 outline: []
 ### visual-marks-one
 body: <span style="font-size:1; color:1; background-color:1; border:1px solid 1">x</span>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -727,8 +727,8 @@ excerptRefs: []
 outline: []
 ### visual-marks-string
 body: <span style="font-size:2; color:2; background-color:2; border:2px solid 2">x</span>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -738,8 +738,8 @@ excerptRefs: []
 outline: []
 ### visual-marks-string-false
 body: <span style="font-size:false; color:false; background-color:false">x</span>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -749,8 +749,8 @@ excerptRefs: []
 outline: []
 ### visual-marks-string-true
 body: <span style="font-size:true; color:true; background-color:true">x</span>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -760,8 +760,8 @@ excerptRefs: []
 outline: []
 ### visual-marks-zero
 body: <span style="font-size:0; color:0; background-color:0; border:0px solid 0">x</span>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -771,8 +771,8 @@ excerptRefs: []
 outline: []
 ### walk-mention-in-tablerow
 body: <table></table>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []

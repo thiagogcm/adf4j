@@ -17,7 +17,17 @@ final class RootValidator {
     var issues = new ArrayList<Diagnostic>();
     if (!document.isObject()) {
       issues.add(new Diagnostic(Code.INVALID_ROOT_TYPE, "ADF root must be an object."));
-      return List.copyOf(issues);
+      return issues.stream()
+          .map(
+              issue ->
+                  issue.at(
+                      switch (issue.code()) {
+                        case INVALID_VERSION, UNSUPPORTED_VERSION -> "/version";
+                        case INVALID_CONTENT -> "/content";
+                        case INVALID_ROOT_NODE -> "/type";
+                        default -> "";
+                      }))
+          .toList();
     }
 
     var type = document.path("type").asString(null);
@@ -40,7 +50,17 @@ final class RootValidator {
           new Diagnostic(Code.INVALID_CONTENT, "ADF root must contain array field 'content'."));
     }
 
-    return List.copyOf(issues);
+    return issues.stream()
+        .map(
+            issue ->
+                issue.at(
+                    switch (issue.code()) {
+                      case INVALID_VERSION, UNSUPPORTED_VERSION -> "/version";
+                      case INVALID_CONTENT -> "/content";
+                      case INVALID_ROOT_NODE -> "/type";
+                      default -> "";
+                    }))
+        .toList();
   }
 
   // Accept the version as a whole JSON number or a numeric string ("1"); anything else yields null.

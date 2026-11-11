@@ -5,7 +5,7 @@ This document describes adf4j internals for contributors and advanced integrator
 ## Design goals
 
 1. **Correct GFM output:** Prefer valid GitHub-Flavored Markdown. Use HTML, placeholders, or diagnostics when GFM cannot express the ADF construct.
-2. **Visible loss:** Record diagnostics when content is changed, dropped, or cannot be parsed.
+2. **Visible loss:** Separate diagnostics, conversion effects, and missing output dependencies.
 3. **Safe defaults:** Treat ADF as untrusted input. Bound parser depth, sanitize URL schemes, and isolate callback failures.
 4. **Small public API:** Export a focused JPMS surface and keep implementation packages internal.
 5. **Cheap converters:** A converter is immutable and holds only its options, so binding one per document costs nothing. The pipeline behind it is process-wide and stateless.
@@ -23,7 +23,7 @@ flowchart LR
     engine --> diag["Diagnostics"]
     engine -->|resolver callbacks| host["Host application"]
     host -->|URLs, page trees, excerpts| engine
-    host -->|MarkdownOptions, attachment inventory| api
+    host -->|ConversionOptions, attachment inventory| api
     cli["adf4j-cli"] --> api
     wasm["adf4j-wasm"] --> api
 ```
@@ -44,21 +44,21 @@ Exported packages:
 | --- | --- |
 | `dev.nthings.adf4j` | `AdfToMarkdown` and `AdfJson`. |
 | `dev.nthings.adf4j.ast` | Public AST records. |
-| `dev.nthings.adf4j.options` | `MarkdownOptions`, resolver hooks, renderer hooks, enums. |
-| `dev.nthings.adf4j.result` | `MarkdownResult`, `ParseResult`, `Diagnostic`, `UnresolvedReferences`, `UnknownNodeException`. |
+| `dev.nthings.adf4j.options` | `ConversionOptions`, resolver hooks, renderer hooks, enums. |
+| `dev.nthings.adf4j.result` | `MarkdownResult`, `ParseResult`, `Diagnostic`, `UnresolvedResource`, `AnalysisResult`, `ValidationResult`, `ConversionEffect`, `AdfException`. |
 | `dev.nthings.adf4j.metadata` | `ContentMetadata` and reference records, including `AttachmentReference`. |
 
 Everything under `internal.*` is implementation detail. JPMS enforces that boundary. Integrators should use `AdfToMarkdown` and `AdfJson` plus the public option, result, metadata, and AST types.
 
 ## The conversion pipeline
 
-`AdfPipeline` owns one parser, analyzer, and renderer. `AdfToMarkdown` holds one instance in a static field, so the whole process shares it, and it is stateless. Each call passes in its `MarkdownOptions` and builds its own `AttachmentInventory` from them.
+`AdfPipeline` owns one parser, analyzer, and renderer. `AdfToMarkdown` holds one instance in a static field, so the whole process shares it, and it is stateless. Each call passes in its `ConversionOptions` and builds its own `AttachmentInventory` from them.
 
 ```mermaid
 flowchart LR
     json["ADF JSON"] --> parse["Parse<br/>AdfParsingService"]
     parse --> ast["AdfDocument + parse diagnostics"]
-    options["MarkdownOptions +<br/>AttachmentInventory"] --> analyze
+    options["ConversionOptions +<br/>AttachmentInventory"] --> analyze
     options --> render
     ast --> analyze["Analyze<br/>AdfDocumentAnalyzer"]
     analyze --> outline["Heading outline"]
@@ -80,7 +80,7 @@ Phases:
 | --- | --- | --- |
 | Parse | `AdfParsingService` | `AdfDocument` plus parse diagnostics. |
 | Analyze | `AdfDocumentAnalyzer` | Heading outline, `ContentMetadata`, lossiness diagnostics. |
-| Render | `AdfRenderer` | Markdown body, unresolved references, macro diagnostics. |
+| Render | `AdfRenderer` | Markdown body, unresolved resources, effects, and render diagnostics. |
 
 Analysis precedes rendering because rendering can depend on global document facts. A table-of-contents macro needs all headings, and heading anchors must be unique before the first rendered line.
 
@@ -114,7 +114,7 @@ flowchart TB
 
 Robustness checks:
 
-- Blank input yields a result with no document and no diagnostics. Invalid JSON yields no document and `INVALID_JSON`. Neither throws.
+- Blank input yields no document and an `EMPTY_INPUT` error. Invalid JSON yields no document and `INVALID_JSON`. Neither throws.
 - Nesting is capped at depth 100.
 - Root validation reports missing document, invalid root type, invalid root node, invalid version, invalid content, and unsupported version.
 - Unsupported version is a warning; parsing continues best effort.
@@ -173,7 +173,7 @@ The heading collector records all explicit anchors during the walk and reserves 
 Confluence-specific knowledge is isolated, and all of it is internal:
 
 - `internal.analyze.ConfluenceMacro` classifies an extension node from its type, key, and parameters. It is the single place macro parameters are normalized, and both analysis and rendering switch over its sealed cases.
-- `internal.AttachmentInventory` indexes the caller's `MarkdownOptions.attachments()` for one call. It is keyed by `fileId`, with a separate title index for macros, and it distinguishes an unknown inventory from an empty one.
+- `internal.AttachmentInventory` indexes the caller's `ConversionOptions.attachments()` for one call. It is keyed by `fileId`, with a separate title index for macros, and it distinguishes an unknown inventory from an empty one.
 - `internal.AttachmentReferences` resolves a macro to an attachment and classifies images from MIME types and file names.
 - `internal.ConfluenceSupport` contains heuristics not tied to one macro: page IDs from URLs and link metadata, and chart titles.
 
@@ -181,7 +181,7 @@ The AST stays product-neutral. Page links are decided in one place, `ConfluenceS
 
 ## Phase 3: Rendering
 
-`AdfRenderer` walks the AST with the precomputed heading outline and active `MarkdownOptions`. It is stateless, and each call gets a fresh `RenderSession`.
+`AdfRenderer` walks the AST with the precomputed heading outline and active `ConversionOptions`. It is stateless, and each call gets a fresh `RenderSession`.
 
 Key state:
 
@@ -216,7 +216,7 @@ URL destinations are scheme-sanitized before output. `htmlVisualMarks` allowlist
 
 ## Extensibility model
 
-`MarkdownOptions` exposes functional hooks for caller-owned data:
+`ConversionOptions` exposes functional hooks for caller-owned data:
 
 | Hook                 | Caller supplies            |
 | -------------------- | -------------------------- |
@@ -227,17 +227,17 @@ URL destinations are scheme-sanitized before output. `htmlVisualMarks` allowlist
 | `ExcerptResolver`    | Rendered excerpt Markdown. |
 | `ExtensionRenderer`  | Custom extension Markdown. |
 
-All hooks are guarded. Returning `null`, returning a blank URL, or throwing declines the lookup and falls back to default behavior. Non-null answers are authoritative. `ExtensionRenderer` receives the `AdfExtension` node, and `MediaResolver` the `AdfMedia` node. The attachment inventory is data rather than a hook: `MarkdownOptions.withAttachments(...)`, where `null` means unknown and a list is authoritative.
+Hooks that throw emit `CALLBACK_FAILED` and use normal fallback. Returning `null` or a blank URL declines a resource lookup. Extension handlers return `ExtensionOutput.defer()`, `replace(markdown)`, or `header(markdown)`. Non-null answers are authoritative. `ExtensionRenderer` receives the `AdfExtension` node, and `MediaResolver` the `AdfMedia` node. The attachment inventory is data rather than a hook: `ConversionOptions.withAttachments(...)`, where `null` means unknown and a list is authoritative.
 
 ## Error handling and diagnostics
 
 adf4j reports most problems as data:
 
-| Type             | Carries                                                    |
-| ---------------- | ---------------------------------------------------------- |
-| `ParseResult`    | Parsed document or `null`, parse diagnostics, `isValid()`. |
-| `MarkdownResult` | Body, metadata, diagnostics, and unresolved references.    |
-| `Diagnostic`     | Code, message, optional cause. The code fixes the severity. |
+| Type | Carries |
+| --- | --- |
+| `ParseResult` | Parsed document or `null`, parse diagnostics, `isSuccess()`. |
+| `MarkdownResult` | Body, metadata, diagnostics, effects, and unresolved resources. |
+| `Diagnostic` | Code, message, optional cause. The code fixes the severity. |
 
 Severity meanings:
 
@@ -245,7 +245,7 @@ Severity meanings:
 - `WARNING`: content changed or dropped.
 - `ERROR`: conversion failed or produced an empty body.
 
-`MarkdownResult.wasLossy()` is true for `WARNING` or `ERROR`. Expected option-driven output is not counted as lossy. The only hard-failure rendering mode is `UnknownNodePolicy.FAIL`, which throws `UnknownNodeException` for unknown nodes.
+`MarkdownResult.hasWarnings()` reports warnings independently of success. Render events collect conversion effects and unresolved dependencies. `UnknownNodePolicy.FAIL` returns a failed result; the internal abort is caught at the pipeline boundary.
 
 ## Concurrency and lifecycle
 
@@ -282,10 +282,10 @@ The library targets JDK 25 and uses:
 | Wide `AdfBlock`/`AdfInline` children | Off-schema input stays renderable. | Record constructors accept any nesting. |
 | `Adf` factories typed by sealed `*Content` and mark interfaces derived from the schema | The compiler enforces nesting and marks, and `AdfContentModelTests` checks the interfaces against the schema. | Attribute ranges and context rules, such as alignment inside a panel, stay unchecked. `List` overloads check required children at runtime. |
 | `localId`s derived per node in `doc` | Rebuilt documents write the same JSON, and an item's id ignores its state and other items. A hash of the whole document would change every id on any edit. | `doc` and `append` rebuild the tree, editing an item changes its id, and a list's id depends on its position. |
-| `withX` methods on records for optional attributes | Immutable, discoverable, and consistent with `MarkdownOptions`. | Only common attributes have one; the rest go through `Attributes.with`. |
+| `withX` methods on records for optional attributes | Immutable, discoverable, and consistent with `ConversionOptions`. | Only common attributes have one; the rest go through `Attributes.with`. |
 | One analysis walk with visitors | Metadata, outline, and lossiness share traversal cost. | Visitors must stay independent, and the walker must track what the renderer renders. |
 | List separation reads rendered Markdown | It sees through transparent containers and macros that expand to lists. | It depends on the output's line shape, not the AST. |
-| Diagnostics as data | Callers can inspect quality without catching exceptions. | Callers must check `wasLossy()` or severity. |
+| Diagnostics as data | Callers can inspect quality without catching exceptions. | Callers must check `hasWarnings()` or severity. |
 | Guarded resolver callbacks | I/O and environment state stay in the host application. | Callers must implement resolvers for real URLs and page trees. |
 | JPMS encapsulation | Stable public API over changeable internals. | Internals are unavailable to integrations. |
 | Immutable converter over a shared stateless pipeline | Thread-safe, and cheap enough to bind one per document, which keeps one way to pass options. | No per-call overloads: a call with different options needs another converter. |

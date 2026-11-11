@@ -94,7 +94,7 @@ if (!result.ok) {
 console.log(result.body);
 ```
 
-`convert` returns `{ ok, body, wasLossy, diagnostics, error? }` and does not throw on bad input. The optional second argument is `{ attachments, title }`.
+`convert` returns an outcome with `ok`, `body`, `hasWarnings`, diagnostics, source metadata, effects, and unresolved resources. Failures include `error` and an empty body. The optional configuration is `{ markdown, context: { attachments, title } }`; `analyze` extracts metadata without rendering. See the [2.0 migration guide](docs/migration-2.md).
 
 One entry point runs in Node.js, Bun, Deno, and the browser. The npm package bundles the GraalVM Web Image loader and the compiled `.wasm`. In Vite, add the shipped plugin (`import adf4jWasm from '@nthings.dev/adf4j-wasm/vite'`) or set `optimizeDeps.exclude: ['@nthings.dev/adf4j-wasm']`. See the [package README](adf4j-wasm/src/npm/README.md) for bundler, runtime, and self-hosting details.
 
@@ -106,12 +106,12 @@ Build the unpacked extension with `just chrome-ext`, then load `adf4j-chrome-ext
 
 ## Documentation
 
-| Doc                                        | Use it for                                                               |
-| ------------------------------------------ | ------------------------------------------------------------------------ |
-| [Getting started](docs/getting-started.md) | Install, convert a first document, inspect results, and run the CLI.     |
-| [Guide](docs/guide.md)                     | Resolver patterns, macros, attachments, options, and AST usage.          |
-| [Reference](docs/reference.md)             | Complete option, mapping, diagnostic, safety, CLI, and exit-code tables. |
-| [Architecture](docs/architecture.md)       | Internal design for contributors and advanced integrators.               |
+| Doc | Use it for |
+| --- | --- |
+| [Getting started](docs/getting-started.md) | Install, convert a first document, inspect results, and run the CLI. |
+| [Guide](docs/guide.md) | Resolver patterns, macros, attachments, options, and AST usage. |
+| [Reference](docs/reference.md) | Complete option, mapping, diagnostic, safety, CLI, and exit-code tables. |
+| [Architecture](docs/architecture.md) | Internal design for contributors and advanced integrators. |
 
 The local [ADF spec snapshot](docs/spec/README.md) mirrors Atlassian's format for offline reference.
 

@@ -9,5 +9,5 @@ chrome.runtime.onMessage.addListener(createListener(convert));
 async function convert(adfJson, context) {
   // Recovers if the image signaled ready only after the loader's timeout already fired.
   const adf4j = globalThis.adf4j?.ready ? globalThis.adf4j : await adf4jReady;
-  return conversionResponse(adf4j.convert(adfJson, context));
+  return conversionResponse(adf4j.convert(adfJson, { context }));
 }

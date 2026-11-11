@@ -1,10 +1,9 @@
 package dev.nthings.adf4j.options;
 
-import dev.nthings.adf4j.AdfToMarkdown;
-
-import org.junit.jupiter.api.Test;
-
 import static org.assertj.core.api.Assertions.assertThat;
+
+import dev.nthings.adf4j.AdfToMarkdown;
+import org.junit.jupiter.api.Test;
 
 class PageLinkResolverOptionsTests {
 
@@ -67,8 +66,8 @@ class PageLinkResolverOptionsTests {
       }
       """;
 
-  private static MarkdownOptions resolving(PageLinkResolver resolver) {
-    return MarkdownOptions.defaults().withPageLinkResolver(resolver);
+  private static ConversionOptions resolving(PageLinkResolver resolver) {
+    return ConversionOptions.defaults().withPageLinkResolver(resolver);
   }
 
   @Test
@@ -95,16 +94,14 @@ class PageLinkResolverOptionsTests {
     var markdown = AdfToMarkdown.with(options).toMarkdown(PAGE_BLOCK_CARD).strip();
 
     assertThat(markdown)
-        .isEqualTo(
-            "[https://example.atlassian.net/wiki/spaces/OF/pages/54321](pages/54321.md)");
+        .isEqualTo("[https://example.atlassian.net/wiki/spaces/OF/pages/54321](pages/54321.md)");
   }
 
   @Test
   void default_renders_a_page_card_as_an_autolink() {
     var markdown = AdfToMarkdown.create().toMarkdown(PAGE_BLOCK_CARD).strip();
 
-    assertThat(markdown)
-        .isEqualTo("<https://example.atlassian.net/wiki/spaces/OF/pages/54321>");
+    assertThat(markdown).isEqualTo("<https://example.atlassian.net/wiki/spaces/OF/pages/54321>");
   }
 
   @Test
@@ -128,9 +125,11 @@ class PageLinkResolverOptionsTests {
 
   @Test
   void resolver_that_throws_is_contained_and_leaves_the_original_href() {
-    var options = resolving(pageNodeId -> {
-      throw new RuntimeException("boom");
-    });
+    var options =
+        resolving(
+            pageNodeId -> {
+              throw new RuntimeException("boom");
+            });
 
     var markdown = AdfToMarkdown.with(options).toMarkdown(PAGE_TEXT_LINK).strip();
 

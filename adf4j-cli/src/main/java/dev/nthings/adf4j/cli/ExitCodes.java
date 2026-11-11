@@ -18,7 +18,7 @@ final class ExitCodes {
   /// `convert --unknown-nodes fail` aborted.
   static final int CONTENT_FAILURE = 3;
 
-  /// A quality gate tripped: `convert --fail-on-lossy` on a lossy result, or `validate
+  /// A quality gate tripped: `convert --fail-on-warning` on a warning, or `validate
   /// --fail-on-warning`.
   static final int QUALITY_GATE = 4;
 

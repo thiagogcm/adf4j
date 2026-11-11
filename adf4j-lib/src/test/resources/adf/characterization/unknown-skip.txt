@@ -1,8 +1,8 @@
 ### number-unknown-node-big-integer
-body: 
-lossy: true
+body:
+warnings: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -11,10 +11,10 @@ pageTreeRefs: []
 excerptRefs: []
 outline: []
 ### number-unknown-node-exponent
-body: 
-lossy: true
+body:
+warnings: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -23,10 +23,10 @@ pageTreeRefs: []
 excerptRefs: []
 outline: []
 ### number-unknown-node-huge-exponent
-body: 
-lossy: true
+body:
+warnings: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -35,10 +35,10 @@ pageTreeRefs: []
 excerptRefs: []
 outline: []
 ### number-unknown-node-limit-scale
-body: 
-lossy: true
+body:
+warnings: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -47,10 +47,10 @@ pageTreeRefs: []
 excerptRefs: []
 outline: []
 ### number-unknown-node-limit-scale-digits
-body: 
-lossy: true
+body:
+warnings: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -59,10 +59,10 @@ pageTreeRefs: []
 excerptRefs: []
 outline: []
 ### number-unknown-node-long-decimal
-body: 
-lossy: true
+body:
+warnings: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -71,10 +71,10 @@ pageTreeRefs: []
 excerptRefs: []
 outline: []
 ### number-unknown-node-negative-zero
-body: 
-lossy: true
+body:
+warnings: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -83,10 +83,10 @@ pageTreeRefs: []
 excerptRefs: []
 outline: []
 ### number-unknown-node-overflowing-scale
-body: 
-lossy: true
+body:
+warnings: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -95,10 +95,10 @@ pageTreeRefs: []
 excerptRefs: []
 outline: []
 ### number-unknown-node-tiny-exponent
-body: 
-lossy: true
+body:
+warnings: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -107,10 +107,10 @@ pageTreeRefs: []
 excerptRefs: []
 outline: []
 ### number-unknown-node-trailing-zero
-body: 
-lossy: true
+body:
+warnings: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -119,10 +119,10 @@ pageTreeRefs: []
 excerptRefs: []
 outline: []
 ### pos-extension-in-paragraph
-body: 
-lossy: true
+body:
+warnings: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -131,10 +131,10 @@ pageTreeRefs: []
 excerptRefs: []
 outline: []
 ### pos-inlinecard-in-doc
-body: 
-lossy: true
+body:
+warnings: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -143,10 +143,10 @@ pageTreeRefs: []
 excerptRefs: []
 outline: []
 ### pos-inlineextension-in-doc
-body: 
-lossy: true
+body:
+warnings: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -155,10 +155,10 @@ pageTreeRefs: []
 excerptRefs: []
 outline: []
 ### pos-media-in-paragraph
-body: 
-lossy: true
+body:
+warnings: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -167,10 +167,10 @@ pageTreeRefs: []
 excerptRefs: []
 outline: []
 ### pos-paragraph-in-paragraph
-body: 
-lossy: true
+body:
+warnings: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -179,10 +179,10 @@ pageTreeRefs: []
 excerptRefs: []
 outline: []
 ### pos-text-in-doc
-body: 
-lossy: true
+body:
+warnings: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -191,10 +191,10 @@ pageTreeRefs: []
 excerptRefs: []
 outline: []
 ### shape-marks-string
-body: 
-lossy: true
+body:
+warnings: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -203,10 +203,10 @@ pageTreeRefs: []
 excerptRefs: []
 outline: []
 ### shape-type-float
-body: 
-lossy: true
+body:
+warnings: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -215,10 +215,10 @@ pageTreeRefs: []
 excerptRefs: []
 outline: []
 ### shape-type-missing
-body: 
-lossy: true
+body:
+warnings: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -227,10 +227,10 @@ pageTreeRefs: []
 excerptRefs: []
 outline: []
 ### shape-type-number
-body: 
-lossy: true
+body:
+warnings: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -239,10 +239,10 @@ pageTreeRefs: []
 excerptRefs: []
 outline: []
 ### shape-type-object
-body: 
-lossy: true
+body:
+warnings: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -251,10 +251,10 @@ pageTreeRefs: []
 excerptRefs: []
 outline: []
 ### unknown-node-policy.json
-body: 
-lossy: true
+body:
+warnings: true
 diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []

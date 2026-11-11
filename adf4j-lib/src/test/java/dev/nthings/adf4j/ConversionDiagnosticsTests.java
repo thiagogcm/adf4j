@@ -2,8 +2,9 @@ package dev.nthings.adf4j;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.nthings.adf4j.options.ConversionOptions;
+import dev.nthings.adf4j.options.ExtensionOutput;
 import dev.nthings.adf4j.options.ExtensionRenderer;
-import dev.nthings.adf4j.options.MarkdownOptions;
 import dev.nthings.adf4j.options.UnknownNodePolicy;
 import dev.nthings.adf4j.result.Diagnostic;
 import java.util.List;
@@ -29,14 +30,14 @@ class ConversionDiagnosticsTests {
     var result = AdfToMarkdown.create().convert(CLEAN);
 
     assertThat(result.diagnostics()).isEmpty();
-    assertThat(result.wasLossy()).isFalse();
+    assertThat(result.hasWarnings()).isFalse();
   }
 
   @Test
   void a_placeholdered_unknown_node_is_flagged_lossy_with_a_warning() {
     var result = AdfToMarkdown.create().convert(UNKNOWN_NODE);
 
-    assertThat(result.wasLossy()).isTrue();
+    assertThat(result.hasWarnings()).isTrue();
     assertThat(result.diagnostics())
         .singleElement()
         .satisfies(
@@ -48,11 +49,11 @@ class ConversionDiagnosticsTests {
 
   @Test
   void a_skipped_unknown_node_is_flagged_lossy_with_a_warning() {
-    var options = MarkdownOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.SKIP);
+    var options = ConversionOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.SKIP);
 
     var result = AdfToMarkdown.with(options).convert(UNKNOWN_NODE);
 
-    assertThat(result.wasLossy()).isTrue();
+    assertThat(result.hasWarnings()).isTrue();
     assertThat(result.diagnostics())
         .extracting(Diagnostic::code)
         .containsExactly(Diagnostic.Code.UNKNOWN_NODE_SKIPPED);
@@ -60,11 +61,12 @@ class ConversionDiagnosticsTests {
 
   @Test
   void a_preserved_unknown_node_is_noted_but_not_lossy() {
-    var options = MarkdownOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.PRESERVE_RAW);
+    var options =
+        ConversionOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.PRESERVE_RAW);
 
     var result = AdfToMarkdown.with(options).convert(UNKNOWN_NODE);
 
-    assertThat(result.wasLossy()).isFalse();
+    assertThat(result.hasWarnings()).isFalse();
     assertThat(result.diagnostics())
         .singleElement()
         .satisfies(
@@ -78,7 +80,7 @@ class ConversionDiagnosticsTests {
   void an_unsupported_version_is_a_warning_and_flagged_lossy() {
     var result = AdfToMarkdown.create().convert(UNSUPPORTED_VERSION);
 
-    assertThat(result.wasLossy()).isTrue();
+    assertThat(result.hasWarnings()).isTrue();
     assertThat(result.diagnostics())
         .singleElement()
         .satisfies(
@@ -94,7 +96,7 @@ class ConversionDiagnosticsTests {
 
     // The text still renders; the unsupported mark is dropped but reported, not silently lost.
     assertThat(result.body()).isEqualTo("hi");
-    assertThat(result.wasLossy()).isTrue();
+    assertThat(result.hasWarnings()).isTrue();
     assertThat(result.diagnostics())
         .singleElement()
         .satisfies(
@@ -111,7 +113,8 @@ class ConversionDiagnosticsTests {
             + "{\"type\":\"mysteryBlock\"},"
             + "{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"hi\",\"marks\":[{\"type\":\"futureMark\"}]}]}"
             + "]}";
-    var options = MarkdownOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.PRESERVE_RAW);
+    var options =
+        ConversionOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.PRESERVE_RAW);
 
     var result = AdfToMarkdown.with(options).convert(json);
 
@@ -120,14 +123,15 @@ class ConversionDiagnosticsTests {
         .extracting(Diagnostic::code)
         .containsExactly(
             Diagnostic.Code.UNKNOWN_NODE_PRESERVED, Diagnostic.Code.UNKNOWN_MARK_DROPPED);
-    assertThat(result.wasLossy()).isTrue();
+    assertThat(result.hasWarnings()).isTrue();
   }
 
   @Test
-  void a_fatal_parse_error_is_flagged_lossy() {
+  void a_fatal_parse_error_is_an_error_not_a_warning() {
     var result = AdfToMarkdown.create().convert("{");
 
-    assertThat(result.wasLossy()).isTrue();
+    assertThat(result.hasErrors()).isTrue();
+    assertThat(result.hasWarnings()).isFalse();
     assertThat(result.diagnostics())
         .singleElement()
         .satisfies(issue -> assertThat(issue.severity()).isEqualTo(Diagnostic.Severity.ERROR));
@@ -137,7 +141,7 @@ class ConversionDiagnosticsTests {
   void an_unsupported_macro_is_flagged_lossy_with_a_warning() {
     var result = AdfToMarkdown.create().convert(UNSUPPORTED_MACRO);
 
-    assertThat(result.wasLossy()).isTrue();
+    assertThat(result.hasWarnings()).isTrue();
     assertThat(result.diagnostics())
         .singleElement()
         .satisfies(
@@ -161,7 +165,7 @@ class ConversionDiagnosticsTests {
     assertThat(result.diagnostics())
         .extracting(Diagnostic::code)
         .doesNotContain(Diagnostic.Code.UNSUPPORTED_MACRO);
-    assertThat(result.wasLossy()).isFalse();
+    assertThat(result.hasWarnings()).isFalse();
   }
 
   @Test
@@ -173,7 +177,7 @@ class ConversionDiagnosticsTests {
     var result = AdfToMarkdown.create().convert(json);
 
     assertThat(result.diagnostics()).isEmpty();
-    assertThat(result.wasLossy()).isFalse();
+    assertThat(result.hasWarnings()).isFalse();
   }
 
   @Test
@@ -186,7 +190,7 @@ class ConversionDiagnosticsTests {
 
     assertThat(result.body()).isEqualTo("{{pagetree}}");
     assertThat(result.diagnostics()).isEmpty();
-    assertThat(result.wasLossy()).isFalse();
+    assertThat(result.hasWarnings()).isFalse();
   }
 
   @Test
@@ -202,20 +206,23 @@ class ConversionDiagnosticsTests {
     assertThat(result.diagnostics())
         .extracting(Diagnostic::code)
         .doesNotContain(Diagnostic.Code.UNSUPPORTED_MACRO);
-    assertThat(result.wasLossy()).isFalse();
+    assertThat(result.hasWarnings()).isFalse();
   }
 
   @Test
   void a_custom_renderer_suppresses_the_unsupported_macro_warning() {
     ExtensionRenderer detailssummary =
-        extension -> "detailssummary".equals(extension.extensionKey()) ? "- a row" : null;
-    var options = MarkdownOptions.defaults().withExtensionRenderers(List.of(detailssummary));
+        extension ->
+            "detailssummary".equals(extension.extensionKey())
+                ? ExtensionOutput.replace("- a row")
+                : ExtensionOutput.defer();
+    var options = ConversionOptions.defaults().withExtensionRenderers(List.of(detailssummary));
 
     var handled = AdfToMarkdown.with(options).convert(UNSUPPORTED_MACRO);
     assertThat(handled.diagnostics())
         .extracting(Diagnostic::code)
         .doesNotContain(Diagnostic.Code.UNSUPPORTED_MACRO);
-    assertThat(handled.wasLossy()).isFalse();
+    assertThat(handled.hasWarnings()).isFalse();
 
     var fallback = AdfToMarkdown.create().convert(UNSUPPORTED_MACRO);
     assertThat(fallback.diagnostics())
@@ -255,7 +262,7 @@ class ConversionDiagnosticsTests {
 
     var result = AdfToMarkdown.create().convert(json);
 
-    assertThat(result.wasLossy()).isTrue();
+    assertThat(result.hasWarnings()).isTrue();
     assertThat(result.diagnostics())
         .extracting(Diagnostic::code)
         .containsExactly(Diagnostic.Code.UNSUPPORTED_MACRO);

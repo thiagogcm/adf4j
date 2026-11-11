@@ -4,9 +4,10 @@ import static java.util.Objects.requireNonNullElse;
 
 import dev.nthings.adf4j.metadata.PageTreeMacro;
 import dev.nthings.adf4j.options.AttachmentResolver;
+import dev.nthings.adf4j.options.ConversionOptions;
 import dev.nthings.adf4j.options.ExcerptResolver;
+import dev.nthings.adf4j.options.ExtensionOutput;
 import dev.nthings.adf4j.options.ExtensionRenderer;
-import dev.nthings.adf4j.options.MarkdownOptions;
 import dev.nthings.adf4j.options.MediaResolver;
 import dev.nthings.adf4j.options.PageLinkResolver;
 import dev.nthings.adf4j.options.PageTreeEntry;
@@ -22,9 +23,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
+import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 
-/// Translates the rendering/resolver flags of `convert` into a {@link MarkdownOptions}. Resolvers
+/// Translates the rendering/resolver flags of `convert` into a {@link ConversionOptions}. Resolvers
 /// are data-driven (URL templates plus JSON lookup tables) and preserve the library's
 /// decline-vs-answer contract: an absent key/entry declines, a present entry answers (an empty
 /// value being a valid empty answer).
@@ -39,16 +41,24 @@ final class RenderConfig {
 
   private RenderConfig() {}
 
-  static MarkdownOptions build(
+  static ConversionOptions build(
       RenderingOptions rendering, ResolverOptions resolvers, CliJson json) {
+    var base = ConversionOptions.defaults();
+    if (rendering.config != null) {
+      var raw = CliIo.read(Path.of(rendering.config), "config file");
+      try {
+        base = ConversionOptions.fromJson(raw);
+      } catch (IllegalArgumentException | JacksonException invalid) {
+        throw CliException.usage("Invalid --config: " + invalid.getMessage());
+      }
+    }
+    if (rendering.title != null) base = base.withDocumentTitle(rendering.title);
+    if (rendering.collapseHardBreaks) base = base.withCollapseHardBreaks(true);
+    if (rendering.escapeParentheses) base = base.withEscapeParentheses(true);
+    if (rendering.imageSize) base = base.withImageSizeAttributes(true);
+    if (rendering.htmlVisualMarks) base = base.withHtmlVisualMarks(true);
     var options =
-        MarkdownOptions.defaults()
-            .withDocumentTitle(rendering.title)
-            .withCollapseHardBreaks(rendering.collapseHardBreaks)
-            .withEscapeParentheses(rendering.escapeParentheses)
-            .withImageSizeAttributes(rendering.imageSize)
-            .withHtmlVisualMarks(rendering.htmlVisualMarks)
-            .withMediaResolver(mediaResolver(resolvers, json))
+        base.withMediaResolver(mediaResolver(resolvers, json))
             .withAttachmentResolver(attachmentResolver(resolvers, json))
             .withPageLinkResolver(pageLinkResolver(resolvers, json))
             .withPageTreeResolver(pageTreeResolver(resolvers, json))
@@ -237,11 +247,12 @@ final class RenderConfig {
                 && (entry.type() == null || entry.type().equals(extension.extensionType()))) {
               // Verbatim per the ExtensionRenderer contract; unknown {tokens} become empty.
               var macroParams = extension.macroParams();
-              return Placeholders.render(
-                  entry.template(), name -> requireNonNullElse(macroParams.value(name), ""));
+              return ExtensionOutput.replace(
+                  Placeholders.render(
+                      entry.template(), name -> requireNonNullElse(macroParams.value(name), "")));
             }
           }
-          return null; // no match -> defer to built-in macros
+          return ExtensionOutput.defer();
         });
   }
 

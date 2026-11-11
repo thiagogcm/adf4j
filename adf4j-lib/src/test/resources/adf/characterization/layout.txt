@@ -1,139 +1,7 @@
-### colspan-array
-body: |     |\n| --- |\n| x   |\n| x   |
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageIds: []
-externalUrls: []
-mentionRefs: []
-attachmentRefs: []
-pageTreeRefs: []
-excerptRefs: []
-outline: []
-### colspan-beyond-int
-body: |     |\n| --- |\n| x   |\n| x   |
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageIds: []
-externalUrls: []
-mentionRefs: []
-attachmentRefs: []
-pageTreeRefs: []
-excerptRefs: []
-outline: []
-### colspan-blank
-body: |     |\n| --- |\n| x   |\n| x   |
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageIds: []
-externalUrls: []
-mentionRefs: []
-attachmentRefs: []
-pageTreeRefs: []
-excerptRefs: []
-outline: []
-### colspan-bool
-body: |     |\n| --- |\n| x   |\n| x   |
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageIds: []
-externalUrls: []
-mentionRefs: []
-attachmentRefs: []
-pageTreeRefs: []
-excerptRefs: []
-outline: []
-### colspan-negative
-body: |     |\n| --- |\n| x   |\n| x   |
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageIds: []
-externalUrls: []
-mentionRefs: []
-attachmentRefs: []
-pageTreeRefs: []
-excerptRefs: []
-outline: []
-### colspan-nonnumeric
-body: |     |\n| --- |\n| x   |\n| x   |
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageIds: []
-externalUrls: []
-mentionRefs: []
-attachmentRefs: []
-pageTreeRefs: []
-excerptRefs: []
-outline: []
-### colspan-null
-body: |     |\n| --- |\n| x   |\n| x   |
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageIds: []
-externalUrls: []
-mentionRefs: []
-attachmentRefs: []
-pageTreeRefs: []
-excerptRefs: []
-outline: []
-### colspan-object
-body: |     |\n| --- |\n| x   |\n| x   |
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageIds: []
-externalUrls: []
-mentionRefs: []
-attachmentRefs: []
-pageTreeRefs: []
-excerptRefs: []
-outline: []
-### colspan-one
-body: |     |\n| --- |\n| x   |\n| x   |
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageIds: []
-externalUrls: []
-mentionRefs: []
-attachmentRefs: []
-pageTreeRefs: []
-excerptRefs: []
-outline: []
-### colspan-string-false
-body: |     |\n| --- |\n| x   |\n| x   |
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageIds: []
-externalUrls: []
-mentionRefs: []
-attachmentRefs: []
-pageTreeRefs: []
-excerptRefs: []
-outline: []
-### colspan-string-true
-body: |     |\n| --- |\n| x   |\n| x   |
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageIds: []
-externalUrls: []
-mentionRefs: []
-attachmentRefs: []
-pageTreeRefs: []
-excerptRefs: []
-outline: []
-### colspan-zero
-body: |     |\n| --- |\n| x   |\n| x   |
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageIds: []
-externalUrls: []
-mentionRefs: []
-attachmentRefs: []
-pageTreeRefs: []
-excerptRefs: []
-outline: []
 ### inline/emoji-metacharacters.json
 body: Reaction: \\[x\\]\\(y\\)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -143,8 +11,8 @@ excerptRefs: []
 outline: []
 ### inline/hard-break.json
 body: Line one.\nLine two.
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -154,8 +22,8 @@ excerptRefs: []
 outline: []
 ### inline/mention-metacharacters.json
 body: By \\[ref\\]\\(x\\)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: [MentionReference{id=user-2, text=[ref](x)}]
@@ -165,8 +33,8 @@ excerptRefs: []
 outline: []
 ### inline/placeholder-metacharacters.json
 body: Owner: \\[label\\]\\(http://evil\\) \\*x\\* \\<b>
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -176,20 +44,8 @@ excerptRefs: []
 outline: []
 ### inline/status-then-placeholder-paren.json
 body: \\[Done\\]\\(see ref\\)
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageIds: []
-externalUrls: []
-mentionRefs: []
-attachmentRefs: []
-pageTreeRefs: []
-excerptRefs: []
-outline: []
-### marks-on-ignoring-nodes
-body: <details><summary>t</summary>\n\nx\n\n</details>\n\n|     |\n| --- |\n| x   |\n\n\\[Extension: k\\]
-lossy: true
-diagnostic: UNSUPPORTED_MACRO|WARNING|1 unsupported macro(s) rendered as placeholders; original content not represented: k.
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -199,8 +55,8 @@ excerptRefs: []
 outline: []
 ### marks/escape-inline-metacharacters.json
 body: Use \\*stars\\* \\_unders\\_ \\`ticks\\` \\[br\\]\\(c\\) \\<tag> \\~s\\~
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -210,30 +66,8 @@ excerptRefs: []
 outline: []
 ### nodes/status-then-paren.json
 body: \\[Done\\]\\(not a link\\) follows
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageIds: []
-externalUrls: []
-mentionRefs: []
-attachmentRefs: []
-pageTreeRefs: []
-excerptRefs: []
-outline: []
-### nodes/table-gfm-leading-marker-unescaped.json
-body: |        |         |\n| ------ | ------- |\n| # hash | > quote |\n| - item | 1. one  |\n| plain  | + plus  |
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageIds: []
-externalUrls: []
-mentionRefs: []
-attachmentRefs: []
-pageTreeRefs: []
-excerptRefs: []
-outline: []
-### nodes/table-simple.json
-body: |     |     |\n| --- | --- |\n| a1  | a2  |\n| b1  | b2  |
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -243,8 +77,8 @@ excerptRefs: []
 outline: []
 ### nodes/toc-slug-divergence.json
 body: - [Overview](#overview)\n  - [Café ☕ Overview](#café--overview)\n  - [Notes\\!\\!\\! \\(draft\\)](#notes-draft)\n- [Overview](#overview-1)\n\n<a id="overview"></a>\n# Overview\n\n<a id="café--overview"></a>\n## Café ☕ Overview\n\n<a id="notes-draft"></a>\n## Notes\\!\\!\\! \\(draft\\)\n\n<a id="overview-1"></a>\n# Overview
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
+warnings: false
+unresolved: []
 pageIds: []
 externalUrls: []
 mentionRefs: []
@@ -252,234 +86,3 @@ attachmentRefs: []
 pageTreeRefs: []
 excerptRefs: []
 outline: [HeadingReference{level=1, text=Overview, anchor=overview}, HeadingReference{level=2, text=Café ☕ Overview, anchor=café--overview}, HeadingReference{level=2, text=Notes!!! (draft), anchor=notes-draft}, HeadingReference{level=1, text=Overview, anchor=overview-1}]
-### number-column-array
-body: |     |\n| --- |\n| x   |\n| x   |
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageIds: []
-externalUrls: []
-mentionRefs: []
-attachmentRefs: []
-pageTreeRefs: []
-excerptRefs: []
-outline: []
-### number-column-blank
-body: |     |\n| --- |\n| x   |\n| x   |
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageIds: []
-externalUrls: []
-mentionRefs: []
-attachmentRefs: []
-pageTreeRefs: []
-excerptRefs: []
-outline: []
-### number-column-float
-body: |     |\n| --- |\n| x   |\n| x   |
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageIds: []
-externalUrls: []
-mentionRefs: []
-attachmentRefs: []
-pageTreeRefs: []
-excerptRefs: []
-outline: []
-### number-column-nonnumeric
-body: |     |\n| --- |\n| x   |\n| x   |
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageIds: []
-externalUrls: []
-mentionRefs: []
-attachmentRefs: []
-pageTreeRefs: []
-excerptRefs: []
-outline: []
-### number-column-null
-body: |     |\n| --- |\n| x   |\n| x   |
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageIds: []
-externalUrls: []
-mentionRefs: []
-attachmentRefs: []
-pageTreeRefs: []
-excerptRefs: []
-outline: []
-### number-column-object
-body: |     |\n| --- |\n| x   |\n| x   |
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageIds: []
-externalUrls: []
-mentionRefs: []
-attachmentRefs: []
-pageTreeRefs: []
-excerptRefs: []
-outline: []
-### number-column-string
-body: |     |\n| --- |\n| x   |\n| x   |
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageIds: []
-externalUrls: []
-mentionRefs: []
-attachmentRefs: []
-pageTreeRefs: []
-excerptRefs: []
-outline: []
-### number-column-string-false
-body: |     |\n| --- |\n| x   |\n| x   |
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageIds: []
-externalUrls: []
-mentionRefs: []
-attachmentRefs: []
-pageTreeRefs: []
-excerptRefs: []
-outline: []
-### number-column-zero
-body: |     |\n| --- |\n| x   |\n| x   |
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageIds: []
-externalUrls: []
-mentionRefs: []
-attachmentRefs: []
-pageTreeRefs: []
-excerptRefs: []
-outline: []
-### rowspan-array
-body: |     |\n| --- |\n| x   |\n| x   |
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageIds: []
-externalUrls: []
-mentionRefs: []
-attachmentRefs: []
-pageTreeRefs: []
-excerptRefs: []
-outline: []
-### rowspan-beyond-int
-body: |     |\n| --- |\n| x   |\n| x   |
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageIds: []
-externalUrls: []
-mentionRefs: []
-attachmentRefs: []
-pageTreeRefs: []
-excerptRefs: []
-outline: []
-### rowspan-blank
-body: |     |\n| --- |\n| x   |\n| x   |
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageIds: []
-externalUrls: []
-mentionRefs: []
-attachmentRefs: []
-pageTreeRefs: []
-excerptRefs: []
-outline: []
-### rowspan-bool
-body: |     |\n| --- |\n| x   |\n| x   |
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageIds: []
-externalUrls: []
-mentionRefs: []
-attachmentRefs: []
-pageTreeRefs: []
-excerptRefs: []
-outline: []
-### rowspan-negative
-body: |     |\n| --- |\n| x   |\n| x   |
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageIds: []
-externalUrls: []
-mentionRefs: []
-attachmentRefs: []
-pageTreeRefs: []
-excerptRefs: []
-outline: []
-### rowspan-nonnumeric
-body: |     |\n| --- |\n| x   |\n| x   |
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageIds: []
-externalUrls: []
-mentionRefs: []
-attachmentRefs: []
-pageTreeRefs: []
-excerptRefs: []
-outline: []
-### rowspan-null
-body: |     |\n| --- |\n| x   |\n| x   |
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageIds: []
-externalUrls: []
-mentionRefs: []
-attachmentRefs: []
-pageTreeRefs: []
-excerptRefs: []
-outline: []
-### rowspan-object
-body: |     |\n| --- |\n| x   |\n| x   |
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageIds: []
-externalUrls: []
-mentionRefs: []
-attachmentRefs: []
-pageTreeRefs: []
-excerptRefs: []
-outline: []
-### rowspan-one
-body: |     |\n| --- |\n| x   |\n| x   |
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageIds: []
-externalUrls: []
-mentionRefs: []
-attachmentRefs: []
-pageTreeRefs: []
-excerptRefs: []
-outline: []
-### rowspan-string-false
-body: |     |\n| --- |\n| x   |\n| x   |
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageIds: []
-externalUrls: []
-mentionRefs: []
-attachmentRefs: []
-pageTreeRefs: []
-excerptRefs: []
-outline: []
-### rowspan-string-true
-body: |     |\n| --- |\n| x   |\n| x   |
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageIds: []
-externalUrls: []
-mentionRefs: []
-attachmentRefs: []
-pageTreeRefs: []
-excerptRefs: []
-outline: []
-### rowspan-zero
-body: |     |\n| --- |\n| x   |\n| x   |
-lossy: false
-unresolved: UnresolvedReferences{pageIds=[], pageTreeRefs=[], excerptRefs=[]}
-pageIds: []
-externalUrls: []
-mentionRefs: []
-attachmentRefs: []
-pageTreeRefs: []
-excerptRefs: []
-outline: []

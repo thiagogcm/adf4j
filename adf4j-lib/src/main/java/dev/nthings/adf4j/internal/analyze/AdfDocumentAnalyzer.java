@@ -2,7 +2,7 @@ package dev.nthings.adf4j.internal.analyze;
 
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.internal.AttachmentInventory;
-import dev.nthings.adf4j.options.MarkdownOptions;
+import dev.nthings.adf4j.options.ConversionOptions;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
@@ -18,14 +18,14 @@ public final class AdfDocumentAnalyzer {
   }
 
   public DocumentAnalysis analyze(
-      @Nullable AdfDocument document, MarkdownOptions options, AttachmentInventory attachments) {
+      @Nullable AdfDocument document, ConversionOptions options, AttachmentInventory attachments) {
     if (document == null) {
       return DocumentAnalysis.empty();
     }
 
     var headingCollector = new AdfHeadingCollector(options.unknownNodePolicy());
     var metadataExtractor = new AdfContentMetadataExtractor(attachments);
-    var lossinessCollector = new AdfLossinessCollector();
+    var lossinessCollector = new AdfLossinessCollector(document);
     AdfNodeWalker.walk(document, List.of(headingCollector, metadataExtractor, lossinessCollector));
 
     var outline = headingCollector.build();

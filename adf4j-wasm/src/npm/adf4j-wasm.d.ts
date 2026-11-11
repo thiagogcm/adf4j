@@ -1,52 +1,102 @@
 export interface Adf4jAttachment {
-  /** The media services file UUID (`extensions.fileId` / v2 `fileId` in the Confluence REST API). */
   fileId: string;
-  /** The attachment's file name. Optional. */
-  title?: string;
-  /** The attachment's MIME type. */
-  mediaType?: string;
-  /** The attachment's real URL; becomes the default link destination for matching nodes. */
-  downloadUrl?: string;
+  title?: string | null;
+  mediaType?: string | null;
+  downloadUrl?: string | null;
 }
 
-/** Parsed as strictly as the CLI's `--attachments` file: an unknown key is an error, not ignored. */
-export interface Adf4jConvertContext {
-  /** The page's attachment inventory; a present (even empty) array is authoritative. */
-  attachments?: Adf4jAttachment[];
-  /** Prepended as an escaped level-1 heading; blank emits no heading. */
-  title?: string;
+export interface Adf4jConfig {
+  markdown?: {
+    unknownNodePolicy?: 'placeholder' | 'skip' | 'preserve-raw' | 'fail';
+    tableFallback?: 'gfm-empty-header' | 'gfm-promote-first-row' | 'html';
+    imageSizeAttributes?: boolean;
+    htmlVisualMarks?: boolean;
+    collapseHardBreaks?: boolean;
+    escapeParentheses?: boolean;
+  };
+  context?: {
+    title?: string | null;
+    /** Absent means unknown; an empty array is an authoritative empty inventory. */
+    attachments?: Adf4jAttachment[];
+  };
 }
 
 export interface Adf4jDiagnostic {
-  /** A stable machine-readable identifier, such as `INVALID_JSON`. */
   code: string;
   severity: 'INFO' | 'WARNING' | 'ERROR';
   message: string;
+  /** JSON Pointers into the source document. */
+  paths: string[];
+  details: Record<string, string>;
 }
 
-export interface Adf4jResult {
-  /** False on invalid input or an invalid context; `error` then says why. */
-  ok: boolean;
-  /** The Markdown. Do not use it when `ok` is false. */
-  body: string;
-  /** True when any diagnostic is a WARNING or ERROR. */
-  wasLossy: boolean;
-  diagnostics: Adf4jDiagnostic[];
-  error?: string;
+export interface Adf4jPageTreeReference {
+  macro: 'pagetree' | 'children';
+  root: string | null;
+  depth?: number;
+  all: boolean;
+  parameters: Record<string, string>;
 }
+
+export interface Adf4jExcerptReference {
+  page: string;
+  excerptName: string | null;
+  parameters: Record<string, string>;
+}
+
+/** Source metadata; arbitrary custom renderer output is not analyzed. */
+export interface Adf4jMetadata {
+  pageIds: string[];
+  externalUrls: string[];
+  referencedFileIds: string[];
+  mentionRefs: { id: string | null; text: string | null }[];
+  attachmentRefs: Adf4jAttachment[];
+  pageTreeRefs: Adf4jPageTreeReference[];
+  excerptRefs: Adf4jExcerptReference[];
+  excerpts: { name: string | null }[];
+  outline: { level: number; text: string; anchor: string }[];
+}
+
+export interface Adf4jUnresolvedResource {
+  kind: 'MEDIA' | 'ATTACHMENT' | 'PAGE' | 'PAGE_TREE' | 'EXCERPT' | 'ATTACHMENT_INVENTORY';
+  id: string;
+  path: string;
+  reason: 'NO_ANSWER' | 'MISSING_INVENTORY' | 'CALLBACK_FAILED';
+  fallback: string;
+}
+
+export interface Adf4jEffect {
+  kind: 'CONTENT_DROPPED' | 'PLACEHOLDER' | 'STYLE_OMITTED' | 'STRUCTURE_CHANGED';
+  path: string;
+  message: string;
+}
+
+interface Outcome {
+  hasWarnings: boolean;
+  diagnostics: Adf4jDiagnostic[];
+}
+
+type Status = { ok: true; error?: never } | { ok: false; error: string };
+
+export type Adf4jResult = Outcome & {
+  metadata: Adf4jMetadata;
+  effects: Adf4jEffect[];
+  unresolved: Adf4jUnresolvedResource[];
+} & ({ ok: true; body: string; error?: never } | { ok: false; body: ''; error: string });
+
+export type Adf4jAnalysisResult = Outcome & Status & { metadata: Adf4jMetadata };
 
 export interface Adf4jWasmApi {
-  /** Never throws on bad input: failures come back as `ok: false`. */
-  convert(json: string, context?: Adf4jConvertContext | string): Adf4jResult;
+  /** Malformed ADF returns a failed outcome, never publishable Markdown. */
+  convert(json: string, config?: Adf4jConfig): Adf4jResult;
+  analyze(json: string, config?: Adf4jConfig): Adf4jAnalysisResult;
   version(): string;
 }
 
 export interface LoadAdf4jOptions {
   timeoutMs?: number;
   imageUrl?: string | URL;
-  imagePath?: string;
   wasmUrl?: string | URL;
-  wasmPath?: string;
 }
 
 export function loadAdf4j(opts?: LoadAdf4jOptions): Promise<Adf4jWasmApi>;

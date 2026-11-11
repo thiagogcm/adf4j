@@ -1,10 +1,9 @@
 package dev.nthings.adf4j.options;
 
-import dev.nthings.adf4j.AdfToMarkdown;
-
-import org.junit.jupiter.api.Test;
-
 import static org.assertj.core.api.Assertions.assertThat;
+
+import dev.nthings.adf4j.AdfToMarkdown;
+import org.junit.jupiter.api.Test;
 
 class PreserveRawPolicyTests {
 
@@ -38,7 +37,8 @@ class PreserveRawPolicyTests {
 
   @Test
   void preserve_raw_emits_an_unknown_block_as_a_fenced_json_block() {
-    var options = MarkdownOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.PRESERVE_RAW);
+    var options =
+        ConversionOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.PRESERVE_RAW);
 
     var markdown = AdfToMarkdown.with(options).toMarkdown(UNKNOWN_BLOCK).strip();
 
@@ -48,7 +48,8 @@ class PreserveRawPolicyTests {
 
   @Test
   void preserve_raw_emits_an_unknown_inline_as_a_code_span() {
-    var options = MarkdownOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.PRESERVE_RAW);
+    var options =
+        ConversionOptions.defaults().withUnknownNodePolicy(UnknownNodePolicy.PRESERVE_RAW);
 
     var markdown = AdfToMarkdown.with(options).toMarkdown(UNKNOWN_INLINE).strip();
 

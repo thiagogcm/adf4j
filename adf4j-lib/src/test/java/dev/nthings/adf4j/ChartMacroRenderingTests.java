@@ -2,7 +2,8 @@ package dev.nthings.adf4j;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.nthings.adf4j.options.MarkdownOptions;
+import dev.nthings.adf4j.options.ConversionOptions;
+import dev.nthings.adf4j.options.ExtensionOutput;
 import dev.nthings.adf4j.result.Diagnostic;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -160,15 +161,16 @@ class ChartMacroRenderingTests {
   @Test
   void a_custom_extension_renderer_still_overrides_the_chart_caption() {
     var options =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withExtensionRenderers(
                 List.of(
                     extension ->
                         "com.atlassian.chart".equals(extension.extensionType())
-                            ? "custom chart block ("
-                                + extension.parameters().string("extensionTitle")
-                                + ")"
-                            : null));
+                            ? ExtensionOutput.replace(
+                                "custom chart block ("
+                                    + extension.parameters().string("extensionTitle")
+                                    + ")")
+                            : ExtensionOutput.defer()));
 
     var markdown = AdfToMarkdown.with(options).toMarkdown(MODERN_CHART).strip();
 

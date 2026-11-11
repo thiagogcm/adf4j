@@ -83,7 +83,6 @@
         <dependency>
             <groupId>com.networknt</groupId>
             <artifactId>json-schema-validator</artifactId>
-            <scope>test</scope>
             <exclusions>
                 <exclusion>
                     <groupId>tools.jackson.dataformat</groupId>
@@ -94,6 +93,18 @@
     </dependencies>
 
     <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <resource>
+                <directory>../docs/spec</directory>
+                <includes>
+                    <include>adf-schema.json</include>
+                </includes>
+                <targetPath>dev/nthings/adf4j</targetPath>
+            </resource>
+        </resources>
         <plugins>
             <!-- Fail `mvn verify` if coverage regresses below the gate (agent/report come from the parent). -->
             <plugin>

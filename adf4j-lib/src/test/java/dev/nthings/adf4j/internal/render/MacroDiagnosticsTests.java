@@ -10,15 +10,15 @@ class MacroDiagnosticsTests {
   void recording_reports_whether_this_render_had_seen_the_label() {
     var diagnostics = new MacroDiagnostics();
 
-    assertThat(diagnostics.recordUnsupported("type", "key")).isTrue();
-    assertThat(diagnostics.recordUnsupported("type", "key")).isFalse();
-    assertThat(diagnostics.recordUnsupported("type", "other")).isTrue();
+    assertThat(diagnostics.recordUnsupported("type", "key", "/content/0")).isTrue();
+    assertThat(diagnostics.recordUnsupported("type", "key", "/content/0")).isFalse();
+    assertThat(diagnostics.recordUnsupported("type", "other", "/content/0")).isTrue();
   }
 
   @Test
   void each_render_starts_fresh() {
-    new MacroDiagnostics().recordUnsupported("type", "key");
+    new MacroDiagnostics().recordUnsupported("type", "key", "/content/0");
 
-    assertThat(new MacroDiagnostics().recordUnsupported("type", "key")).isTrue();
+    assertThat(new MacroDiagnostics().recordUnsupported("type", "key", "/content/0")).isTrue();
   }
 }

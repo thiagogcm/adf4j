@@ -28,8 +28,8 @@ class AttachmentResolverOptionsTests {
       }
       """;
 
-  private static MarkdownOptions withAttachmentContext(AttachmentResolver resolver) {
-    return MarkdownOptions.defaults()
+  private static ConversionOptions withAttachmentContext(AttachmentResolver resolver) {
+    return ConversionOptions.defaults()
         .withAttachments(
             List.of(new AttachmentReference("file-pdf-1", "guide.pdf", "application/pdf")))
         .withAttachmentResolver(resolver);
@@ -93,7 +93,7 @@ class AttachmentResolverOptionsTests {
         }
         """;
     var options =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withAttachments(
                 List.of(
                     new AttachmentReference(

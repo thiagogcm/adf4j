@@ -3,7 +3,7 @@ package dev.nthings.adf4j.spec;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.nthings.adf4j.AdfToMarkdown;
-import dev.nthings.adf4j.options.MarkdownOptions;
+import dev.nthings.adf4j.options.ConversionOptions;
 import org.jsoup.Jsoup;
 import org.junit.jupiter.api.Test;
 
@@ -16,7 +16,7 @@ class CommonMarkOracleTests {
 
   private static final AdfToMarkdown CONVERTER = AdfToMarkdown.create();
   private static final AdfToMarkdown VISUAL_CONVERTER =
-      AdfToMarkdown.with(MarkdownOptions.defaults().withHtmlVisualMarks(true));
+      AdfToMarkdown.with(ConversionOptions.defaults().withHtmlVisualMarks(true));
 
   private static String toHtml(String adfJson) {
     return CommonMarkTestSupport.toHtml(CONVERTER.toMarkdown(adfJson));

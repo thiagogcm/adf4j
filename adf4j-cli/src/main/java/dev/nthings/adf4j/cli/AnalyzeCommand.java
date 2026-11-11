@@ -1,7 +1,7 @@
 package dev.nthings.adf4j.cli;
 
 import dev.nthings.adf4j.AdfToMarkdown;
-import dev.nthings.adf4j.options.MarkdownOptions;
+import dev.nthings.adf4j.options.ConversionOptions;
 import java.util.List;
 import java.util.StringJoiner;
 import org.aesh.command.CommandDefinition;
@@ -42,15 +42,16 @@ public class AnalyzeCommand extends Adf4jSubcommand {
     var selected = selectedSections();
     var json = new CliJson();
     var parsed = parseInput();
-    var options = MarkdownOptions.defaults().withAttachments(attachments.read(json));
+    var options = ConversionOptions.defaults().withAttachments(attachments.read(json));
     var metadata = AdfToMarkdown.with(options).analyze(parsed);
 
-    var sections = JsonRenderer.metadata(metadata, selected);
+    var result = json.result(metadata);
+    var sections = JsonRenderer.metadata((ObjectNode) result.get("metadata"), selected);
     var output =
-        format.equals("text") ? text(sections) : json.write(sections, !common.compact) + "\n";
+        format.equals("text") ? text(sections) : json.write(result, !common.compact) + "\n";
     CliIo.writeOutput(common.output, output);
-    printDiagnostics(parsed.diagnostics());
-    return parsed.isValid() ? ExitCodes.OK : ExitCodes.CONTENT_FAILURE;
+    printDiagnostics(metadata.diagnostics());
+    return metadata.isSuccess() ? ExitCodes.OK : ExitCodes.CONTENT_FAILURE;
   }
 
   private List<String> selectedSections() {

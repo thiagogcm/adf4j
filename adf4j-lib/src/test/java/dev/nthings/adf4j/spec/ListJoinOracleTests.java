@@ -4,7 +4,7 @@ import static dev.nthings.adf4j.testing.AdfSnippets.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.nthings.adf4j.AdfToMarkdown;
-import dev.nthings.adf4j.options.MarkdownOptions;
+import dev.nthings.adf4j.options.ConversionOptions;
 import dev.nthings.adf4j.testing.AdfSnippets;
 import java.util.List;
 import org.jsoup.Jsoup;
@@ -22,7 +22,7 @@ class ListJoinOracleTests {
 
   private static final AdfToMarkdown CONVERTER = AdfToMarkdown.create();
   private static final AdfToMarkdown VISUAL =
-      AdfToMarkdown.with(MarkdownOptions.defaults().withHtmlVisualMarks(true));
+      AdfToMarkdown.with(ConversionOptions.defaults().withHtmlVisualMarks(true));
 
   private static Document parsed(String markdown) {
     return Jsoup.parse(CommonMarkTestSupport.toHtml(markdown));

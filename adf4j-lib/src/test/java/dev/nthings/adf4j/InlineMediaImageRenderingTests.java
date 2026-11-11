@@ -3,7 +3,7 @@ package dev.nthings.adf4j;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.nthings.adf4j.ast.AdfMedia;
-import dev.nthings.adf4j.options.MarkdownOptions;
+import dev.nthings.adf4j.options.ConversionOptions;
 import dev.nthings.adf4j.result.Diagnostic;
 import org.junit.jupiter.api.Test;
 
@@ -71,7 +71,7 @@ class InlineMediaImageRenderingTests {
   void a_media_resolver_turns_it_into_a_local_image_link() {
     var seen = new AdfMedia[1];
     var options =
-        MarkdownOptions.defaults()
+        ConversionOptions.defaults()
             .withMediaResolver(
                 media -> {
                   seen[0] = media;
@@ -89,7 +89,7 @@ class InlineMediaImageRenderingTests {
 
   @Test
   void the_media_id_is_referenced_in_metadata_like_a_media_node() {
-    var metadata = AdfToMarkdown.create().analyze(AdfJson.parse(INLINE_MEDIA_IMAGE));
+    var metadata = AdfToMarkdown.create().analyze(AdfJson.parse(INLINE_MEDIA_IMAGE)).metadata();
 
     assertThat(metadata.referencedFileIds())
         .containsExactly("7e62545e-7cdc-42a6-8760-137006ae963b");
