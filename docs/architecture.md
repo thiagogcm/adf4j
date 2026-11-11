@@ -281,7 +281,7 @@ The library targets JDK 25 and uses:
 | Unknown nodes preserved | Forward compatibility with newer ADF. | Larger public AST surface. |
 | Records keep raw `attrs` behind typed accessors | Lossless by construction, with one source of truth. | Accessors coerce on each read. |
 | Wide `AdfBlock`/`AdfInline` children | Off-schema input stays renderable. | Record constructors accept any nesting. |
-| `Adf` factories typed by sealed `*Content` and mark interfaces derived from the schema | The compiler enforces nesting and marks, and `AdfContentModelTests` checks the interfaces against the schema. | Attribute ranges and context rules, such as alignment inside a panel, stay unchecked. `List` overloads check required children at runtime. |
+| `Adf` factories typed by sealed `*Content` and mark interfaces derived from the schema | The compiler enforces nesting and marks. | Attribute ranges and context rules, such as alignment inside a panel, stay unchecked. `List` overloads check required children at runtime. |
 | `localId`s derived per node in `doc` | Rebuilt documents write the same JSON, and an item's id ignores its state and other items. A hash of the whole document would change every id on any edit. | `doc` and `append` rebuild the tree, editing an item changes its id, and a list's id depends on its position. |
 | `withX` methods on records for optional attributes | Immutable, discoverable, and consistent with `ConversionOptions`. | Only common attributes have one; the rest go through `Attributes.with`. |
 | One analysis walk with visitors | Metadata, outline, and lossiness share traversal cost. | Visitors must stay independent, and the walker must track what the renderer renders. |

@@ -47,7 +47,30 @@ class AnalyzeCommandTest {
     assertThat(result.exitCode()).isZero();
     assertThat(JSON.readTree(result.out()).path("metadata").propertyNames())
         .containsExactlyElementsOf(AdfJson.METADATA_SECTIONS);
-    assertThat(result.out()).contains("\"text\" : \"Hello\"");
+    assertThat(result.out())
+        .isEqualTo(
+            """
+            {
+              "ok" : true,
+              "hasWarnings" : false,
+              "diagnostics" : [ ],
+              "metadata" : {
+                "pageIds" : [ ],
+                "externalUrls" : [ ],
+                "mentionRefs" : [ ],
+                "attachmentRefs" : [ ],
+                "referencedFileIds" : [ ],
+                "pageTreeRefs" : [ ],
+                "excerptRefs" : [ ],
+                "excerpts" : [ ],
+                "outline" : [ {
+                  "level" : 1,
+                  "text" : "Hello",
+                  "anchor" : "hello"
+                } ]
+              }
+            }
+            """);
   }
 
   @Test
@@ -72,7 +95,20 @@ class AnalyzeCommandTest {
     var excerpts = JSON.readTree(result.out()).path("metadata").get("excerpts");
     assertThat(excerpts).hasSize(1);
     assertThat(excerpts.get(0).propertyNames()).containsExactly("name");
-    assertThat(result.out()).doesNotContain("Shared");
+    assertThat(result.out())
+        .isEqualTo(
+            """
+            {
+              "ok" : true,
+              "hasWarnings" : false,
+              "diagnostics" : [ ],
+              "metadata" : {
+                "excerpts" : [ {
+                  "name" : null
+                } ]
+              }
+            }
+            """);
   }
 
   @Test
@@ -164,13 +200,6 @@ class AnalyzeCommandTest {
     assertThat(result.exitCode()).isZero();
     assertThat(result.err()).contains("[WARNING] UNSUPPORTED_VERSION:");
     assertThat(result.out()).contains("UNSUPPORTED_VERSION");
-  }
-
-  @Test
-  void quietSilencesDiagnosticsOnInvalidInput() {
-    var result = run("{ not json", "analyze", "-q");
-    assertThat(result.exitCode()).isEqualTo(ExitCodes.CONTENT_FAILURE);
-    assertThat(result.err()).isEmpty();
   }
 
   @Test

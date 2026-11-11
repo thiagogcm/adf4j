@@ -1,0 +1,286 @@
+### number-unknown-node-big-integer
+schema: off-schema
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: mystery|[/content/0]|{}
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### number-unknown-node-exponent
+schema: off-schema
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: mystery|[/content/0]|{}
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### number-unknown-node-huge-exponent
+schema: off-schema
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: mystery|[/content/0]|{}
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### number-unknown-node-limit-scale
+schema: off-schema
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: mystery|[/content/0]|{}
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### number-unknown-node-limit-scale-digits
+schema: off-schema
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: mystery|[/content/0]|{}
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### number-unknown-node-long-decimal
+schema: off-schema
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: mystery|[/content/0]|{}
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### number-unknown-node-negative-zero
+schema: off-schema
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: mystery|[/content/0]|{}
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### number-unknown-node-overflowing-scale
+schema: off-schema
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: mystery|[/content/0]|{}
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### number-unknown-node-tiny-exponent
+schema: off-schema
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: mystery|[/content/0]|{}
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### number-unknown-node-trailing-zero
+schema: off-schema
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: mystery|[/content/0]|{}
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### pos-extension-in-paragraph
+schema: off-schema
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: extension|[/content/0/content/0]|{}
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### pos-inlinecard-in-doc
+schema: off-schema
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: inlineCard|[/content/0]|{}
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### pos-inlineextension-in-doc
+schema: off-schema
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: inlineExtension|[/content/0]|{}
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### pos-media-in-paragraph
+schema: off-schema
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: media|[/content/0/content/0]|{}
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### pos-paragraph-in-paragraph
+schema: off-schema
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: paragraph|[/content/0/content/0]|{}
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### pos-text-in-doc
+schema: off-schema
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: text|[/content/0]|{}
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### shape-marks-string
+schema: off-schema
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: text|[/content/0]|{}
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### shape-type-float
+schema: off-schema
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: 1.0E8|[/content/0]|{}
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### shape-type-missing
+schema: off-schema
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: <empty>|[/content/0]|{}
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### shape-type-number
+schema: off-schema
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: 5|[/content/0]|{}
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### shape-type-object
+schema: off-schema
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: <empty>|[/content/0]|{}
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### unknown-node-policy.json
+schema: off-schema
+body:
+warnings: false
+diagnostic: UNKNOWN_NODE_REJECTED|ERROR|Unknown node: mysteryBlock|[/content/0]|{}
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []

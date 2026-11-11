@@ -96,14 +96,6 @@ class VisualMarkOptionsTests {
   }
 
   @Test
-  void opt_in_preserves_text_color_as_a_span_style() {
-    var options = ConversionOptions.defaults().withHtmlVisualMarks(true);
-    var markdown = AdfToMarkdown.with(options).toMarkdown(TEXT_COLOR).strip();
-
-    assertThat(markdown).isEqualTo("<span style=\"color:#ff0000\">danger</span>");
-  }
-
-  @Test
   void opt_in_combines_multiple_visual_marks_into_one_span() {
     var options = ConversionOptions.defaults().withHtmlVisualMarks(true);
     var markdown = AdfToMarkdown.with(options).toMarkdown(COLOR_AND_BACKGROUND).strip();

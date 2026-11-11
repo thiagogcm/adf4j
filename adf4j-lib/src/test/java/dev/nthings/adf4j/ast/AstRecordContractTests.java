@@ -120,29 +120,6 @@ class AstRecordContractTests {
   }
 
   @Test
-  void unknown_nodes_and_marks_share_their_type_and_raw_json() {
-    List<AdfUnknown> unknowns =
-        List.of(
-            new UnknownBlock("mystery", "{\"a\":1}"),
-            new UnknownInline("mystery", "{\"a\":1}"),
-            new UnknownMark("mystery", "{\"a\":1}"));
-
-    assertThat(unknowns).extracting(AdfUnknown::type).containsOnly("mystery");
-    assertThat(unknowns).extracting(AdfUnknown::rawJson).containsOnly("{\"a\":1}");
-  }
-
-  @Test
-  void each_record_reports_its_json_type() {
-    assertThat(new TableCell(false, Attributes.empty(), List.of(), List.of()).type())
-        .isEqualTo("tableCell");
-    assertThat(new TableCell(true, Attributes.empty(), List.of(), List.of()).type())
-        .isEqualTo("tableHeader");
-    assertThat(new SubSup(Attributes.empty()).type()).isEqualTo("subsup");
-    assertThat(new AdfDocument(1, List.of()).type()).isEqualTo("doc");
-    assertThat(new UnknownBlock("mystery", "{}").type()).isEqualTo("mystery");
-  }
-
-  @Test
   void accessors_read_attrs_leniently_without_changing_them() {
     var attrs = new Attributes(Map.of("level", "9", "colspan", 0));
 

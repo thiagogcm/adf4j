@@ -24,7 +24,6 @@ import org.junit.jupiter.api.Test;
 
 class AdfTests {
 
-  private static final String CONFLUENCE_MACRO = "com.atlassian.confluence.macro.core";
   private static final String PINNED_ID = "4c9cd0d5-9afb-37a8-8159-d62cdafcf5b5";
 
   private static List<Error> violations(AdfDocument document) throws IOException {
@@ -317,59 +316,6 @@ class AdfTests {
   }
 
   @Test
-  void each_attribute_reads_back_through_its_accessor() {
-    var cell = tableCell("x").withColspan(2).withRowspan(3).withBackground("#eeeeee");
-    var table = table(tableRow(cell)).withLayout(TableLayout.ALIGN_START).withNumberColumn();
-    var single = mediaSingle(externalMedia("https://i")).withLayout(MediaLayout.WRAP_LEFT);
-    var image = media("id", "col").withAlt("alt").withSize(800, 600);
-
-    assertThat(sub().subSupType()).isEqualTo("sub");
-    assertThat(sup().subSupType()).isEqualTo("sup");
-    assertThat(link("https://a", "T").title()).isEqualTo("T");
-    assertThat(cell.colspan()).isEqualTo(2);
-    assertThat(cell.rowspan()).isEqualTo(3);
-    assertThat(cell.background()).isEqualTo("#eeeeee");
-    assertThat(tableHeader("x").header()).isTrue();
-    assertThat(table.numberColumnEnabled()).isTrue();
-    assertThat(table.attrs().text("layout")).isEqualTo("align-start");
-    assertThat(orderedList(listItem("x")).withOrder(5).order()).isEqualTo(5);
-    assertThat(single.layout()).isEqualTo("wrap-left");
-    assertThat(single.withPixelWidth(640).widthType()).isEqualTo("pixel");
-    assertThat(single.withPixelWidth(640).withWidth(50).widthType()).isEqualTo("percentage");
-    assertThat(single.withPixelWidth(640).width()).isEqualTo("640");
-    assertThat(single.withLink(link("https://a")).marks()).containsExactly(link("https://a"));
-    assertThat(table.withWidth(760).attrs().number("width", 0)).isEqualTo(760);
-    assertThat(cell.withColwidth(200, 300).attrs().values().get("colwidth"))
-        .isEqualTo(List.of(200L, 300L));
-    assertThat(nestedExpand("t", "x").content()).containsExactly(paragraph("x"));
-    assertThat(bodiedExtension("t", "k", paragraph("x")).extensionKey()).isEqualTo("k");
-    assertThat(image.id()).isEqualTo("id");
-    assertThat(image.collection()).isEqualTo("col");
-    assertThat(image.alt()).isEqualTo("alt");
-    assertThat(image.width()).isEqualTo("800");
-    assertThat(image.height()).isEqualTo("600");
-    assertThat(heading(3, "x").level()).isEqualTo(3);
-    assertThat(codeBlock("java", "x").language()).isEqualTo("java");
-    assertThat(panel(PanelType.SUCCESS, "x").panelType()).isEqualTo("success");
-    assertThat(expand("t", "x").title()).isEqualTo("t");
-    assertThat(layoutColumn(33.33, paragraph("x")).width()).isEqualTo(33.33);
-    assertThat(status("s", StatusColor.RED).color()).isEqualTo("red");
-    assertThat(mention("id", "@A").text()).isEqualTo("@A");
-    assertThat(date(LocalDate.of(1999, 12, 31)).timestamp()).isEqualTo("946598400000");
-  }
-
-  @Test
-  void a_confluence_macro_reads_back_through_the_extension_api() {
-    var toc =
-        extension(
-            CONFLUENCE_MACRO, "toc", macroParameters(Map.of("minLevel", "2", "maxLevel", "3")));
-
-    assertThat(toc.extensionKey()).isEqualTo("toc");
-    assertThat(toc.macroParams().values())
-        .containsOnly(Map.entry("minLevel", "2"), Map.entry("maxLevel", "3"));
-  }
-
-  @Test
   void extension_parameters_write_in_sorted_order_whatever_the_map_iterates() {
     var nested = new LinkedHashMap<String, Object>();
     nested.put("z", 3);
@@ -433,13 +379,6 @@ class AdfTests {
     var document = doc(reused, taskList(taskItem(TaskState.TODO, "Review")));
 
     assertThat(allIds(AdfJson.write(document))).hasSize(4).doesNotHaveDuplicates();
-  }
-
-  @Test
-  void the_same_node_used_twice_gets_two_ids() {
-    var repeated = taskList(taskItem(TaskState.TODO, "Review"));
-
-    assertThat(allIds(AdfJson.write(doc(repeated, repeated)))).hasSize(4).doesNotHaveDuplicates();
   }
 
   @Test

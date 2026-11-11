@@ -1,0 +1,308 @@
+### number-unknown-node-big-integer
+schema: off-schema
+body:
+warnings: true
+diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.|[/content/0]|{}
+effect: CONTENT_DROPPED|/content/0|Unknown node dropped
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### number-unknown-node-exponent
+schema: off-schema
+body:
+warnings: true
+diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.|[/content/0]|{}
+effect: CONTENT_DROPPED|/content/0|Unknown node dropped
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### number-unknown-node-huge-exponent
+schema: off-schema
+body:
+warnings: true
+diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.|[/content/0]|{}
+effect: CONTENT_DROPPED|/content/0|Unknown node dropped
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### number-unknown-node-limit-scale
+schema: off-schema
+body:
+warnings: true
+diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.|[/content/0]|{}
+effect: CONTENT_DROPPED|/content/0|Unknown node dropped
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### number-unknown-node-limit-scale-digits
+schema: off-schema
+body:
+warnings: true
+diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.|[/content/0]|{}
+effect: CONTENT_DROPPED|/content/0|Unknown node dropped
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### number-unknown-node-long-decimal
+schema: off-schema
+body:
+warnings: true
+diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.|[/content/0]|{}
+effect: CONTENT_DROPPED|/content/0|Unknown node dropped
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### number-unknown-node-negative-zero
+schema: off-schema
+body:
+warnings: true
+diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.|[/content/0]|{}
+effect: CONTENT_DROPPED|/content/0|Unknown node dropped
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### number-unknown-node-overflowing-scale
+schema: off-schema
+body:
+warnings: true
+diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.|[/content/0]|{}
+effect: CONTENT_DROPPED|/content/0|Unknown node dropped
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### number-unknown-node-tiny-exponent
+schema: off-schema
+body:
+warnings: true
+diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.|[/content/0]|{}
+effect: CONTENT_DROPPED|/content/0|Unknown node dropped
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### number-unknown-node-trailing-zero
+schema: off-schema
+body:
+warnings: true
+diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.|[/content/0]|{}
+effect: CONTENT_DROPPED|/content/0|Unknown node dropped
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### pos-extension-in-paragraph
+schema: off-schema
+body:
+warnings: true
+diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.|[/content/0/content/0]|{}
+effect: CONTENT_DROPPED|/content/0/content/0|Unknown node dropped
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### pos-inlinecard-in-doc
+schema: off-schema
+body:
+warnings: true
+diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.|[/content/0]|{}
+effect: CONTENT_DROPPED|/content/0|Unknown node dropped
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### pos-inlineextension-in-doc
+schema: off-schema
+body:
+warnings: true
+diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.|[/content/0]|{}
+effect: CONTENT_DROPPED|/content/0|Unknown node dropped
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### pos-media-in-paragraph
+schema: off-schema
+body:
+warnings: true
+diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.|[/content/0/content/0]|{}
+effect: CONTENT_DROPPED|/content/0/content/0|Unknown node dropped
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### pos-paragraph-in-paragraph
+schema: off-schema
+body:
+warnings: true
+diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.|[/content/0/content/0]|{}
+effect: CONTENT_DROPPED|/content/0/content/0|Unknown node dropped
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### pos-text-in-doc
+schema: off-schema
+body:
+warnings: true
+diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.|[/content/0]|{}
+effect: CONTENT_DROPPED|/content/0|Unknown node dropped
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### shape-marks-string
+schema: off-schema
+body:
+warnings: true
+diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.|[/content/0]|{}
+effect: CONTENT_DROPPED|/content/0|Unknown node dropped
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### shape-type-float
+schema: off-schema
+body:
+warnings: true
+diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.|[/content/0]|{}
+effect: CONTENT_DROPPED|/content/0|Unknown node dropped
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### shape-type-missing
+schema: off-schema
+body:
+warnings: true
+diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.|[/content/0]|{}
+effect: CONTENT_DROPPED|/content/0|Unknown node dropped
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### shape-type-number
+schema: off-schema
+body:
+warnings: true
+diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.|[/content/0]|{}
+effect: CONTENT_DROPPED|/content/0|Unknown node dropped
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### shape-type-object
+schema: off-schema
+body:
+warnings: true
+diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.|[/content/0]|{}
+effect: CONTENT_DROPPED|/content/0|Unknown node dropped
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### unknown-node-policy.json
+schema: off-schema
+body:
+warnings: true
+diagnostic: UNKNOWN_NODE_SKIPPED|WARNING|1 unsupported node(s) dropped from the output.|[/content/0]|{}
+effect: CONTENT_DROPPED|/content/0|Unknown node dropped
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []

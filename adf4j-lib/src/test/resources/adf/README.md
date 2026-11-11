@@ -1,15 +1,9 @@
 # ADF Test Resources
 
-Executable ADF test data lives under `spec/`. `characterization/` pins everything observable about a conversion across those fixtures and the off-spec `corpus.tsv`; see `ConversionCharacterizationTests`.
+`ConversionGoldenTests` drives everything here.
 
-- Nested `spec/*/` directories contain auto-discovered conversion examples. Each input is a `*.json` file paired with an expected Markdown output using the same basename: `*.md`. `AdfSpecConversionTests` discovers these pairs automatically.
-- Use one canonical JSON input per feature and place its expected `*.md` output next to it.
-- Top-level `spec/*.json` files are support and regression resources used by focused service tests when the behavior depends on non-default `ConversionOptions`, large DB-derived payloads, invalid roots, or metadata assertions that are not simple conversion pairs.
-- A small number of fixtures intentionally model non-schema ADF that the parser accepts for product tolerance or degradation coverage:
-  - `spec/unknown-node-policy.json`
-  - `spec/inline/embed-card-as-inline-link.json`
-  - `spec/inline/inline-block-card.json`
-  - `spec/marks/breakout-fragment-dataconsumer-passthrough.json`
-  - `spec/nodes/code-block-strips-marks.json`
-  - `spec/nodes/list-item-with-decision-sublist.json`
-  - `spec/nodes/multi-bodied-extension.json`
+- `spec/**/*.json` are ADF fixtures: one canonical input per feature under `inline/`, `marks/` and `nodes/`, plus larger real-world and regression payloads at the top level. A sibling `*.md` holds the fixture's default Markdown body in readable form.
+- `golden/corpus.tsv` holds off-spec and hostile inputs, one `name<TAB>json` per line.
+- `golden/<preset>.txt` pins everything observable about each case under one option preset: body, diagnostics with paths and details, effects, unresolved dependencies, metadata, excerpts, and whether the written document conforms to the ADF schema (`schema: off-schema` marks fixtures that model product tolerance beyond it). Non-default presets list only the cases that differ from `defaults`.
+
+To accept an intended change, run `./mvnw -pl adf4j-lib test -Dtest=ConversionGoldenTests -Dadf4j.updateGoldens=true` and review the diff.

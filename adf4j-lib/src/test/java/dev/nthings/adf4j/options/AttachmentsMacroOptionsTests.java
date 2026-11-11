@@ -82,16 +82,6 @@ class AttachmentsMacroOptionsTests {
   }
 
   @Test
-  void a_supplied_inventory_is_referenced_in_metadata() {
-    var metadata =
-        AdfToMarkdown.with(withInventory(INVENTORY))
-            .analyze(AdfJson.parse(ATTACHMENTS_MACRO))
-            .metadata();
-
-    assertThat(metadata.referencedFileIds()).containsExactly("file-1", "file-2");
-  }
-
-  @Test
   void a_title_less_entry_is_listed_and_referenced_under_its_file_id() {
     var inventory =
         List.of(

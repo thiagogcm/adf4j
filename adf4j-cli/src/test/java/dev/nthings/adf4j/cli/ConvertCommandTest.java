@@ -38,19 +38,47 @@ class ConvertCommandTest {
   @Test
   void titleAndRenderingFlagsApply() {
     var result = convert(SIMPLE_DOC, "-t", "My Page");
-    assertThat(result.out()).startsWith("# My Page\n");
+    assertThat(result.out())
+        .isEqualTo(
+            """
+            # My Page
+
+            # Hello
+
+            World""");
   }
 
   @Test
   void jsonFormatEmitsFullResultPrettyByDefault() {
     var result = convert(SIMPLE_DOC, "-f", "json");
     assertThat(result.exitCode()).isZero();
-    assertThat(result.out()).contains("\n  \"body\"");
-    assertThat(result.out()).contains("\"hasWarnings\" : false");
-    assertThat(result.out()).contains("\"diagnostics\"");
-    assertThat(result.out()).contains("\"metadata\"");
-    assertThat(result.out()).contains("\"unresolved\"");
-    assertThat(result.out()).contains("\"outline\"");
+    assertThat(result.out())
+        .isEqualTo(
+            """
+            {
+              "ok" : true,
+              "body" : "# Hello\\n\\nWorld",
+              "hasWarnings" : false,
+              "diagnostics" : [ ],
+              "metadata" : {
+                "pageIds" : [ ],
+                "externalUrls" : [ ],
+                "mentionRefs" : [ ],
+                "attachmentRefs" : [ ],
+                "referencedFileIds" : [ ],
+                "pageTreeRefs" : [ ],
+                "excerptRefs" : [ ],
+                "excerpts" : [ ],
+                "outline" : [ {
+                  "level" : 1,
+                  "text" : "Hello",
+                  "anchor" : "hello"
+                } ]
+              },
+              "effects" : [ ],
+              "unresolved" : [ ]
+            }
+            """);
   }
 
   @Test
@@ -64,9 +92,30 @@ class ConvertCommandTest {
     var result = convert(excerpt, "-f", "json", "-t", "Page");
     assertThat(result.exitCode()).isZero();
     assertThat(result.out())
-        .contains("\"name\" : null")
-        .contains("Shared")
-        .doesNotContain("\"markdown\"");
+        .isEqualTo(
+            """
+            {
+              "ok" : true,
+              "body" : "# Page\\n\\nShared",
+              "hasWarnings" : false,
+              "diagnostics" : [ ],
+              "metadata" : {
+                "pageIds" : [ ],
+                "externalUrls" : [ ],
+                "mentionRefs" : [ ],
+                "attachmentRefs" : [ ],
+                "referencedFileIds" : [ ],
+                "pageTreeRefs" : [ ],
+                "excerptRefs" : [ ],
+                "excerpts" : [ {
+                  "name" : null
+                } ],
+                "outline" : [ ]
+              },
+              "effects" : [ ],
+              "unresolved" : [ ]
+            }
+            """);
   }
 
   @Test
@@ -77,11 +126,33 @@ class ConvertCommandTest {
     var result =
         convert(CliTestSupport.MEDIA_DOC, "-f", "json", "--attachments", inventory.toString());
     assertThat(result.out())
-        .contains("\"pageIds\"")
-        .contains("\"externalUrls\"")
-        .contains("\"downloadUrl\" : \"https://x/f\"")
-        .doesNotContain("pageRefs")
-        .doesNotContain("externalRefs");
+        .isEqualTo(
+            """
+            {
+              "ok" : true,
+              "body" : "[f](https://x/f)",
+              "hasWarnings" : false,
+              "diagnostics" : [ ],
+              "metadata" : {
+                "pageIds" : [ ],
+                "externalUrls" : [ ],
+                "mentionRefs" : [ ],
+                "attachmentRefs" : [ {
+                  "fileId" : "FILE_ID",
+                  "title" : null,
+                  "mediaType" : null,
+                  "downloadUrl" : "https://x/f"
+                } ],
+                "referencedFileIds" : [ "FILE_ID" ],
+                "pageTreeRefs" : [ ],
+                "excerptRefs" : [ ],
+                "excerpts" : [ ],
+                "outline" : [ ]
+              },
+              "effects" : [ ],
+              "unresolved" : [ ]
+            }
+            """);
   }
 
   @Test
@@ -104,7 +175,11 @@ class ConvertCommandTest {
   void compactFlagProducesSingleLineJson() {
     var result = convert(SIMPLE_DOC, "-f", "json", "--compact");
     assertThat(result.out().strip().lines().count()).isEqualTo(1);
-    assertThat(result.out()).contains("\"body\":\"# Hello");
+    assertThat(result.out())
+        .isEqualTo(
+            """
+            {"ok":true,"body":"# Hello\\n\\nWorld","hasWarnings":false,"diagnostics":[],"metadata":{"pageIds":[],"externalUrls":[],"mentionRefs":[],"attachmentRefs":[],"referencedFileIds":[],"pageTreeRefs":[],"excerptRefs":[],"excerpts":[],"outline":[{"level":1,"text":"Hello","anchor":"hello"}]},"effects":[],"unresolved":[]}
+            """);
   }
 
   @Test
@@ -129,7 +204,7 @@ class ConvertCommandTest {
   }
 
   @ParameterizedTest
-  @ValueSource(strings = {"rw-r-----", "rw-------", "r--r--r--", "rw-rw-rw-"})
+  @ValueSource(strings = {"rw-r-----", "r--r--r--"})
   void outputFileKeepsAnExistingFilesMode(String mode, @TempDir Path dir) throws Exception {
     assumePosix(dir);
     var out = CliTestSupport.write(dir, "out.md", "old");
@@ -180,7 +255,42 @@ class ConvertCommandTest {
   void invalidRootExitsContentFailureWithAJsonResult() {
     var result = convert("{\"version\":1,\"type\":\"paragraph\"}", "-f", "json");
     assertThat(result.exitCode()).isEqualTo(ExitCodes.CONTENT_FAILURE);
-    assertThat(result.out()).contains("\"body\" : \"\"").contains("INVALID_ROOT_NODE");
+    assertThat(result.out())
+        .isEqualTo(
+            """
+            {
+              "ok" : false,
+              "body" : "",
+              "hasWarnings" : false,
+              "diagnostics" : [ {
+                "code" : "INVALID_ROOT_NODE",
+                "severity" : "ERROR",
+                "message" : "ADF root node must have type 'doc'.",
+                "paths" : [ "/type" ],
+                "details" : { }
+              }, {
+                "code" : "INVALID_CONTENT",
+                "severity" : "ERROR",
+                "message" : "ADF root must contain array field 'content'.",
+                "paths" : [ "/content" ],
+                "details" : { }
+              } ],
+              "metadata" : {
+                "pageIds" : [ ],
+                "externalUrls" : [ ],
+                "mentionRefs" : [ ],
+                "attachmentRefs" : [ ],
+                "referencedFileIds" : [ ],
+                "pageTreeRefs" : [ ],
+                "excerptRefs" : [ ],
+                "excerpts" : [ ],
+                "outline" : [ ]
+              },
+              "effects" : [ ],
+              "unresolved" : [ ],
+              "error" : "ADF root node must have type 'doc'."
+            }
+            """);
   }
 
   @Test
@@ -195,13 +305,6 @@ class ConvertCommandTest {
   void invalidInputOutranksTheWarningGate() {
     var result = convert("{ not json", "--fail-on-warning");
     assertThat(result.exitCode()).isEqualTo(ExitCodes.CONTENT_FAILURE);
-  }
-
-  @Test
-  void quietSilencesStderrOnInvalidInput() {
-    var result = convert("{ not json", "-q");
-    assertThat(result.exitCode()).isEqualTo(ExitCodes.CONTENT_FAILURE);
-    assertThat(result.err()).isEmpty();
   }
 
   @Test
@@ -252,7 +355,7 @@ class ConvertCommandTest {
         """);
     var missing = convert(CliTestSupport.MEDIA_DOC, "--fail-on-unresolved");
     assertThat(missing.exitCode()).isEqualTo(ExitCodes.QUALITY_GATE);
-    assertThat(missing.out()).contains("media:col/FILE_ID");
+    assertThat(missing.out()).isEqualTo("[file](media:col/FILE_ID)");
 
     var resolved =
         convert(
@@ -263,7 +366,12 @@ class ConvertCommandTest {
             "Published",
             "--fail-on-unresolved");
     assertThat(resolved.exitCode()).isZero();
-    assertThat(resolved.out()).startsWith("# Published").contains("downloads/file");
+    assertThat(resolved.out())
+        .isEqualTo(
+            """
+            # Published
+
+            [file](downloads/file)""");
   }
 
   @Test

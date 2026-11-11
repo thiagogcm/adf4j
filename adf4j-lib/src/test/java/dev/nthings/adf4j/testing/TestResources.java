@@ -1,5 +1,7 @@
 package dev.nthings.adf4j.testing;
 
+import dev.nthings.adf4j.AdfJson;
+import dev.nthings.adf4j.ast.AdfDocument;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URISyntaxException;
@@ -24,6 +26,24 @@ public final class TestResources {
 
       return new String(stream.readAllBytes(), StandardCharsets.UTF_8);
     }
+  }
+
+  /// The JSON of the fixture `adf/spec/<name>.json`.
+  public static String spec(String name) {
+    try {
+      return read(SPEC_ROOT + "/" + name + ".json");
+    } catch (IOException failure) {
+      throw new UncheckedIOException(failure);
+    }
+  }
+
+  /// The parsed document of the fixture `adf/spec/<name>.json`.
+  public static AdfDocument specDocument(String name) {
+    return AdfJson.parse(spec(name)).requireDocument();
+  }
+
+  public static boolean exists(String path) {
+    return TestResources.class.getClassLoader().getResource(path) != null;
   }
 
   public static Path root(String path) {
@@ -57,7 +77,7 @@ public final class TestResources {
   public static Map<String, String> corpus() {
     var cases = new LinkedHashMap<String, String>();
     try {
-      read("adf/characterization/corpus.tsv")
+      read("adf/golden/corpus.tsv")
           .lines()
           .forEach(
               line -> {

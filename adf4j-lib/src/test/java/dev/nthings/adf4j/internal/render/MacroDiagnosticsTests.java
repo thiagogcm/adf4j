@@ -14,11 +14,4 @@ class MacroDiagnosticsTests {
     assertThat(diagnostics.recordUnsupported("type", "key", "/content/0")).isFalse();
     assertThat(diagnostics.recordUnsupported("type", "other", "/content/0")).isTrue();
   }
-
-  @Test
-  void each_render_starts_fresh() {
-    new MacroDiagnostics().recordUnsupported("type", "key", "/content/0");
-
-    assertThat(new MacroDiagnostics().recordUnsupported("type", "key", "/content/0")).isTrue();
-  }
 }

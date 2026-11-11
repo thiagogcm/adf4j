@@ -1,0 +1,96 @@
+### inline/emoji-metacharacters.json
+schema: conforms
+body: Reaction: \\[x\\]\\(y\\)
+warnings: false
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### inline/hard-break.json
+schema: conforms
+body: Line one.\nLine two.
+warnings: false
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### inline/mention-metacharacters.json
+schema: conforms
+body: By \\[ref\\]\\(x\\)
+warnings: false
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: [MentionReference{id=user-2, text=[ref](x)}]
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### inline/placeholder-metacharacters.json
+schema: conforms
+body: Owner: \\[label\\]\\(http://evil\\) \\*x\\* \\<b>
+warnings: false
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### inline/status-then-placeholder-paren.json
+schema: conforms
+body: \\[Done\\]\\(see ref\\)
+warnings: false
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### marks/escape-inline-metacharacters.json
+schema: conforms
+body: Use \\*stars\\* \\_unders\\_ \\`ticks\\` \\[br\\]\\(c\\) \\<tag> \\~s\\~
+warnings: false
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### nodes/status-then-paren.json
+schema: conforms
+body: \\[Done\\]\\(not a link\\) follows
+warnings: false
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: []
+### nodes/toc-slug-divergence.json
+schema: conforms
+body: - [Overview](#overview)\n  - [Café ☕ Overview](#café--overview)\n  - [Notes\\!\\!\\! \\(draft\\)](#notes-draft)\n- [Overview](#overview-1)\n\n<a id="overview"></a>\n# Overview\n\n<a id="café--overview"></a>\n## Café ☕ Overview\n\n<a id="notes-draft"></a>\n## Notes\\!\\!\\! \\(draft\\)\n\n<a id="overview-1"></a>\n# Overview
+warnings: false
+unresolved: []
+pageIds: []
+externalUrls: []
+mentionRefs: []
+attachmentRefs: []
+pageTreeRefs: []
+excerptRefs: []
+outline: [HeadingReference{level=1, text=Overview, anchor=overview}, HeadingReference{level=2, text=Café ☕ Overview, anchor=café--overview}, HeadingReference{level=2, text=Notes!!! (draft), anchor=notes-draft}, HeadingReference{level=1, text=Overview, anchor=overview-1}]

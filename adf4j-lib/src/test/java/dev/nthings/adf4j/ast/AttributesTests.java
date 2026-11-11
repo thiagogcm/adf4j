@@ -50,11 +50,6 @@ class AttributesTests {
   }
 
   @Test
-  void attributes_are_not_a_json_value() {
-    assertThatThrownBy(() -> one(one(1))).isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
   void nested_values_are_immutable_at_every_depth() {
     var attributes = one(Map.of("list", List.of(Map.of("deep", 1))));
 

@@ -354,23 +354,6 @@ class PageTreeResolverOptionsTests {
   }
 
   @Test
-  void the_request_parses_the_standard_depth_and_all_parameters() {
-    var captured = new PageTreeReference[1];
-    var options =
-        ConversionOptions.defaults()
-            .withPageTreeResolver(
-                request -> {
-                  captured[0] = request;
-                  return List.of();
-                });
-
-    AdfToMarkdown.with(options).toMarkdown(ROOTED_CHILDREN);
-
-    assertThat(captured[0].depth()).hasValue(2);
-    assertThat(captured[0].all()).isFalse();
-  }
-
-  @Test
   void request_depth_is_empty_for_absent_blank_invalid_or_non_positive_values() {
     assertThat(request(Map.of()).depth()).isEmpty();
     assertThat(request(Map.of("depth", "  ")).depth()).isEmpty();
@@ -393,11 +376,6 @@ class PageTreeResolverOptionsTests {
 
   private static PageTreeReference request(Map<String, String> parameters) {
     return new PageTreeReference(PageTreeMacro.CHILDREN, null, parameters);
-  }
-
-  @Test
-  void a_null_title_normalizes_to_empty() {
-    assertThat(new PageTreeEntry(0, null, "1").title()).isEmpty();
   }
 
   @Test

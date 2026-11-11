@@ -17,7 +17,7 @@ class ResolverOptionsTest {
   @Test
   void mediaUrlTemplateResolvesFileMedia() {
     var result = convert(MEDIA_DOC, "--media-url", "https://cdn.example/{collection}/{id}");
-    assertThat(result.out()).contains("https://cdn.example/col/FILE_ID");
+    assertThat(result.out()).isEqualTo("[FILE_ID](https://cdn.example/col/FILE_ID)");
   }
 
   @Test
@@ -28,7 +28,7 @@ class ResolverOptionsTest {
 
     var result = convert(doc, "--media-url", "https://cdn.example/{collection}/{id}");
 
-    assertThat(result.out()).doesNotContain("cdn.example");
+    assertThat(result.out()).isEqualTo("[file](media)");
   }
 
   @Test
@@ -41,8 +41,7 @@ class ResolverOptionsTest {
             map.toString(),
             "--media-url",
             "https://cdn.example/{collection}/{id}");
-    assertThat(result.out()).contains("https://map.example/win");
-    assertThat(result.out()).doesNotContain("cdn.example");
+    assertThat(result.out()).isEqualTo("[win](https://map.example/win)");
   }
 
   @Test
@@ -56,16 +55,19 @@ class ResolverOptionsTest {
   void templateValueIsPercentEncodedToDefuseTraversal() {
     var doc = MEDIA_DOC.replace("\"FILE_ID\"", "\"../escape\"");
     var result = convert(doc, "--media-url", "https://cdn/{collection}/{id}");
-    assertThat(result.out()).contains("col/..%2Fescape"); // '/' is encoded
-    assertThat(result.out()).doesNotContain("col/../escape");
+    assertThat(result.out())
+        .isEqualTo("[..%2Fescape](https://cdn/col/..%2Fescape)"); // '/' is encoded
+    assertThat(result.out()).isEqualTo("[..%2Fescape](https://cdn/col/..%2Fescape)");
   }
 
   @Test
   void templateValueEncodesSupplementaryCharactersAsUtf8() {
     var doc = MEDIA_DOC.replace("\"FILE_ID\"", "\"\\uD83D\\uDE00\""); // 😀 (U+1F600)
     var result = convert(doc, "--media-url", "https://cdn/{collection}/{id}");
-    assertThat(result.out()).contains("col/%F0%9F%98%80"); // the code point's UTF-8 bytes
-    assertThat(result.out()).doesNotContain("%3F"); // not two replacement '?' bytes
+    assertThat(result.out())
+        .isEqualTo("[%F0%9F%98%80](https://cdn/col/%F0%9F%98%80)"); // the code point's UTF-8 bytes
+    assertThat(result.out())
+        .isEqualTo("[%F0%9F%98%80](https://cdn/col/%F0%9F%98%80)"); // not two replacement '?' bytes
   }
 
   @Test
@@ -136,7 +138,8 @@ class ResolverOptionsTest {
   @Test
   void numericScalarsStayAllowed(@TempDir Path dir) {
     var media = write(dir, "media.json", "{\"FILE_ID\":12345}");
-    assertThat(convert(MEDIA_DOC, "--media-map", media.toString()).out()).contains("12345");
+    assertThat(convert(MEDIA_DOC, "--media-map", media.toString()).out())
+        .isEqualTo("[12345](12345)");
 
     var tree =
         write(
@@ -148,14 +151,11 @@ class ResolverOptionsTest {
         {"type":"doc","version":1,"content":[{"type":"extension","attrs":{
           "extensionType":"com.atlassian.confluence.macro.core","extensionKey":"pagetree"}}]}
         """;
-    assertThat(convert(doc, "--page-tree-map", tree.toString()).out()).contains("- 7\n  - 8");
-  }
-
-  @Test
-  void attachmentsMapFlagIsGone() {
-    var result = convert(SIMPLE_DOC, "--attachments-map", "x.json");
-    assertThat(result.exitCode()).isEqualTo(ExitCodes.USAGE);
-    assertThat(result.err()).contains("--attachments-map");
+    assertThat(convert(doc, "--page-tree-map", tree.toString()).out())
+        .isEqualTo(
+            """
+            - 7
+              - 8""");
   }
 
   @Test

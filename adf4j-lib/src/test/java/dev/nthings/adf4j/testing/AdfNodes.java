@@ -26,7 +26,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/// Terse AST construction for tests that build documents in code.
+/// Raw AST construction for off-schema structures the type-checked {@link
+// dev.nthings.adf4j.ast.Adf}
+/// builder refuses, such as lists inside a `blockTaskItem`. Prefer `Adf` everywhere else.
 public final class AdfNodes {
 
   private AdfNodes() {}

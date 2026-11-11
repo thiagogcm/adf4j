@@ -110,7 +110,9 @@ class TableFallbackOptionsTests {
         ConversionOptions.defaults().withTableFallback(TableFallback.GFM_PROMOTE_FIRST_ROW);
     var markdown = AdfToMarkdown.with(options).toMarkdown(COLSPAN_TABLE).strip();
 
-    assertThat(markdown).startsWith("<table>").contains("colspan=\"2\"").endsWith("</table>");
+    assertThat(markdown)
+        .isEqualTo(
+            "<table><tr><td colspan=\"2\">wide</td></tr><tr><td>b1</td><td>b2</td></tr></table>");
   }
 
   @Test
@@ -159,7 +161,9 @@ class TableFallbackOptionsTests {
 
     var markdown = AdfToMarkdown.create().toMarkdown(adf).strip();
 
-    assertThat(markdown).contains("href=\"/wiki/page\"").contains("href=\"https://example.com/p\"");
+    assertThat(markdown)
+        .isEqualTo(
+            "<table><tr><td colspan=\"2\"><a rel=\"nofollow\" href=\"/wiki/page\">rel</a><a rel=\"nofollow\" href=\"https://example.com/p\"> abs</a></td></tr></table>");
   }
 
   @Test
@@ -176,6 +180,10 @@ class TableFallbackOptionsTests {
 
     var html = AdfToMarkdown.create().toMarkdown(adf);
 
-    assertThat(html).contains("<p>cap</p>").doesNotContain("<p></p>");
+    assertThat(html)
+        .isEqualTo(
+            """
+            <table><tr><td colspan="2"><p><img src="https://a/1.png" alt="media"></p>
+            <p>cap</p></td></tr></table>""");
   }
 }

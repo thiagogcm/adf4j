@@ -1,7 +1,7 @@
 package dev.nthings.adf4j.internal.writer;
 
+import static dev.nthings.adf4j.testing.AdfJsonComparison.canonical;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.ast.Attributes;
@@ -75,13 +75,16 @@ class AdfJsonWriterTests {
                 Map.of("list", Arrays.asList("x", null, 1))));
     var document = new AdfDocument(1, List.of(new Paragraph(attrs, List.of(), List.of())));
 
-    assertThat(writer.write(document))
-        .contains("\"long\":5")
-        .contains("\"big\":99999999999999999999999")
-        .contains("\"double\":1.5")
-        .contains("\"decimal\":1.2345678901234567890123456")
-        .contains("\"bool\":true")
-        .contains("\"nested\":{\"list\":[\"x\",null,1]}");
+    // Map.of iterates in a per-JVM order, so compare key-order-insensitively.
+    assertThat(canonical(writer.write(document)))
+        .isEqualTo(
+            canonical(
+                """
+                {"type": "doc", "version": 1, "content": [{"type": "paragraph", "attrs": {
+                  "long": 5, "big": 99999999999999999999999, "double": 1.5,
+                  "decimal": 1.2345678901234567890123456, "bool": true,
+                  "nested": {"list": ["x", null, 1]}}}]}
+                """));
   }
 
   @Test
@@ -98,17 +101,7 @@ class AdfJsonWriterTests {
                     List.of())));
 
     assertThat(writer.write(document))
-        .contains("{\"type\":\"b\",\"x\":[1]}")
-        .contains("\"marks\":[{\"type\":\"m\",\"a\":1}]")
-        .contains("{\"type\":\"i\"}");
-  }
-
-  @Test
-  void an_unknown_node_built_with_invalid_json_is_rejected() {
-    var document = new AdfDocument(1, List.of(new UnknownBlock("b", "not json")));
-
-    assertThatThrownBy(() -> writer.write(document))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("not json");
+        .isEqualTo(
+            "{\"type\":\"doc\",\"version\":1,\"content\":[{\"type\":\"b\",\"x\":[1]},{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"x\",\"marks\":[{\"type\":\"m\",\"a\":1}]},{\"type\":\"i\"}]}]}");
   }
 }

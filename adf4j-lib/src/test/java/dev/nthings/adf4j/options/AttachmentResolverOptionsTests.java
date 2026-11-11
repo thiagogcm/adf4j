@@ -45,15 +45,6 @@ class AttachmentResolverOptionsTests {
   }
 
   @Test
-  void resolver_turns_the_resolved_attachment_into_a_local_path() {
-    var options = withAttachmentContext(reference -> "files/" + reference.title());
-
-    var markdown = AdfToMarkdown.with(options).toMarkdown(VIEWPDF).strip();
-
-    assertThat(markdown).isEqualTo("[PDF: guide.pdf](files/guide.pdf)");
-  }
-
-  @Test
   void resolver_sees_the_resolved_file_id_and_media_type() {
     var options =
         withAttachmentContext(

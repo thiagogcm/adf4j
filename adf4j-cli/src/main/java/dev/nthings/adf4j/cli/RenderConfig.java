@@ -76,7 +76,7 @@ final class RenderConfig {
   }
 
   // Takes constants, not the Class, to stay reflection-free. The parser already checked
-  // allowedValues, so a miss here is a bug. OptionContractTest pins the lists to the enums.
+  // allowedValues, so a miss means an option's allowedValues drifted from its enum.
   private static <E extends Enum<E>> E enumOption(E[] constants, String value) {
     for (var constant : constants) {
       if (CliJson.kebabCase(constant).equals(value)) {

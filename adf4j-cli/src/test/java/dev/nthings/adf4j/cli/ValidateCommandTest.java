@@ -18,14 +18,26 @@ class ValidateCommandTest {
   void validDocumentExitsZeroWithTextReport() {
     var result = run(SIMPLE_DOC, "validate");
     assertThat(result.exitCode()).isZero();
-    assertThat(result.out()).contains("valid: true").contains("diagnostics: none");
+    assertThat(result.out())
+        .isEqualTo(
+            """
+            valid: true
+            diagnostics: none
+            """);
   }
 
   @Test
   void invalidRootExitsContentFailure() {
     var result = run(INVALID_ROOT_DOC, "validate");
     assertThat(result.exitCode()).isEqualTo(ExitCodes.CONTENT_FAILURE);
-    assertThat(result.out()).contains("valid: false");
+    assertThat(result.out())
+        .isEqualTo(
+            """
+            valid: false
+            diagnostics:
+              [ERROR] INVALID_ROOT_NODE: ADF root node must have type 'doc'.
+              [ERROR] INVALID_CONTENT: ADF root must contain array field 'content'.
+            """);
   }
 
   @Test
@@ -37,7 +49,15 @@ class ValidateCommandTest {
   @Test
   void jsonFormatEmitsValidFlagAndDiagnostics() {
     var result = run(SIMPLE_DOC, "validate", "-f", "json");
-    assertThat(result.out()).contains("\"ok\" : true").contains("\"diagnostics\"");
+    assertThat(result.out())
+        .isEqualTo(
+            """
+            {
+              "ok" : true,
+              "hasWarnings" : false,
+              "diagnostics" : [ ]
+            }
+            """);
   }
 
   @Test
@@ -47,7 +67,13 @@ class ValidateCommandTest {
 
     var withoutGate = run(UNSUPPORTED_VERSION_DOC, "validate", "--parse-only");
     assertThat(withoutGate.exitCode()).isZero();
-    assertThat(withoutGate.out()).contains("valid: true");
+    assertThat(withoutGate.out())
+        .isEqualTo(
+            """
+            valid: true
+            diagnostics:
+              [WARNING] UNSUPPORTED_VERSION: ADF version must be 1.
+            """);
   }
 
   @Test

@@ -68,7 +68,7 @@ class ExtensionRendererOptionsTests {
   void without_a_renderer_an_unknown_extension_falls_back_to_a_placeholder() {
     var markdown = AdfToMarkdown.create().toMarkdown(BLOCK_EXTENSION).strip();
 
-    assertThat(markdown).contains("Extension");
+    assertThat(markdown).isEqualTo("\\[Extension: com.acme.macros/jira-issue\\]");
   }
 
   @Test
@@ -96,7 +96,7 @@ class ExtensionRendererOptionsTests {
     var options = ConversionOptions.defaults().withExtensionRenderers(List.of(deferring));
     var markdown = AdfToMarkdown.with(options).toMarkdown(BLOCK_EXTENSION).strip();
 
-    assertThat(markdown).contains("Extension");
+    assertThat(markdown).isEqualTo("\\[Extension: com.acme.macros/jira-issue\\]");
   }
 
   @Test
@@ -108,7 +108,7 @@ class ExtensionRendererOptionsTests {
     var options = ConversionOptions.defaults().withExtensionRenderers(List.of(throwing));
     var markdown = AdfToMarkdown.with(options).toMarkdown(BLOCK_EXTENSION).strip();
 
-    assertThat(markdown).contains("Extension");
+    assertThat(markdown).isEqualTo("\\[Extension: com.acme.macros/jira-issue\\]");
   }
 
   @Test

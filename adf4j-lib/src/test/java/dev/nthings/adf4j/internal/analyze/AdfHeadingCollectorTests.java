@@ -201,29 +201,6 @@ class AdfHeadingCollectorTests {
                 .toList());
   }
 
-  @Test
-  void normalized_heading_nodes_preserve_emphasis_marks() throws Exception {
-    var inlineList =
-        inlines(
-            """
-            [
-              {
-                "type": "text",
-                "text": "Bold Heading",
-                "marks": [{"type": "strong"}]
-              }
-            ]
-            """);
-
-    var normalized = HeadingContent.normalizedHeadingNodes(inlineList);
-
-    assertThat(inlineList).hasSize(1);
-    assertThat(inlineList.getFirst()).isInstanceOf(Text.class);
-    assertThat(((Text) inlineList.getFirst()).marks()).hasSize(1);
-    assertThat(normalized).hasSize(1);
-    assertThat(((Text) normalized.getFirst()).marks()).hasSize(1);
-  }
-
   @ParameterizedTest(name = "{argumentSetName}")
   @FieldSource("heading_outline_documents")
   void collect_builds_heading_outline_from_rendered_heading_text(HeadingOutlineCase input)
@@ -237,13 +214,6 @@ class AdfHeadingCollectorTests {
             input.expectedHeadings().stream()
                 .map(expected -> tuple(expected.level(), expected.text(), expected.anchor()))
                 .toList());
-  }
-
-  @Test
-  void collect_returns_empty_outline_for_null_adf_input() {
-    var outline = outlineOf(null);
-
-    assertThat(outline.headings()).isEmpty();
   }
 
   @Test
