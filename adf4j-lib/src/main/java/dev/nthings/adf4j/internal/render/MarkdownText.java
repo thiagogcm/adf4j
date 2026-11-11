@@ -1,10 +1,10 @@
 package dev.nthings.adf4j.internal.render;
 
 import dev.nthings.adf4j.internal.Strings;
+import dev.nthings.adf4j.internal.UrlSafety;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
 
@@ -15,10 +15,10 @@ final class MarkdownText {
   // Both ordered-list delimiters; ")" reaches here only when parentheses are not escaped.
   private static final Pattern LEADING_ORDERED_MARKER = Pattern.compile("^(\\d+)([.)])");
 
-  // Schemes safe as link destinations; others are defused by escapeUrlDestination.
-  // "media"/"attachment" are the library's inert placeholder schemes.
-  private static final Set<String> SAFE_URL_SCHEMES =
-      Set.of("http", "https", "mailto", "tel", "ftp", "ftps", "media", "attachment");
+  // Markdown permits web destinations and the library's inert resource placeholders.
+  private static final UrlSafety.SchemePolicy URL_SCHEMES =
+      UrlSafety.SchemePolicy.of(
+          "http", "https", "mailto", "tel", "ftp", "ftps", "media", "attachment");
 
   private MarkdownText() {}
 
@@ -234,7 +234,7 @@ final class MarkdownText {
       return url;
     }
 
-    url = sanitizeScheme(url);
+    url = UrlSafety.sanitizeScheme(url, URL_SCHEMES);
 
     var hasAngleOrNewline =
         url.indexOf('<') >= 0
@@ -257,64 +257,6 @@ final class MarkdownText {
         .replace(">", "%3E")
         .replace("\n", "%0A")
         .replace("\r", "%0D");
-  }
-
-  // Defuse an unsafe scheme by percent-encoding its colon; safe and relative URLs pass through.
-  private static String sanitizeScheme(String url) {
-    if (hasSafeOrNoScheme(url)) {
-      return url;
-    }
-    // Drop C0 controls and DEL, which browsers ignore: they can hide a scheme from a naive check.
-    var cleaned = new StringBuilder(url.length());
-    for (var i = 0; i < url.length(); i++) {
-      var c = url.charAt(i);
-      if (c >= ' ' && c != 0x7f) {
-        cleaned.append(c);
-      }
-    }
-    var colon = cleaned.indexOf(":");
-    if (colon >= 0) {
-      cleaned.replace(colon, colon + 1, "%3A");
-    }
-    return cleaned.toString();
-  }
-
-  // Relative, or a SAFE_URL_SCHEMES scheme. A tab/CR/LF inside the scheme is unsafe: browsers
-  // strip it before re-reading the scheme.
-  private static boolean hasSafeOrNoScheme(String url) {
-    var i = 0;
-    while (i < url.length() && url.charAt(i) <= ' ') {
-      i++;
-    }
-    var start = i;
-    var dirty = false;
-    for (; i < url.length(); i++) {
-      var c = url.charAt(i);
-      if (c == ':') {
-        return !dirty && i > start && isSafeScheme(url, start, i);
-      }
-      if (c == '\t' || c == '\n' || c == '\r') {
-        dirty = true;
-      } else if (!isSchemeChar(c, i == start)) {
-        return true; // no scheme before ':'
-      }
-    }
-    return true;
-  }
-
-  private static boolean isSafeScheme(String url, int start, int end) {
-    for (var scheme : SAFE_URL_SCHEMES) {
-      if (scheme.length() == end - start
-          && url.regionMatches(true, start, scheme, 0, scheme.length())) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private static boolean isSchemeChar(char c, boolean first) {
-    var letter = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
-    return letter || (!first && ((c >= '0' && c <= '9') || c == '+' || c == '-' || c == '.'));
   }
 
   private static boolean hasUnbalancedParens(String url) {

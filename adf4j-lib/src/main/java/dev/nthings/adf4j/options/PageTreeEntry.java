@@ -3,11 +3,11 @@ package dev.nthings.adf4j.options;
 import org.jspecify.annotations.Nullable;
 
 /// One descendant page in an expanded `pagetree` or `children` macro, returned by a
-/// {@link PageTreeResolver}. Entries render as an indented bullet list in iteration order.
+/// {@link PageTreeResolver}. Iteration order and depth describe the page hierarchy.
 ///
-/// `depth` is 0-based; the shallowest entry renders at column 0. `title` is the Markdown-escaped
-/// label, `null` meaning empty. `pageNodeId` is routed through `pageLinkResolver` for the link; a
-/// null or unresolved ID renders plain text.
+/// `depth` is 0-based. `title` is plain text for the renderer to escape, `null` meaning empty.
+/// `pageNodeId` can be resolved into a destination through `PageLinkResolver`. Markdown renders
+/// entries as an indented bullet list, with plain labels for absent or unresolved IDs.
 public record PageTreeEntry(int depth, String title, @Nullable String pageNodeId) {
 
   public PageTreeEntry(int depth, @Nullable String title, @Nullable String pageNodeId) {

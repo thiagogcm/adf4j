@@ -3,6 +3,9 @@ package dev.nthings.adf4j.options;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.nthings.adf4j.AdfToMarkdown;
+import dev.nthings.adf4j.metadata.AttachmentReference;
+import dev.nthings.adf4j.result.Diagnostic;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class MediaResolverOptionsTests {
@@ -139,5 +142,27 @@ class MediaResolverOptionsTests {
     var markdown = AdfToMarkdown.with(options).toMarkdown(FILE_MEDIA).strip();
 
     assertThat(markdown).isEqualTo("![diagram](media:contentId-42/abc-123)");
+  }
+
+  @Test
+  void inventory_download_url_after_a_resolver_failure_is_still_scheme_sanitized() {
+    var options =
+        ConversionOptions.defaults()
+            .withAttachments(
+                List.of(
+                    new AttachmentReference(
+                        "abc-123", "diagram.png", "image/png", "javascript:alert(1)")))
+            .withMediaResolver(
+                attrs -> {
+                  throw new IllegalStateException("offline");
+                });
+    var result = AdfToMarkdown.with(options).convert(FILE_MEDIA);
+
+    assertThat(result.body().strip()).isEqualTo("![diagram](javascript%3Aalert(1))");
+    assertThat(result.diagnostics())
+        .singleElement()
+        .satisfies(
+            diagnostic -> assertThat(diagnostic.code()).isEqualTo(Diagnostic.Code.CALLBACK_FAILED));
+    assertThat(result.unresolved()).isEmpty();
   }
 }

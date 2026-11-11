@@ -17,6 +17,7 @@ import dev.nthings.adf4j.ast.Status;
 import dev.nthings.adf4j.ast.Text;
 import dev.nthings.adf4j.ast.UnknownInline;
 import dev.nthings.adf4j.internal.AdfText;
+import dev.nthings.adf4j.internal.Located;
 import dev.nthings.adf4j.internal.Strings;
 import dev.nthings.adf4j.internal.analyze.ConfluenceMacro.Anchor;
 import dev.nthings.adf4j.internal.analyze.ConfluenceMacro.InlineMediaImage;
@@ -24,19 +25,20 @@ import dev.nthings.adf4j.internal.analyze.ConfluenceMacro.Toc;
 import dev.nthings.adf4j.metadata.HeadingReference;
 import dev.nthings.adf4j.options.UnknownNodePolicy;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
-import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import org.commonmark.ext.heading.anchor.IdGenerator;
 
-/// Collects headings, toc level ranges and explicit anchors during the {@link AdfNodeWalker}
-/// pass. {@link #build()} derives each slug. One instance per document.
+/// Collects headings with their source occurrence paths, toc level ranges and explicit anchors
+/// during the {@link AdfNodeWalker} pass. {@link #build()} derives each slug. One instance per
+/// document.
 final class AdfHeadingCollector implements NodeVisitor {
 
   private final UnknownNodePolicy unknownNodePolicy;
-  private final List<Heading> headings = new ArrayList<>();
+  private final List<Located<Heading>> headings = new ArrayList<>();
   private final Set<Integer> tocReferencedLevels = new HashSet<>();
   private final Set<String> explicitAnchors = new HashSet<>();
 
@@ -47,7 +49,7 @@ final class AdfHeadingCollector implements NodeVisitor {
   @Override
   public void visitBlock(AdfBlock block, String path) {
     switch (block) {
-      case Heading heading -> headings.add(heading);
+      case Heading heading -> headings.add(new Located<>(heading, path));
       case Extension extension -> recordMacro(extension);
       default -> {}
     }
@@ -66,9 +68,10 @@ final class AdfHeadingCollector implements NodeVisitor {
     var references = new ArrayList<HeadingReference>();
     var idGenerator = IdGenerator.builder().defaultId("section").build();
     var takenAnchors = new HashSet<>(explicitAnchors);
-    var headingsByNode = new IdentityHashMap<Heading, HeadingReference>();
+    var referencesByPath = new HashMap<String, HeadingReference>();
 
-    for (var heading : headings) {
+    for (var occurrence : headings) {
+      var heading = occurrence.node();
       var level = AdfText.clampHeadingLevel(heading.level());
       var headingText = extractHeadingPlainText(heading.content());
       if (headingText.isBlank()) {
@@ -82,10 +85,10 @@ final class AdfHeadingCollector implements NodeVisitor {
 
       var reference = new HeadingReference(level, headingText, anchor);
       references.add(reference);
-      headingsByNode.put(heading, reference);
+      referencesByPath.put(occurrence.path(), reference);
     }
 
-    return HeadingOutline.of(references, headingsByNode, tocReferencedLevels);
+    return HeadingOutline.of(references, referencesByPath, tocReferencedLevels);
   }
 
   // The generator suffixes only repeats of the same text, so skip ids already taken.

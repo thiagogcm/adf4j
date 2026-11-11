@@ -50,8 +50,8 @@ public final class AdfPipeline {
 
   public AnalysisResult analyze(AdfDocument document, ConversionOptions options) {
     var attachments = AttachmentInventory.from(options.attachments());
-    var result = analyzer.analyze(document, options, attachments);
-    return new AnalysisResult(result.metadata(), result.diagnostics());
+    var result = analyzer.analyze(document, options.unknownNodePolicy(), attachments);
+    return new AnalysisResult(result.facts().metadata(), result.diagnostics());
   }
 
   public MarkdownResult convert(@Nullable String adfJson, ConversionOptions options) {
@@ -73,16 +73,16 @@ public final class AdfPipeline {
       return new MarkdownResult("", ContentMetadata.empty(), diagnostics, List.of(), List.of());
     }
     var attachments = AttachmentInventory.from(options.attachments());
-    var analysis = analyzer.analyze(document, options, attachments, false);
+    var facts = analyzer.facts(document, options.unknownNodePolicy(), attachments);
     try {
-      var rendered = renderer.render(document, options, attachments, analysis.outline());
+      var rendered = renderer.render(document, options, attachments, facts.outline());
       // Only visited content contributes render diagnostics.
       var merged = mergeDiagnostics(diagnostics, rendered.diagnostics());
       return new MarkdownResult(
-          rendered.body(), analysis.metadata(), merged, rendered.unresolved(), rendered.effects());
+          rendered.body(), facts.metadata(), merged, rendered.unresolved(), rendered.effects());
     } catch (AdfException failure) {
       var issues = mergeDiagnostics(diagnostics, failure.diagnostics());
-      return new MarkdownResult("", analysis.metadata(), issues, List.of(), List.of());
+      return new MarkdownResult("", facts.metadata(), issues, List.of(), List.of());
     }
   }
 

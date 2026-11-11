@@ -151,7 +151,7 @@ final class TextMarkRenderer {
     return new LinkTarget(
         href,
         Strings.firstNonBlank(link.title()),
-        session.resolvers().linkedPageId(href, link.attrs()));
+        session.resources().linkedPageId(href, link.attrs()));
   }
 
   // Pointer of the effective (last) link mark, reported with the resolver call.
@@ -186,7 +186,7 @@ final class TextMarkRenderer {
       String rendered, LinkTarget link, String linkPath, RenderContext context) {
     var session = context.session();
     var label = rendered.isBlank() ? session.writer().text(link.href(), false) : rendered;
-    var resolved = session.resolvers().pageId(link.pageNodeId(), linkPath);
+    var resolved = session.resources().pageId(link.pageNodeId(), linkPath);
     var destination = resolved == null ? link.href() : resolved;
     var title = link.title();
     return title == null

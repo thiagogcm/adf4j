@@ -136,4 +136,13 @@ class PageLinkResolverOptionsTests {
     assertThat(markdown)
         .isEqualTo("[See the spec](https://example.atlassian.net/wiki/spaces/OF/pages/12345)");
   }
+
+  @Test
+  void a_rewritten_destination_is_still_scheme_sanitized() {
+    var options = resolving(pageNodeId -> "javascript:alert(1)");
+
+    var markdown = AdfToMarkdown.with(options).toMarkdown(PAGE_TEXT_LINK).strip();
+
+    assertThat(markdown).isEqualTo("[See the spec](javascript%3Aalert(1))");
+  }
 }

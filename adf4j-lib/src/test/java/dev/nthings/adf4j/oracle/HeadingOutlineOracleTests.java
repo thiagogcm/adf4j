@@ -12,6 +12,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
 import dev.nthings.adf4j.AdfToMarkdown;
+import dev.nthings.adf4j.ast.Adf;
+import dev.nthings.adf4j.ast.AdfDocument;
+import dev.nthings.adf4j.ast.Attributes;
+import dev.nthings.adf4j.ast.BulletList;
+import dev.nthings.adf4j.ast.Extension;
+import dev.nthings.adf4j.ast.ListItem;
 import dev.nthings.adf4j.options.ConversionOptions;
 import dev.nthings.adf4j.options.ExtensionOutput;
 import dev.nthings.adf4j.options.UnknownNodePolicy;
@@ -229,5 +235,56 @@ class HeadingOutlineOracleTests {
     var result = CONVERTER.convert(doc(toc(), heading(2, anchor("foo")), heading(2, text("Foo"))));
 
     assertThat(anchorIds(result.body())).containsExactly("foo", "foo-1");
+  }
+
+  @Test
+  void a_heading_node_reused_at_two_source_positions_gets_distinct_anchors() {
+    var shared = Adf.heading(2, "Shared");
+    var document = new AdfDocument(1, List.of(tocMacro(), shared, shared));
+
+    var result = CONVERTER.convert(document);
+
+    assertThat(anchorIds(result.body())).containsExactly("shared", "shared-1");
+    assertThat(result.metadata().outline())
+        .extracting("text", "anchor")
+        .containsExactly(tuple("Shared", "shared"), tuple("Shared", "shared-1"));
+    assertThat(result.body()).startsWith("- [Shared](#shared)\n- [Shared](#shared-1)\n");
+  }
+
+  @Test
+  void a_heading_node_reused_inside_a_nested_container_keeps_each_occurrence_anchor() {
+    var shared = Adf.heading(2, "Shared");
+    var document =
+        new AdfDocument(
+            1,
+            List.of(
+                tocMacro(), Adf.panel(Adf.PanelType.INFO, Adf.paragraph("intro"), shared), shared));
+
+    var result = CONVERTER.convert(document);
+
+    assertThat(anchorIds(result.body())).containsExactly("shared", "shared-1");
+    assertThat(result.metadata().outline())
+        .extracting("text", "anchor")
+        .containsExactly(tuple("Shared", "shared"), tuple("Shared", "shared-1"));
+  }
+
+  @Test
+  void headings_after_filtered_children_keep_their_source_occurrence_anchors() {
+    var shared = Adf.heading(2, "Shared");
+    var item = new ListItem(Attributes.empty(), List.of(shared), List.of());
+    var list =
+        new BulletList(
+            Attributes.empty(), List.of(Adf.paragraph("ignored stray child"), item), List.of());
+    var result = CONVERTER.convert(new AdfDocument(1, List.of(tocMacro(), list, shared)));
+
+    assertThat(result.body()).doesNotContain("ignored stray child");
+    assertThat(anchorIds(result.body())).containsExactly("shared", "shared-1");
+    assertThat(result.metadata().outline())
+        .extracting("text", "anchor")
+        .containsExactly(tuple("Shared", "shared"), tuple("Shared", "shared-1"));
+  }
+
+  private static Extension tocMacro() {
+    return Adf.extension("com.atlassian.confluence.macro.core", "toc");
   }
 }

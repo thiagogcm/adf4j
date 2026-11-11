@@ -36,9 +36,28 @@ class LinkSafetyTests {
               "tab-obfuscated javascript link",
               linked("java\tscript:alert(1)"),
               "[x](javascript%3Aalert(1))"),
+          argumentSet(
+              "newline-obfuscated javascript link",
+              linked("java\nscript:alert(1)"),
+              "[x](javascript%3Aalert(1))"),
+          argumentSet(
+              "carriage-return-obfuscated javascript link",
+              linked("java\rscript:alert(1)"),
+              "[x](javascript%3Aalert(1))"),
+          argumentSet(
+              "mixed-case javascript link",
+              linked("JaVaScRiPt:alert(1)"),
+              "[x](JaVaScRiPt%3Aalert(1))"),
+          argumentSet("file URL link", linked("file:///etc/passwd"), "[x](file%3A///etc/passwd)"),
           argumentSet("https link", linked("https://example.com/a"), "[x](https://example.com/a)"),
           argumentSet("mailto link", linked("mailto:a@example.com"), "[x](mailto:a@example.com)"),
           argumentSet("relative link", linked("/wiki/page"), "[x](/wiki/page)"),
+          argumentSet("protocol-relative link", linked("//cdn.example/a"), "[x](//cdn.example/a)"),
+          argumentSet("relative link with colon", linked("./a:b"), "[x](./a:b)"),
+          argumentSet("fragment link", linked("#section"), "[x](#section)"),
+          argumentSet("media placeholder link", linked("media:c/id"), "[x](media:c/id)"),
+          argumentSet(
+              "attachment placeholder link", linked("attachment:file-1"), "[x](attachment:file-1)"),
           argumentSet(
               "javascript card",
               doc(paragraph(inlineCard("javascript:alert(1)"))),

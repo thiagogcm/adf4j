@@ -154,7 +154,8 @@ final class MacroRenderer {
 
   // Resolver expansion, else the placeholder token (recorded as unresolved).
   private String renderPageTreeMacro(PageTreeReference reference, RenderContext context) {
-    var failures = context.session().events().callbackFailures();
+    var callbacks = context.session().events().callbacks();
+    var failures = callbacks.failureCount();
     var expanded = expandPageTree(reference, context);
     if (expanded != null) {
       return expanded;
@@ -177,7 +178,7 @@ final class MacroRenderer {
         UnresolvedResource.Kind.PAGE_TREE,
         reference.root(),
         context.path(),
-        events.reasonSince(failures),
+        callbacks.reasonSince(failures),
         fallback,
         "Page tree unresolved");
     return fallback;
@@ -186,7 +187,7 @@ final class MacroRenderer {
   // Entries as an indented bullet list (empty when the answer is empty). Null falls back to the
   // token: no resolver, null return, or throw.
   private @Nullable String expandPageTree(PageTreeReference reference, RenderContext context) {
-    var entries = context.session().resolvers().pageTree(reference, context.path());
+    var entries = context.session().resources().pageTree(reference, context.path());
     if (entries == null) {
       return null;
     }
@@ -206,8 +207,9 @@ final class MacroRenderer {
   // Link when the page id resolves, else the escaped one-line title; null if nothing renders.
   private @Nullable String pageTreeLabel(PageTreeEntry entry, RenderContext context) {
     var label = Strings.collapseWhitespace(entry.title()).strip();
-    var failures = context.session().events().callbackFailures();
-    var href = context.session().resolvers().pageId(entry.pageNodeId(), context.path());
+    var callbacks = context.session().events().callbacks();
+    var failures = callbacks.failureCount();
+    var href = context.session().resources().pageId(entry.pageNodeId(), context.path());
     if (href != null) {
       return context.session().writer().link(label.isEmpty() ? href : label, href);
     }
@@ -217,7 +219,7 @@ final class MacroRenderer {
           UnresolvedResource.Kind.PAGE,
           entry.pageNodeId(),
           context.path(),
-          events.reasonSince(failures),
+          callbacks.reasonSince(failures),
           label,
           null);
     }
@@ -235,7 +237,8 @@ final class MacroRenderer {
 
   // Resolver expansion, else the labelled placeholder (recorded as unresolved).
   private String renderExcerptInclude(ExcerptIncludeReference reference, RenderContext context) {
-    var failures = context.session().events().callbackFailures();
+    var callbacks = context.session().events().callbacks();
+    var failures = callbacks.failureCount();
     var resolved = context.session().resolvers().excerpt(reference, context.path());
     if (resolved != null) {
       return resolved;
@@ -250,7 +253,7 @@ final class MacroRenderer {
         UnresolvedResource.Kind.EXCERPT,
         reference.page(),
         context.path(),
-        events.reasonSince(failures),
+        callbacks.reasonSince(failures),
         fallback,
         "Excerpt unresolved");
     return fallback;
@@ -334,24 +337,22 @@ final class MacroRenderer {
     return writer.link(label, resolveAttachment(attachmentReference, context));
   }
 
-  // Resolver, then the reference's downloadUrl, else the attachment:<fileId> placeholder.
+  // Attachment resolver, then file resolver, then the reference's downloadUrl; else the
+  // attachment:<fileId> placeholder.
   private String resolveAttachment(AttachmentReference reference, RenderContext context) {
-    var failures = context.session().events().callbackFailures();
-    var resolved = context.session().resolvers().attachment(reference, context.path());
+    var events = context.session().events();
+    var callbacks = events.callbacks();
+    var failures = callbacks.failureCount();
+    var resolved = context.session().resources().attachmentSource(reference, context.path());
     if (resolved != null) {
       return resolved;
     }
-    var downloadUrl = reference.downloadUrl();
-    if (downloadUrl != null && !downloadUrl.isBlank()) {
-      return downloadUrl;
-    }
     var fallback = "attachment:" + reference.fileId();
-    var events = context.session().events();
     events.unresolved(
         UnresolvedResource.Kind.ATTACHMENT,
         reference.fileId(),
         context.path(),
-        events.reasonSince(failures),
+        callbacks.reasonSince(failures),
         fallback,
         "Attachment URL unresolved");
     return fallback;

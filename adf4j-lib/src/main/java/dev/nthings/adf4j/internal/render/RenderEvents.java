@@ -8,6 +8,7 @@ import dev.nthings.adf4j.ast.LayoutSection;
 import dev.nthings.adf4j.ast.UnknownMark;
 import dev.nthings.adf4j.internal.Located;
 import dev.nthings.adf4j.internal.analyze.AdfLossinessCollector;
+import dev.nthings.adf4j.internal.resource.CallbackTracker;
 import dev.nthings.adf4j.options.ConversionOptions;
 import dev.nthings.adf4j.result.ConversionEffect;
 import dev.nthings.adf4j.result.Diagnostic;
@@ -15,17 +16,14 @@ import dev.nthings.adf4j.result.UnresolvedResource;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.function.Supplier;
 import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
 
 /// What one render reports: callback failures, effects in document order, unresolved
 /// dependencies, and content lossiness.
 final class RenderEvents {
-  // Failures only; their count drives reasonSince.
-  private final List<Diagnostic> failures = new ArrayList<>();
+  private final CallbackTracker callbacks = new CallbackTracker();
   private final List<ConversionEffect> effects = new ArrayList<>();
   private final List<UnresolvedResource> unresolved = new ArrayList<>();
   private final AdfLossinessCollector unknowns = new AdfLossinessCollector();
@@ -78,7 +76,8 @@ final class RenderEvents {
   }
 
   List<Diagnostic> diagnostics() {
-    return Stream.concat(unknowns.build(options.unknownNodePolicy()).stream(), failures.stream())
+    return Stream.concat(
+            unknowns.build(options.unknownNodePolicy()).stream(), callbacks.diagnostics().stream())
         .toList();
   }
 
@@ -90,29 +89,8 @@ final class RenderEvents {
     return List.copyOf(unresolved);
   }
 
-  <T> @Nullable T call(String hook, String path, Supplier<@Nullable T> callback) {
-    try {
-      return callback.get();
-    } catch (RuntimeException failure) {
-      failures.add(
-          new Diagnostic(
-              Diagnostic.Code.CALLBACK_FAILED,
-              hook + " failed: " + failure.getMessage(),
-              failure,
-              List.of(path),
-              Map.of("callback", hook)));
-      return null;
-    }
-  }
-
-  int callbackFailures() {
-    return failures.size();
-  }
-
-  UnresolvedResource.Reason reasonSince(int failures) {
-    return callbackFailures() > failures
-        ? UnresolvedResource.Reason.CALLBACK_FAILED
-        : UnresolvedResource.Reason.NO_ANSWER;
+  CallbackTracker callbacks() {
+    return callbacks;
   }
 
   void effect(ConversionEffect.Kind kind, String path, String message) {

@@ -41,7 +41,7 @@ final class CardRenderer {
     var hasTitle = title != null && !title.isBlank();
 
     if (url != null && !url.isBlank()) {
-      var resolvedUrl = session.resolvers().pageHref(url, card.attrs(), context.path());
+      var resolvedUrl = session.resources().pageHref(url, card.attrs(), context.path());
       if (hasTitle) {
         return session.writer().link(title, resolvedUrl);
       }

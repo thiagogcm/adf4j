@@ -55,19 +55,22 @@ final class MediaRenderer {
   }
 
   private String renderEmbedOrLink(AdfMedia media, RenderContext context) {
-    var attachment = context.session().attachments().byFileId(media.id());
-    var failures = context.session().events().callbackFailures();
-    var resolvedSource = resolveMediaSource(media, attachment, context);
+    var session = context.session();
+    var attachment = session.attachments().byFileId(media.id());
+    var callbacks = session.events().callbacks();
+    var failures = callbacks.failureCount();
+    var resolvedSource = session.resources().mediaSource(media, context.path());
     var destination = resolvedSource != null ? resolvedSource : placeholder(media);
     if (resolvedSource == null) {
-      var events = context.session().events();
-      events.unresolved(
-          UnresolvedResource.Kind.MEDIA,
-          media.id(),
-          context.path(),
-          events.reasonSince(failures),
-          destination,
-          "Media URL unresolved");
+      session
+          .events()
+          .unresolved(
+              UnresolvedResource.Kind.MEDIA,
+              media.id(),
+              context.path(),
+              callbacks.reasonSince(failures),
+              destination,
+              "Media URL unresolved");
     }
 
     // Non-images (PDF, video, archive, …) become links; an image embed would break.
@@ -77,19 +80,18 @@ final class MediaRenderer {
           attachment != null && notBlank(attachment.title())
               ? attachment.title()
               : AttachmentReferences.fileName(resolvedSource);
-      return context.session().writer().link(fileLabel(media, destinationFileName), destination);
+      return session.writer().link(fileLabel(media, destinationFileName), destination);
     }
 
     // {width= height=} is non-GFM: opt-in only.
     var source = MarkdownText.escapeUrlDestination(destination);
     var attributeSuffix =
-        context.session().options().imageSizeAttributes()
+        session.options().imageSizeAttributes()
             ? renderImageAttributeSuffix(
                 positiveInteger(media.width()), positiveInteger(media.height()))
             : "";
     return "![%s](%s)%s"
-        .formatted(
-            context.session().writer().alt(imageAlt(media, attachment)), source, attributeSuffix);
+        .formatted(session.writer().alt(imageAlt(media, attachment)), source, attributeSuffix);
   }
 
   // Name, file name, alt, then destination file name; else "file".
@@ -124,23 +126,6 @@ final class MediaRenderer {
         attachmentTitle,
         media.url(),
         resolvedSource);
-  }
-
-  // Real sources only, never the synthetic placeholder, so label and image-ness use real names.
-  private @Nullable String resolveMediaSource(
-      AdfMedia media, @Nullable AttachmentReference attachment, RenderContext context) {
-    var url = media.url();
-    if (url != null && !url.isBlank()) {
-      return url;
-    }
-
-    var resolved = context.session().resolvers().media(media, context.path());
-    if (resolved != null) {
-      return resolved;
-    }
-
-    var downloadUrl = attachment == null ? null : attachment.downloadUrl();
-    return downloadUrl == null || downloadUrl.isBlank() ? null : downloadUrl;
   }
 
   private static boolean notBlank(@Nullable String value) {

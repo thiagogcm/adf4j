@@ -5,7 +5,7 @@ import dev.nthings.adf4j.result.Diagnostic;
 import dev.nthings.adf4j.result.UnresolvedResource;
 import java.util.List;
 
-/// Render result; mirrors the analyze phase's `DocumentAnalysis`.
+/// Markdown output and reports for the content actually rendered.
 public record RenderOutput(
     String body,
     List<Diagnostic> diagnostics,

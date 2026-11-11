@@ -40,7 +40,7 @@ public final class HeadingContent {
   }
 
   /// Id of the first `anchor` macro that carries one, or `null`.
-  static @Nullable String extractAnchorId(List<AdfInline> content) {
+  public static @Nullable String extractAnchorId(List<AdfInline> content) {
     for (var node : content) {
       if (node instanceof InlineExtension extension
           && ConfluenceMacro.of(extension) instanceof Anchor(var id)

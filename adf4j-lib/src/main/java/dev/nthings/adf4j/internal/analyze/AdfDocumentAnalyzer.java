@@ -2,7 +2,7 @@ package dev.nthings.adf4j.internal.analyze;
 
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.internal.AttachmentInventory;
-import dev.nthings.adf4j.options.ConversionOptions;
+import dev.nthings.adf4j.options.UnknownNodePolicy;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
@@ -16,24 +16,37 @@ public final class AdfDocumentAnalyzer {
     return new AdfDocumentAnalyzer();
   }
 
-  public DocumentAnalysis analyze(
-      @Nullable AdfDocument document, ConversionOptions options, AttachmentInventory attachments) {
-    return analyze(document, options, attachments, true);
+  /// Reference and outline facts, without Markdown lossiness diagnostics.
+  public DocumentFacts facts(
+      @Nullable AdfDocument document,
+      UnknownNodePolicy unknownNodePolicy,
+      AttachmentInventory attachments) {
+    if (document == null) {
+      return DocumentFacts.empty();
+    }
+    return collectFacts(document, unknownNodePolicy, attachments, null);
   }
 
-  /// Without `lossiness`, diagnostics stay empty: the render reports what it visits itself.
+  /// Facts plus the diagnostics that project Markdown's lossiness.
   public DocumentAnalysis analyze(
       @Nullable AdfDocument document,
-      ConversionOptions options,
-      AttachmentInventory attachments,
-      boolean lossiness) {
+      UnknownNodePolicy unknownNodePolicy,
+      AttachmentInventory attachments) {
     if (document == null) {
       return DocumentAnalysis.empty();
     }
+    var lossinessCollector = new AdfLossinessCollector();
+    var facts = collectFacts(document, unknownNodePolicy, attachments, lossinessCollector);
+    return new DocumentAnalysis(facts, lossinessCollector.build(unknownNodePolicy));
+  }
 
-    var headingCollector = new AdfHeadingCollector(options.unknownNodePolicy());
+  private static DocumentFacts collectFacts(
+      AdfDocument document,
+      UnknownNodePolicy unknownNodePolicy,
+      AttachmentInventory attachments,
+      @Nullable AdfLossinessCollector lossinessCollector) {
+    var headingCollector = new AdfHeadingCollector(unknownNodePolicy);
     var metadataExtractor = new AdfContentMetadataExtractor(attachments);
-    var lossinessCollector = lossiness ? new AdfLossinessCollector() : null;
     AdfNodeWalker.walk(
         document,
         lossinessCollector == null
@@ -41,11 +54,6 @@ public final class AdfDocumentAnalyzer {
             : List.of(headingCollector, metadataExtractor, lossinessCollector));
 
     var outline = headingCollector.build();
-    return new DocumentAnalysis(
-        outline,
-        metadataExtractor.build(outline.headings()),
-        lossinessCollector == null
-            ? List.of()
-            : lossinessCollector.build(options.unknownNodePolicy()));
+    return new DocumentFacts(outline, metadataExtractor.build(outline.headings()));
   }
 }

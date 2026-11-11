@@ -1,17 +1,22 @@
 package dev.nthings.adf4j.internal.analyze;
 
+import static dev.nthings.adf4j.ast.Adf.heading;
+import static dev.nthings.adf4j.ast.Adf.panel;
+import static dev.nthings.adf4j.ast.Adf.paragraph;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.junit.jupiter.params.provider.Arguments.argumentSet;
 
 import dev.nthings.adf4j.AdfJson;
+import dev.nthings.adf4j.ast.Adf.PanelType;
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.ast.AdfInline;
 import dev.nthings.adf4j.ast.Heading;
 import dev.nthings.adf4j.ast.Paragraph;
 import dev.nthings.adf4j.ast.Text;
 import dev.nthings.adf4j.internal.AttachmentInventory;
-import dev.nthings.adf4j.options.ConversionOptions;
+import dev.nthings.adf4j.metadata.HeadingReference;
+import dev.nthings.adf4j.options.UnknownNodePolicy;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -241,33 +246,38 @@ class AdfHeadingCollectorTests {
   }
 
   @Test
-  void an_explicit_anchor_is_injected() {
-    var document = AdfJson.parse(headingDocument("Title", ANCHOR_MACRO)).document();
+  void outline_lookup_uses_source_occurrence_paths_not_node_identity() {
+    var shared = heading(2, "Shared");
+    var document = new AdfDocument(1, List.of(shared, paragraph("between"), shared));
+    var outline = outlineOf(document);
 
-    assertThat(outlineOf(document).anchorToInject(firstHeading(document), false)).isEqualTo("here");
+    assertThat(outline.referenceAt("/content/0"))
+        .isEqualTo(new HeadingReference(2, "Shared", "shared"));
+    assertThat(outline.referenceAt("/content/2"))
+        .isEqualTo(new HeadingReference(2, "Shared", "shared-1"));
+    assertThat(outline.referenceAt("/content/1")).isNull();
   }
 
   @Test
-  void a_toc_referenced_heading_injects_its_slug() {
-    var document = AdfJson.parse(TOC_WITH_HEADINGS).document();
+  void outline_lookup_uses_source_paths_inside_filtered_containers() {
+    var shared = heading(2, "Shared");
+    var document =
+        new AdfDocument(1, List.of(panel(PanelType.INFO, paragraph("intro"), shared), shared));
+    var outline = outlineOf(document);
 
-    assertThat(outlineOf(document).anchorToInject(firstHeading(document), false)).isNotBlank();
+    assertThat(outline.referenceAt("/content/0/content/1"))
+        .isEqualTo(new HeadingReference(2, "Shared", "shared"));
+    assertThat(outline.referenceAt("/content/1"))
+        .isEqualTo(new HeadingReference(2, "Shared", "shared-1"));
   }
 
   @Test
-  void a_plain_heading_injects_nothing() {
-    var document = AdfJson.parse(adfWithHeading(2, "Getting Started")).document();
-
-    assertThat(outlineOf(document).anchorToInject(firstHeading(document), false)).isNull();
-  }
-
-  @Test
-  void a_heading_that_rendered_blank_keeps_only_its_explicit_anchor() {
+  void a_heading_that_renders_blank_has_no_outline_reference() {
     var anchored = AdfJson.parse(headingDocument(" ", ANCHOR_MACRO)).document();
     var bare = AdfJson.parse(headingDocument(" ", "{\"type\":\"hardBreak\"}")).document();
 
-    assertThat(outlineOf(anchored).anchorToInject(firstHeading(anchored), true)).isEqualTo("here");
-    assertThat(outlineOf(bare).anchorToInject(firstHeading(bare), true)).isNull();
+    assertThat(outlineOf(anchored).referenceAt("/content/0")).isNull();
+    assertThat(outlineOf(bare).referenceAt("/content/0")).isNull();
   }
 
   @Test
@@ -278,25 +288,8 @@ class AdfHeadingCollectorTests {
     assertThat(outline.headings())
         .extracting("text", "anchor")
         .containsExactly(tuple("[status]", "here"));
-    assertThat(outline.anchorToInject(firstHeading(document), false)).isEqualTo("here");
-  }
-
-  @Test
-  void a_heading_outside_the_outline_keeps_only_its_explicit_anchor() {
-    var anchored = AdfJson.parse(headingDocument("Title", ANCHOR_MACRO)).document();
-    var bare = AdfJson.parse(adfWithHeading(2, "Title")).document();
-    var unrelated = outlineOf(AdfJson.parse(TOC_WITH_HEADINGS).document());
-
-    assertThat(unrelated.anchorToInject(firstHeading(anchored), false)).isEqualTo("here");
-    assertThat(unrelated.anchorToInject(firstHeading(bare), false)).isNull();
-  }
-
-  private static Heading firstHeading(AdfDocument document) {
-    return document.content().stream()
-        .filter(Heading.class::isInstance)
-        .map(Heading.class::cast)
-        .findFirst()
-        .orElseThrow();
+    assertThat(outline.referenceAt("/content/0"))
+        .isEqualTo(new HeadingReference(2, "[status]", "here"));
   }
 
   private static String headingDocument(String first, String second) {
@@ -314,7 +307,7 @@ class AdfHeadingCollectorTests {
 
   private static HeadingOutline outlineOf(AdfDocument document) {
     return AdfDocumentAnalyzer.createDefault()
-        .analyze(document, ConversionOptions.defaults(), AttachmentInventory.from(null))
+        .facts(document, UnknownNodePolicy.PLACEHOLDER, AttachmentInventory.from(null))
         .outline();
   }
 
@@ -322,7 +315,7 @@ class AdfHeadingCollectorTests {
     return document.content().stream()
         .filter(Heading.class::isInstance)
         .map(Heading.class::cast)
-        .map(outline::isTocReferenced)
+        .map(heading -> outline.isTocReferenced(heading.level()))
         .toList();
   }
 

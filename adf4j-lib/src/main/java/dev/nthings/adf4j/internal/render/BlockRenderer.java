@@ -148,7 +148,9 @@ final class BlockRenderer {
 
   private String renderHeading(Heading heading, RenderContext context) {
     var text = renderHeadingText(heading, context);
-    var anchor = context.session().headingOutline().anchorToInject(heading, text.isBlank());
+    var anchor =
+        HeadingAnchors.anchorToInject(
+            context.session().headingOutline(), heading, context.path(), text.isBlank());
     if (text.isBlank()) {
       return HtmlFragments.anchor(anchor);
     }
