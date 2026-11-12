@@ -61,4 +61,15 @@ class UrlSafetyTests {
         .isEqualTo("https://example.com/a");
     assertThat(UrlSafety.sanitizeScheme("/relative", webOnly)).isEqualTo("/relative");
   }
+
+  @Test
+  void absolute_uris_follow_the_commonmark_scheme_rule() {
+    assertThat(UrlSafety.isAbsoluteUri("https://example.com")).isTrue();
+    assertThat(UrlSafety.isAbsoluteUri("a+b.c-d:x")).isTrue();
+    assertThat(UrlSafety.isAbsoluteUri("x:only-one-char-scheme")).isFalse();
+    assertThat(UrlSafety.isAbsoluteUri("1http://digit-first")).isFalse();
+    assertThat(UrlSafety.isAbsoluteUri("\u00e9t\u00e9://non-ascii")).isFalse();
+    assertThat(UrlSafety.isAbsoluteUri("a".repeat(33) + ":too-long")).isFalse();
+    assertThat(UrlSafety.isAbsoluteUri("/relative")).isFalse();
+  }
 }

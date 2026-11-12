@@ -1202,8 +1202,8 @@ outline: []
 schema: conforms
 body: # [Reporting icon](media:contentId-reporting/children-reporting-icon) **Reporting Specifications**\n\n{{children}}
 warnings: false
-effect: STYLE_OMITTED|/content/0/content/1/marks/0|Visual formatting omitted
 effect: PLACEHOLDER|/content/0/content/0|Media URL unresolved
+effect: STYLE_OMITTED|/content/0/content/1/marks/0|Visual formatting omitted
 effect: PLACEHOLDER|/content/1|Page tree unresolved
 unresolved: [UnresolvedResource{kind=MEDIA, id=children-reporting-icon, path=/content/0/content/0, reason=NO_ANSWER, fallback=media:contentId-reporting/children-reporting-icon}, UnresolvedResource{kind=PAGE_TREE, id=, path=/content/1, reason=NO_ANSWER, fallback={{children}}}]
 pageIds: []
@@ -3133,8 +3133,6 @@ schema: off-schema
 body: <details><summary>t</summary>\n\nx\n\n</details>\n\n|     |\n| --- |\n| x   |\n\n\\[Extension: k\\]
 warnings: true
 diagnostic: UNSUPPORTED_MACRO|WARNING|1 unsupported macro(s) rendered as placeholders; original content not represented: k.|[/content/2]|{}
-effect: CONTENT_DROPPED|/content/0/marks/0|Unknown mark dropped
-effect: CONTENT_DROPPED|/content/1/marks/0|Unknown mark dropped
 effect: STRUCTURE_CHANGED|/content/1|Empty table header synthesized
 effect: PLACEHOLDER|/content/2|Unsupported extension: k
 unresolved: []
@@ -3149,7 +3147,6 @@ outline: []
 schema: off-schema
 body: @1[[file](media:1)](http://kept)
 warnings: false
-effect: CONTENT_DROPPED|/content/0/content/0/marks/0|Unknown mark dropped
 effect: PLACEHOLDER|/content/0/content/1|Media URL unresolved
 unresolved: [UnresolvedResource{kind=MEDIA, id=1, path=/content/0/content/1, reason=NO_ANSWER, fallback=media:1}]
 pageIds: []

@@ -29,6 +29,20 @@ public final class UrlSafety {
     return cleaned.toString();
   }
 
+  /// A CommonMark absolute URI: an ASCII scheme of 2 to 32 characters, then `:`.
+  public static boolean isAbsoluteUri(String url) {
+    var colon = url.indexOf(':');
+    if (colon < 2 || colon > 32) {
+      return false;
+    }
+    for (var i = 0; i < colon; i++) {
+      if (!isSchemeChar(url.charAt(i), i == 0)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   // Relative, or an allowed scheme. A tab/CR/LF inside the scheme is unsafe: browsers strip it
   // before re-reading the scheme.
   private static boolean hasSafeOrNoScheme(String url, Set<String> allowedSchemes) {

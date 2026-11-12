@@ -15,11 +15,11 @@ public record DocumentContext(
     return new DocumentContext(null, null);
   }
 
-  public DocumentContext withAttachments(@Nullable List<AttachmentReference> value) {
+  DocumentContext withAttachments(@Nullable List<AttachmentReference> value) {
     return new DocumentContext(value, title);
   }
 
-  public DocumentContext withTitle(@Nullable String value) {
+  DocumentContext withTitle(@Nullable String value) {
     return new DocumentContext(attachments, value);
   }
 }

@@ -1,11 +1,7 @@
 package dev.nthings.adf4j.internal.render;
 
-import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.AdfExtension;
-import dev.nthings.adf4j.ast.AdfInline;
 import dev.nthings.adf4j.ast.AdfNode;
-import dev.nthings.adf4j.ast.AdfUnknown;
-import dev.nthings.adf4j.ast.LayoutSection;
 import dev.nthings.adf4j.ast.UnknownMark;
 import dev.nthings.adf4j.internal.Located;
 import dev.nthings.adf4j.internal.analyze.AdfLossinessCollector;
@@ -15,9 +11,7 @@ import dev.nthings.adf4j.result.ConversionEffect;
 import dev.nthings.adf4j.result.Diagnostic;
 import dev.nthings.adf4j.result.UnresolvedResource;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
@@ -28,45 +22,25 @@ final class RenderEvents {
   private final CallbackTracker callbacks = new CallbackTracker();
   private final List<ConversionEffect> effects = new ArrayList<>();
   private final List<UnresolvedResource> unresolved = new ArrayList<>();
-  private final AdfLossinessCollector unknowns = new AdfLossinessCollector();
+  private final List<String> unknownNodePaths = new ArrayList<>();
+  private final List<String> unknownMarkPaths = new ArrayList<>();
   private final MacroDiagnostics macros = new MacroDiagnostics();
-  private final Set<String> observed = new HashSet<>();
   private final ConversionOptions options;
 
   RenderEvents(ConversionOptions options) {
     this.options = options;
   }
 
-  /// Records what the node at `path` changes; each source position counts once.
-  void observe(AdfNode node, String path) {
-    if (!observed.add(path)) {
+  /// Records the marks of the node at `path` that the output loses. Called once per rendered node,
+  /// before its content renders; nodes whose marks rendering ignores record nothing.
+  void observeMarks(AdfNode node, String path) {
+    if (!AdfLossinessCollector.rendersMarks(node)) {
       return;
-    }
-    if (node instanceof AdfBlock block) {
-      unknowns.visitBlock(block, path);
-    } else if (node instanceof AdfInline inline) {
-      unknowns.visitInline(inline, path);
-    }
-    if (node instanceof AdfUnknown) {
-      switch (options.unknownNodePolicy()) {
-        case SKIP -> effect(ConversionEffect.Kind.CONTENT_DROPPED, path, "Unknown node dropped");
-        case PLACEHOLDER ->
-            effect(
-                ConversionEffect.Kind.PLACEHOLDER,
-                path,
-                "Unknown node replaced with a placeholder");
-        case PRESERVE_RAW, FAIL -> {}
-      }
-    }
-    if (node instanceof LayoutSection) {
-      effect(
-          ConversionEffect.Kind.STRUCTURE_CHANGED,
-          path,
-          "Columns flattened into sequential blocks");
     }
     for (var i = 0; i < node.marks().size(); i++) {
       var mark = node.marks().get(i);
       if (mark instanceof UnknownMark) {
+        unknownMarkPaths.add(Located.mark(path, i));
         effect(
             ConversionEffect.Kind.CONTENT_DROPPED, Located.mark(path, i), "Unknown mark dropped");
       } else if (TextMarkRenderer.omitsVisual(mark, options.htmlVisualMarks())) {
@@ -78,9 +52,17 @@ final class RenderEvents {
     }
   }
 
+  /// Records an unknown node the active policy rendered; the policy's effect is the caller's.
+  void unknownNode(String path) {
+    unknownNodePaths.add(path);
+  }
+
   List<Diagnostic> diagnostics() {
     return Stream.of(
-            macros.build(), unknowns.build(options.unknownNodePolicy()), callbacks.diagnostics())
+            macros.build(),
+            AdfLossinessCollector.diagnostics(
+                options.unknownNodePolicy(), unknownNodePaths, unknownMarkPaths),
+            callbacks.diagnostics())
         .flatMap(List::stream)
         .toList();
   }

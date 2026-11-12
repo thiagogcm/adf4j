@@ -7,7 +7,7 @@
 | Previous API or behavior | 2.0 API or behavior |
 | --- | --- |
 | `ParseResult.isValid()` | `isSuccess()` means parsing produced a document; `requireDocument()` returns it or throws `AdfException`. |
-| `MarkdownOptions` containing every conversion setting | `ConversionOptions` groups `MarkdownOptions`, `DocumentContext`, and `ResolverHooks`. Focused `withX` conveniences remain available. |
+| `MarkdownOptions` containing every conversion setting | `ConversionOptions` groups `MarkdownOptions`, `DocumentContext`, and `ResolverHooks`; set any option with its `ConversionOptions.withX(...)`. |
 | `wasLossy()` | `isSuccess()`, `hasWarnings()`, `effects()`, and `unresolved()` answer separate questions. |
 | `analyze(...)` returning metadata alone | `AnalysisResult` retains diagnostics; read `metadata()` after checking `isSuccess()`. JSON input is also accepted. |
 | Blank input silently returning empty Markdown | `EMPTY_INPUT` error. Failed conversion has an empty body, even with a configured title. |
@@ -24,14 +24,10 @@ import dev.nthings.adf4j.AdfJson;
 import dev.nthings.adf4j.AdfToMarkdown;
 import dev.nthings.adf4j.AdfValidation;
 import dev.nthings.adf4j.options.ConversionOptions;
-import dev.nthings.adf4j.options.DocumentContext;
-import dev.nthings.adf4j.options.MarkdownOptions;
-import dev.nthings.adf4j.options.ResolverHooks;
 
-var options = new ConversionOptions(
-    MarkdownOptions.defaults(),
-    DocumentContext.defaults().withTitle("Report"),
-    ResolverHooks.defaults().withFileResolver(id -> "downloads/" + id));
+var options = ConversionOptions.defaults()
+    .withDocumentTitle("Report")
+    .withFileResolver(id -> "downloads/" + id);
 
 var converter = AdfToMarkdown.with(options);
 var result = converter.convert(adfJson);

@@ -3,8 +3,8 @@ package dev.nthings.adf4j.internal.analyze;
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.internal.AttachmentInventory;
 import dev.nthings.adf4j.options.UnknownNodePolicy;
+import java.util.ArrayList;
 import java.util.List;
-import org.jspecify.annotations.Nullable;
 
 /// Analyze phase: one {@link AdfNodeWalker} pass feeds the heading and metadata collectors.
 /// Stateless and thread-safe.
@@ -19,7 +19,7 @@ public final class AdfDocumentAnalyzer {
   /// Reference and outline facts, without Markdown lossiness diagnostics.
   public DocumentFacts facts(
       AdfDocument document, UnknownNodePolicy unknownNodePolicy, AttachmentInventory attachments) {
-    return collectFacts(document, unknownNodePolicy, attachments, null);
+    return collectFacts(document, unknownNodePolicy, attachments);
   }
 
   /// Facts plus the diagnostics that project Markdown's lossiness.
@@ -34,14 +34,12 @@ public final class AdfDocumentAnalyzer {
       AdfDocument document,
       UnknownNodePolicy unknownNodePolicy,
       AttachmentInventory attachments,
-      @Nullable AdfLossinessCollector lossinessCollector) {
+      NodeVisitor... extraVisitors) {
     var headingCollector = new AdfHeadingCollector(unknownNodePolicy);
     var metadataExtractor = new AdfContentMetadataExtractor(attachments);
-    AdfNodeWalker.walk(
-        document,
-        lossinessCollector == null
-            ? List.of(headingCollector, metadataExtractor)
-            : List.of(headingCollector, metadataExtractor, lossinessCollector));
+    var visitors = new ArrayList<NodeVisitor>(List.of(headingCollector, metadataExtractor));
+    visitors.addAll(List.of(extraVisitors));
+    AdfNodeWalker.walk(document, visitors);
 
     var outline = headingCollector.build();
     return new DocumentFacts(outline, metadataExtractor.build(outline.headings()));

@@ -20,7 +20,7 @@ public record ResolverHooks(
     return new ResolverHooks(null, null, null, null, null, null, List.of());
   }
 
-  public ResolverHooks withMediaResolver(@Nullable MediaResolver value) {
+  ResolverHooks withMediaResolver(@Nullable MediaResolver value) {
     return new ResolverHooks(
         value,
         attachmentResolver,
@@ -31,7 +31,7 @@ public record ResolverHooks(
         extensionRenderers);
   }
 
-  public ResolverHooks withAttachmentResolver(@Nullable AttachmentResolver value) {
+  ResolverHooks withAttachmentResolver(@Nullable AttachmentResolver value) {
     return new ResolverHooks(
         mediaResolver,
         value,
@@ -42,7 +42,7 @@ public record ResolverHooks(
         extensionRenderers);
   }
 
-  public ResolverHooks withFileResolver(@Nullable FileResolver value) {
+  ResolverHooks withFileResolver(@Nullable FileResolver value) {
     return new ResolverHooks(
         mediaResolver,
         attachmentResolver,
@@ -53,7 +53,7 @@ public record ResolverHooks(
         extensionRenderers);
   }
 
-  public ResolverHooks withPageLinkResolver(@Nullable PageLinkResolver value) {
+  ResolverHooks withPageLinkResolver(@Nullable PageLinkResolver value) {
     return new ResolverHooks(
         mediaResolver,
         attachmentResolver,
@@ -64,7 +64,7 @@ public record ResolverHooks(
         extensionRenderers);
   }
 
-  public ResolverHooks withPageTreeResolver(@Nullable PageTreeResolver value) {
+  ResolverHooks withPageTreeResolver(@Nullable PageTreeResolver value) {
     return new ResolverHooks(
         mediaResolver,
         attachmentResolver,
@@ -75,7 +75,7 @@ public record ResolverHooks(
         extensionRenderers);
   }
 
-  public ResolverHooks withExcerptResolver(@Nullable ExcerptResolver value) {
+  ResolverHooks withExcerptResolver(@Nullable ExcerptResolver value) {
     return new ResolverHooks(
         mediaResolver,
         attachmentResolver,
@@ -86,7 +86,7 @@ public record ResolverHooks(
         extensionRenderers);
   }
 
-  public ResolverHooks withExtensionRenderers(List<ExtensionRenderer> value) {
+  ResolverHooks withExtensionRenderers(List<ExtensionRenderer> value) {
     return new ResolverHooks(
         mediaResolver,
         attachmentResolver,

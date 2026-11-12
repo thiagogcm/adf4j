@@ -41,6 +41,7 @@ import dev.nthings.adf4j.internal.AdfText;
 import dev.nthings.adf4j.internal.Located;
 import dev.nthings.adf4j.internal.Strings;
 import dev.nthings.adf4j.internal.analyze.HeadingContent;
+import dev.nthings.adf4j.result.ConversionEffect;
 import java.util.Locale;
 import org.jspecify.annotations.Nullable;
 
@@ -68,16 +69,21 @@ final class BlockRenderer {
   }
 
   // Right-trim so a custom renderer's trailing newline adds no blank lines to a parent.
-  // `context` sits at the block, as everywhere below.
+  // `context` sits at the block, as everywhere below. A paragraph at column 0 starts a line.
   String renderBlock(AdfBlock block, RenderContext context) {
-    context.session().events().observe(block, context.path());
-    return dispatchBlock(block, context).stripTrailing();
+    return renderBlock(block, context, true);
   }
 
-  private String dispatchBlock(AdfBlock block, RenderContext context) {
+  /// Every block renders through here, so each is observed once. `atLineStart` is false only for
+  /// a paragraph after a checkbox on the same line.
+  String renderBlock(AdfBlock block, RenderContext context, boolean atLineStart) {
+    context.session().events().observeMarks(block, context.path());
+    return dispatchBlock(block, context, atLineStart).stripTrailing();
+  }
+
+  private String dispatchBlock(AdfBlock block, RenderContext context, boolean atLineStart) {
     return switch (block) {
-      // Column 0: the first inline is at line start.
-      case Paragraph paragraph -> renderParagraph(paragraph, context, true);
+      case Paragraph paragraph -> renderParagraph(paragraph, context, atLineStart);
       case Heading heading -> renderHeading(heading, context);
       case Blockquote blockquote -> renderBlockQuote(blockquote, context);
       case Rule _ -> "---";
@@ -130,9 +136,7 @@ final class BlockRenderer {
     return inlineRenderer.renderInlineNodes(context.children(node, AdfInline.class), context, true);
   }
 
-  // False only after a checkbox on the same line.
-  String renderParagraph(Paragraph paragraph, RenderContext context, boolean atLineStart) {
-    context.session().events().observe(paragraph, context.path());
+  private String renderParagraph(Paragraph paragraph, RenderContext context, boolean atLineStart) {
     var rendered =
         inlineRenderer.renderInlineNodes(
             context.children(paragraph, AdfInline.class), context, atLineStart);
@@ -216,6 +220,13 @@ final class BlockRenderer {
   }
 
   private String renderLayoutSection(LayoutSection layout, RenderContext context) {
+    context
+        .session()
+        .events()
+        .effect(
+            ConversionEffect.Kind.STRUCTURE_CHANGED,
+            context.path(),
+            "Columns flattened into sequential blocks");
     return MarkdownBlocks.join(
         context.children(layout, LayoutColumn.class).stream()
             .map(column -> renderBlocks(column.node(), context.at(column)))

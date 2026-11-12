@@ -27,7 +27,7 @@ final class MediaRenderer {
     // A link can't span the blank line between images, so each wrapper covers one image.
     var blocks = new ArrayList<String>();
     for (var media : context.children(node, Media.class)) {
-      var image = renderMedia(media.node(), context.at(media));
+      var image = blockRenderer.renderBlock(media.node(), context.at(media));
       blocks.add(markRenderer.applyMarks(image, node.marks(), context));
     }
     for (var caption : context.children(node, Caption.class)) {
@@ -44,12 +44,11 @@ final class MediaRenderer {
     return String.join(
         "\n",
         context.children(node, Media.class).stream()
-            .map(media -> renderMedia(media.node(), context.at(media)))
+            .map(media -> blockRenderer.renderBlock(media.node(), context.at(media)))
             .toList());
   }
 
   String renderMedia(AdfMedia node, RenderContext context) {
-    context.session().events().observe(node, context.path());
     var rendered = renderEmbedOrLink(node, context);
     return markRenderer.applyMarks(rendered, node.marks(), context);
   }

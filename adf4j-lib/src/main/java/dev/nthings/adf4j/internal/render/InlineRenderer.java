@@ -17,7 +17,9 @@ import dev.nthings.adf4j.ast.UnknownBlock;
 import dev.nthings.adf4j.ast.UnknownInline;
 import dev.nthings.adf4j.internal.AdfText;
 import dev.nthings.adf4j.internal.Located;
+import dev.nthings.adf4j.options.UnknownNodePolicy;
 import dev.nthings.adf4j.result.AdfException;
+import dev.nthings.adf4j.result.ConversionEffect;
 import dev.nthings.adf4j.result.Diagnostic;
 import java.util.ArrayList;
 import java.util.List;
@@ -57,10 +59,12 @@ final class InlineRenderer {
     var builder = new StringBuilder();
     var atLineStart = hasLines && startAtLineStart;
     @Nullable AdfInline previous = null;
-    nodes.forEach(node -> context.session().events().observe(node.node(), node.path()));
-    for (var located : coalesceAdjacentText(nodes, context.session())) {
-      var node = located.node();
-      var rendered = renderInline(node, context.at(located), atLineStart);
+    for (var run : coalesceAdjacentText(nodes, context.session())) {
+      for (var source : run.sources()) {
+        context.session().events().observeMarks(source.node(), source.path());
+      }
+      var node = run.node().node();
+      var rendered = renderInline(node, context.at(run.node()), atLineStart);
       if (rendered.isEmpty()) {
         continue;
       }
@@ -74,22 +78,26 @@ final class InlineRenderer {
     return builder.toString();
   }
 
+  /// A node to render and the source nodes it stands for, in document order.
+  private record Run(Located<AdfInline> node, List<Located<AdfInline>> sources) {}
+
   /// Merges adjacent {@link Text} runs that render alike, so they share one set of delimiters.
   /// A merged run keeps its first pointer.
-  private List<Located<AdfInline>> coalesceAdjacentText(
-      List<Located<AdfInline>> nodes, RenderSession session) {
-    var result = new ArrayList<Located<AdfInline>>(nodes.size());
+  private List<Run> coalesceAdjacentText(List<Located<AdfInline>> nodes, RenderSession session) {
+    var result = new ArrayList<Run>(nodes.size());
     for (var located : nodes) {
       if (located.node() instanceof Text text
           && !result.isEmpty()
-          && result.getLast().node() instanceof Text last
+          && result.getLast().node().node() instanceof Text last
           && markRenderer.rendersAlike(last.marks(), text.marks(), session)) {
+        var previous = result.getLast();
+        var sources = new ArrayList<>(previous.sources());
+        sources.add(located);
+        var merged = new Text(last.text() + text.text(), last.marks());
         result.set(
-            result.size() - 1,
-            new Located<>(
-                new Text(last.text() + text.text(), last.marks()), result.getLast().path()));
+            result.size() - 1, new Run(new Located<>(merged, previous.node().path()), sources));
       } else {
-        result.add(located);
+        result.add(new Run(located, List.of(located)));
       }
     }
     return result;
@@ -153,9 +161,16 @@ final class InlineRenderer {
     var kind = isBlock ? "block" : "inline";
     var nodeType = node.type();
     var label = nodeType.isBlank() ? "<empty>" : nodeType;
-    return switch (context.session().options().unknownNodePolicy()) {
+    var events = context.session().events();
+    var policy = context.session().options().unknownNodePolicy();
+    if (policy != UnknownNodePolicy.FAIL) {
+      events.unknownNode(context.path());
+    }
+    return switch (policy) {
       case SKIP -> {
         log.warn("Skipping unsupported ADF {} node type: {}", kind, label);
+        events.effect(
+            ConversionEffect.Kind.CONTENT_DROPPED, context.path(), "Unknown node dropped");
         yield "";
       }
       case FAIL ->
@@ -175,6 +190,10 @@ final class InlineRenderer {
       }
       case PLACEHOLDER -> {
         log.warn("Rendering placeholder for unsupported ADF {} node type: {}", kind, label);
+        events.effect(
+            ConversionEffect.Kind.PLACEHOLDER,
+            context.path(),
+            "Unknown node replaced with a placeholder");
         yield context.session().writer().label(AdfText.unsupportedLabel(node));
       }
     };

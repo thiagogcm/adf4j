@@ -189,8 +189,6 @@ schema: off-schema
 body: <details><summary>t</summary>\n\nx\n\n</details>\n\n<table><tr><td>x</td></tr></table>\n\n\\[Extension: k\\]
 warnings: true
 diagnostic: UNSUPPORTED_MACRO|WARNING|1 unsupported macro(s) rendered as placeholders; original content not represented: k.|[/content/2]|{}
-effect: CONTENT_DROPPED|/content/0/marks/0|Unknown mark dropped
-effect: CONTENT_DROPPED|/content/1/marks/0|Unknown mark dropped
 effect: PLACEHOLDER|/content/2|Unsupported extension: k
 unresolved: []
 pageIds: []

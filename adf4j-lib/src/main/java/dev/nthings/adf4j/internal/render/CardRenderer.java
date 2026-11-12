@@ -3,6 +3,7 @@ package dev.nthings.adf4j.internal.render;
 import dev.nthings.adf4j.ast.AdfCard;
 import dev.nthings.adf4j.internal.AdfText;
 import dev.nthings.adf4j.internal.Strings;
+import dev.nthings.adf4j.internal.UrlSafety;
 import org.jspecify.annotations.Nullable;
 
 final class CardRenderer {
@@ -48,7 +49,7 @@ final class CardRenderer {
       // Autolink only an untouched url; otherwise a labelled link keeps the original visible.
       var rewritten = !resolvedUrl.equals(url);
       var destination = MarkdownText.escapeUrlDestination(resolvedUrl);
-      return !rewritten && url.equals(destination) && isAbsoluteUri(url)
+      return !rewritten && url.equals(destination) && UrlSafety.isAbsoluteUri(url)
           ? "<%s>".formatted(url)
           : session.writer().link(url, resolvedUrl);
     }
@@ -58,20 +59,5 @@ final class CardRenderer {
     }
 
     return null;
-  }
-
-  /// CommonMark absolute URI: a 2+ character scheme, then ':'.
-  private static boolean isAbsoluteUri(String url) {
-    var colon = url.indexOf(':');
-    if (colon < 2 || !Character.isLetter(url.charAt(0))) {
-      return false;
-    }
-    for (var i = 1; i < colon; i++) {
-      var c = url.charAt(i);
-      if (!Character.isLetterOrDigit(c) && c != '+' && c != '.' && c != '-') {
-        return false;
-      }
-    }
-    return true;
   }
 }

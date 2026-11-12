@@ -3,14 +3,13 @@ package dev.nthings.adf4j.internal.analyze;
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.AdfInline;
 import dev.nthings.adf4j.ast.AdfNode;
+import dev.nthings.adf4j.ast.AdfUnknown;
 import dev.nthings.adf4j.ast.Heading;
 import dev.nthings.adf4j.ast.Media;
 import dev.nthings.adf4j.ast.MediaInline;
 import dev.nthings.adf4j.ast.MediaSingle;
 import dev.nthings.adf4j.ast.Paragraph;
 import dev.nthings.adf4j.ast.Text;
-import dev.nthings.adf4j.ast.UnknownBlock;
-import dev.nthings.adf4j.ast.UnknownInline;
 import dev.nthings.adf4j.ast.UnknownMark;
 import dev.nthings.adf4j.internal.Located;
 import dev.nthings.adf4j.options.UnknownNodePolicy;
@@ -18,40 +17,40 @@ import dev.nthings.adf4j.result.Diagnostic;
 import java.util.ArrayList;
 import java.util.List;
 
-/// Records paths of unmodelled nodes and marks so the conversion can report lossiness. Unknown
-/// nodes follow the active {@link UnknownNodePolicy}; unknown marks are always dropped.
-/// One instance per document.
+/// Records paths of unmodelled nodes and marks so analysis can report lossiness. Unknown nodes
+/// follow the active {@link UnknownNodePolicy}; unknown marks are always dropped. One instance per
+/// document. Rendering reports the same diagnostics through {@link #diagnostics}.
 public final class AdfLossinessCollector implements NodeVisitor {
 
   private final List<String> nodePaths = new ArrayList<>();
   private final List<String> markPaths = new ArrayList<>();
 
+  /// Whether rendering reads `node`'s marks; marks on other nodes are ignored by design.
+  public static boolean rendersMarks(AdfNode node) {
+    return switch (node) {
+      case Paragraph _, Heading _, MediaSingle _, Media _, Text _, MediaInline _ -> true;
+      default -> false;
+    };
+  }
+
   @Override
   public void visitBlock(AdfBlock block, String path) {
-    switch (block) {
-      case UnknownBlock _ -> nodePaths.add(path);
-      case Paragraph _, Heading _, MediaSingle _, Media _ -> unknownMarks(block, path);
-      default -> {
-        // Rendering ignores marks on other blocks by design.
-      }
-    }
+    visit(block, path);
   }
 
   @Override
   public void visitInline(AdfInline inline, String path) {
-    switch (inline) {
-      case UnknownInline _ -> nodePaths.add(path);
-      case Text _, MediaInline _ -> unknownMarks(inline, path);
-      default -> {
-        // Rendering ignores marks on other inlines by design.
-      }
-    }
+    visit(inline, path);
   }
 
-  private void unknownMarks(AdfNode node, String path) {
-    for (var i = 0; i < node.marks().size(); i++) {
-      if (node.marks().get(i) instanceof UnknownMark) {
-        markPaths.add(Located.mark(path, i));
+  private void visit(AdfNode node, String path) {
+    if (node instanceof AdfUnknown) {
+      nodePaths.add(path);
+    } else if (rendersMarks(node)) {
+      for (var i = 0; i < node.marks().size(); i++) {
+        if (node.marks().get(i) instanceof UnknownMark) {
+          markPaths.add(Located.mark(path, i));
+        }
       }
     }
   }
@@ -59,6 +58,12 @@ public final class AdfLossinessCollector implements NodeVisitor {
   /// The unknown-node count is an upper bound: it includes nodes inside subtrees the renderer
   /// drops by design.
   public List<Diagnostic> build(UnknownNodePolicy policy) {
+    return diagnostics(policy, nodePaths, markPaths);
+  }
+
+  /// Lossiness diagnostics for unknown nodes and marks at the given paths.
+  public static List<Diagnostic> diagnostics(
+      UnknownNodePolicy policy, List<String> nodePaths, List<String> markPaths) {
     var issues = new ArrayList<Diagnostic>(2);
     var nodes = nodePaths.size();
     var nodeIssue =

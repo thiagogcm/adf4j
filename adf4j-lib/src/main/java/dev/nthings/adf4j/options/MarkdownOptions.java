@@ -20,7 +20,7 @@ public record MarkdownOptions(
         UnknownNodePolicy.PLACEHOLDER, false, TableFallback.GFM_EMPTY_HEADER, false, false, false);
   }
 
-  public MarkdownOptions withUnknownNodePolicy(UnknownNodePolicy value) {
+  MarkdownOptions withUnknownNodePolicy(UnknownNodePolicy value) {
     return new MarkdownOptions(
         value,
         imageSizeAttributes,
@@ -30,7 +30,7 @@ public record MarkdownOptions(
         escapeParentheses);
   }
 
-  public MarkdownOptions withImageSizeAttributes(boolean value) {
+  MarkdownOptions withImageSizeAttributes(boolean value) {
     return new MarkdownOptions(
         unknownNodePolicy,
         value,
@@ -40,7 +40,7 @@ public record MarkdownOptions(
         escapeParentheses);
   }
 
-  public MarkdownOptions withTableFallback(TableFallback value) {
+  MarkdownOptions withTableFallback(TableFallback value) {
     return new MarkdownOptions(
         unknownNodePolicy,
         imageSizeAttributes,
@@ -50,7 +50,7 @@ public record MarkdownOptions(
         escapeParentheses);
   }
 
-  public MarkdownOptions withHtmlVisualMarks(boolean value) {
+  MarkdownOptions withHtmlVisualMarks(boolean value) {
     return new MarkdownOptions(
         unknownNodePolicy,
         imageSizeAttributes,
@@ -60,7 +60,7 @@ public record MarkdownOptions(
         escapeParentheses);
   }
 
-  public MarkdownOptions withCollapseHardBreaks(boolean value) {
+  MarkdownOptions withCollapseHardBreaks(boolean value) {
     return new MarkdownOptions(
         unknownNodePolicy,
         imageSizeAttributes,
@@ -70,7 +70,7 @@ public record MarkdownOptions(
         escapeParentheses);
   }
 
-  public MarkdownOptions withEscapeParentheses(boolean value) {
+  MarkdownOptions withEscapeParentheses(boolean value) {
     return new MarkdownOptions(
         unknownNodePolicy,
         imageSizeAttributes,

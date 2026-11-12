@@ -138,11 +138,8 @@ final class ListRenderer {
     var first = located.node();
     var lines = new ArrayList<String>();
     String previous;
-    if (first instanceof Paragraph paragraph) {
-      previous =
-          blockRenderer
-              .renderParagraph(paragraph, context.at(located), style.paragraphAtLineStart)
-              .stripTrailing();
+    if (first instanceof Paragraph) {
+      previous = blockRenderer.renderBlock(first, context.at(located), style.paragraphAtLineStart);
       lines.addAll(prefixParagraph(prefix, previous, indent));
     } else {
       previous = blockRenderer.renderBlock(first, context.at(located));

@@ -9,6 +9,7 @@ import dev.nthings.adf4j.internal.AttachmentInventory;
 import dev.nthings.adf4j.metadata.AttachmentReference;
 import dev.nthings.adf4j.metadata.PageTreeMacro;
 import dev.nthings.adf4j.metadata.PageTreeReference;
+import dev.nthings.adf4j.options.ConversionOptions;
 import dev.nthings.adf4j.options.PageTreeEntry;
 import dev.nthings.adf4j.options.ResolverHooks;
 import dev.nthings.adf4j.result.Diagnostic;
@@ -24,16 +25,16 @@ class ResourceResolverTests {
 
   private final CallbackTracker callbacks = new CallbackTracker();
 
-  private ResourceResolver resolver(ResolverHooks hooks, AttachmentReference... attachments) {
+  private ResourceResolver resolver(ConversionOptions options, AttachmentReference... attachments) {
     return new ResourceResolver(
-        hooks, AttachmentInventory.from(Arrays.asList(attachments)), callbacks);
+        options.resolvers(), AttachmentInventory.from(Arrays.asList(attachments)), callbacks);
   }
 
   @Test
   void a_media_node_url_wins_without_calling_any_hook() {
     var resolver =
         resolver(
-            ResolverHooks.defaults()
+            ConversionOptions.defaults()
                 .withMediaResolver(
                     media -> {
                       throw new AssertionError("media hook must not run");
@@ -53,7 +54,7 @@ class ResourceResolverTests {
     var reference = new AttachmentReference("abc", "diagram.png", "image/png", "inventory/abc.png");
     var resolver =
         resolver(
-            ResolverHooks.defaults()
+            ConversionOptions.defaults()
                 .withMediaResolver(media -> "media/" + media.id())
                 .withFileResolver(id -> "file/" + id),
             reference);
@@ -67,7 +68,7 @@ class ResourceResolverTests {
   void a_blank_media_hook_falls_through_to_the_file_hook() {
     var resolver =
         resolver(
-            ResolverHooks.defaults()
+            ConversionOptions.defaults()
                 .withMediaResolver(media -> "  ")
                 .withFileResolver(id -> "file/" + id));
 
@@ -79,7 +80,8 @@ class ResourceResolverTests {
   @Test
   void a_declined_media_hook_falls_through_to_the_inventory_download_url() {
     var reference = new AttachmentReference("abc", "diagram.png", "image/png", "inventory/abc.png");
-    var resolver = resolver(ResolverHooks.defaults().withMediaResolver(media -> null), reference);
+    var resolver =
+        resolver(ConversionOptions.defaults().withMediaResolver(media -> null), reference);
 
     assertThat(resolver.mediaSource(media("abc", "collection"), "/content/0"))
         .isEqualTo("inventory/abc.png");
@@ -91,7 +93,7 @@ class ResourceResolverTests {
     var reference = new AttachmentReference("abc", "diagram.png", "image/png", "inventory/abc.png");
     var resolver =
         resolver(
-            ResolverHooks.defaults()
+            ConversionOptions.defaults()
                 .withMediaResolver(
                     media -> {
                       throw new IllegalStateException("media offline");
@@ -123,7 +125,7 @@ class ResourceResolverTests {
 
   @Test
   void media_without_any_source_is_null_and_has_no_answer() {
-    var resolver = resolver(ResolverHooks.defaults());
+    var resolver = resolver(ConversionOptions.defaults());
 
     assertThat(resolver.mediaSource(media("abc", "collection"), "/content/0")).isNull();
     assertThat(callbacks.reasonSince(0)).isEqualTo(UnresolvedResource.Reason.NO_ANSWER);
@@ -147,7 +149,7 @@ class ResourceResolverTests {
         new AttachmentReference("file-1", "guide.pdf", "application/pdf", "inventory/guide.pdf");
     var resolver =
         resolver(
-            ResolverHooks.defaults()
+            ConversionOptions.defaults()
                 .withAttachmentResolver(reference1 -> "attachment/" + reference1.fileId())
                 .withFileResolver(id -> "file/" + id),
             reference);
@@ -162,7 +164,7 @@ class ResourceResolverTests {
         new AttachmentReference("file-1", "guide.pdf", "application/pdf", "inventory/guide.pdf");
     var resolver =
         resolver(
-            ResolverHooks.defaults()
+            ConversionOptions.defaults()
                 .withAttachmentResolver(reference1 -> " ")
                 .withFileResolver(id -> "file/" + id),
             reference);
@@ -174,7 +176,8 @@ class ResourceResolverTests {
   void a_declined_attachment_hook_falls_through_to_the_download_url() {
     var reference =
         new AttachmentReference("file-1", "guide.pdf", "application/pdf", "inventory/guide.pdf");
-    var resolver = resolver(ResolverHooks.defaults().withAttachmentResolver(reference1 -> null));
+    var resolver =
+        resolver(ConversionOptions.defaults().withAttachmentResolver(reference1 -> null));
 
     assertThat(resolver.attachmentSource(reference, "/content/0")).isEqualTo("inventory/guide.pdf");
   }
@@ -185,7 +188,7 @@ class ResourceResolverTests {
         new AttachmentReference("file-1", "guide.pdf", "application/pdf", "inventory/guide.pdf");
     var resolver =
         resolver(
-            ResolverHooks.defaults()
+            ConversionOptions.defaults()
                 .withAttachmentResolver(
                     reference1 -> {
                       throw new IllegalStateException("attachment offline");
@@ -208,7 +211,7 @@ class ResourceResolverTests {
   @Test
   void an_attachment_without_any_source_is_null_and_has_no_answer() {
     var reference = new AttachmentReference("file-1", "guide.pdf", "application/pdf");
-    var resolver = resolver(ResolverHooks.defaults());
+    var resolver = resolver(ConversionOptions.defaults());
 
     assertThat(resolver.attachmentSource(reference, "/content/0")).isNull();
     assertThat(callbacks.reasonSince(0)).isEqualTo(UnresolvedResource.Reason.NO_ANSWER);
@@ -217,7 +220,7 @@ class ResourceResolverTests {
   @Test
   void a_blank_download_url_is_not_a_source() {
     var reference = new AttachmentReference("file-1", "guide.pdf", "application/pdf", "  ");
-    var resolver = resolver(ResolverHooks.defaults());
+    var resolver = resolver(ConversionOptions.defaults());
 
     assertThat(resolver.attachmentSource(reference, "/content/0")).isNull();
   }
@@ -226,7 +229,7 @@ class ResourceResolverTests {
   void page_href_rewrites_page_links_and_keeps_other_urls() {
     var resolver =
         resolver(
-            ResolverHooks.defaults().withPageLinkResolver(pageNodeId -> "pages/" + pageNodeId));
+            ConversionOptions.defaults().withPageLinkResolver(pageNodeId -> "pages/" + pageNodeId));
 
     assertThat(resolver.linkedPageId(PAGE_URL, Attributes.empty())).isEqualTo("12345");
     assertThat(resolver.pageHref(PAGE_URL, Attributes.empty(), "/content/0"))
@@ -238,7 +241,7 @@ class ResourceResolverTests {
 
   @Test
   void page_href_without_a_resolver_returns_the_original_and_calls_nothing() {
-    var resolver = resolver(ResolverHooks.defaults());
+    var resolver = resolver(ConversionOptions.defaults());
 
     assertThat(resolver.linkedPageId(PAGE_URL, Attributes.empty())).isNull();
     assertThat(resolver.pageHref(PAGE_URL, Attributes.empty(), "/content/0")).isEqualTo(PAGE_URL);
@@ -249,7 +252,7 @@ class ResourceResolverTests {
   void a_blank_or_absent_page_id_does_not_call_the_page_hook() {
     var resolver =
         resolver(
-            ResolverHooks.defaults()
+            ConversionOptions.defaults()
                 .withPageLinkResolver(
                     pageNodeId -> {
                       throw new AssertionError("page hook must not run");
@@ -265,7 +268,7 @@ class ResourceResolverTests {
   void a_failing_page_hook_keeps_the_original_href_and_records_the_failure() {
     var resolver =
         resolver(
-            ResolverHooks.defaults()
+            ConversionOptions.defaults()
                 .withPageLinkResolver(
                     pageNodeId -> {
                       throw new IllegalStateException("page offline");
@@ -287,7 +290,7 @@ class ResourceResolverTests {
 
   @Test
   void a_declined_page_hook_has_no_answer() {
-    var resolver = resolver(ResolverHooks.defaults().withPageLinkResolver(pageNodeId -> null));
+    var resolver = resolver(ConversionOptions.defaults().withPageLinkResolver(pageNodeId -> null));
 
     assertThat(resolver.pageId("12345", "/content/0")).isNull();
     assertThat(callbacks.reasonSince(0)).isEqualTo(UnresolvedResource.Reason.NO_ANSWER);
@@ -299,7 +302,7 @@ class ResourceResolverTests {
     var entries = List.of(new PageTreeEntry(0, "A *literal* title", "456"));
     var resolver =
         resolver(
-            ResolverHooks.defaults()
+            ConversionOptions.defaults()
                 .withPageTreeResolver(
                     request -> {
                       assertThat(request).isSameAs(reference);
@@ -314,13 +317,13 @@ class ResourceResolverTests {
   void an_empty_page_tree_is_distinct_from_an_absent_or_declined_answer() {
     var reference = new PageTreeReference(PageTreeMacro.PAGETREE, null, Map.of());
 
-    assertThat(resolver(ResolverHooks.defaults()).pageTree(reference, "/content/0")).isNull();
+    assertThat(resolver(ConversionOptions.defaults()).pageTree(reference, "/content/0")).isNull();
     assertThat(
-            resolver(ResolverHooks.defaults().withPageTreeResolver(request -> null))
+            resolver(ConversionOptions.defaults().withPageTreeResolver(request -> null))
                 .pageTree(reference, "/content/0"))
         .isNull();
     assertThat(
-            resolver(ResolverHooks.defaults().withPageTreeResolver(request -> List.of()))
+            resolver(ConversionOptions.defaults().withPageTreeResolver(request -> List.of()))
                 .pageTree(reference, "/content/0"))
         .isEmpty();
     assertThat(callbacks.diagnostics()).isEmpty();
@@ -331,7 +334,7 @@ class ResourceResolverTests {
     var reference = new PageTreeReference(PageTreeMacro.PAGETREE, null, Map.of());
     var resolver =
         resolver(
-            ResolverHooks.defaults()
+            ConversionOptions.defaults()
                 .withPageTreeResolver(
                     request -> {
                       throw new IllegalStateException("hierarchy offline");

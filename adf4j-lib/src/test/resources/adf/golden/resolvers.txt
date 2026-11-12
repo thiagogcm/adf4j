@@ -274,7 +274,6 @@ outline: []
 schema: off-schema
 body: @1[[a.pdf](https://media.example/1)](http://kept)
 warnings: false
-effect: CONTENT_DROPPED|/content/0/content/0/marks/0|Unknown mark dropped
 unresolved: []
 pageIds: []
 externalUrls: [http://kept]

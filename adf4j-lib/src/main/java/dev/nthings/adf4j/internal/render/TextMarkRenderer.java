@@ -156,11 +156,7 @@ final class TextMarkRenderer {
 
   // Pointer of the effective (last) link mark, reported with the resolver call.
   private static String linkPath(List<AdfMark> marks, RenderContext context) {
-    var index = marks.size() - 1;
-    while (index > 0 && !(marks.get(index) instanceof Link)) {
-      index--;
-    }
-    return Located.mark(context.path(), index);
+    return Located.mark(context.path(), AdfText.effectiveLinkIndex(marks));
   }
 
   private String applyEffects(String value, Collection<MarkEffect> effects) {

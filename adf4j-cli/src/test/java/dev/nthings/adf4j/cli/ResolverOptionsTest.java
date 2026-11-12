@@ -93,7 +93,7 @@ class ResolverOptionsTest {
     var map = write(dir, "att.json", "[{\"fileId\":\"x\",\"bogusKey\":\"y\"}]");
     var result = convert(SIMPLE_DOC, "--attachments", map.toString());
     assertThat(result.exitCode()).isEqualTo(ExitCodes.USAGE);
-    assertThat(result.err()).contains("unknown key 'bogusKey'");
+    assertThat(result.err()).contains("Unknown configuration key: bogusKey");
   }
 
   @ParameterizedTest
@@ -112,10 +112,10 @@ class ResolverOptionsTest {
         "--excerpt-map    | {}                                                  | JSON array",
         "--extension-map  | [{\"key\":\"k\",\"template\":{}}]                       | 'template'",
         "--extension-map  | [{\"key\":\"k\",\"bogus\":1}]                           | 'bogus'",
-        "--attachments    | {}                                                  | JSON array",
-        "--attachments    | [\"x\"]                                               | JSON object",
-        "--attachments    | [{\"title\":\"no file id\"}]                            | 'fileId'",
-        "--attachments    | [{\"fileId\":\"f\",\"title\":[]}]                       | 'title'",
+        "--attachments    | {}                                                  | must be an array",
+        "--attachments    | [\"x\"]                                               | configuration object",
+        "--attachments    | [{\"title\":\"no file id\"}]                            | fileId is required",
+        "--attachments    | [{\"fileId\":\"f\",\"title\":[]}]                       | title must be a string",
         "--page-tree-map  | []                                                  | JSON object",
         "--page-tree-map  | {\"bogus\":{}}                                        | 'bogus'",
         "--page-tree-map  | {\"pagetree\":[]}                                     | JSON object",

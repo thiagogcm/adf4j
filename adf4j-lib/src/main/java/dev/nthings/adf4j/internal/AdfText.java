@@ -66,13 +66,18 @@ public final class AdfText {
   /// The last link mark, even one without an `href` (which leaves the node unlinked). Rendering
   /// and metadata both use this, so they agree.
   public static @Nullable Link effectiveLink(List<AdfMark> marks) {
-    Link link = null;
-    for (var mark : marks) {
-      if (mark instanceof Link found) {
-        link = found;
+    var index = effectiveLinkIndex(marks);
+    return index < 0 ? null : (Link) marks.get(index);
+  }
+
+  /// Index of {@link #effectiveLink} in `marks`, or `-1`.
+  public static int effectiveLinkIndex(List<AdfMark> marks) {
+    for (var i = marks.size() - 1; i >= 0; i--) {
+      if (marks.get(i) instanceof Link) {
+        return i;
       }
     }
-    return link;
+    return -1;
   }
 
   public static String mediaAlt(AdfMedia media) {
