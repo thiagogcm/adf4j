@@ -5,6 +5,7 @@ import dev.nthings.adf4j.internal.UrlSafety;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
 
@@ -16,9 +17,8 @@ final class MarkdownText {
   private static final Pattern LEADING_ORDERED_MARKER = Pattern.compile("^(\\d+)([.)])");
 
   // Markdown permits web destinations and the library's inert resource placeholders.
-  private static final UrlSafety.SchemePolicy URL_SCHEMES =
-      UrlSafety.SchemePolicy.of(
-          "http", "https", "mailto", "tel", "ftp", "ftps", "media", "attachment");
+  private static final Set<String> URL_SCHEMES =
+      Set.of("http", "https", "mailto", "tel", "ftp", "ftps", "media", "attachment");
 
   private MarkdownText() {}
 

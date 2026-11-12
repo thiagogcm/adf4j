@@ -17,6 +17,11 @@ public record MarkdownResult(
     effects = List.copyOf(effects);
   }
 
+  /// A failure before any content was read: empty body and metadata.
+  public static MarkdownResult failed(List<Diagnostic> diagnostics) {
+    return new MarkdownResult("", ContentMetadata.empty(), diagnostics, List.of(), List.of());
+  }
+
   public String requireBody() {
     requireSuccess();
     return body;

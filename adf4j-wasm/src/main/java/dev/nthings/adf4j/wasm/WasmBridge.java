@@ -2,13 +2,11 @@ package dev.nthings.adf4j.wasm;
 
 import dev.nthings.adf4j.AdfJson;
 import dev.nthings.adf4j.AdfToMarkdown;
-import dev.nthings.adf4j.metadata.ContentMetadata;
 import dev.nthings.adf4j.options.ConversionOptions;
 import dev.nthings.adf4j.result.AdfException;
 import dev.nthings.adf4j.result.AnalysisResult;
 import dev.nthings.adf4j.result.MarkdownResult;
 import java.io.IOException;
-import java.util.List;
 import java.util.Properties;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
@@ -38,9 +36,7 @@ public final class WasmBridge {
     } catch (AdfException invalid) {
       var diagnostics = invalid.diagnostics();
       return AdfJson.writeResult(
-          analyze
-              ? new AnalysisResult(ContentMetadata.empty(), diagnostics)
-              : new MarkdownResult("", ContentMetadata.empty(), diagnostics, List.of(), List.of()));
+          analyze ? AnalysisResult.failed(diagnostics) : MarkdownResult.failed(diagnostics));
     }
     var converter = AdfToMarkdown.with(options);
     return AdfJson.writeResult(analyze ? converter.analyze(json) : converter.convert(json));

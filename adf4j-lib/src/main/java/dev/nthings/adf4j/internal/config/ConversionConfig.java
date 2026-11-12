@@ -1,5 +1,6 @@
 package dev.nthings.adf4j.internal.config;
 
+import dev.nthings.adf4j.internal.Strings;
 import dev.nthings.adf4j.metadata.AttachmentReference;
 import dev.nthings.adf4j.options.ConversionOptions;
 import dev.nthings.adf4j.options.TableFallback;
@@ -9,7 +10,6 @@ import dev.nthings.adf4j.result.Diagnostic;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
@@ -50,15 +50,7 @@ public final class ConversionConfig {
     var options = ConversionOptions.defaults();
     var markdown = root.get("markdown");
     if (markdown != null) {
-      object(
-          markdown,
-          Set.of(
-              "unknownNodePolicy",
-              "tableFallback",
-              "imageSizeAttributes",
-              "htmlVisualMarks",
-              "collapseHardBreaks",
-              "escapeParentheses"));
+      requireObject(markdown);
       for (var entry : markdown.properties()) {
         var key = entry.getKey();
         var value = entry.getValue();
@@ -72,8 +64,7 @@ public final class ConversionConfig {
               case "htmlVisualMarks" -> options.withHtmlVisualMarks(bool(value, key));
               case "collapseHardBreaks" -> options.withCollapseHardBreaks(bool(value, key));
               case "escapeParentheses" -> options.withEscapeParentheses(bool(value, key));
-              // object(...) above has already rejected any other key.
-              default -> throw new IllegalStateException(key);
+              default -> throw unknownKey(key);
             };
       }
     }
@@ -107,34 +98,36 @@ public final class ConversionConfig {
   }
 
   private static void object(JsonNode node, Set<String> keys) {
+    requireObject(node);
+    for (var key : node.propertyNames()) {
+      if (!keys.contains(key)) {
+        throw unknownKey(key);
+      }
+    }
+  }
+
+  private static void requireObject(JsonNode node) {
     if (!node.isObject()) {
       throw new IllegalArgumentException("Expected a configuration object");
     }
-    for (var key : node.propertyNames()) {
-      if (!keys.contains(key)) {
-        throw new IllegalArgumentException("Unknown configuration key: " + key);
-      }
-    }
+  }
+
+  private static IllegalArgumentException unknownKey(String key) {
+    return new IllegalArgumentException("Unknown configuration key: " + key);
   }
 
   // Kebab-case names. Takes the constants, not the Class, to avoid reflection in native images.
   private static <E extends Enum<E>> E constant(E[] constants, JsonNode node, String key) {
     var value = requiredString(node, key);
     for (var constant : constants) {
-      if (kebabCase(constant).equals(value)) {
+      if (Strings.kebabCase(constant).equals(value)) {
         return constant;
       }
     }
     throw new IllegalArgumentException(
         key
             + " must be one of: "
-            + Arrays.stream(constants)
-                .map(ConversionConfig::kebabCase)
-                .collect(Collectors.joining(", ")));
-  }
-
-  private static String kebabCase(Enum<?> constant) {
-    return constant.name().toLowerCase(Locale.ROOT).replace('_', '-');
+            + Arrays.stream(constants).map(Strings::kebabCase).collect(Collectors.joining(", ")));
   }
 
   private static boolean bool(JsonNode node, String key) {

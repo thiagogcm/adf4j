@@ -19,6 +19,11 @@ public sealed interface OperationResult
     return diagnostics().stream().anyMatch(d -> d.severity() == Diagnostic.Severity.WARNING);
   }
 
+  /// The first error's message, or a generic one; what {@link #requireSuccess} throws with.
+  default String errorMessage() {
+    return AdfException.firstErrorMessage(diagnostics());
+  }
+
   default void requireSuccess() {
     if (!isSuccess()) {
       throw new AdfException(diagnostics());

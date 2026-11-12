@@ -7,16 +7,19 @@ public final class AdfException extends IllegalArgumentException {
   private final List<Diagnostic> diagnostics;
 
   public AdfException(List<Diagnostic> diagnostics) {
-    super(
-        diagnostics.stream()
-            .filter(d -> d.severity() == Diagnostic.Severity.ERROR)
-            .map(Diagnostic::message)
-            .findFirst()
-            .orElse("ADF operation failed"));
+    super(firstErrorMessage(diagnostics));
     this.diagnostics = List.copyOf(diagnostics);
   }
 
   public List<Diagnostic> diagnostics() {
     return diagnostics;
+  }
+
+  static String firstErrorMessage(List<Diagnostic> diagnostics) {
+    return diagnostics.stream()
+        .filter(d -> d.severity() == Diagnostic.Severity.ERROR)
+        .map(Diagnostic::message)
+        .findFirst()
+        .orElse("ADF operation failed");
   }
 }

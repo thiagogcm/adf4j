@@ -18,23 +18,13 @@ public final class AdfDocumentAnalyzer {
 
   /// Reference and outline facts, without Markdown lossiness diagnostics.
   public DocumentFacts facts(
-      @Nullable AdfDocument document,
-      UnknownNodePolicy unknownNodePolicy,
-      AttachmentInventory attachments) {
-    if (document == null) {
-      return DocumentFacts.empty();
-    }
+      AdfDocument document, UnknownNodePolicy unknownNodePolicy, AttachmentInventory attachments) {
     return collectFacts(document, unknownNodePolicy, attachments, null);
   }
 
   /// Facts plus the diagnostics that project Markdown's lossiness.
   public DocumentAnalysis analyze(
-      @Nullable AdfDocument document,
-      UnknownNodePolicy unknownNodePolicy,
-      AttachmentInventory attachments) {
-    if (document == null) {
-      return DocumentAnalysis.empty();
-    }
+      AdfDocument document, UnknownNodePolicy unknownNodePolicy, AttachmentInventory attachments) {
     var lossinessCollector = new AdfLossinessCollector();
     var facts = collectFacts(document, unknownNodePolicy, attachments, lossinessCollector);
     return new DocumentAnalysis(facts, lossinessCollector.build(unknownNodePolicy));

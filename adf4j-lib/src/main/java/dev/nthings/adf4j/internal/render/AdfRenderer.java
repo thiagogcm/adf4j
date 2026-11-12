@@ -5,7 +5,6 @@ import dev.nthings.adf4j.internal.AttachmentInventory;
 import dev.nthings.adf4j.internal.Strings;
 import dev.nthings.adf4j.internal.analyze.HeadingOutline;
 import dev.nthings.adf4j.options.ConversionOptions;
-import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
 
 /// Turns a document into a Markdown body, plus the diagnostics and unresolved lookups raised.
@@ -32,10 +31,7 @@ public final class AdfRenderer {
     var body = blockRenderer.renderBlocks(document, new RenderContext(session, InlineSite.BODY));
     return new RenderOutput(
         prependTitle(body, options.documentTitle(), session.writer()),
-        Stream.concat(
-                session.macroDiagnostics().build().stream(),
-                session.events().diagnostics().stream())
-            .toList(),
+        session.events().diagnostics(),
         session.events().unresolved(),
         session.events().effects());
   }

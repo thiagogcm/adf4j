@@ -64,8 +64,8 @@ public final class ResourceResolver {
   /// Media destination: the node's own URL, then the media hook, then the file hook, then the
   /// inventory download URL. `null` when none answers.
   public @Nullable String mediaSource(AdfMedia media, String path) {
-    var url = media.url();
-    if (url != null && !url.isBlank()) {
+    var url = blankToNull(media.url());
+    if (url != null) {
       return url;
     }
     var resolved = resolveMedia(media, path);
@@ -73,8 +73,7 @@ public final class ResourceResolver {
       return resolved;
     }
     var attachment = attachments.byFileId(media.id());
-    var downloadUrl = attachment == null ? null : attachment.downloadUrl();
-    return downloadUrl == null || downloadUrl.isBlank() ? null : downloadUrl;
+    return attachment == null ? null : blankToNull(attachment.downloadUrl());
   }
 
   /// Attachment destination: the attachment hook, then the file hook, then the reference's
@@ -84,8 +83,7 @@ public final class ResourceResolver {
     if (resolved != null) {
       return resolved;
     }
-    var downloadUrl = reference.downloadUrl();
-    return downloadUrl == null || downloadUrl.isBlank() ? null : downloadUrl;
+    return blankToNull(reference.downloadUrl());
   }
 
   private @Nullable String resolveMedia(AdfMedia media, String path) {
@@ -112,7 +110,10 @@ public final class ResourceResolver {
   }
 
   private @Nullable String nonBlank(String hook, String path, Supplier<@Nullable String> callback) {
-    var value = callbacks.call(hook, path, callback);
+    return blankToNull(callbacks.call(hook, path, callback));
+  }
+
+  private static @Nullable String blankToNull(@Nullable String value) {
     return value == null || value.isBlank() ? null : value;
   }
 }

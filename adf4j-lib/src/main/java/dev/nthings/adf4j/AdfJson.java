@@ -21,8 +21,9 @@ public final class AdfJson {
   /// Keys of a result's `metadata` object, in {@link #writeResult} output order.
   public static final List<String> METADATA_SECTIONS = ResultJson.SECTION_NAMES;
 
-  private static final AdfParsingService PARSER = AdfParsingService.createDefault();
-  private static final AdfJsonWriter WRITER = AdfJsonWriter.createDefault();
+  // Shared with AdfValidation.
+  static final AdfParsingService PARSER = AdfParsingService.createDefault();
+  static final AdfJsonWriter WRITER = AdfJsonWriter.createDefault();
 
   private AdfJson() {}
 

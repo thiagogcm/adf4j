@@ -9,4 +9,9 @@ public record AnalysisResult(ContentMetadata metadata, List<Diagnostic> diagnost
   public AnalysisResult {
     diagnostics = List.copyOf(diagnostics);
   }
+
+  /// A failure before any content was read: empty metadata.
+  public static AnalysisResult failed(List<Diagnostic> diagnostics) {
+    return new AnalysisResult(ContentMetadata.empty(), diagnostics);
+  }
 }

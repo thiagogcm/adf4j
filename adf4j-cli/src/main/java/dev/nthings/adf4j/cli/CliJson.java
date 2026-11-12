@@ -16,7 +16,6 @@ import tools.jackson.core.util.DefaultPrettyPrinter;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
-import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
 /// Tree-mode JSON only (no record databind), so the native image gets no reflection surface. The
@@ -50,14 +49,6 @@ final class CliJson {
 
   ObjectNode result(OperationResult result) {
     return (ObjectNode) mapper.readTree(AdfJson.writeResult(result));
-  }
-
-  static ObjectNode object() {
-    return JsonNodeFactory.instance.objectNode();
-  }
-
-  static ArrayNode array() {
-    return JsonNodeFactory.instance.arrayNode();
   }
 
   /// The CLI spelling of a library enum constant, in option values and JSON output alike.

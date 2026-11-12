@@ -5,13 +5,12 @@ import dev.nthings.adf4j.internal.analyze.HeadingOutline;
 import dev.nthings.adf4j.internal.resource.ResourceResolver;
 import dev.nthings.adf4j.options.ConversionOptions;
 
-/// Per-render state shared by the traversal: outline, options, attachments, the per-render sinks,
+/// Per-render state shared by the traversal: outline, options, attachments, the event sink,
 /// resolvers, and the writer holding the escaping options.
 record RenderSession(
     HeadingOutline headingOutline,
     ConversionOptions options,
     AttachmentInventory attachments,
-    MacroDiagnostics macroDiagnostics,
     ResourceResolver resources,
     Resolvers resolvers,
     MarkdownWriter writer,
@@ -25,7 +24,6 @@ record RenderSession(
         headingOutline,
         options,
         attachments,
-        new MacroDiagnostics(),
         new ResourceResolver(options.resolvers(), attachments, callbacks),
         new Resolvers(options.resolvers(), callbacks),
         new MarkdownWriter(options.escapeParentheses()),

@@ -84,12 +84,4 @@ class AdfDocumentAnalyzerTests {
             ANALYZER.facts(document, UnknownNodePolicy.SKIP, NO_ATTACHMENTS).outline().headings())
         .isEmpty();
   }
-
-  @Test
-  void null_documents_have_empty_facts_and_analysis() {
-    assertThat(ANALYZER.facts(null, UnknownNodePolicy.PLACEHOLDER, NO_ATTACHMENTS))
-        .isEqualTo(DocumentFacts.empty());
-    assertThat(ANALYZER.analyze(null, UnknownNodePolicy.PLACEHOLDER, NO_ATTACHMENTS))
-        .isEqualTo(DocumentAnalysis.empty());
-  }
 }

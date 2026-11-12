@@ -30,7 +30,6 @@ import dev.nthings.adf4j.metadata.HeadingReference;
 import dev.nthings.adf4j.metadata.PageTreeReference;
 import dev.nthings.adf4j.options.ExtensionOutput;
 import dev.nthings.adf4j.options.PageTreeEntry;
-import dev.nthings.adf4j.result.ConversionEffect;
 import dev.nthings.adf4j.result.UnresolvedResource;
 import java.util.ArrayList;
 import java.util.List;
@@ -124,16 +123,7 @@ final class MacroRenderer {
       // Attribute text escapes like literal text.
       return context.session().writer().text(text, atLineStart);
     }
-    context
-        .session()
-        .events()
-        .effect(
-            ConversionEffect.Kind.PLACEHOLDER,
-            context.path(),
-            "Unsupported extension: " + node.extensionKey());
-    var diagnostics = context.session().macroDiagnostics();
-    var firstInRender =
-        diagnostics.recordUnsupported(node.extensionType(), node.extensionKey(), context.path());
+    var firstInRender = context.session().events().unsupportedExtension(node, context.path());
     return renderExtensionPlaceholder(node, firstInRender, context);
   }
 
@@ -154,12 +144,6 @@ final class MacroRenderer {
 
   // Resolver expansion, else the placeholder token (recorded as unresolved).
   private String renderPageTreeMacro(PageTreeReference reference, RenderContext context) {
-    var callbacks = context.session().events().callbacks();
-    var failures = callbacks.failureCount();
-    var expanded = expandPageTree(reference, context);
-    if (expanded != null) {
-      return expanded;
-    }
     var fallback =
         switch (reference.macro()) {
           case CHILDREN -> {
@@ -173,15 +157,18 @@ final class MacroRenderer {
             yield root == null ? "{{pagetree}}" : "{{pagetree:" + root + "}}";
           }
         };
-    var events = context.session().events();
-    events.unresolved(
-        UnresolvedResource.Kind.PAGE_TREE,
-        reference.root(),
-        context.path(),
-        callbacks.reasonSince(failures),
-        fallback,
-        "Page tree unresolved");
-    return fallback;
+    var expanded =
+        context
+            .session()
+            .events()
+            .resolve(
+                () -> expandPageTree(reference, context),
+                UnresolvedResource.Kind.PAGE_TREE,
+                reference.root(),
+                context.path(),
+                fallback,
+                "Page tree unresolved");
+    return expanded != null ? expanded : fallback;
   }
 
   // Entries as an indented bullet list (empty when the answer is empty). Null falls back to the
@@ -207,21 +194,22 @@ final class MacroRenderer {
   // Link when the page id resolves, else the escaped one-line title; null if nothing renders.
   private @Nullable String pageTreeLabel(PageTreeEntry entry, RenderContext context) {
     var label = Strings.collapseWhitespace(entry.title()).strip();
-    var callbacks = context.session().events().callbacks();
-    var failures = callbacks.failureCount();
-    var href = context.session().resources().pageId(entry.pageNodeId(), context.path());
+    var pageNodeId = entry.pageNodeId();
+    var href =
+        pageNodeId == null || pageNodeId.isBlank()
+            ? null
+            : context
+                .session()
+                .events()
+                .resolve(
+                    () -> context.session().resources().pageId(pageNodeId, context.path()),
+                    UnresolvedResource.Kind.PAGE,
+                    pageNodeId,
+                    context.path(),
+                    label,
+                    null);
     if (href != null) {
       return context.session().writer().link(label.isEmpty() ? href : label, href);
-    }
-    if (entry.pageNodeId() != null && !entry.pageNodeId().isBlank()) {
-      var events = context.session().events();
-      events.unresolved(
-          UnresolvedResource.Kind.PAGE,
-          entry.pageNodeId(),
-          context.path(),
-          callbacks.reasonSince(failures),
-          label,
-          null);
     }
     return label.isEmpty() ? null : context.session().writer().text(label, false);
   }
@@ -237,26 +225,23 @@ final class MacroRenderer {
 
   // Resolver expansion, else the labelled placeholder (recorded as unresolved).
   private String renderExcerptInclude(ExcerptIncludeReference reference, RenderContext context) {
-    var callbacks = context.session().events().callbacks();
-    var failures = callbacks.failureCount();
-    var resolved = context.session().resolvers().excerpt(reference, context.path());
-    if (resolved != null) {
-      return resolved;
-    }
     var label =
         reference.excerptName() == null
             ? "Excerpt include: " + reference.page()
             : "Excerpt include: " + reference.page() + " / " + reference.excerptName();
     var fallback = context.session().writer().label(label);
-    var events = context.session().events();
-    events.unresolved(
-        UnresolvedResource.Kind.EXCERPT,
-        reference.page(),
-        context.path(),
-        callbacks.reasonSince(failures),
-        fallback,
-        "Excerpt unresolved");
-    return fallback;
+    var resolved =
+        context
+            .session()
+            .events()
+            .resolve(
+                () -> context.session().resolvers().excerpt(reference, context.path()),
+                UnresolvedResource.Kind.EXCERPT,
+                reference.page(),
+                context.path(),
+                fallback,
+                "Excerpt unresolved");
+    return resolved != null ? resolved : fallback;
   }
 
   // Inventory as a bullet list of links ("" when authoritatively empty); only a missing inventory
@@ -340,22 +325,19 @@ final class MacroRenderer {
   // Attachment resolver, then file resolver, then the reference's downloadUrl; else the
   // attachment:<fileId> placeholder.
   private String resolveAttachment(AttachmentReference reference, RenderContext context) {
-    var events = context.session().events();
-    var callbacks = events.callbacks();
-    var failures = callbacks.failureCount();
-    var resolved = context.session().resources().attachmentSource(reference, context.path());
-    if (resolved != null) {
-      return resolved;
-    }
     var fallback = "attachment:" + reference.fileId();
-    events.unresolved(
-        UnresolvedResource.Kind.ATTACHMENT,
-        reference.fileId(),
-        context.path(),
-        callbacks.reasonSince(failures),
-        fallback,
-        "Attachment URL unresolved");
-    return fallback;
+    var resolved =
+        context
+            .session()
+            .events()
+            .resolve(
+                () -> context.session().resources().attachmentSource(reference, context.path()),
+                UnresolvedResource.Kind.ATTACHMENT,
+                reference.fileId(),
+                context.path(),
+                fallback,
+                "Attachment URL unresolved");
+    return resolved != null ? resolved : fallback;
   }
 
   // Bodyless legacy chart: nothing recoverable, so a labelled placeholder.

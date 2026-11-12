@@ -9,8 +9,4 @@ public record DocumentAnalysis(DocumentFacts facts, List<Diagnostic> diagnostics
   public DocumentAnalysis {
     diagnostics = List.copyOf(diagnostics);
   }
-
-  public static DocumentAnalysis empty() {
-    return new DocumentAnalysis(DocumentFacts.empty(), List.of());
-  }
 }

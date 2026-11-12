@@ -2,29 +2,17 @@ package dev.nthings.adf4j.internal;
 
 import java.util.Set;
 
-/// URL scheme safety independent of an output format. A policy is the caller's scheme
-/// allow-list, not a universal HTML policy; each output backend selects the schemes it can
-/// emit.
+/// URL scheme safety independent of an output format. The allowed schemes are the caller's
+/// allow-list, not a universal HTML policy; each output backend selects the schemes it can emit.
 public final class UrlSafety {
-
-  /// Schemes allowed in a URL destination. Relative URLs carry no scheme and always pass.
-  public record SchemePolicy(Set<String> schemes) {
-    public SchemePolicy {
-      schemes = Set.copyOf(schemes);
-    }
-
-    public static SchemePolicy of(String... schemes) {
-      return new SchemePolicy(Set.of(schemes));
-    }
-  }
 
   private UrlSafety() {}
 
-  /// Percent-encodes the colon of a URL whose scheme is not in `policy`; allowed and relative
-  /// URLs pass through unchanged. A defused URL also drops C0 controls and DEL, which browsers
-  /// ignore and which could otherwise hide a scheme.
-  public static String sanitizeScheme(String url, SchemePolicy policy) {
-    if (hasSafeOrNoScheme(url, policy)) {
+  /// Percent-encodes the colon of a URL whose scheme is not in `allowedSchemes`; allowed and
+  /// relative URLs pass through unchanged. A defused URL also drops C0 controls and DEL, which
+  /// browsers ignore and which could otherwise hide a scheme.
+  public static String sanitizeScheme(String url, Set<String> allowedSchemes) {
+    if (hasSafeOrNoScheme(url, allowedSchemes)) {
       return url;
     }
     var cleaned = new StringBuilder(url.length());
@@ -43,7 +31,7 @@ public final class UrlSafety {
 
   // Relative, or an allowed scheme. A tab/CR/LF inside the scheme is unsafe: browsers strip it
   // before re-reading the scheme.
-  private static boolean hasSafeOrNoScheme(String url, SchemePolicy policy) {
+  private static boolean hasSafeOrNoScheme(String url, Set<String> allowedSchemes) {
     var i = 0;
     while (i < url.length() && url.charAt(i) <= ' ') {
       i++;
@@ -53,7 +41,7 @@ public final class UrlSafety {
     for (; i < url.length(); i++) {
       var c = url.charAt(i);
       if (c == ':') {
-        return !dirty && i > start && isAllowedScheme(url, start, i, policy);
+        return !dirty && i > start && isAllowedScheme(url, start, i, allowedSchemes);
       }
       if (c == '\t' || c == '\n' || c == '\r') {
         dirty = true;
@@ -64,8 +52,9 @@ public final class UrlSafety {
     return true;
   }
 
-  private static boolean isAllowedScheme(String url, int start, int end, SchemePolicy policy) {
-    for (var scheme : policy.schemes()) {
+  private static boolean isAllowedScheme(
+      String url, int start, int end, Set<String> allowedSchemes) {
+    for (var scheme : allowedSchemes) {
       if (scheme.length() == end - start
           && url.regionMatches(true, start, scheme, 0, scheme.length())) {
         return true;

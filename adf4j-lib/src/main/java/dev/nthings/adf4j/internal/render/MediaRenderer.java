@@ -57,21 +57,18 @@ final class MediaRenderer {
   private String renderEmbedOrLink(AdfMedia media, RenderContext context) {
     var session = context.session();
     var attachment = session.attachments().byFileId(media.id());
-    var callbacks = session.events().callbacks();
-    var failures = callbacks.failureCount();
-    var resolvedSource = session.resources().mediaSource(media, context.path());
-    var destination = resolvedSource != null ? resolvedSource : placeholder(media);
-    if (resolvedSource == null) {
-      session
-          .events()
-          .unresolved(
-              UnresolvedResource.Kind.MEDIA,
-              media.id(),
-              context.path(),
-              callbacks.reasonSince(failures),
-              destination,
-              "Media URL unresolved");
-    }
+    var placeholder = placeholder(media);
+    var resolvedSource =
+        session
+            .events()
+            .resolve(
+                () -> session.resources().mediaSource(media, context.path()),
+                UnresolvedResource.Kind.MEDIA,
+                media.id(),
+                context.path(),
+                placeholder,
+                "Media URL unresolved");
+    var destination = resolvedSource != null ? resolvedSource : placeholder;
 
     // Non-images (PDF, video, archive, …) become links; an image embed would break.
     if (!isImage(media, attachment, resolvedSource)) {

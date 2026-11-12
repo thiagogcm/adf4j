@@ -1,5 +1,6 @@
 package dev.nthings.adf4j.internal.json;
 
+import dev.nthings.adf4j.internal.Strings;
 import dev.nthings.adf4j.metadata.AttachmentReference;
 import dev.nthings.adf4j.metadata.ContentMetadata;
 import dev.nthings.adf4j.metadata.ExcerptDefinition;
@@ -8,6 +9,7 @@ import dev.nthings.adf4j.metadata.HeadingReference;
 import dev.nthings.adf4j.metadata.MentionReference;
 import dev.nthings.adf4j.metadata.PageTreeReference;
 import dev.nthings.adf4j.result.AnalysisResult;
+import dev.nthings.adf4j.result.ConversionEffect;
 import dev.nthings.adf4j.result.Diagnostic;
 import dev.nthings.adf4j.result.MarkdownResult;
 import dev.nthings.adf4j.result.OperationResult;
@@ -16,7 +18,6 @@ import dev.nthings.adf4j.result.UnresolvedResource;
 import dev.nthings.adf4j.result.ValidationResult;
 import java.util.Collection;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.function.Function;
 import tools.jackson.core.util.DefaultIndenter;
@@ -49,27 +50,14 @@ public final class ResultJson {
     switch (result) {
       case MarkdownResult converted -> {
         output.set("metadata", metadata(converted.metadata()));
-        var effects = output.putArray("effects");
-        for (var effect : converted.effects()) {
-          effects
-              .addObject()
-              .put("kind", effect.kind().name())
-              .put("path", effect.path())
-              .put("message", effect.message());
-        }
-        output.set("unresolved", node(converted.unresolved()));
+        output.set("effects", nodes(converted.effects(), ResultJson::node));
+        output.set("unresolved", nodes(converted.unresolved(), ResultJson::node));
       }
       case AnalysisResult analyzed -> output.set("metadata", metadata(analyzed.metadata()));
       case ParseResult _, ValidationResult _ -> {}
     }
     if (!result.isSuccess()) {
-      output.put(
-          "error",
-          result.diagnostics().stream()
-              .filter(d -> d.severity() == Diagnostic.Severity.ERROR)
-              .map(Diagnostic::message)
-              .findFirst()
-              .orElse("ADF operation failed"));
+      output.put("error", result.errorMessage());
     }
     return pretty
         ? JSON.writer().with(PRETTY).writeValueAsString(output)
@@ -119,18 +107,20 @@ public final class ResultJson {
         });
   }
 
-  private static ArrayNode node(List<UnresolvedResource> unresolved) {
-    var resources = JSON.createArrayNode();
-    for (var resource : unresolved) {
-      resources
-          .addObject()
-          .put("kind", resource.kind().name())
-          .put("id", resource.id())
-          .put("path", resource.path())
-          .put("reason", resource.reason().name())
-          .put("fallback", resource.fallback());
-    }
-    return resources;
+  private static ObjectNode node(ConversionEffect effect) {
+    return JSON.createObjectNode()
+        .put("kind", effect.kind().name())
+        .put("path", effect.path())
+        .put("message", effect.message());
+  }
+
+  private static ObjectNode node(UnresolvedResource resource) {
+    return JSON.createObjectNode()
+        .put("kind", resource.kind().name())
+        .put("id", resource.id())
+        .put("path", resource.path())
+        .put("reason", resource.reason().name())
+        .put("fallback", resource.fallback());
   }
 
   private static ObjectNode node(MentionReference mention) {
@@ -151,7 +141,7 @@ public final class ResultJson {
 
   private static ObjectNode node(PageTreeReference reference) {
     var item = JSON.createObjectNode();
-    item.put("macro", reference.macro().name().toLowerCase(Locale.ROOT).replace('_', '-'));
+    item.put("macro", Strings.kebabCase(reference.macro()));
     item.put("root", reference.root());
     reference.depth().ifPresent(depth -> item.put("depth", depth));
     item.put("all", reference.all());

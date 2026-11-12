@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.argumentSet;
 
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -11,9 +12,8 @@ import org.junit.jupiter.params.provider.FieldSource;
 
 class UrlSafetyTests {
 
-  private static final UrlSafety.SchemePolicy POLICY =
-      UrlSafety.SchemePolicy.of(
-          "http", "https", "mailto", "tel", "ftp", "ftps", "media", "attachment");
+  private static final Set<String> POLICY =
+      Set.of("http", "https", "mailto", "tel", "ftp", "ftps", "media", "attachment");
 
   private static final List<Arguments> destinations =
       List.of(
@@ -53,7 +53,7 @@ class UrlSafetyTests {
 
   @Test
   void a_policy_selects_its_own_schemes() {
-    var webOnly = UrlSafety.SchemePolicy.of("http", "https");
+    var webOnly = Set.of("http", "https");
 
     assertThat(UrlSafety.sanitizeScheme("media:collection/id", webOnly))
         .isEqualTo("media%3Acollection/id");

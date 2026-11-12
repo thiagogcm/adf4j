@@ -1,6 +1,7 @@
 package dev.nthings.adf4j.internal.render;
 
 import dev.nthings.adf4j.ast.AdfBlock;
+import dev.nthings.adf4j.ast.AdfExtension;
 import dev.nthings.adf4j.ast.AdfInline;
 import dev.nthings.adf4j.ast.AdfNode;
 import dev.nthings.adf4j.ast.AdfUnknown;
@@ -17,6 +18,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
 
@@ -27,6 +29,7 @@ final class RenderEvents {
   private final List<ConversionEffect> effects = new ArrayList<>();
   private final List<UnresolvedResource> unresolved = new ArrayList<>();
   private final AdfLossinessCollector unknowns = new AdfLossinessCollector();
+  private final MacroDiagnostics macros = new MacroDiagnostics();
   private final Set<String> observed = new HashSet<>();
   private final ConversionOptions options;
 
@@ -76,8 +79,9 @@ final class RenderEvents {
   }
 
   List<Diagnostic> diagnostics() {
-    return Stream.concat(
-            unknowns.build(options.unknownNodePolicy()).stream(), callbacks.diagnostics().stream())
+    return Stream.of(
+            macros.build(), unknowns.build(options.unknownNodePolicy()), callbacks.diagnostics())
+        .flatMap(List::stream)
         .toList();
   }
 
@@ -93,8 +97,32 @@ final class RenderEvents {
     return callbacks;
   }
 
+  /// Records an extension rendered as a placeholder; true if its label is new to this render.
+  boolean unsupportedExtension(AdfExtension node, String path) {
+    effect(
+        ConversionEffect.Kind.PLACEHOLDER, path, "Unsupported extension: " + node.extensionKey());
+    return macros.recordUnsupported(node.extensionType(), node.extensionKey(), path);
+  }
+
   void effect(ConversionEffect.Kind kind, String path, String message) {
     effects.add(new ConversionEffect(kind, path, message));
+  }
+
+  /// Runs `lookup`; a `null` answer records the dependency as unresolved, with the reason the
+  /// lookup's callbacks imply, and returns `null` so the caller renders `fallback`.
+  <T> @Nullable T resolve(
+      Supplier<@Nullable T> lookup,
+      UnresolvedResource.Kind kind,
+      @Nullable String id,
+      String path,
+      String fallback,
+      @Nullable String placeholder) {
+    var failuresBefore = callbacks.failureCount();
+    var resolved = lookup.get();
+    if (resolved == null) {
+      unresolved(kind, id, path, callbacks.reasonSince(failuresBefore), fallback, placeholder);
+    }
+    return resolved;
   }
 
   /// Records a dependency missing after every fallback; a non-null `placeholder` adds an effect.

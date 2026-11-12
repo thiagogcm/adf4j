@@ -8,7 +8,6 @@ import dev.nthings.adf4j.ast.Paragraph;
 import dev.nthings.adf4j.ast.Table;
 import dev.nthings.adf4j.ast.TableCell;
 import dev.nthings.adf4j.ast.TableRow;
-import dev.nthings.adf4j.options.TableFallback;
 import dev.nthings.adf4j.result.ConversionEffect;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -46,21 +45,23 @@ final class TableRenderer {
     }
     // GFM-safe but headerless: apply the fallback policy. Promoting the first row needs no
     // extra step; it always sits above the separator.
-    if (context.session().options().tableFallback() != TableFallback.HTML) {
-      context
-          .session()
-          .events()
-          .effect(
-              ConversionEffect.Kind.STRUCTURE_CHANGED,
-              context.path(),
-              context.session().options().tableFallback() == TableFallback.GFM_EMPTY_HEADER
-                  ? "Empty table header synthesized"
-                  : "First data row promoted to header");
-    }
+    var events = context.session().events();
     return switch (context.session().options().tableFallback()) {
       case HTML -> htmlTableRenderer.renderHtmlTable(node, context, numberColumn);
-      case GFM_PROMOTE_FIRST_ROW -> renderGfmTable(node, context, false);
-      case GFM_EMPTY_HEADER -> renderGfmTable(node, context, true);
+      case GFM_PROMOTE_FIRST_ROW -> {
+        events.effect(
+            ConversionEffect.Kind.STRUCTURE_CHANGED,
+            context.path(),
+            "First data row promoted to header");
+        yield renderGfmTable(node, context, false);
+      }
+      case GFM_EMPTY_HEADER -> {
+        events.effect(
+            ConversionEffect.Kind.STRUCTURE_CHANGED,
+            context.path(),
+            "Empty table header synthesized");
+        yield renderGfmTable(node, context, true);
+      }
     };
   }
 

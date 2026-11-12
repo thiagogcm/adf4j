@@ -1,5 +1,6 @@
 package dev.nthings.adf4j.internal;
 
+import java.util.Locale;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
 
@@ -46,6 +47,11 @@ public final class Strings {
 
   public static String collapseWhitespace(String value) {
     return WHITESPACE_RUN.matcher(value).replaceAll(" ");
+  }
+
+  /// The documented wire spelling of an enum constant: `TABLE_FALLBACK` becomes `table-fallback`.
+  public static String kebabCase(Enum<?> constant) {
+    return constant.name().toLowerCase(Locale.ROOT).replace('_', '-');
   }
 
   /// RFC 6901 token escaping; `~` must be escaped before `/`.

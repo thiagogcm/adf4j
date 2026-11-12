@@ -6,8 +6,6 @@ import com.networknt.schema.SpecificationVersion;
 import com.networknt.schema.path.NodePath;
 import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.internal.Strings;
-import dev.nthings.adf4j.internal.parser.AdfParsingService;
-import dev.nthings.adf4j.internal.writer.AdfJsonWriter;
 import dev.nthings.adf4j.result.Diagnostic;
 import dev.nthings.adf4j.result.ValidationResult;
 import java.io.IOException;
@@ -19,21 +17,19 @@ import tools.jackson.databind.JsonNode;
 /// Validates against the bundled ADF schema. The string overload checks the original JSON; the
 /// document overload checks its serialized form.
 public final class AdfValidation {
-  private static final AdfParsingService PARSER = AdfParsingService.createDefault();
-  private static final AdfJsonWriter WRITER = AdfJsonWriter.createDefault();
   private static final Schema SCHEMA = schema();
 
   private AdfValidation() {}
 
   /// The input's parse errors, if its JSON or root is unusable; otherwise its schema violations.
   public static ValidationResult validate(String json) {
-    var tree = PARSER.readTree(json);
+    var tree = AdfJson.PARSER.readTree(json);
     var root = tree.root();
     return root == null ? new ValidationResult(tree.diagnostics()) : schemaViolations(root);
   }
 
   public static ValidationResult validate(AdfDocument document) {
-    return schemaViolations(WRITER.tree(Objects.requireNonNull(document, "document")));
+    return schemaViolations(AdfJson.WRITER.tree(Objects.requireNonNull(document, "document")));
   }
 
   private static ValidationResult schemaViolations(JsonNode root) {

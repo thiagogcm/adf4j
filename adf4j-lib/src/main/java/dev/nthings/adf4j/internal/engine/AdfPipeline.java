@@ -5,7 +5,6 @@ import dev.nthings.adf4j.internal.AttachmentInventory;
 import dev.nthings.adf4j.internal.analyze.AdfDocumentAnalyzer;
 import dev.nthings.adf4j.internal.parser.AdfParsingService;
 import dev.nthings.adf4j.internal.render.AdfRenderer;
-import dev.nthings.adf4j.metadata.ContentMetadata;
 import dev.nthings.adf4j.options.ConversionOptions;
 import dev.nthings.adf4j.result.AdfException;
 import dev.nthings.adf4j.result.AnalysisResult;
@@ -41,7 +40,7 @@ public final class AdfPipeline {
   public AnalysisResult analyze(ParseResult parsed, ConversionOptions options) {
     var document = parsed.document();
     if (document == null) {
-      return new AnalysisResult(ContentMetadata.empty(), parsed.diagnostics());
+      return AnalysisResult.failed(parsed.diagnostics());
     }
     var result = analyze(document, options);
     return new AnalysisResult(
@@ -70,7 +69,7 @@ public final class AdfPipeline {
   private MarkdownResult render(
       @Nullable AdfDocument document, ConversionOptions options, List<Diagnostic> diagnostics) {
     if (document == null) {
-      return new MarkdownResult("", ContentMetadata.empty(), diagnostics, List.of(), List.of());
+      return MarkdownResult.failed(diagnostics);
     }
     var attachments = AttachmentInventory.from(options.attachments());
     var facts = analyzer.facts(document, options.unknownNodePolicy(), attachments);
