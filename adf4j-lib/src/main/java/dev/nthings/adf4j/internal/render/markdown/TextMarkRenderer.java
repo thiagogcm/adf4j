@@ -1,4 +1,4 @@
-package dev.nthings.adf4j.internal.render;
+package dev.nthings.adf4j.internal.render.markdown;
 
 import dev.nthings.adf4j.ast.AdfMark;
 import dev.nthings.adf4j.ast.Alignment;
@@ -20,6 +20,7 @@ import dev.nthings.adf4j.ast.TextColor;
 import dev.nthings.adf4j.ast.Underline;
 import dev.nthings.adf4j.ast.UnknownMark;
 import dev.nthings.adf4j.internal.AdfText;
+import dev.nthings.adf4j.internal.CssSafety;
 import dev.nthings.adf4j.internal.Located;
 import dev.nthings.adf4j.internal.Strings;
 import java.util.ArrayList;
@@ -27,7 +28,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
 
 /// Applies inline marks to text, and block marks (indentation, alignment) to whole blocks.
@@ -35,16 +35,6 @@ final class TextMarkRenderer {
 
   // NBSP per indent step: 4+ leading ASCII spaces would make a code block.
   private static final String INDENT_UNIT = "    ";
-
-  // Colors and sizes only: none can end the declaration or attribute, or load anything.
-  private static final Pattern SAFE_CSS_VALUE =
-      Pattern.compile(
-          "#\\p{XDigit}{3,8}"
-              + "|\\p{Alpha}[\\p{Alpha}-]*"
-              + "|\\d+(?:\\.\\d+)?(?:\\p{Alpha}+|%)?"
-              + "|(?:rgb|hsl)a?\\([\\d.,%/ -]*\\)");
-
-  private static final Pattern CSS_NUMBER = Pattern.compile("\\d+(?:\\.\\d+)?");
 
   /// A mark's effect on text, applied in `rank` order.
   private sealed interface MarkEffect {
@@ -97,7 +87,7 @@ final class TextMarkRenderer {
   }
 
   private static Style style(List<AdfMark> marks, RenderSession session) {
-    var visual = session.options().htmlVisualMarks();
+    var visual = session.markdown().htmlVisualMarks();
     var code = false;
     var effects = new TreeMap<Integer, MarkEffect>();
     for (var mark : marks) {
@@ -192,22 +182,17 @@ final class TextMarkRenderer {
 
   // Values are untrusted ADF JSON: anything outside a known-safe shape drops the declaration.
   private static @Nullable MarkEffect css(int rank, String property, @Nullable String value) {
-    var safe = safeCssValue(value);
+    var safe = CssSafety.safeValue(value);
     return safe == null ? null : new Css(rank, property + ":" + safe);
   }
 
   private static @Nullable MarkEffect border(int rank, Border border) {
-    var size = Strings.trimToNull(border.size());
-    var color = safeCssValue(border.color());
-    if (size == null || color == null || !CSS_NUMBER.matcher(size).matches()) {
+    var size = CssSafety.safeNumber(border.size());
+    var color = CssSafety.safeValue(border.color());
+    if (size == null || color == null) {
       return null;
     }
     return new Css(rank, "border:" + size + "px solid " + color);
-  }
-
-  private static @Nullable String safeCssValue(@Nullable String value) {
-    var stripped = Strings.trimToNull(value);
-    return stripped != null && SAFE_CSS_VALUE.matcher(stripped).matches() ? stripped : null;
   }
 
   // <div align> for center/end alignment, when htmlVisualMarks is on.

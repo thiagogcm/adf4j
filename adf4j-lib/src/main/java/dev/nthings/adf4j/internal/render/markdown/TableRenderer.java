@@ -1,4 +1,4 @@
-package dev.nthings.adf4j.internal.render;
+package dev.nthings.adf4j.internal.render.markdown;
 
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.Media;
@@ -46,7 +46,7 @@ final class TableRenderer {
     // GFM-safe but headerless: apply the fallback policy. Promoting the first row needs no
     // extra step; it always sits above the separator.
     var events = context.session().events();
-    return switch (context.session().options().tableFallback()) {
+    return switch (context.session().markdown().tableFallback()) {
       case HTML -> htmlTableRenderer.renderHtmlTable(node, context, numberColumn);
       case GFM_PROMOTE_FIRST_ROW -> {
         events.effect(

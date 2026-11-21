@@ -1,11 +1,10 @@
-package dev.nthings.adf4j.internal.render;
+package dev.nthings.adf4j.internal.render.markdown;
 
 import java.util.List;
 import org.commonmark.Extension;
 import org.commonmark.ext.gfm.alerts.AlertsExtension;
 import org.commonmark.ext.gfm.strikethrough.StrikethroughExtension;
 import org.commonmark.ext.gfm.tables.TablesExtension;
-import org.commonmark.ext.heading.anchor.HeadingAnchorExtension;
 import org.commonmark.ext.image.attributes.ImageAttributesExtension;
 import org.commonmark.ext.task.list.items.TaskListItemsExtension;
 import org.commonmark.parser.Parser;
@@ -20,7 +19,6 @@ public final class CommonMarkSupport {
           TablesExtension.create(),
           StrikethroughExtension.create(),
           TaskListItemsExtension.create(),
-          HeadingAnchorExtension.create(),
           ImageAttributesExtension.create(),
           AlertsExtension.builder().allowNestedAlerts(true).build());
 

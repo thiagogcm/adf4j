@@ -1,4 +1,4 @@
-package dev.nthings.adf4j.internal.render;
+package dev.nthings.adf4j.internal.render.markdown;
 
 import java.util.ArrayList;
 import java.util.List;

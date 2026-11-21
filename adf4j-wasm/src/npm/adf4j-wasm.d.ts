@@ -6,10 +6,10 @@ export interface Adf4jAttachment {
   downloadUrl?: string | null;
 }
 
-/** Rendering policy (`markdown`) and document context (`context`) passed to convert and analyze. */
+/** Portable conversion configuration: unknown-node policy, Markdown options, and document context. */
 export interface Adf4jConfig {
+  unknownNodePolicy?: 'placeholder' | 'skip' | 'preserve-raw' | 'fail';
   markdown?: {
-    unknownNodePolicy?: 'placeholder' | 'skip' | 'preserve-raw' | 'fail';
     tableFallback?: 'gfm-empty-header' | 'gfm-promote-first-row' | 'html';
     imageSizeAttributes?: boolean;
     htmlVisualMarks?: boolean;

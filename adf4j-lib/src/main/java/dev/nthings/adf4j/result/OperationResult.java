@@ -4,7 +4,7 @@ import java.util.List;
 
 /// An operation's outcome. Expected input failures are diagnostics; programming errors still throw.
 public sealed interface OperationResult
-    permits AnalysisResult, MarkdownResult, ParseResult, ValidationResult {
+    permits AnalysisResult, ConversionResult, ParseResult, ValidationResult {
   List<Diagnostic> diagnostics();
 
   default boolean isSuccess() {

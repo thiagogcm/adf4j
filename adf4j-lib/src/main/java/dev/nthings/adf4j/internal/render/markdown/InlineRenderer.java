@@ -1,4 +1,4 @@
-package dev.nthings.adf4j.internal.render;
+package dev.nthings.adf4j.internal.render.markdown;
 
 import dev.nthings.adf4j.ast.AdfCard;
 import dev.nthings.adf4j.ast.AdfInline;
@@ -61,7 +61,7 @@ final class InlineRenderer {
     @Nullable AdfInline previous = null;
     for (var run : coalesceAdjacentText(nodes, context.session())) {
       for (var source : run.sources()) {
-        context.session().events().observeMarks(source.node(), source.path());
+        context.session().observeMarks(source.node(), source.path());
       }
       var node = run.node().node();
       var rendered = renderInline(node, context.at(run.node()), atLineStart);
@@ -151,7 +151,7 @@ final class InlineRenderer {
       // Cells: one "\n" (a <br> after unwrap), not the two-space form.
       case GFM_CELL, HTML_CELL -> "\n";
       // collapseHardBreaks turns the two-space break into a plain newline.
-      case BODY -> context.session().options().collapseHardBreaks() ? "\n" : "  \n";
+      case BODY -> context.session().markdown().collapseHardBreaks() ? "\n" : "  \n";
     };
   }
 
@@ -162,7 +162,7 @@ final class InlineRenderer {
     var nodeType = node.type();
     var label = nodeType.isBlank() ? "<empty>" : nodeType;
     var events = context.session().events();
-    var policy = context.session().options().unknownNodePolicy();
+    var policy = context.session().unknownNodePolicy();
     if (policy != UnknownNodePolicy.FAIL) {
       events.unknownNode(context.path());
     }

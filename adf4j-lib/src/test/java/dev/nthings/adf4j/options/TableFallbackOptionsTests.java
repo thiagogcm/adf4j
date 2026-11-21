@@ -186,4 +186,27 @@ class TableFallbackOptionsTests {
             <table><tr><td colspan="2"><p><img src="https://a/1.png" alt="media"></p>
             <p>cap</p></td></tr></table>""");
   }
+
+  @Test
+  void headings_in_html_cells_carry_no_ids_of_their_own() {
+    // Anchors come only from the document outline; per-cell slugs would duplicate "notes".
+    var json =
+        """
+        {"type": "doc", "version": 1, "content": [
+          {"type": "heading", "attrs": {"level": 2}, "content": [{"type": "text", "text": "Notes"}]},
+          {"type": "table", "content": [
+            {"type": "tableRow", "content": [
+              {"type": "tableCell", "attrs": {"colspan": 2}, "content": [
+                {"type": "paragraph", "content": [{"type": "text", "text": "wide"}]}]}]},
+            {"type": "tableRow", "content": [
+              {"type": "tableCell", "content": [
+                {"type": "heading", "attrs": {"level": 2}, "content": [{"type": "text", "text": "Notes"}]}]},
+              {"type": "tableCell", "content": [
+                {"type": "heading", "attrs": {"level": 2}, "content": [{"type": "text", "text": "Notes"}]}]}]}]}]}
+        """;
+
+    var markdown = AdfToMarkdown.create().toMarkdown(json);
+
+    assertThat(markdown).contains("<h2>Notes</h2>").doesNotContain("id=\"notes\"");
+  }
 }

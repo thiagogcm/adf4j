@@ -4,14 +4,17 @@ import static dev.nthings.adf4j.ast.Adf.externalMedia;
 import static dev.nthings.adf4j.ast.Adf.media;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.nthings.adf4j.ast.Adf;
 import dev.nthings.adf4j.ast.Attributes;
 import dev.nthings.adf4j.internal.AttachmentInventory;
 import dev.nthings.adf4j.metadata.AttachmentReference;
+import dev.nthings.adf4j.metadata.ExcerptDefinition;
+import dev.nthings.adf4j.metadata.ExcerptIncludeReference;
 import dev.nthings.adf4j.metadata.PageTreeMacro;
 import dev.nthings.adf4j.metadata.PageTreeReference;
 import dev.nthings.adf4j.options.ConversionOptions;
 import dev.nthings.adf4j.options.PageTreeEntry;
-import dev.nthings.adf4j.options.ResolverHooks;
+import dev.nthings.adf4j.options.ResourceResolvers;
 import dev.nthings.adf4j.result.Diagnostic;
 import dev.nthings.adf4j.result.UnresolvedResource;
 import java.util.Arrays;
@@ -27,7 +30,9 @@ class ResourceResolverTests {
 
   private ResourceResolver resolver(ConversionOptions options, AttachmentReference... attachments) {
     return new ResourceResolver(
-        options.resolvers(), AttachmentInventory.from(Arrays.asList(attachments)), callbacks);
+        options.resourceResolvers(),
+        AttachmentInventory.from(Arrays.asList(attachments)),
+        callbacks);
   }
 
   @Test
@@ -134,10 +139,11 @@ class ResourceResolverTests {
   @Test
   void unknown_and_empty_inventories_both_leave_media_without_a_download_url() {
     var unknown =
-        new ResourceResolver(ResolverHooks.defaults(), AttachmentInventory.from(null), callbacks);
+        new ResourceResolver(
+            ResourceResolvers.defaults(), AttachmentInventory.from(null), callbacks);
     var empty =
         new ResourceResolver(
-            ResolverHooks.defaults(), AttachmentInventory.from(List.of()), callbacks);
+            ResourceResolvers.defaults(), AttachmentInventory.from(List.of()), callbacks);
 
     assertThat(unknown.mediaSource(media("abc", "collection"), "/content/0")).isNull();
     assertThat(empty.mediaSource(media("abc", "collection"), "/content/0")).isNull();
@@ -350,6 +356,38 @@ class ResourceResolverTests {
                   .isEqualTo("PageTreeResolver failed: hierarchy offline");
               assertThat(diagnostic.paths()).containsExactly("/content/3");
               assertThat(diagnostic.details()).containsEntry("callback", "PageTreeResolver");
+            });
+  }
+
+  @Test
+  void excerpt_content_hook_returns_ast_definition_and_guards_failures() {
+    var reference = new ExcerptIncludeReference("Overview", "summary", Map.of());
+    var definition = new ExcerptDefinition("summary", List.of(Adf.paragraph("Hello")));
+
+    assertThat(resolver(ConversionOptions.defaults()).excerptContent(reference, "/content/0"))
+        .isNull();
+    assertThat(
+            resolver(ConversionOptions.defaults().withExcerptContentResolver(req -> definition))
+                .excerptContent(reference, "/content/0"))
+        .isSameAs(definition);
+
+    var failing =
+        resolver(
+            ConversionOptions.defaults()
+                .withExcerptContentResolver(
+                    req -> {
+                      throw new IllegalStateException("store down");
+                    }));
+    assertThat(failing.excerptContent(reference, "/content/2")).isNull();
+    assertThat(callbacks.reasonSince(0)).isEqualTo(UnresolvedResource.Reason.CALLBACK_FAILED);
+    assertThat(callbacks.diagnostics())
+        .singleElement()
+        .satisfies(
+            diagnostic -> {
+              assertThat(diagnostic.message())
+                  .isEqualTo("ExcerptContentResolver failed: store down");
+              assertThat(diagnostic.paths()).containsExactly("/content/2");
+              assertThat(diagnostic.details()).containsEntry("callback", "ExcerptContentResolver");
             });
   }
 }

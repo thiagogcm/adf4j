@@ -7,12 +7,14 @@ import dev.nthings.adf4j.AdfToMarkdown;
 import dev.nthings.adf4j.metadata.AttachmentReference;
 import dev.nthings.adf4j.options.AttachmentResolver;
 import dev.nthings.adf4j.options.ConversionOptions;
+import dev.nthings.adf4j.options.ExcerptContentResolver;
 import dev.nthings.adf4j.options.ExcerptResolver;
 import dev.nthings.adf4j.options.ExtensionOutput;
 import dev.nthings.adf4j.options.ExtensionRenderer;
 import dev.nthings.adf4j.options.MediaResolver;
 import dev.nthings.adf4j.options.PageLinkResolver;
 import dev.nthings.adf4j.options.PageTreeResolver;
+import dev.nthings.adf4j.options.ResourceResolvers;
 import dev.nthings.adf4j.options.TableFallback;
 import dev.nthings.adf4j.options.UnknownNodePolicy;
 import dev.nthings.adf4j.result.AdfException;
@@ -59,6 +61,7 @@ class ConversionOptionsTests {
     AttachmentResolver attachment = reference -> "a";
     PageLinkResolver pageLink = pageNodeId -> "p";
     PageTreeResolver pageTree = reference -> List.of();
+    ExcerptContentResolver excerptContent = reference -> null;
     ExcerptResolver excerpt = reference -> "e";
     ExtensionRenderer extension = node -> ExtensionOutput.replace("x");
     var attachments = List.of(new AttachmentReference("a", "a.pdf", null));
@@ -75,6 +78,7 @@ class ConversionOptionsTests {
             .withAttachmentResolver(attachment)
             .withPageLinkResolver(pageLink)
             .withPageTreeResolver(pageTree)
+            .withExcerptContentResolver(excerptContent)
             .withExcerptResolver(excerpt)
             .withCollapseHardBreaks(true)
             .withDocumentTitle("My Page")
@@ -90,10 +94,22 @@ class ConversionOptionsTests {
     assertThat(options.attachmentResolver()).isSameAs(attachment);
     assertThat(options.pageLinkResolver()).isSameAs(pageLink);
     assertThat(options.pageTreeResolver()).isSameAs(pageTree);
+    assertThat(options.excerptContentResolver()).isSameAs(excerptContent);
     assertThat(options.excerptResolver()).isSameAs(excerpt);
     assertThat(options.collapseHardBreaks()).isTrue();
     assertThat(options.documentTitle()).isEqualTo("My Page");
     assertThat(options.escapeParentheses()).isTrue();
+
+    var neutral =
+        ResourceResolvers.defaults()
+            .withMediaResolver(media)
+            .withAttachmentResolver(attachment)
+            .withPageLinkResolver(pageLink)
+            .withPageTreeResolver(pageTree)
+            .withExcerptContentResolver(excerptContent);
+    assertThat(options.resourceResolvers()).isEqualTo(neutral);
+    assertThat(ConversionOptions.defaults().withResourceResolvers(neutral).resourceResolvers())
+        .isEqualTo(neutral);
   }
 
   @Test
@@ -138,11 +154,23 @@ class ConversionOptionsTests {
   }
 
   @Test
+  void portable_configuration_reads_top_level_unknown_node_policy() {
+    var options =
+        ConversionOptions.fromJson(
+            """
+            {"unknownNodePolicy":"skip","markdown":{"escapeParentheses":true}}
+            """);
+    assertThat(options.unknownNodePolicy()).isEqualTo(UnknownNodePolicy.SKIP);
+    assertThat(options.escapeParentheses()).isTrue();
+  }
+
+  @Test
   void invalid_portable_configuration_throws_one_invalid_options_diagnostic() {
     for (var json :
         List.of(
             "{",
             "{\"markdown\":{\"bogus\":true}}",
+            "{\"markdown\":{\"unknownNodePolicy\":\"skip\"}}",
             "{\"markdown\":{\"tableFallback\":\"nope\"}}")) {
       assertThatExceptionOfType(AdfException.class)
           .isThrownBy(() -> ConversionOptions.fromJson(json))

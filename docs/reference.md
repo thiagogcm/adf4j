@@ -4,7 +4,7 @@ Lookup tables for options, ADF to Markdown rendering, diagnostics, URL safety, C
 
 ## Options (ConversionOptions)
 
-`ConversionOptions` groups immutable `MarkdownOptions`, `DocumentContext`, and `ResolverHooks`. Start from `ConversionOptions.defaults()` and chain `withX(...)`, each of which returns a new instance. `ConversionOptions.fromJson(json)` reads the portable `{ markdown, context }` configuration; blank input is the defaults, and invalid input throws `AdfException` with one `INVALID_OPTIONS` diagnostic. Bind options with `AdfToMarkdown.with(options)`; there are no per-call overloads, and a converter is cheap to create.
+`ConversionOptions` groups immutable `UnknownNodePolicy`, `MarkdownOptions`, `DocumentContext`, and `ResolverHooks` (which composes renderer-neutral `ResourceResolvers`). Start from `ConversionOptions.defaults()` and chain `withX(...)`, each of which returns a new instance. `ConversionOptions.fromJson(json)` reads the portable `{ unknownNodePolicy, markdown, context }` configuration; blank input is the defaults, and invalid input throws `AdfException` with one `INVALID_OPTIONS` diagnostic. Bind options with `AdfToMarkdown.with(options)`; there are no per-call overloads, and a converter is cheap to create.
 
 | Option | Default | Effect |
 | --- | --- | --- |
@@ -18,7 +18,8 @@ Lookup tables for options, ADF to Markdown rendering, diagnostics, URL safety, C
 | `attachmentResolver` | `null` | Turns attachment macro references into URLs. `null` or blank falls back to the entry's `downloadUrl`, then the `attachment:<fileId>` placeholder. Not consulted for media nodes. |
 | `pageLinkResolver` | `null` | Rewrites Confluence page node IDs. `null` or blank keeps the original href or plain page-tree text. |
 | `pageTreeResolver` | `null` | Expands `pagetree` and `children` macros. An empty list means no descendants. `null` keeps the token. |
-| `excerptResolver` | `null` | Expands `excerpt-include` macros. Output is inserted verbatim. Empty string suppresses output. `null` keeps the placeholder. |
+| `excerptContentResolver` | `null` | Renderer-neutral AST expansion for `excerpt-include` macros (returns an `ExcerptDefinition`). Empty content suppresses output; `null` falls through to `excerptResolver` or placeholder. Called at most once per distinct reference per conversion; an excerpt that (transitively) includes itself is expanded once, and the inner include falls through. |
+| `excerptResolver` | `null` | Markdown-specific expansion for `excerpt-include` macros. Output is inserted verbatim. Empty string suppresses output. `null` keeps the placeholder. |
 | `collapseHardBreaks` | `false` | Renders hard breaks as plain newlines instead of two-space GFM hard breaks. |
 | `documentTitle` | `null` | Prepends a level-1 heading to a successful conversion, including an empty document. Newlines collapse to spaces and Markdown punctuation is escaped. Blank emits nothing. Not reflected in metadata. |
 | `escapeParentheses` | `false` | Backslash-escapes literal `(` and `)` in text and image alt text. |
@@ -196,7 +197,8 @@ The CLI is built on [aesh](https://aeshell.github.io/), which also provides shel
 
 | Flag | Effect |
 | --- | --- |
-| `-f, --format md\|json` | `md`, the default, prints the body. `json` prints body, `hasWarnings`, diagnostics, metadata, and unresolved references. |
+| `--to md` | Target output format (`md` is the default). |
+| `-f, --format body\|json` | `body`, the default, prints the rendered output. `json` prints body, `hasWarnings`, diagnostics, metadata, effects, and unresolved references. |
 | `--fail-on-warning` | Exit 4 when warnings are present. |
 | `--attachments FILE` | Supplies the attachment inventory. |
 | `-t, --title TITLE` | Prepend a level-1 heading. |

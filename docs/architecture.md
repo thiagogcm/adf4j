@@ -44,15 +44,15 @@ Exported packages:
 | --- | --- |
 | `dev.nthings.adf4j` | `AdfToMarkdown` and `AdfJson`. |
 | `dev.nthings.adf4j.ast` | Public AST records. |
-| `dev.nthings.adf4j.options` | `ConversionOptions`, resolver hooks, renderer hooks, enums. |
-| `dev.nthings.adf4j.result` | `MarkdownResult`, `ParseResult`, `Diagnostic`, `UnresolvedResource`, `AnalysisResult`, `ValidationResult`, `ConversionEffect`, `AdfException`. |
+| `dev.nthings.adf4j.options` | `ConversionOptions`, `ResourceResolvers`, resolver hooks, renderer hooks, enums. |
+| `dev.nthings.adf4j.result` | `ConversionResult`, `MarkdownResult`, `ParseResult`, `Diagnostic`, `UnresolvedResource`, `AnalysisResult`, `ValidationResult`, `ConversionEffect`, `AdfException`. |
 | `dev.nthings.adf4j.metadata` | `ContentMetadata` and reference records, including `AttachmentReference`. |
 
 Everything under `internal.*` is implementation detail. JPMS enforces that boundary. Integrators should use `AdfToMarkdown` and `AdfJson` plus the public option, result, metadata, and AST types.
 
 ## The conversion pipeline
 
-`AdfPipeline` owns one parser, analyzer, and renderer. `AdfToMarkdown` holds one instance in a static field, so the whole process shares it, and it is stateless. Each call passes in its `ConversionOptions` and builds its own `AttachmentInventory` from them.
+`AdfPipeline` owns one parser and analyzer and is renderer-neutral. `AdfToMarkdown` binds it to `MarkdownAdfRenderer` in static fields, so the whole process shares them statelessly. Each call passes its `DocumentContext`, `UnknownNodePolicy`, `ResourceResolvers`, and renderer backend, building a fresh `AttachmentInventory` and `RenderEnvironment`.
 
 ```mermaid
 flowchart LR
@@ -181,14 +181,15 @@ The AST stays product-neutral. Page links are decided in one place, `ConfluenceS
 
 ## Phase 3: Rendering
 
-`AdfRenderer` walks the AST with the precomputed heading outline and active `ConversionOptions`. It is stateless, and each call gets a fresh `RenderSession`.
+Shared rendering contracts live in `internal.render` (`AdfDocumentRenderer`, `RenderEnvironment`, `RenderEvents`, `MacroDiagnostics`); a backend returns only its body, and the pipeline reads diagnostics, unresolved lookups, and effects from `RenderEvents`, while the Markdown backend lives in `internal.render.markdown`. `MarkdownAdfRenderer` walks the AST with the precomputed heading outline and active `ConversionOptions`. It is stateless, and each call gets a fresh `RenderSession`.
 
 Key state:
 
-- `RenderSession` is what the whole traversal shares: heading outline, options, `AttachmentInventory`, the per-render sinks `MacroDiagnostics` and `RenderEvents`, `Resolvers`, and `MarkdownWriter`.
-- `RenderContext(session, site, path)` is the immutable cursor. It holds the session, the `InlineSite` (`BODY`, `GFM_CELL`, `HTML_CELL`, or `HEADING`) that changes on descent and decides escaping and hard-break form, and the JSON Pointer of the node being rendered. Renderers descend through `children` and `at`, which take each pointer from the child's index in its parent's `content`, so every report locates content by position, never by object identity.
+- `RenderEnvironment` is the renderer-neutral bundle built by `AdfPipeline`: heading outline, `DocumentContext`, `UnknownNodePolicy`, `AttachmentInventory`, `ResourceResolver`, and `RenderEvents`.
+- `RenderSession` wraps `RenderEnvironment` with Markdown-specific state: `MarkdownOptions`, `MarkdownHooks`, and `MarkdownWriter`.
+- `RenderContext(session, site, path)` is the immutable cursor. It holds the session, the `InlineSite` (`BODY`, `GFM_CELL`, `HTML_CELL`, or `HEADING`) that changes on descent and decides escaping and hard-break form, and the JSON Pointer of the node being rendered. The per-render `ResourceResolver` memoizes excerpt answers and cuts excerpt cycles. Renderers descend through `children` and `at`, which take each pointer from the child's index in its parent's `content`, so every report locates content by position, never by object identity.
 - `RenderEvents` collects what the render reports: callback failures, effects in document order, unresolved dependencies, and the lossiness of each position it observes, counted once however often the renderers reach it.
-- `Resolvers` wraps every caller hook: it handles a missing hook, guards the call, and applies that hook's decline rule. Renderers record what stays unresolved after every fallback.
+- `MarkdownHooks` wraps the Markdown-valued caller hooks (`ExcerptResolver`, `ExtensionRenderer`); renderer-neutral lookups live in `ResourceResolver`. Renderers record what stays unresolved after every fallback.
 - `MarkdownWriter` binds the `MarkdownText` operations to the render's `escapeParentheses` value.
 
 `BlockRenderer` is the hub. It dispatches each block and renders the simple containers itself. It builds focused delegates for lists, tables, media, macros, cards, and marks, and hands them itself so they can recurse into nested blocks. `InlineRenderer` renders inline runs. It merges adjacent text nodes whose marks render identically, compared by rendered form rather than by the marks themselves, so a run gets one set of delimiters, and it tracks whether the next node sits at a line start.
@@ -265,7 +266,7 @@ The library targets JDK 25 and uses:
 | Dependency | Purpose |
 | --- | --- |
 | Jackson | JSON tree reading and writing. |
-| CommonMark plus GFM extensions | Markdown parsing and HTML conversion for table fallback, and heading slugs. |
+| CommonMark plus GFM extensions | Markdown parsing and HTML conversion for table fallback (`internal.render.markdown`). |
 | jsoup | HTML table construction and serialization. |
 | JSpecify | Nullness annotations. |
 | SLF4J | Logging, especially callback failures. The CLI turns it off unless `-v` is set. |

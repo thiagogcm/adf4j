@@ -1,10 +1,13 @@
-package dev.nthings.adf4j.internal.render;
+package dev.nthings.adf4j.internal.render.markdown;
 
+import dev.nthings.adf4j.ast.AdfDocument;
 import dev.nthings.adf4j.ast.AdfExtension;
 import dev.nthings.adf4j.ast.BodiedExtension;
 import dev.nthings.adf4j.ast.BodiedSyncBlock;
+import dev.nthings.adf4j.ast.InlineExtension;
 import dev.nthings.adf4j.ast.MacroParams;
 import dev.nthings.adf4j.ast.MultiBodiedExtension;
+import dev.nthings.adf4j.ast.Paragraph;
 import dev.nthings.adf4j.ast.SyncBlock;
 import dev.nthings.adf4j.internal.AdfText;
 import dev.nthings.adf4j.internal.AttachmentReferences;
@@ -52,7 +55,7 @@ final class MacroRenderer {
 
   // `atLineStart`: true for block output, whose fallback text sits at column 0.
   String renderExtension(AdfExtension node, RenderContext context, boolean atLineStart) {
-    var custom = context.session().resolvers().extension(node, context.path());
+    var custom = context.session().hooks().extension(node, context.path());
     if (custom != null) {
       return custom.markdown();
     }
@@ -70,7 +73,8 @@ final class MacroRenderer {
           labelled
               ? renderChartMacro(node.macroParams(), context)
               : extensionFallback(node, context, atLineStart);
-      case ExcerptInclude(var reference) -> renderExcerptInclude(reference, context);
+      case ExcerptInclude(var reference) ->
+          renderExcerptInclude(reference, context, node instanceof InlineExtension, atLineStart);
       case Attachments _ -> renderAttachmentsMacro(node, context, atLineStart);
       case Excerpt _, Other _ -> extensionFallback(node, context, atLineStart);
     };
@@ -105,7 +109,7 @@ final class MacroRenderer {
       AdfExtension node,
       RenderContext context,
       BiFunction<AdfExtension, RenderContext, String> defaultHeader) {
-    var custom = context.session().resolvers().extension(node, context.path());
+    var custom = context.session().hooks().extension(node, context.path());
     if (custom != null && custom.mode() == ExtensionOutput.Mode.REPLACE) {
       return custom.markdown();
     }
@@ -223,8 +227,12 @@ final class MacroRenderer {
     return flattened.isEmpty() ? null : flattened;
   }
 
-  // Resolver expansion, else the labelled placeholder (recorded as unresolved).
-  private String renderExcerptInclude(ExcerptIncludeReference reference, RenderContext context) {
+  // AST resolver first (renderer-neutral), then Markdown resolver, else labelled placeholder.
+  private String renderExcerptInclude(
+      ExcerptIncludeReference reference,
+      RenderContext context,
+      boolean inline,
+      boolean atLineStart) {
     var label =
         reference.excerptName() == null
             ? "Excerpt include: " + reference.page()
@@ -235,13 +243,34 @@ final class MacroRenderer {
             .session()
             .events()
             .resolve(
-                () -> context.session().resolvers().excerpt(reference, context.path()),
+                () -> expandExcerpt(reference, context, inline, atLineStart),
                 UnresolvedResource.Kind.EXCERPT,
                 reference.page(),
                 context.path(),
                 fallback,
                 "Excerpt unresolved");
     return resolved != null ? resolved : fallback;
+  }
+
+  private @Nullable String expandExcerpt(
+      ExcerptIncludeReference reference,
+      RenderContext context,
+      boolean inline,
+      boolean atLineStart) {
+    var expanded =
+        context
+            .session()
+            .resources()
+            .expandExcerpt(
+                reference,
+                context.path(),
+                blocks ->
+                    inline && blocks.size() == 1 && blocks.getFirst() instanceof Paragraph paragraph
+                        ? blockRenderer.renderBlock(paragraph, context, atLineStart)
+                        : blockRenderer.renderBlocks(new AdfDocument(1, blocks), context));
+    return expanded != null
+        ? expanded
+        : context.session().hooks().excerpt(reference, context.path());
   }
 
   // Inventory as a bullet list of links ("" when authoritatively empty); only a missing inventory

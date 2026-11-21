@@ -1,4 +1,4 @@
-package dev.nthings.adf4j.internal.render;
+package dev.nthings.adf4j.internal.render.markdown;
 
 import dev.nthings.adf4j.ast.AdfMedia;
 import dev.nthings.adf4j.ast.Caption;
@@ -82,7 +82,7 @@ final class MediaRenderer {
     // {width= height=} is non-GFM: opt-in only.
     var source = MarkdownText.escapeUrlDestination(destination);
     var attributeSuffix =
-        session.options().imageSizeAttributes()
+        session.markdown().imageSizeAttributes()
             ? renderImageAttributeSuffix(
                 positiveInteger(media.width()), positiveInteger(media.height()))
             : "";

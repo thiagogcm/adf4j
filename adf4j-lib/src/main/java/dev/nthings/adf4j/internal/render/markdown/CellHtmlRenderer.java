@@ -1,4 +1,4 @@
-package dev.nthings.adf4j.internal.render;
+package dev.nthings.adf4j.internal.render.markdown;
 
 import org.commonmark.node.Paragraph;
 import org.commonmark.parser.Parser;

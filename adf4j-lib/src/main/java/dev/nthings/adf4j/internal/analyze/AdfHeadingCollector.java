@@ -30,7 +30,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import org.commonmark.ext.heading.anchor.IdGenerator;
 
 /// Collects headings with their source occurrence paths, toc level ranges and explicit anchors
 /// during the {@link AdfNodeWalker} pass. {@link #build()} derives each slug. One instance per
@@ -63,10 +62,10 @@ final class AdfHeadingCollector implements NodeVisitor {
   }
 
   // Slugs avoid every explicit anchor, wherever it sits. Repeated headings get stable suffixes
-  // from the per-build generator.
+  // from the per-build slugger.
   HeadingOutline build() {
     var references = new ArrayList<HeadingReference>();
-    var idGenerator = IdGenerator.builder().defaultId("section").build();
+    var slugger = new HeadingSlugger();
     var takenAnchors = new HashSet<>(explicitAnchors);
     var referencesByPath = new HashMap<String, HeadingReference>();
 
@@ -80,7 +79,7 @@ final class AdfHeadingCollector implements NodeVisitor {
 
       var anchor = HeadingContent.extractAnchorId(heading.content());
       if (anchor == null) {
-        anchor = uniqueSlug(idGenerator, headingText, takenAnchors);
+        anchor = slugger.uniqueSlug(headingText, takenAnchors);
       }
 
       var reference = new HeadingReference(level, headingText, anchor);
@@ -89,15 +88,6 @@ final class AdfHeadingCollector implements NodeVisitor {
     }
 
     return HeadingOutline.of(references, referencesByPath, tocReferencedLevels);
-  }
-
-  // The generator suffixes only repeats of the same text, so skip ids already taken.
-  private static String uniqueSlug(IdGenerator idGenerator, String text, Set<String> taken) {
-    var slug = idGenerator.generateId(text);
-    while (!taken.add(slug)) {
-      slug = idGenerator.generateId(text);
-    }
-    return slug;
   }
 
   private void recordMacro(AdfExtension extension) {

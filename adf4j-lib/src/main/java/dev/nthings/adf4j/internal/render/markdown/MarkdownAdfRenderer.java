@@ -1,39 +1,37 @@
-package dev.nthings.adf4j.internal.render;
+package dev.nthings.adf4j.internal.render.markdown;
 
 import dev.nthings.adf4j.ast.AdfDocument;
-import dev.nthings.adf4j.internal.AttachmentInventory;
 import dev.nthings.adf4j.internal.Strings;
-import dev.nthings.adf4j.internal.analyze.HeadingOutline;
+import dev.nthings.adf4j.internal.render.AdfDocumentRenderer;
+import dev.nthings.adf4j.internal.render.RenderEnvironment;
 import dev.nthings.adf4j.options.ConversionOptions;
 import org.jspecify.annotations.Nullable;
 
-/// Turns a document into a Markdown body, plus the diagnostics and unresolved lookups raised.
+/// Turns a document into a Markdown body; diagnostics and unresolved lookups go to the events.
 /// Stateless: each call gets a fresh {@link RenderSession}.
-public final class AdfRenderer {
+public final class MarkdownAdfRenderer {
 
   private final BlockRenderer blockRenderer;
 
-  private AdfRenderer(BlockRenderer blockRenderer) {
+  private MarkdownAdfRenderer(BlockRenderer blockRenderer) {
     this.blockRenderer = blockRenderer;
   }
 
   /// Keeps the CommonMark wiring out of callers.
-  public static AdfRenderer createDefault() {
-    return new AdfRenderer(new BlockRenderer(CommonMarkSupport.cellHtmlRenderer()));
+  public static MarkdownAdfRenderer createDefault() {
+    return new MarkdownAdfRenderer(new BlockRenderer(CommonMarkSupport.cellHtmlRenderer()));
   }
 
-  public RenderOutput render(
-      AdfDocument document,
-      ConversionOptions options,
-      AttachmentInventory attachments,
-      HeadingOutline headingOutline) {
-    var session = RenderSession.from(options, attachments, headingOutline);
+  /// Returns an {@link AdfDocumentRenderer} bound to `options`.
+  public AdfDocumentRenderer forOptions(ConversionOptions options) {
+    return (document, environment) -> render(document, environment, options);
+  }
+
+  private String render(
+      AdfDocument document, RenderEnvironment environment, ConversionOptions options) {
+    var session = RenderSession.from(environment, options);
     var body = blockRenderer.renderBlocks(document, new RenderContext(session, InlineSite.BODY));
-    return new RenderOutput(
-        prependTitle(body, options.documentTitle(), session.writer()),
-        session.events().diagnostics(),
-        session.events().unresolved(),
-        session.events().effects());
+    return prependTitle(body, environment.context().title(), session.writer());
   }
 
   private static String prependTitle(

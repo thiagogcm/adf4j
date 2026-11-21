@@ -1,4 +1,4 @@
-package dev.nthings.adf4j.internal.render;
+package dev.nthings.adf4j.internal.render.markdown;
 
 /// Where inline nodes render. GFM_CELL is inline context: no block-marker neutralization. HTML_CELL
 /// is re-parsed as blocks, so a leading `#`/`>`/`-` is neutralized. Both cells collapse a hard

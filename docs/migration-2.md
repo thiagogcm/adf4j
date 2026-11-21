@@ -67,8 +67,8 @@ Use `--config config.json` for portable rendering policy and document context. E
 
 ```json
 {
+  "unknownNodePolicy": "placeholder",
   "markdown": {
-    "unknownNodePolicy": "placeholder",
     "tableFallback": "gfm-empty-header"
   },
   "context": {

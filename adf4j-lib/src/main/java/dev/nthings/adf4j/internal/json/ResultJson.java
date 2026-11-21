@@ -10,8 +10,8 @@ import dev.nthings.adf4j.metadata.MentionReference;
 import dev.nthings.adf4j.metadata.PageTreeReference;
 import dev.nthings.adf4j.result.AnalysisResult;
 import dev.nthings.adf4j.result.ConversionEffect;
+import dev.nthings.adf4j.result.ConversionResult;
 import dev.nthings.adf4j.result.Diagnostic;
-import dev.nthings.adf4j.result.MarkdownResult;
 import dev.nthings.adf4j.result.OperationResult;
 import dev.nthings.adf4j.result.ParseResult;
 import dev.nthings.adf4j.result.UnresolvedResource;
@@ -42,13 +42,13 @@ public final class ResultJson {
   public static String write(OperationResult result, boolean pretty) {
     var output = JSON.createObjectNode();
     output.put("ok", result.isSuccess());
-    if (result instanceof MarkdownResult converted) {
+    if (result instanceof ConversionResult converted) {
       output.put("body", converted.body());
     }
     output.put("hasWarnings", result.hasWarnings());
     output.set("diagnostics", diagnostics(result.diagnostics()));
     switch (result) {
-      case MarkdownResult converted -> {
+      case ConversionResult converted -> {
         output.set("metadata", metadata(converted.metadata()));
         output.set("effects", nodes(converted.effects(), ResultJson::node));
         output.set("unresolved", nodes(converted.unresolved(), ResultJson::node));

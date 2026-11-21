@@ -1,99 +1,58 @@
 package dev.nthings.adf4j.options;
 
 import java.util.List;
+import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
-/// Java callbacks. URL null/blank declines; empty excerpt or page-tree answers suppress output.
+/// Java callbacks for Markdown conversion: renderer-neutral {@link ResourceResolvers} plus
+/// Markdown-valued excerpt and extension hooks.
 public record ResolverHooks(
-    @Nullable MediaResolver mediaResolver,
-    @Nullable AttachmentResolver attachmentResolver,
-    @Nullable FileResolver fileResolver,
-    @Nullable PageLinkResolver pageLinkResolver,
-    @Nullable PageTreeResolver pageTreeResolver,
+    ResourceResolvers resources,
     @Nullable ExcerptResolver excerptResolver,
     List<ExtensionRenderer> extensionRenderers) {
+
   public ResolverHooks {
+    Objects.requireNonNull(resources, "resources");
     extensionRenderers = List.copyOf(extensionRenderers);
   }
 
   public static ResolverHooks defaults() {
-    return new ResolverHooks(null, null, null, null, null, null, List.of());
+    return new ResolverHooks(ResourceResolvers.defaults(), null, List.of());
   }
 
-  ResolverHooks withMediaResolver(@Nullable MediaResolver value) {
-    return new ResolverHooks(
-        value,
-        attachmentResolver,
-        fileResolver,
-        pageLinkResolver,
-        pageTreeResolver,
-        excerptResolver,
-        extensionRenderers);
+  public @Nullable MediaResolver mediaResolver() {
+    return resources.mediaResolver();
   }
 
-  ResolverHooks withAttachmentResolver(@Nullable AttachmentResolver value) {
-    return new ResolverHooks(
-        mediaResolver,
-        value,
-        fileResolver,
-        pageLinkResolver,
-        pageTreeResolver,
-        excerptResolver,
-        extensionRenderers);
+  public @Nullable AttachmentResolver attachmentResolver() {
+    return resources.attachmentResolver();
   }
 
-  ResolverHooks withFileResolver(@Nullable FileResolver value) {
-    return new ResolverHooks(
-        mediaResolver,
-        attachmentResolver,
-        value,
-        pageLinkResolver,
-        pageTreeResolver,
-        excerptResolver,
-        extensionRenderers);
+  public @Nullable FileResolver fileResolver() {
+    return resources.fileResolver();
   }
 
-  ResolverHooks withPageLinkResolver(@Nullable PageLinkResolver value) {
-    return new ResolverHooks(
-        mediaResolver,
-        attachmentResolver,
-        fileResolver,
-        value,
-        pageTreeResolver,
-        excerptResolver,
-        extensionRenderers);
+  public @Nullable PageLinkResolver pageLinkResolver() {
+    return resources.pageLinkResolver();
   }
 
-  ResolverHooks withPageTreeResolver(@Nullable PageTreeResolver value) {
-    return new ResolverHooks(
-        mediaResolver,
-        attachmentResolver,
-        fileResolver,
-        pageLinkResolver,
-        value,
-        excerptResolver,
-        extensionRenderers);
+  public @Nullable PageTreeResolver pageTreeResolver() {
+    return resources.pageTreeResolver();
   }
 
-  ResolverHooks withExcerptResolver(@Nullable ExcerptResolver value) {
-    return new ResolverHooks(
-        mediaResolver,
-        attachmentResolver,
-        fileResolver,
-        pageLinkResolver,
-        pageTreeResolver,
-        value,
-        extensionRenderers);
+  public @Nullable ExcerptContentResolver excerptContentResolver() {
+    return resources.excerptContentResolver();
   }
 
-  ResolverHooks withExtensionRenderers(List<ExtensionRenderer> value) {
-    return new ResolverHooks(
-        mediaResolver,
-        attachmentResolver,
-        fileResolver,
-        pageLinkResolver,
-        pageTreeResolver,
-        excerptResolver,
-        value);
+  public ResolverHooks withResources(ResourceResolvers value) {
+    return new ResolverHooks(value, excerptResolver, extensionRenderers);
+  }
+
+  public ResolverHooks withExcerptResolver(@Nullable ExcerptResolver value) {
+    return new ResolverHooks(resources, value, extensionRenderers);
+  }
+
+  public ResolverHooks withExtensionRenderers(List<ExtensionRenderer> value) {
+    return new ResolverHooks(resources, excerptResolver, value);
   }
 }

@@ -1,4 +1,4 @@
-package dev.nthings.adf4j.internal.render;
+package dev.nthings.adf4j.internal.render.markdown;
 
 import dev.nthings.adf4j.ast.AdfExtension;
 import dev.nthings.adf4j.internal.resource.CallbackTracker;
@@ -7,14 +7,14 @@ import dev.nthings.adf4j.options.ExtensionOutput;
 import dev.nthings.adf4j.options.ResolverHooks;
 import org.jspecify.annotations.Nullable;
 
-/// Markdown-valued caller hooks. Resource resolution is renderer-neutral and lives in
+/// Markdown-valued caller hooks. Renderer-neutral resource and AST excerpt resolution lives in
 /// {@link dev.nthings.adf4j.internal.resource.ResourceResolver}.
-final class Resolvers {
+final class MarkdownHooks {
 
   private final ResolverHooks hooks;
   private final CallbackTracker callbacks;
 
-  Resolvers(ResolverHooks hooks, CallbackTracker callbacks) {
+  MarkdownHooks(ResolverHooks hooks, CallbackTracker callbacks) {
     this.hooks = hooks;
     this.callbacks = callbacks;
   }

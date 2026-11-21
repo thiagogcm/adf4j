@@ -1,4 +1,4 @@
-package dev.nthings.adf4j.internal.render;
+package dev.nthings.adf4j.internal.render.markdown;
 
 import static dev.nthings.adf4j.testing.AdfSnippets.anchor;
 import static dev.nthings.adf4j.testing.AdfSnippets.atom;

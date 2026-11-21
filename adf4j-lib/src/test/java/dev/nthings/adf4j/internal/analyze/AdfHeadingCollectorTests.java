@@ -292,6 +292,34 @@ class AdfHeadingCollectorTests {
         .isEqualTo(new HeadingReference(2, "[status]", "here"));
   }
 
+  @Test
+  void slugger_handles_unicode_punctuation_symbol_only_fallback_and_explicit_anchor_collisions() {
+    var document =
+        new AdfDocument(
+            1,
+            List.of(
+                heading(2, "Café & Résumé!"),
+                heading(2, "???"),
+                heading(2, "!!!"),
+                heading(2, "Overview"),
+                AdfJson.parse(headingDocument(ANCHOR_MACRO, "Here"))
+                    .document()
+                    .content()
+                    .getFirst(),
+                heading(2, "Here")));
+    var outline = outlineOf(document);
+
+    assertThat(outline.headings())
+        .extracting("text", "anchor")
+        .containsExactly(
+            tuple("Café & Résumé!", "café--résumé"),
+            tuple("???", "section"),
+            tuple("!!!", "section-1"),
+            tuple("Overview", "overview"),
+            tuple("Here", "here"),
+            tuple("Here", "here-1"));
+  }
+
   private static String headingDocument(String first, String second) {
     return """
         {"type": "doc", "version": 1, "content": [

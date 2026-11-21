@@ -46,8 +46,14 @@ public final class ConversionConfig {
   }
 
   private static ConversionOptions parse(JsonNode root) {
-    object(root, Set.of("markdown", "context"));
+    object(root, Set.of("unknownNodePolicy", "markdown", "context"));
     var options = ConversionOptions.defaults();
+    var unknownNodePolicy = root.get("unknownNodePolicy");
+    if (unknownNodePolicy != null) {
+      options =
+          options.withUnknownNodePolicy(
+              constant(UnknownNodePolicy.values(), unknownNodePolicy, "unknownNodePolicy"));
+    }
     var markdown = root.get("markdown");
     if (markdown != null) {
       requireObject(markdown);
@@ -56,8 +62,6 @@ public final class ConversionConfig {
         var value = entry.getValue();
         options =
             switch (key) {
-              case "unknownNodePolicy" ->
-                  options.withUnknownNodePolicy(constant(UnknownNodePolicy.values(), value, key));
               case "tableFallback" ->
                   options.withTableFallback(constant(TableFallback.values(), value, key));
               case "imageSizeAttributes" -> options.withImageSizeAttributes(bool(value, key));

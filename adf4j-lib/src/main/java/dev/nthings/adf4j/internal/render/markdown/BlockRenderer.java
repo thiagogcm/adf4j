@@ -1,4 +1,4 @@
-package dev.nthings.adf4j.internal.render;
+package dev.nthings.adf4j.internal.render.markdown;
 
 import dev.nthings.adf4j.ast.AdfBlock;
 import dev.nthings.adf4j.ast.AdfInline;
@@ -77,7 +77,7 @@ final class BlockRenderer {
   /// Every block renders through here, so each is observed once. `atLineStart` is false only for
   /// a paragraph after a checkbox on the same line.
   String renderBlock(AdfBlock block, RenderContext context, boolean atLineStart) {
-    context.session().events().observeMarks(block, context.path());
+    context.session().observeMarks(block, context.path());
     return dispatchBlock(block, context, atLineStart).stripTrailing();
   }
 
@@ -147,7 +147,7 @@ final class BlockRenderer {
     var prefixed = markRenderer.indentationPrefix(paragraph.marks()) + rendered;
     var styled = markRenderer.applyMarks(prefixed, paragraph.marks(), context);
     return markRenderer.alignmentWrap(
-        styled, paragraph.marks(), context.session().options().htmlVisualMarks());
+        styled, paragraph.marks(), context.session().markdown().htmlVisualMarks());
   }
 
   private String renderHeading(Heading heading, RenderContext context) {
@@ -166,7 +166,7 @@ final class BlockRenderer {
       markup = HtmlFragments.anchor(anchor) + "\n" + markup;
     }
     return markRenderer.alignmentWrap(
-        markup, heading.marks(), context.session().options().htmlVisualMarks());
+        markup, heading.marks(), context.session().markdown().htmlVisualMarks());
   }
 
   private String renderHeadingText(Heading heading, RenderContext context) {

@@ -3,17 +3,17 @@
   "title": "adf4j portable conversion configuration",
   "type": "object",
   "properties": {
+    "unknownNodePolicy": {
+      "enum": [
+        "placeholder",
+        "skip",
+        "preserve-raw",
+        "fail"
+      ]
+    },
     "markdown": {
       "type": "object",
       "properties": {
-        "unknownNodePolicy": {
-          "enum": [
-            "placeholder",
-            "skip",
-            "preserve-raw",
-            "fail"
-          ]
-        },
         "tableFallback": {
           "enum": [
             "gfm-empty-header",

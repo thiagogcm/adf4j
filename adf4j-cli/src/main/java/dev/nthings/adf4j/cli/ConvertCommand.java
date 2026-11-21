@@ -8,20 +8,28 @@ import org.aesh.command.CommandDefinition;
 import org.aesh.command.option.Mixin;
 import org.aesh.command.option.Option;
 
-/// `adf4j convert`: renders ADF JSON as Markdown, or a JSON result with `-f json`. Exits 3 on
-/// invalid content (stdout is still written) and 4 when a `--fail-on-*` gate trips.
+/// `adf4j convert`: renders ADF JSON to the target format (`--to md`), printing either the rendered
+/// body (`-f body`, default) or the full JSON result (`-f json`). Exits 3 on invalid content
+/// (stdout is still written) and 4 when a `--fail-on-*` gate trips.
 @CommandDefinition(
     name = "convert",
     description = "Convert ADF JSON to Markdown",
     generateHelp = true)
 public class ConvertCommand extends Adf4jSubcommand {
 
+  // Only Markdown exists today; the option fixes the CLI contract before an HTML backend lands.
+  @Option(
+      name = "to",
+      description = "Target output format: md (default)",
+      allowedValues = {"md"})
+  String to = "md";
+
   @Option(
       shortName = 'f',
       name = "format",
-      description = "md (default) prints the body; json prints the full result",
-      allowedValues = {"md", "json"})
-  String format = "md";
+      description = "body (default) prints the rendered output; json prints the full result",
+      allowedValues = {"body", "json"})
+  String format = "body";
 
   @Option(
       name = "fail-on-warning",

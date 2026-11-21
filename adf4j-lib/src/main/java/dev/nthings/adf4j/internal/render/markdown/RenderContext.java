@@ -1,11 +1,11 @@
-package dev.nthings.adf4j.internal.render;
+package dev.nthings.adf4j.internal.render.markdown;
 
 import dev.nthings.adf4j.ast.AdfNode;
 import dev.nthings.adf4j.internal.Located;
 import java.util.List;
 
-/// Traversal position: output site and the JSON Pointer of the node. Renderers descend with
-/// {@link #children} and {@link #at}, so pointers follow source position.
+/// Traversal position: output site and JSON Pointer of the node.
+/// Renderers descend with {@link #children} and {@link #at}, so pointers follow source position.
 record RenderContext(RenderSession session, InlineSite site, String path) {
   RenderContext(RenderSession session, InlineSite site) {
     this(session, site, "");

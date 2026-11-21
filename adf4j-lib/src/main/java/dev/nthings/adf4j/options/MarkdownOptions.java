@@ -2,81 +2,43 @@ package dev.nthings.adf4j.options;
 
 import java.util.Objects;
 
-/// Serializable rendering policy. Headerless tables keep every original data row.
+/// Serializable Markdown rendering policy. Headerless tables keep every original data row.
 public record MarkdownOptions(
-    UnknownNodePolicy unknownNodePolicy,
     boolean imageSizeAttributes,
     TableFallback tableFallback,
     boolean htmlVisualMarks,
     boolean collapseHardBreaks,
     boolean escapeParentheses) {
   public MarkdownOptions {
-    Objects.requireNonNull(unknownNodePolicy, "unknownNodePolicy");
     Objects.requireNonNull(tableFallback, "tableFallback");
   }
 
   public static MarkdownOptions defaults() {
-    return new MarkdownOptions(
-        UnknownNodePolicy.PLACEHOLDER, false, TableFallback.GFM_EMPTY_HEADER, false, false, false);
+    return new MarkdownOptions(false, TableFallback.GFM_EMPTY_HEADER, false, false, false);
   }
 
-  MarkdownOptions withUnknownNodePolicy(UnknownNodePolicy value) {
+  public MarkdownOptions withImageSizeAttributes(boolean value) {
     return new MarkdownOptions(
-        value,
-        imageSizeAttributes,
-        tableFallback,
-        htmlVisualMarks,
-        collapseHardBreaks,
-        escapeParentheses);
+        value, tableFallback, htmlVisualMarks, collapseHardBreaks, escapeParentheses);
   }
 
-  MarkdownOptions withImageSizeAttributes(boolean value) {
+  public MarkdownOptions withTableFallback(TableFallback value) {
     return new MarkdownOptions(
-        unknownNodePolicy,
-        value,
-        tableFallback,
-        htmlVisualMarks,
-        collapseHardBreaks,
-        escapeParentheses);
+        imageSizeAttributes, value, htmlVisualMarks, collapseHardBreaks, escapeParentheses);
   }
 
-  MarkdownOptions withTableFallback(TableFallback value) {
+  public MarkdownOptions withHtmlVisualMarks(boolean value) {
     return new MarkdownOptions(
-        unknownNodePolicy,
-        imageSizeAttributes,
-        value,
-        htmlVisualMarks,
-        collapseHardBreaks,
-        escapeParentheses);
+        imageSizeAttributes, tableFallback, value, collapseHardBreaks, escapeParentheses);
   }
 
-  MarkdownOptions withHtmlVisualMarks(boolean value) {
+  public MarkdownOptions withCollapseHardBreaks(boolean value) {
     return new MarkdownOptions(
-        unknownNodePolicy,
-        imageSizeAttributes,
-        tableFallback,
-        value,
-        collapseHardBreaks,
-        escapeParentheses);
+        imageSizeAttributes, tableFallback, htmlVisualMarks, value, escapeParentheses);
   }
 
-  MarkdownOptions withCollapseHardBreaks(boolean value) {
+  public MarkdownOptions withEscapeParentheses(boolean value) {
     return new MarkdownOptions(
-        unknownNodePolicy,
-        imageSizeAttributes,
-        tableFallback,
-        htmlVisualMarks,
-        value,
-        escapeParentheses);
-  }
-
-  MarkdownOptions withEscapeParentheses(boolean value) {
-    return new MarkdownOptions(
-        unknownNodePolicy,
-        imageSizeAttributes,
-        tableFallback,
-        htmlVisualMarks,
-        collapseHardBreaks,
-        value);
+        imageSizeAttributes, tableFallback, htmlVisualMarks, collapseHardBreaks, value);
   }
 }

@@ -6,17 +6,22 @@ import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
-/// Immutable conversion configuration: render policy, per-document data, and Java callbacks.
+/// Immutable conversion configuration: shared unknown-node policy, Markdown policy, per-document
+/// data, and Java callbacks.
 public record ConversionOptions(
-    MarkdownOptions markdown, DocumentContext context, ResolverHooks resolvers) {
+    UnknownNodePolicy unknownNodePolicy,
+    MarkdownOptions markdown,
+    DocumentContext context,
+    ResolverHooks resolvers) {
   public ConversionOptions {
-    Objects.requireNonNull(markdown);
-    Objects.requireNonNull(context);
-    Objects.requireNonNull(resolvers);
+    Objects.requireNonNull(unknownNodePolicy, "unknownNodePolicy");
+    Objects.requireNonNull(markdown, "markdown");
+    Objects.requireNonNull(context, "context");
+    Objects.requireNonNull(resolvers, "resolvers");
   }
 
-  /// Reads the portable `{ markdown, context }` JSON shared with the CLI and WASM. Blank input
-  /// means defaults; invalid input throws `AdfException` with one
+  /// Reads the portable `{ unknownNodePolicy, markdown, context }` JSON shared with the CLI and
+  /// WASM. Blank input means defaults; invalid input throws `AdfException` with one
   /// `INVALID_OPTIONS` diagnostic.
   public static ConversionOptions fromJson(String json) {
     return ConversionConfig.read(json);
@@ -24,27 +29,34 @@ public record ConversionOptions(
 
   public static ConversionOptions defaults() {
     return new ConversionOptions(
-        MarkdownOptions.defaults(), DocumentContext.defaults(), ResolverHooks.defaults());
-  }
-
-  public ConversionOptions withMarkdown(MarkdownOptions value) {
-    return new ConversionOptions(value, context, resolvers);
-  }
-
-  public ConversionOptions withContext(DocumentContext value) {
-    return new ConversionOptions(markdown, value, resolvers);
-  }
-
-  public ConversionOptions withResolvers(ResolverHooks value) {
-    return new ConversionOptions(markdown, context, value);
-  }
-
-  public UnknownNodePolicy unknownNodePolicy() {
-    return markdown.unknownNodePolicy();
+        UnknownNodePolicy.PLACEHOLDER,
+        MarkdownOptions.defaults(),
+        DocumentContext.defaults(),
+        ResolverHooks.defaults());
   }
 
   public ConversionOptions withUnknownNodePolicy(UnknownNodePolicy value) {
-    return withMarkdown(markdown.withUnknownNodePolicy(value));
+    return new ConversionOptions(value, markdown, context, resolvers);
+  }
+
+  public ConversionOptions withMarkdown(MarkdownOptions value) {
+    return new ConversionOptions(unknownNodePolicy, value, context, resolvers);
+  }
+
+  public ConversionOptions withContext(DocumentContext value) {
+    return new ConversionOptions(unknownNodePolicy, markdown, value, resolvers);
+  }
+
+  public ConversionOptions withResolvers(ResolverHooks value) {
+    return new ConversionOptions(unknownNodePolicy, markdown, context, value);
+  }
+
+  public ResourceResolvers resourceResolvers() {
+    return resolvers.resources();
+  }
+
+  public ConversionOptions withResourceResolvers(ResourceResolvers value) {
+    return withResolvers(resolvers.withResources(value));
   }
 
   public boolean imageSizeAttributes() {
@@ -108,7 +120,7 @@ public record ConversionOptions(
   }
 
   public ConversionOptions withMediaResolver(@Nullable MediaResolver value) {
-    return withResolvers(resolvers.withMediaResolver(value));
+    return withResourceResolvers(resolvers.resources().withMediaResolver(value));
   }
 
   public @Nullable AttachmentResolver attachmentResolver() {
@@ -116,7 +128,7 @@ public record ConversionOptions(
   }
 
   public ConversionOptions withAttachmentResolver(@Nullable AttachmentResolver value) {
-    return withResolvers(resolvers.withAttachmentResolver(value));
+    return withResourceResolvers(resolvers.resources().withAttachmentResolver(value));
   }
 
   public @Nullable FileResolver fileResolver() {
@@ -124,7 +136,7 @@ public record ConversionOptions(
   }
 
   public ConversionOptions withFileResolver(@Nullable FileResolver value) {
-    return withResolvers(resolvers.withFileResolver(value));
+    return withResourceResolvers(resolvers.resources().withFileResolver(value));
   }
 
   public @Nullable PageLinkResolver pageLinkResolver() {
@@ -132,7 +144,7 @@ public record ConversionOptions(
   }
 
   public ConversionOptions withPageLinkResolver(@Nullable PageLinkResolver value) {
-    return withResolvers(resolvers.withPageLinkResolver(value));
+    return withResourceResolvers(resolvers.resources().withPageLinkResolver(value));
   }
 
   public @Nullable PageTreeResolver pageTreeResolver() {
@@ -140,7 +152,15 @@ public record ConversionOptions(
   }
 
   public ConversionOptions withPageTreeResolver(@Nullable PageTreeResolver value) {
-    return withResolvers(resolvers.withPageTreeResolver(value));
+    return withResourceResolvers(resolvers.resources().withPageTreeResolver(value));
+  }
+
+  public @Nullable ExcerptContentResolver excerptContentResolver() {
+    return resolvers.excerptContentResolver();
+  }
+
+  public ConversionOptions withExcerptContentResolver(@Nullable ExcerptContentResolver value) {
+    return withResourceResolvers(resolvers.resources().withExcerptContentResolver(value));
   }
 
   public @Nullable ExcerptResolver excerptResolver() {

@@ -1,4 +1,4 @@
-package dev.nthings.adf4j.internal.render;
+package dev.nthings.adf4j.internal.render.markdown;
 
 import dev.nthings.adf4j.internal.Strings;
 import dev.nthings.adf4j.internal.UrlSafety;

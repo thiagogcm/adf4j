@@ -28,6 +28,20 @@ class ConvertCommandTest {
   }
 
   @Test
+  void explicitToMdAndFormatBodyMatchDefaults() {
+    var result = convert(SIMPLE_DOC, "--to", "md", "-f", "body");
+    assertThat(result.exitCode()).isZero();
+    assertThat(result.out()).isEqualTo("# Hello\n\nWorld");
+  }
+
+  @Test
+  void invalidToTargetIsAUsageError() {
+    var result = convert(SIMPLE_DOC, "--to", "pdf");
+    assertThat(result.exitCode()).isEqualTo(ExitCodes.USAGE);
+    assertThat(result.err()).contains("--to");
+  }
+
+  @Test
   void readsFromFilePositional(@TempDir Path dir) {
     var input = CliTestSupport.write(dir, "doc.json", SIMPLE_DOC);
     var result = convert("", input.toString());

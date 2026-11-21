@@ -1,6 +1,6 @@
 package dev.nthings.adf4j.oracle;
 
-import dev.nthings.adf4j.internal.render.CommonMarkSupport;
+import dev.nthings.adf4j.internal.render.markdown.CommonMarkSupport;
 import org.commonmark.parser.Parser;
 import org.commonmark.renderer.html.HtmlRenderer;
 import org.commonmark.renderer.markdown.MarkdownRenderer;

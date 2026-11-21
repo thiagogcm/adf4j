@@ -3,8 +3,14 @@ package dev.nthings.adf4j.options;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.nthings.adf4j.AdfToMarkdown;
+import dev.nthings.adf4j.ast.Adf;
+import dev.nthings.adf4j.metadata.ExcerptDefinition;
 import dev.nthings.adf4j.metadata.ExcerptIncludeReference;
 import dev.nthings.adf4j.result.Diagnostic;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 class ExcerptResolverOptionsTests {
@@ -202,5 +208,102 @@ class ExcerptResolverOptionsTests {
             d ->
                 d.code() == Diagnostic.Code.UNSUPPORTED_MACRO
                     && d.severity() == Diagnostic.Severity.WARNING);
+  }
+
+  @Test
+  void an_ast_excerpt_content_resolver_renders_blocks_natively() {
+    var definition =
+        new ExcerptDefinition(
+            null,
+            List.of(
+                Adf.paragraph(Adf.text("Shared", Adf.strong()), Adf.text(" notice")),
+                Adf.bulletList(Adf.listItem("Item one"))));
+    var options = ConversionOptions.defaults().withExcerptContentResolver(ref -> definition);
+
+    var result = AdfToMarkdown.with(options).convert(BLOCK_EXCERPT_INCLUDE);
+
+    assertThat(result.body()).isEqualTo("**Shared** notice\n\n- Item one");
+    assertThat(result.unresolved()).isEmpty();
+  }
+
+  @Test
+  void an_ast_excerpt_content_resolver_renders_single_paragraph_inline() {
+    var definition =
+        new ExcerptDefinition(
+            "Problemas Conhecidos", List.of(Adf.paragraph(Adf.text("none", Adf.em()))));
+    var options =
+        ConversionOptions.defaults()
+            .withExcerptContentResolver(
+                ref -> "Problemas Conhecidos".equals(ref.excerptName()) ? definition : null);
+
+    var result = AdfToMarkdown.with(options).convert(INLINE_NAMED_EXCERPT_INCLUDE);
+
+    assertThat(result.body()).isEqualTo("Status: *none*");
+    assertThat(result.unresolved()).isEmpty();
+  }
+
+  @Test
+  void an_empty_ast_excerpt_suppresses_output_and_null_falls_through_to_markdown_resolver() {
+    var empty =
+        ConversionOptions.defaults()
+            .withExcerptContentResolver(ref -> new ExcerptDefinition(null, List.of()));
+    var emptyResult = AdfToMarkdown.with(empty).convert(BLOCK_EXCERPT_INCLUDE);
+    assertThat(emptyResult.body()).isEmpty();
+    assertThat(emptyResult.unresolved()).isEmpty();
+
+    var fallback =
+        ConversionOptions.defaults()
+            .withExcerptContentResolver(ref -> null)
+            .withExcerptResolver(ref -> "from-markdown");
+    var fallbackResult = AdfToMarkdown.with(fallback).convert(BLOCK_EXCERPT_INCLUDE);
+    assertThat(fallbackResult.body()).isEqualTo("from-markdown");
+  }
+
+  @Test
+  void a_cyclic_ast_excerpt_expands_once_and_falls_back_to_placeholder() {
+    var recursiveInclude =
+        Adf.extension(
+            "com.atlassian.confluence.macro.core",
+            "excerpt-include",
+            Adf.macroParameters(Map.of("", "Self")));
+    var definition = new ExcerptDefinition(null, List.of(recursiveInclude));
+    var requested = new ArrayList<String>();
+    var options =
+        ConversionOptions.defaults()
+            .withExcerptContentResolver(
+                ref -> {
+                  requested.add(ref.page());
+                  return definition;
+                });
+
+    var result = AdfToMarkdown.with(options).convert(BLOCK_EXCERPT_INCLUDE);
+
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.body()).isEqualTo("\\[Excerpt include: Self\\]");
+    assertThat(result.unresolved()).hasSize(1);
+    // The outer page and "Self" are each resolved once; the cycle is cut before a third lookup.
+    assertThat(requested).hasSize(2).doesNotHaveDuplicates();
+  }
+
+  @Test
+  void repeated_includes_of_one_excerpt_resolve_once_per_render() {
+    var include =
+        Adf.extension(
+            "com.atlassian.confluence.macro.core",
+            "excerpt-include",
+            Adf.macroParameters(Map.of("", "Shared")));
+    var calls = new AtomicInteger();
+    var options =
+        ConversionOptions.defaults()
+            .withExcerptContentResolver(
+                ref -> {
+                  calls.incrementAndGet();
+                  return new ExcerptDefinition(null, List.of(Adf.paragraph("Notice")));
+                });
+
+    var result = AdfToMarkdown.with(options).convert(Adf.doc(include, include));
+
+    assertThat(result.body()).isEqualTo("Notice\n\nNotice");
+    assertThat(calls).hasValue(1);
   }
 }
