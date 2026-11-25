@@ -63,7 +63,7 @@
 
         <aesh.version>3.19.2</aesh.version>
         <assertj-core.version>3.27.7</assertj-core.version>
-        <commonmark.version>0.32.0</commonmark.version>
+        <commonmark.version>0.33.0</commonmark.version>
         <cyclonedx-maven-plugin.version>2.9.3</cyclonedx-maven-plugin.version>
         <errorprone.version>2.52.0</errorprone.version>
         <flatten-maven-plugin.version>1.9.0</flatten-maven-plugin.version>
